@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 400" width="600" height="400" role="img">
+<defs>
+<radialGradient id="halo">
+<stop offset="0" stop-color="#FF4900" stop-opacity="0.22"/>
+<stop offset="1" stop-color="#FF4900" stop-opacity="0"/>
+</radialGradient>
+</defs>
+<rect width="600" height="400" fill="#0A0A0A"/>
+<circle cx="491.99999999999994" cy="64" r="252" fill="url(#halo)"/>
+<path d="M54,34 h202 a14,14 0 0 1 14,14 v26 a14,14 0 0 1 -14,14 h-212 a4,4 0 0 1 -4,-4 v-36 a14,14 0 0 1 14,-14 z" fill="#141414" stroke="#242424" stroke-width="1"/>
+<rect x="62" y="52" width="150" height="7" rx="3.5" fill="#2E2E2E"/><rect x="62" y="65" width="96" height="7" rx="3.5" fill="#2E2E2E"/>
+<path d="M70,110 V210" stroke="#2E2E2E" stroke-width="3" stroke-dasharray="7 9" stroke-linecap="round"/>
+<circle cx="70" cy="110" r="9" fill="#2E2E2E"/>
+<circle cx="70" cy="210" r="11" fill="#FF4900"/>
+<rect x="96" y="144" width="62.72" height="26" rx="13" fill="rgba(255,73,0,.16)"/><text x="127.36" y="157" fill="#FF7A18" font-size="14" font-weight="700"
+font-family="system-ui,-apple-system,'Segoe UI',Roboto,sans-serif"
+text-anchor="middle" dominant-baseline="central">24 h</text>
+<path d="M118,186 h302 a4,4 0 0 1 4,4 v56 a14,14 0 0 1 -14,14 h-292 a14,14 0 0 1 -14,-14 v-46 a14,14 0 0 1 14,-14 z" fill="#FF4900"/>
+<rect x="126" y="208" width="260" height="7" rx="3.5" fill="rgba(255,255,255,.6)"/><rect x="126" y="221" width="200" height="7" rx="3.5" fill="rgba(255,255,255,.6)"/>
+<text x="40" y="306" fill="#8A8A8A" font-size="17" font-weight="600"
+font-family="system-ui,-apple-system,'Segoe UI',Roboto,sans-serif"
+text-anchor="start" dominant-baseline="central">vuelve una sola vez</text>
+</svg>

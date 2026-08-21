@@ -1,0 +1,1021 @@
+/**
+ * Todo el copy de la página, tipado. Nada hardcodeado en el JSX.
+ *
+ * Fuente: el index.html de Vendemia. Producto real — vendedor digital que
+ * atiende y cierra por WhatsApp, mercado peruano, precios en soles. Se llama
+ * Mia. Sobre por qué NUNCA se le llama "bot", ver la nota sobre HERO.
+ *
+ * Dos secciones no tenían equivalente directo en el HTML y las resolví así
+ * (están marcadas más abajo):
+ *   · Sección 5 (la del globo) → "Mia no duerme": el visual de disponibilidad
+ *     permanente sustituye al de red global. Es el mismo argumento, 24/7.
+ *   · Sección 11 (productos relacionados) → las tres ventajas de la comparativa
+ *     "Vendemia vs otros", que en el HTML viven en una tabla.
+ *
+ * Los números (78 %, 21x, 5 min, S/500, 30 s, 10 min) vienen de tu HTML tal
+ * cual. No he inventado ninguno.
+ *
+ *
+ * ══════════════════════════════════════════════════════════════════════════
+ * CÓMO ESTÁ ESTRUCTURADA ESTA PÁGINA, Y POR QUÉ
+ * ══════════════════════════════════════════════════════════════════════════
+ *
+ * El orden NO es "hero, características, precios, pie". Es la lista de
+ * OBJECIONES que se hace quien llega, resueltas en el orden en que aparecen.
+ * Cada sección tiene UN trabajo; si no responde a una objeción, sobra.
+ *
+ *   #   sección       la pregunta que responde        la pieza de copy
+ *   ──  ────────────  ──────────────────────────────  ─────────────────────
+ *    1  Hero          ¿qué es y qué gano?             dolor con cifra + categoría
+ *                     ¿y si me sale mal?              HERO.footnote (garantía)
+ *                     ¿esto es real?                  HERO.socialProof
+ *    2  Benefit       ¿me pasa a mí?                  calculadora con SUS números
+ *    3  BentoA        ¿cómo funciona?                 el mecanismo
+ *    4  ChatDemo      ¿funciona de verdad?            que lo vea con su rubro
+ *    5  BentoB        ¿qué más hace?                  resultados, no funciones
+ *    6  Always-on     ¿y cuando no estoy?             24/7
+ *    7  UseCases      ¿sirve para MI negocio?         por rubro, con sus tareas
+ *    8  Pricing       ¿cuánto cuesta? ¿me van a       precio + garantía +
+ *                     cobrar de más?                  planes por tipo de lector
+ *    9  Faq           mis dudas sueltas               objeciones nombradas
+ *   10  Related       ¿por qué tú y no el otro?       las 3 diferencias que pesan
+ *   11  FinalCta      la petición                     dolor → botón → garantía
+ *
+ * TRES REGLAS que hay que respetar al escribir aquí:
+ *
+ *  1 · LOS TÍTULOS DICEN RESULTADOS, EL CUERPO DICE MECANISMOS. Nunca al
+ *      revés. "Seguimiento inteligente a 24 horas" es lo que el software
+ *      tiene; 'Rescata al que dijo "ya te aviso"' es lo que al lector le pasa.
+ *      Lo segundo no hay que traducirlo.
+ *
+ *  2 · LA GARANTÍA VA PEGADA A CADA PETICIÓN, no en una sección aparte.
+ *      Aparece tres veces —bajo el botón del hero, bajo los precios y bajo el
+ *      botón final— porque son los tres sitios donde se abandona. No es
+ *      repetirse: es responder "¿y si me sale mal?" en el momento en que se
+ *      pregunta.
+ *
+ *  3 · LOS BOTONES VAN EN PRIMERA PERSONA. "Empiezo con Seller", "Quiero
+ *      probar Mia gratis" — no "Empezar ahora". Redactado como lo diría el
+ *      usuario, el clic continúa su propia frase; en imperativo es una orden
+ *      de la página.
+ *
+ * La primera objeción de todas —"¿esto es real?"— la responde la fila de
+ * negocios bajo el hero. Es la más barata de responder y la que más sostiene
+ * al resto: mientras no haya una prueba, los datos de la página (78 %, 21x,
+ * 30 s) son afirmaciones nuestras. Ver la nota sobre HERO.socialProof para el
+ * siguiente paso, que es convertir uno de esos nombres en un testimonio con
+ * cifra.
+ */
+
+export const BRAND = {
+  name: 'VENDEMIA',
+  // Ver la nota de posicionamiento sobre HERO: la categoría es "vendedor
+  // digital", nunca "bot".
+  /** El wordmark del logo parte en dos colores: "vende" tinta + "mia" azul. */
+  letters: ['V', 'E', 'N', 'D', 'E', 'M', 'I', 'A'] as const,
+  /** Índice desde el que las letras van en azul de marca */
+  accentFrom: 5,
+  tagline: 'Tu vendedor digital en WhatsApp',
+} as const;
+
+/* ── Barra de anuncio + navbar ────────────────────────────── */
+
+/**
+ * ⚠️ ESTA LANDING NO VIVE SOLA: ES EL index DEL BACKOFFICE.
+ *
+ * El build estático se copia dentro de kallpabot-backoffice, junto a
+ * login.html, dashboard.html y las demás. O sea que "Iniciar sesión" tiene un
+ * destino REAL, y hasta ahora apuntaba a #final-cta — un ancla de relleno que
+ * dejaba al visitante dando vueltas por la misma página.
+ *
+ * ⚠️ VA ANTES DE ANNOUNCEMENT A PROPÓSITO, y no es cuestión de orden
+ * estético: ANNOUNCEMENT lo usa en su `href`. Un `const` de módulo está en
+ * zona muerta temporal hasta su línea, así que declararlo DESPUÉS no da un
+ * aviso — lanza "Cannot access 'SITIO' before initialization" al cargar el
+ * módulo y la página entera se queda en blanco. Si mueves este bloque,
+ * muévelo hacia arriba, nunca hacia abajo.
+ *
+ * RUTAS RELATIVAS, no absolutas. Todo el backoffice enlaza con "./login.html"
+ * y así funciona igual servido en la raíz de un dominio, en un subdirectorio o
+ * abierto a pelo desde el disco. Poner "/login.html" lo ataría a la raíz.
+ */
+export const SITIO = {
+  login: './login.html',
+  panel: './dashboard.html',
+} as const;
+
+
+/**
+ * ⚠️ TODO ENLACE LLEVA A ALGÚN SITIO, O NO ES UN ENLACE.
+ *
+ * Aquí no hay `href: '#'`. Un ancla vacía no es un enlace pendiente: navega al
+ * principio de la página, mete una entrada en el historial (y rompe el botón
+ * "atrás") y un lector de pantalla la anuncia como enlace aunque no lleve a
+ * nada. Se auditó y había 31 de 52 así.
+ *
+ * Cuando el destino todavía no existe (blog, contacto, legales…), el `href` se
+ * deja SIN DEFINIR y el componente pinta texto plano en vez de un enlace. Se ve
+ * igual, pero deja de mentir. En cuanto exista la página, se añade el href aquí
+ * y se convierte en enlace solo.
+ */
+export const ANNOUNCEMENT = {
+  text: 'Mia activa 24/7 · Responde en menos de 30 segundos',
+  // Es el aria-label de la flecha, y la flecha lleva a #pricing. Decía "Probar
+  // gratis": quien navega con lector de pantalla oía una cosa y aterrizaba en
+  // otra. La etiqueta tiene que describir el DESTINO, no el deseo.
+  cta: 'Ver precios',
+  links: [
+    { label: 'Iniciar sesión', href: SITIO.login },
+    { label: 'Precios', href: '#pricing' },
+    { label: 'FAQ', href: '#faq' },
+  ],
+} as const;
+
+/**
+ * ⚠️ "Comparativa" apunta a #related, NO a la sección del 24/7.
+ *
+ * Apuntaba a #global, que es "Tu negocio cierra a las 8. Mia no cierra nunca."
+ * — disponibilidad, no comparación. La comparativa real ("El mismo canal.
+ * Distinto resultado.", con S/0 de instalación, 10 minutos y la garantía) vive
+ * en RELATED. Era un enlace que sí resolvía y por eso no saltaba en ninguna
+ * comprobación automática: llevaba a la sección equivocada, que es peor que no
+ * llevar a ninguna.
+ */
+export const NAV_LINKS = [
+  { label: 'Cómo funciona', href: '#bento-a', hasChevron: false },
+  { label: 'Comparativa', href: '#related', hasChevron: false },
+  { label: 'Precios', href: '#pricing', hasChevron: false },
+  { label: 'FAQ', href: '#faq', hasChevron: false },
+] as const;
+
+export const NAV_CTA = {
+  ghost: 'Iniciar sesión',
+  solid: 'Prueba gratis',
+} as const;
+
+/* ── WhatsApp ─────────────────────────────────────────────── */
+
+/**
+ * El CTA "Prueba gratis" abre WhatsApp con la conversación empezada.
+ *
+ * Tiene sentido que sea WhatsApp y no un formulario: el producto ES un
+ * vendedor de WhatsApp, así que el primer contacto por el mismo canal es
+ * además una demostración.
+ *
+ * ── Formato del número ───────────────────────────────────────────────────
+ * `wa.me` quiere el número internacional SIN el `+`, sin espacios y sin
+ * guiones. +51 947 144 701 → "51947144701". Si le cuelas el `+` o un espacio,
+ * WhatsApp abre pero con el número en blanco y el usuario no sabe a quién
+ * escribe.
+ *
+ * El mensaje se escribe aquí en claro y lo codifica whatsappUrl(); no lo
+ * guardes ya codificado o acabará con dobles escapes (%2520) la primera vez
+ * que alguien lo edite.
+ */
+export const WHATSAPP = {
+  /** +51 947 144 701 */
+  phone: '51947144701',
+  message: 'Hola 👋 Quiero probar Vendemia gratis en mi negocio.',
+} as const;
+
+/** Construye el enlace de WhatsApp con el mensaje ya escrito. */
+export function whatsappUrl(message: string = WHATSAPP.message): string {
+  return `https://wa.me/${WHATSAPP.phone}?text=${encodeURIComponent(message)}`;
+}
+
+/**
+ * Los atributos COMPLETOS de un CTA que abre WhatsApp. Vivía dentro de
+ * Navbar.tsx, pero el CTA final también lo necesita y duplicarlo es la forma
+ * de que dentro de un mes uno de los dos apunte a otro número.
+ *
+ *   · target="_blank"  → WhatsApp abre aparte y no se pierde la landing, que
+ *                        es donde el usuario estaba decidiendo.
+ *   · rel="noopener"   → sin esto la página destino recibe window.opener y
+ *                        puede redirigir la nuestra. `noreferrer` además evita
+ *                        filtrar de dónde viene.
+ *   · aria-label       → el texto visible dice "Prueba gratis"; sin esto, quien
+ *                        navega con lector de pantalla no sabe que va a salir a
+ *                        WhatsApp hasta que ya está fuera.
+ */
+export function whatsappLink(label: string, message?: string) {
+  return {
+    href: whatsappUrl(message),
+    target: '_blank',
+    rel: 'noopener noreferrer',
+    'aria-label': `${label} — escríbenos por WhatsApp`,
+  } as const;
+}
+
+/* ── 1 · Hero ─────────────────────────────────────────────── */
+
+/**
+ * ⚠️ POSICIONAMIENTO · LA PALABRA "BOT" NO APARECE EN NINGUNA PARTE
+ *
+ * Mia no se vende como un bot ni como un chatbot. Se vende como un VENDEDOR
+ * DIGITAL. No es maquillaje de copy: es la diferencia de categoría, y la
+ * investigación del sector la respalda —
+ *
+ *   · un chatbot es REACTIVO: espera a que le escriban y CONTESTA. Su métrica
+ *     es cuántas consultas desvía;
+ *   · un vendedor es PROACTIVO: maneja la objeción, insiste una vez, agenda y
+ *     CIERRA. Su métrica es cuánto vende.
+ *
+ * Quien busca "bot de WhatsApp" en Perú tiene ya una expectativa formada —
+ * menús de "responde 1, responde 2", respuestas rígidas, y la sensación de
+ * estar hablando con una máquina que no entiende. Entrar en esa categoría es
+ * competir en precio dentro de una expectativa baja. La categoría "vendedor
+ * digital" se compara con contratar a alguien, y ahí S/89 al mes es barato.
+ *
+ * Ni siquiera se usa para negarlo ("no somos un chatbot"): nombrar a la
+ * categoría rival la refuerza. Se contrasta por el COMPORTAMIENTO —
+ * "contestar" frente a "vender"— sin decir la palabra.
+ *
+ * Vocabulario de reemplazo, por si hay que escribir copy nuevo:
+ *   bot / chatbot        → vendedor digital · Mia
+ *   "responde mensajes"  → "atiende y cierra"
+ *   "automatiza"         → "vende por ti"
+ *   "sonar a robot"      → "sonar a mensaje automático"
+ */
+export const HERO = {
+  badge: 'Mia atiende 24/7',
+  /**
+   * `{n}` es un HUECO, no texto: lo rellena <CountUp> con una cifra que sube.
+   * Va como token dentro de la cadena y no partiendo el titular en trozos de
+   * JSX porque el reparto del stagger de M1 se calcula sobre el número total
+   * de palabras — ver el prop `slots` de RevealHeading.
+   *
+   * Si cambias esta frase, cuenta con que la posición del token decide cuándo
+   * arranca la cuenta: Hero.tsx la deriva del índice, no la lleva escrita.
+   */
+  h1: 'Cada minuto que tardas, pierdes {n} ventas',
+  /** Rango del que sale la cifra del H1. Se sortea una nueva en cada carga. */
+  lostSalesRange: { min: 4, max: 99 },
+  /**
+   * El párrafo del hero hace UN trabajo: decir qué categoría es esto.
+   *
+   * El titular ya dio el dolor con una cifra; aquí toca la respuesta a "¿qué
+   * es?" en la primera línea, y el "¿qué hace?" en la segunda. Los cuatro
+   * verbos van en el orden real de una venta —atender, objeción, agendar,
+   * cobrar— porque enumerar capacidades sueltas se lee como lista de
+   * funciones, y en secuencia se lee como un trabajo hecho de principio a fin.
+   */
+  paragraph:
+    'Mia es tu vendedor digital en WhatsApp: atiende en 30 segundos, resuelve la objeción, agenda la cita y cobra. Trabaja mientras tú atiendes el local, duermes o descansas el domingo.',
+  primaryCta: 'Empieza gratis — sin tarjeta',
+  secondaryCta: 'Ver cómo funciona',
+  footnote: 'Garantía de reembolso · Sin costo de instalación · Funciona en 10 minutos',
+  /**
+   * ⚠️ ESTA LISTA AFIRMA EN PÚBLICO QUE SON CLIENTES. TRÁTALA COMO TAL.
+   *
+   * Responde a la primera objeción de quien llega —"¿esto es real?"— y por eso
+   * se pinta bajo el hero. Confirmado que son negocios reales.
+   *
+   * La regla, para el día que alguien edite esto sin contexto: un nombre solo
+   * entra aquí si el negocio ES cliente y ha dado permiso. Si deja de serlo, se
+   * quita — no se deja "porque queda bien". Publicar nombres de terceros que no
+   * son clientes es afirmar una relación comercial que no existe, y en Perú eso
+   * cae bajo publicidad engañosa (Indecopi).
+   *
+   * SIGUIENTE PASO, y es el que más convierte: cambiar uno de estos nombres por
+   * un testimonio con CIFRA ("pasamos de responder en 2 horas a 30 segundos").
+   * Una frase con número atribuida a una persona vale más que los seis nombres
+   * juntos, porque es la única prueba que sostiene los datos del resto de la
+   * página en vez de pedir que se los crean.
+   */
+  socialProofLabel: 'Negocios peruanos que ya venden con Mia',
+  socialProof: [
+    'Barbería El Corte',
+    'DentPlus',
+    'FreshMart',
+    'EstiloShop',
+    'MediTurno',
+    'Nails Studio',
+  ],
+} as const;
+
+/** Ticker superior — datos que justifican toda la propuesta */
+export const TICKER = [
+  'El 78 % de tus clientes decide con el PRIMER contacto',
+  'Responder en más de 5 min reduce 21× tu probabilidad de venta',
+  'Cada minuto que tardas, un competidor cierra esa venta',
+] as const;
+
+/* ── 2 · La calculadora de pérdida ────────────────────────── */
+
+export const BENEFIT = {
+  h2: '¿Cuánto te cuesta responder tarde?',
+  /**
+   * DOS anclas, ni una más.
+   *
+   * En la referencia son exactamente dos: una píldora negra con icono +
+   * etiqueta, y un enlace en texto plano al lado. Con cinco, la píldora negra
+   * deja de leerse como "estás aquí" y pasa a leerse como una barra de
+   * pestañas — que es otra cosa y compite con el navbar de arriba.
+   *
+   * El icono no es adorno: es lo que se ve dentro del punto mientras la
+   * píldora todavía no se ha estirado.
+   */
+  anchors: [
+    { label: '¿Qué es?', href: '#benefit', icon: 'sparkles' },
+    { label: '¿Cómo funciona?', href: '#bento-a' },
+  ],
+  mediaHeadline: 'Mueve los controles con tus números reales y mira la cuenta.',
+  lead: 'Responder en más de 5 minutos reduce 21 veces tu probabilidad de venta.',
+  body:
+    'No es una cifra de marketing: es el punto donde el cliente ya le escribió a otro. Con 20 consultas al día y un ticket de S/120, la cuenta sale a unos S/1,497 al mes que no ves porque nunca llegaron a ser venta. Mia responde en 30 segundos y recupera hasta el 78 % de esos clientes.',
+  /** Chips del marquee: lo que Mia resuelve sin que intervengas */
+  chipRows: [
+    ['Responde al instante', 'Maneja objeciones', 'Agenda citas', 'Cobra por Yape'],
+    ['Seguimiento a 24h', 'Remarketing', 'Resumen diario', 'Deriva a humano'],
+    ['Consulta de precios', 'Disponibilidad', 'Ubicación y horarios', 'Confirma pedidos'],
+  ],
+  /** Etiquetas de la calculadora */
+  calculator: {
+    tag: 'Tiempo real',
+    assumption:
+      'Este cálculo asume que tardas más de 5 minutos en responder — el punto donde la probabilidad de venta cae 21 veces.',
+    leadsLabel: 'Clientes que te escriben al día',
+    ticketLabel: 'Ticket promedio de venta',
+    resultLabel: 'Estás perdiendo aproximadamente',
+    metrics: ['Clientes perdidos/día', 'Ticket promedio', 'Pérdida diaria', 'Pérdida anual'],
+    tip: 'Con Vendemia, Mia responde en 30 segundos y recupera hasta el 78 % de esos clientes automáticamente.',
+  },
+} as const;
+
+/* ── 3 · Mia no contesta, vende ───────────────────────────── */
+
+export const BENTO_A = {
+  badge: 'Cómo funciona',
+  h2: 'Mia no contesta. Vende.',
+  cards: {
+    network: {
+      title: 'Maneja la objeción sin pasártela a ti',
+      body: [
+        { text: 'Cuando el cliente dice ' },
+        { text: '"déjame pensarlo"', strong: true },
+        { text: ' o pregunta el precio antes de tiempo, una respuesta automática corta la conversación. Mia la sostiene, responde y ' },
+        { text: 'lleva al cierre', strong: true },
+        { text: ' — igual que tu mejor vendedor un martes por la mañana.' },
+      ],
+    },
+    endpoint: {
+      title: 'Agenda y confirma sola',
+      body: [
+        { text: 'Propone horarios libres, confirma y manda recordatorio. ' },
+        { text: 'Sin ida y vuelta', strong: true },
+        { text: ' y sin que abras la agenda.' },
+      ],
+    },
+  },
+} as const;
+
+/* ── 4 · Capacidades ──────────────────────────────────────── */
+
+export type RichText = { text: string; strong?: boolean }[];
+
+/**
+ * ⚠️ LOS TÍTULOS SON RESULTADOS, NO CARACTERÍSTICAS.
+ *
+ * Esta sección responde a "¿qué más hace?", y es donde toda landing se
+ * desliza sola hacia la lista de funciones. La regla para escribir aquí:
+ * el título dice lo que el DUEÑO consigue, y el cuerpo dice cómo se hace.
+ * Nunca al revés.
+ *
+ * Los cuatro que había antes decían el mecanismo:
+ *   "Seguimiento inteligente a 24 horas"  → 'Rescata al que dijo "ya te aviso"'
+ *   "Configurada por tipo de negocio"     → "Sabe de tu negocio desde el primer día"
+ *   "Panel de ventas en tiempo real"      → "Sabes cómo va el negocio sin abrir nada"
+ *
+ * Fíjate en el patrón: la versión antigua describe lo que el software TIENE,
+ * la nueva describe lo que al lector le PASA. "Seguimiento a 24 horas" hay que
+ * traducirlo mentalmente; el "ya te aviso" que nunca vuelve ya le duele.
+ *
+ * Los dos que se quedaron —"Responde en 30 segundos" y "Listo en 10 minutos"—
+ * son características que YA son el resultado, porque el tiempo es justo la
+ * unidad en la que el lector mide el problema. No hay que arreglar lo que
+ * funciona.
+ */
+export const BENTO_B = {
+  cards: [
+    {
+      area: 'a',
+      assetId: 'bentoB.privacy',
+      title: 'Responde en 30 segundos',
+      body: [
+        { text: 'A cualquier hora, también domingo y a las 3 de la mañana. ' },
+        { text: 'El 78 %', strong: true },
+        { text: ' de tus clientes decide con el primer contacto: ese primer contacto ahora siempre es el tuyo.' },
+      ] as RichText,
+    },
+    {
+      area: 'b',
+      assetId: 'bentoB.storage',
+      title: 'Rescata al que dijo "ya te aviso"',
+      body: [
+        { text: 'Ese cliente no dijo que no: se distrajo. A las 24 horas Mia vuelve ' },
+        { text: 'una sola vez, en el momento justo', strong: true },
+        { text: ', y sin sonar a mensaje automático. Es la venta que ya tenías y se te escapó por no insistir.' },
+      ] as RichText,
+    },
+    {
+      area: 'c',
+      assetId: 'bentoB.models',
+      title: 'Sabe de tu negocio desde el primer día',
+      body: [
+        { text: 'No hay que enseñarle: llega sabiendo agendar para barberías y clínicas, vender catálogo para e-commerce, o ' },
+        { text: 'las dos cosas', strong: true },
+        { text: ' si las necesitas.' },
+      ] as RichText,
+    },
+    {
+      area: 'd',
+      assetId: 'bentoB.autoscale',
+      title: 'Sabes cómo va el negocio sin abrir nada',
+      body: [
+        { text: 'Cada noche te llega un ' },
+        { text: 'resumen por WhatsApp', strong: true },
+        { text: ': cuántos escribieron, cuántos agendaron, cuántos cerraron y en qué punto se cae la conversación. El panel en vivo está ahí si lo quieres, pero no hace falta que entres.' },
+      ] as RichText,
+    },
+    {
+      area: 'e',
+      assetId: 'bentoB.gpu',
+      title: 'Listo en 10 minutos',
+      body: [
+        { text: 'Sin código, sin asesor, sin llamada de onboarding. ' },
+        { text: 'Tú solo, desde tu celular', strong: true },
+        { text: '.' },
+      ] as RichText,
+    },
+  ],
+} as const;
+
+/* ── 5 · Mia no duerme ────────────────────────────────────── */
+/* Sustituye a la sección de "red global": mismo peso visual, argumento 24/7. */
+
+export const GLOBAL_NETWORK = {
+  badge: 'Disponible 24/7',
+  h2: 'Tu negocio cierra a las 8. Mia no cierra nunca.',
+  paragraph:
+    'El domingo por la tarde, el feriado, la madrugada. Los mensajes siguen llegando aunque tú no estés — y ahora también las respuestas.',
+} as const;
+
+/* ── 6 · La demo conversacional ────────────────────────────── */
+
+/**
+ * ⚠️ ESTA SECCIÓN NO GUARDA CONVERSACIONES: LAS COMPONE.
+ *
+ * Y esa es la decisión importante del bloque, no un detalle de implementación.
+ *
+ * Lo que la sección promete es "Mia se configura con tu negocio y tu forma de
+ * hablar". Si las 27 combinaciones (3 negocios × 3 tonos × 3 casos) estuvieran
+ * escritas a mano, la promesa sería un dibujo: el visitante vería tres textos
+ * fijos que alguien redactó. Componiéndolas —los HECHOS los pone el negocio, el
+ * REGISTRO lo pone el tono— la sección hace delante de sus ojos exactamente lo
+ * que el producto dice hacer. La demo ES el argumento.
+ *
+ * De paso, mantenerlo es sumar, no multiplicar: un negocio nuevo son 3 bloques
+ * de hechos, no 9 conversaciones.
+ *
+ *   mensaje de Mia = apertura[tono][caso] + hechos[negocio][caso] + cierre[tono][caso]
+ *
+ * ── LO QUE **NO** DEPENDE DEL TONO ────────────────────────────────────────
+ * Lo que escribe el CLIENTE, ni su respuesta final. El tono es un ajuste de
+ * Mia; el cliente escribe como le da la gana. Hacer que el cliente también
+ * cambiara de registro habría quedado más "redondo" y habría sido mentira.
+ *
+ * ── EL TONO YA NO SE ELIGE EN PANTALLA ────────────────────────────────────
+ * Había un segundo selector ("Cómo quieres que hable") y se retiró: dos filas
+ * de mandos encima del chat pedían demasiado antes de haber enseñado nada.
+ * Ahora la demo va fija en NEUTRAL — ni acartonado ni pegajoso, el registro que
+ * casi cualquier negocio peruano reconoce como suyo.
+ *
+ * "Cercano" y "Formal" SE QUEDAN AQUÍ a propósito, no son código muerto:
+ *   · siguen documentando que el tono es un ajuste real del producto, que es
+ *     justo lo que se vende;
+ *   · y devolver el selector es un cambio de una línea en ChatDemo.tsx.
+ * Si algún día sobran de verdad, se borran los dos y el guion sigue armándose
+ * igual con el que quede.
+ */
+
+export const DEMO = {
+  /**
+   * El título ya no promete "y tu forma de hablar": el selector de tono se
+   * retiró y prometer lo que no se puede tocar es peor que no ofrecerlo.
+   */
+  h2: 'Míralo funcionando en tu negocio',
+  sub: 'Elige tu rubro y mira cómo responde Mia. Son ventas, no respuestas automáticas.',
+  etiquetaNegocio: 'Tu negocio',
+  pie: 'Demostración con datos de ejemplo. La Mia real usa tu catálogo, tus horarios y tus precios.',
+
+  /** El cliente escribe esto. NO depende del tono — ver la nota de arriba. */
+  casos: [
+    {
+      id: 'precio',
+      pestana: '¿Cuánto cuesta?',
+      /** Lo que se demuestra. Sirve igual para los tres negocios. */
+      etiqueta: 'Responde y propone el siguiente paso',
+      tiempo: 'en 30 segundos',
+    },
+    {
+      id: 'objecion',
+      pestana: '"Déjame pensarlo"',
+      etiqueta: 'Sostiene la objeción sin bajar el precio',
+      tiempo: 'sin pasártela a ti',
+    },
+    {
+      id: 'disponibilidad',
+      pestana: '¿Tienen disponibilidad?',
+      etiqueta: 'Cierra sin que tú intervengas',
+      tiempo: 'a cualquier hora',
+    },
+  ],
+
+  negocios: [
+    {
+      id: 'barberia',
+      label: 'Barbería',
+      nombre: 'Barbería El Corte',
+      precio: {
+        cliente: 'Hola, ¿cuánto está el corte con barba?',
+        hechos:
+          'El *corte + barba* incluye lavado y perfilado. Esta semana está en S/40 (normalmente S/50).\nHoy queda cupo a las 4:00 pm y mañana a las 11:00 am.',
+        respuesta: 'Hoy 4pm me va perfecto. ¿Cómo confirmo?',
+      },
+      objecion: {
+        cliente: 'Ah ya, lo pienso y te aviso.',
+        hechos:
+          'Solo te comento que los cupos del sábado se llenan rápido y el precio de S/40 va hasta el domingo.\nEl cupo se puede mover hasta 3 horas antes.',
+        respuesta: 'Ya pues, mejor apártamelo. ¿Qué datos necesitas?',
+      },
+      disponibilidad: {
+        cliente: '¿Tienen espacio mañana?',
+        hechos:
+          'Mañana queda:\n• 9:00 am\n• 11:30 am\n• 5:00 pm\nTe mando el recordatorio el día antes.',
+        respuesta: '11:30 am. Gracias, qué rápido.',
+      },
+    },
+    {
+      id: 'clinica',
+      label: 'Clínica dental',
+      nombre: 'DentPlus',
+      precio: {
+        cliente: 'Buenas, ¿cuánto cuesta una limpieza dental?',
+        hechos:
+          'La *limpieza con evaluación* está en S/120 e incluye la radiografía si el doctor la necesita.\nTengo martes 10:00 am y jueves 4:30 pm.',
+        respuesta: 'El jueves 4:30 me queda bien.',
+      },
+      objecion: {
+        cliente: 'Lo consulto en casa y te escribo.',
+        hechos:
+          'Te comento que la evaluación va sin costo si agendas esta semana.\nEl horario se puede reprogramar sin penalidad.',
+        respuesta: 'Mejor resérvame el martes, mañana confirmo.',
+      },
+      disponibilidad: {
+        cliente: '¿Tienen cita para esta semana?',
+        hechos:
+          'Sí, esta semana queda:\n• Miércoles 9:00 am\n• Jueves 4:30 pm\n• Sábado 11:00 am\nTe recuerdo un día antes por acá.',
+        respuesta: 'Sábado 11, por favor.',
+      },
+    },
+    {
+      id: 'ecommerce',
+      label: 'Tienda online',
+      nombre: 'EstiloShop',
+      precio: {
+        cliente: 'Hola, ¿cuánto cuesta el modelo negro?',
+        hechos:
+          'El negro está en S/89 con *envío gratis a Lima*. Quedan tallas M y L.\nSi lo pides hoy, sale mañana temprano.',
+        respuesta: 'Ya, lo quiero en M. ¿Cómo pago?',
+      },
+      objecion: {
+        cliente: 'Está un poco caro, lo voy a pensar.',
+        hechos:
+          'Te entiendo. Es cuero sintético con 6 meses de garantía, y si no te queda lo cambias sin costo.\nNo hay descuento, pero sí puedo apartártelo 24 horas.',
+        respuesta: 'Bueno, apártamelo. Mañana te confirmo.',
+      },
+      disponibilidad: {
+        cliente: '¿Tienen stock del negro en talla M?',
+        hechos:
+          'Sí, quedan 3 en M.\nEnvío gratis a Lima y llega en 24 a 48 horas.\nPuedes pagar con Yape o Plin por acá mismo.',
+        respuesta: 'Sí, genérame el pedido. Pago con Yape.',
+      },
+    },
+  ],
+
+  /**
+   * El tono SOLO envuelve. Los hechos —precios, horarios, stock— son los
+   * mismos en los tres: cambiar de registro no puede cambiar lo que se le
+   * promete al cliente, y que eso quede separado en el código es justamente
+   * lo que impide que alguien lo rompa al añadir un tono nuevo.
+   */
+  tonos: [
+    {
+      id: 'neutral',
+      label: 'Neutral',
+      apertura: {
+        precio: 'Hola, claro que sí.',
+        objecion: 'Sin problema, tómate tu tiempo.',
+        disponibilidad: 'Hola, sí tenemos.',
+      },
+      cierre: {
+        precio: '¿Cuál te acomoda mejor?',
+        objecion: '¿Te lo aparto mientras tanto?',
+        disponibilidad: '¿Con cuál te confirmo?',
+      },
+    },
+    {
+      id: 'cercano',
+      label: 'Cercano',
+      apertura: {
+        precio: '¡Hola! 👋 Claro que sí.',
+        objecion: '¡Tranquilo, sin apuro! 😊',
+        disponibilidad: '¡Hola! Justo queda espacio.',
+      },
+      cierre: {
+        precio: '¿Cuál te reservo? 🙌',
+        objecion: '¿Te lo aparto? Sin compromiso.',
+        disponibilidad: '¿Con cuál te lo dejo apartado?',
+      },
+    },
+    {
+      id: 'formal',
+      label: 'Formal',
+      apertura: {
+        precio: 'Buenas tardes. Con gusto le comento:',
+        objecion: 'Por supuesto, quedo atento a su decisión.',
+        disponibilidad: 'Buenas tardes. Sí, contamos con disponibilidad.',
+      },
+      cierre: {
+        precio: '¿Cuál horario prefiere que le reserve?',
+        objecion: '¿Desea que le reserve un espacio provisional?',
+        disponibilidad: '¿Cuál horario desea confirmar?',
+      },
+    },
+  ],
+} as const;
+
+export type DemoCasoId = (typeof DEMO.casos)[number]['id'];
+
+/**
+ * Arma la conversación. Es la función que sostiene toda la sección — ver la
+ * nota de arriba sobre por qué se compone en vez de guardarse.
+ */
+export function guionDemo(negocioIdx: number, tonoIdx: number, casoIdx: number) {
+  const negocio = DEMO.negocios[negocioIdx];
+  const tono = DEMO.tonos[tonoIdx];
+  const caso = DEMO.casos[casoIdx];
+  const id = caso.id as DemoCasoId;
+
+  // El acceso por índice no vale aquí: cada negocio guarda sus tres casos en
+  // propiedades con el nombre del caso, no en un array.
+  const guion = negocio[id];
+
+  return {
+    negocio: negocio.nombre,
+    caso,
+    cliente: guion.cliente,
+    // Dos saltos de línea entre las tres partes: en WhatsApp un mensaje de
+    // venta sin aire es un muro que nadie lee.
+    mia: `${tono.apertura[id]}\n\n${guion.hechos}\n\n${tono.cierre[id]}`,
+    respuesta: guion.respuesta,
+  };
+}
+
+/* ── 7 · Casos de uso ─────────────────────────────────────── */
+
+export const USE_CASES = {
+  badge: 'Por tipo de negocio',
+  h2: 'Funciona igual de bien en una barbería que en una clínica',
+  items: [
+    {
+      assetId: 'useCases.it',
+      title: 'Barberías y peluquerías',
+      bullets: [
+        'Agenda el corte sin ida y vuelta',
+        'Recuerda la cita el día anterior',
+        'Rellena los huecos que deja una cancelación',
+        'Avisa cuando toca volver',
+      ],
+    },
+    {
+      assetId: 'useCases.retail',
+      title: 'Clínicas y consultorios',
+      bullets: [
+        'Filtra el motivo de consulta antes de agendar',
+        'Reparte según especialidad y disponibilidad',
+        'Confirma y reduce las inasistencias',
+        'Responde precios y coberturas',
+      ],
+    },
+    {
+      assetId: 'useCases.auto',
+      title: 'E-commerce',
+      bullets: [
+        'Consulta de stock y tallas al instante',
+        'Recupera el carrito abandonado por WhatsApp',
+        'Cobra con Yape o Plin en la conversación',
+        'Da el estado del pedido sin que preguntes tú',
+      ],
+    },
+    {
+      assetId: 'useCases.gaming',
+      title: 'Gimnasios y estudios',
+      bullets: [
+        'Explica planes y compara membresías',
+        'Agenda la clase de prueba',
+        'Reactiva al que dejó de venir',
+        'Cobra la renovación antes de que caduque',
+      ],
+    },
+    {
+      assetId: 'useCases.hospitality',
+      title: 'Restaurantes',
+      bullets: [
+        'Toma el pedido para llevar',
+        'Reserva mesa y confirma',
+        'Manda la carta del día',
+        'Responde horarios y ubicación',
+      ],
+    },
+    {
+      assetId: 'useCases.manufacturing',
+      title: 'Inmobiliarias y servicios',
+      bullets: [
+        'Califica al interesado antes de que pierdas la visita',
+        'Agenda la visita al inmueble',
+        'Manda ficha, fotos y ubicación',
+        'Hace seguimiento hasta la decisión',
+      ],
+    },
+  ],
+} as const;
+
+/* ── 8 · Precios ──────────────────────────────────────────── */
+
+/**
+ * DOS DECISIONES DE COPY QUE NO SON ADORNO:
+ *
+ * 1 · LOS PLANES SE NOMBRAN POR EL LECTOR, NO POR LO QUE INCLUYEN.
+ *     Decían "para empezar a vender", "el más popular", "para escalar". Eso
+ *     obliga a leer las tres columnas enteras y comparar specs para saber cuál
+ *     te toca. Ahora dicen "para el que atiende solo", "para el que ya no da
+ *     abasto", "para el que tiene más de un local": el lector se reconoce en
+ *     una línea y deja de comparar. "El más popular" además no informaba de
+ *     nada — es presión social, y ya la da el borde iluminado de la tarjeta.
+ *
+ * 2 · CADA PLAN LLEVA SU PROPIO BOTÓN, Y EN PRIMERA PERSONA.
+ *     Los tres decían "Empezar ahora". Un botón que nombra el plan que estás
+ *     mirando confirma la elección en el momento de pulsarla, y redactado como
+ *     lo diría el usuario ("Empiezo con…", no "Empezar") el clic es la
+ *     continuación de su propia frase en vez de una orden de la página.
+ *     `PRICING.cta` se mantiene como respaldo por si algún plan nuevo entra
+ *     sin el suyo.
+ */
+export const PRICING = {
+  h2: 'Sin costos ocultos. Sin sorpresas.',
+  subtitle:
+    'Desde S/89 al mes — menos de lo que pierdes en dos días sin responder a tiempo. Sin instalación, sin permanencia y con 30 días de garantía.',
+  currencies: [
+    { code: 'PEN', symbol: 'S/', rate: 1 },
+    { code: 'USD', symbol: '$', rate: 0.27 },
+  ],
+  period: '/ mes',
+  cta: 'Empezar ahora',
+  plans: [
+    {
+      header: 'Starter · para el que atiende solo',
+      price: 89,
+      featured: false,
+      cta: 'Empiezo con Starter',
+      specs: [
+        { icon: 'chat', label: 'Hasta 300 conversaciones/mes' },
+        { icon: 'shield', label: 'Objeciones automáticas' },
+        { icon: 'calendar', label: 'Agenda de citas' },
+        { icon: 'chart', label: 'Resumen diario y panel básico', tooltip: 'El resumen llega a tu WhatsApp cada noche.' },
+      ],
+    },
+    {
+      header: 'Seller · para el que ya no da abasto',
+      price: 149,
+      featured: true,
+      cta: 'Empiezo con Seller',
+      specs: [
+        { icon: 'chat', label: 'Hasta 800 conversaciones/mes' },
+        { icon: 'shield', label: 'Seguimiento inteligente 24h' },
+        { icon: 'calendar', label: 'Remarketing automático' },
+        { icon: 'chart', label: 'Panel en vivo y soporte prioritario', tooltip: 'Incluye todo lo de Starter.' },
+      ],
+    },
+    {
+      header: 'Best Seller · para el que tiene más de un local',
+      price: 189,
+      featured: false,
+      cta: 'Empiezo con Best Seller',
+      specs: [
+        { icon: 'chat', label: 'Conversaciones ilimitadas' },
+        { icon: 'shield', label: 'Multi-negocio en un panel' },
+        { icon: 'calendar', label: 'Integración con Yape y Plin' },
+        { icon: 'chart', label: 'Informes y onboarding a medida', tooltip: 'Incluye todo lo de Seller.' },
+      ],
+    },
+  ],
+  footnote: 'Garantía de reembolso 30 días · Sin costo de instalación · Cancela cuando quieras',
+} as const;
+
+/* ── 9 · FAQ ──────────────────────────────────────────────── */
+
+export const FAQ = {
+  h2: 'Preguntas frecuentes',
+  items: [
+    {
+      /**
+       * La pregunta ya NO nombra a la categoría rival.
+       *
+       * Decía "¿Vendemia es un chatbot?" y se respondía "No...". Preguntarlo
+       * así mete la palabra en la cabeza del lector y le da a Vendemia el
+       * marco del competidor: a partir de ahí compara precios de chatbots.
+       * Preguntado por el COMPORTAMIENTO, la respuesta puede marcar la
+       * diferencia sin regalar la categoría.
+       */
+      q: '¿En qué se diferencia de las respuestas automáticas que ya usa todo el mundo?',
+      a: [
+        'Una respuesta automática contesta y ahí se queda. Mia vende: entiende lo que te preguntan, maneja la objeción, propone un horario, confirma la cita y vuelve a los que no respondieron. Es la diferencia entre un contestador y un vendedor.',
+        'La diferencia está en los resultados, no en la tecnología.',
+      ],
+    },
+    {
+      q: '¿Cuánto tiempo toma configurarlo?',
+      a: [
+        '10 minutos. Sin asesores, sin código, sin llamadas de onboarding. Tú solo, desde tu celular.',
+      ],
+    },
+    {
+      q: '¿Cuánto cuesta realmente?',
+      a: [
+        'Desde S/89 al mes, sin costo de instalación. Otros cobran S/500 solo para empezar, más el consumo mensual. Con Vendemia pagas lo que ves.',
+      ],
+    },
+    {
+      q: '¿Qué pasa si no funciona?',
+      a: [
+        'Te devolvemos el dinero sin preguntas. Si Mia no te ayuda a responder más rápido y cerrar más ventas, no mereces pagar.',
+      ],
+    },
+    {
+      q: '¿Funciona para barberías, clínicas y e-commerce?',
+      a: [
+        'Sí. Vendemia se configura por tipo de negocio: agenda citas para barberías y clínicas, vende productos para e-commerce, y combina ambos si los necesitas.',
+      ],
+    },
+    {
+      q: '¿Y si el cliente quiere hablar con una persona?',
+      a: [
+        'Mia te pasa la conversación en cuanto detecta que hace falta, con el contexto de lo hablado. No pelea por quedarse el chat.',
+      ],
+    },
+  ],
+} as const;
+
+/* ── 10 · CTA final ───────────────────────────────────────── */
+
+/**
+ * EL CIERRE. Tres piezas, y las tres tienen que estar:
+ *
+ *   1 · el recordatorio del dolor  → `badge`, que repite el titular del hero.
+ *       El lector ha bajado toda la página; para cuando llega aquí ya no tiene
+ *       en la cabeza por qué empezó a leer.
+ *   2 · la petición                → `cta`, en PRIMERA PERSONA. "Quiero probar
+ *       Mia gratis" y no "Empieza gratis ahora": redactado como lo diría el
+ *       usuario, el clic continúa su propia frase; redactado en imperativo, es
+ *       una orden de la página. Mismo criterio que los botones de precios.
+ *   3 · la anulación del riesgo    → `footnote`, otra vez y al lado del botón.
+ *       Repetir la garantía justo donde se pulsa no es redundante: es el
+ *       último punto donde se abandona.
+ *
+ * `badge` y `footnote` existían y NO se pintaban — el cierre era titular,
+ * párrafo y botón, sin dolor ni garantía. Ya se pintan los dos.
+ *
+ * Se retiró `secondaryCta: 'Hablar con el equipo'`, que tampoco se pintaba y
+ * que ahora además sobra: el botón principal abre WhatsApp, o sea que ya ES
+ * hablar con el equipo. Dos botones que llevan al mismo sitio solo reparten el
+ * clic.
+ */
+export const FINAL_CTA = {
+  badge: 'Cada minuto sin responder es dinero que pierdes',
+  h2: 'Tu vendedor digital empieza hoy',
+  paragraph: [
+    'Sin instalación. Sin esperar a un asesor.',
+    'Sin pagar S/500 para empezar.',
+  ],
+  cta: 'Quiero probar Mia gratis',
+  footnote: 'Garantía de reembolso 30 días · Funciona en 10 minutos',
+} as const;
+
+/* ── 11 · Vendemia vs otros ───────────────────────────────── */
+/* En el HTML esto es una tabla comparativa. Aquí son las tres diferencias que
+   más pesan, que es lo que cabe en tres tarjetas sin marear. */
+
+export const RELATED = {
+  h2: 'El mismo canal. Distinto resultado.',
+  cards: [
+    {
+      icon: 'wallet',
+      title: 'S/0 de instalación',
+      body: 'Otros cobran S/500 antes de que vendas nada. En 6 meses eso es más de S/1,200 que te ahorras solo en arrancar.',
+    },
+    {
+      icon: 'clock',
+      title: '10 minutos, tú solo',
+      body: 'Frente a los 45 minutos con asesor que pide el resto. Sin agendar llamada y sin esperar a que te devuelvan el mensaje.',
+    },
+    {
+      icon: 'shield',
+      title: '30 días de garantía',
+      body: 'Si no te ayuda a responder más rápido y cerrar más, te devolvemos el dinero sin preguntas. Nadie más lo ofrece.',
+    },
+  ],
+  // Se retiró `link: 'Ver comparativa completa'`. No se pintaba en ninguna
+  // parte y, sobre todo, no existe ninguna comparativa completa a la que
+  // llevar: era una promesa esperando a que alguien la enchufara a un `href`
+  // inventado. Mismo criterio que los enlaces sin destino del footer.
+} as const;
+
+/* ── 12 · Footer ──────────────────────────────────────────── */
+
+export const FOOTER = {
+  description:
+    'Mia es tu vendedor digital en WhatsApp: responde en 30 segundos, maneja objeciones y cierra por ti — también cuando tú no puedes.',
+  /**
+   * `href` opcional a propósito: con él sale un enlace, sin él sale texto
+   * plano. Ver la nota de ANNOUNCEMENT. La columna "Producto" apunta a las
+   * secciones de esta misma página; el resto espera a que existan las páginas.
+   */
+  columns: [
+    {
+      title: 'Producto',
+      links: [
+        { label: 'Cómo funciona', href: '#bento-a' },
+        { label: 'Comparativa', href: '#related' },
+        { label: 'Precios', href: '#pricing' },
+        { label: 'Casos de uso', href: '#use-cases' },
+        // "Novedades" se queda sin enlace: no hay changelog ni blog todavía.
+        { label: 'Novedades' },
+      ],
+    },
+    {
+      title: 'Empresa',
+      links: [
+        { label: 'Sobre nosotros' },
+        { label: 'Blog' },
+        { label: 'Trabaja con nosotros' },
+        { label: 'Contacto' },
+      ],
+    },
+    {
+      title: 'Ayuda',
+      links: [
+        { label: 'Centro de ayuda' },
+        { label: 'Cómo empezar', href: '#bento-a' },
+        { label: 'Estado del servicio' },
+        { label: 'Soporte' },
+      ],
+    },
+    {
+      title: 'Legal',
+      links: [
+        { label: 'Términos' },
+        { label: 'Privacidad' },
+        { label: 'Garantía de reembolso' },
+        { label: 'Libro de reclamaciones' },
+      ],
+    },
+  ],
+  newsletter: {
+    title: 'Recibe las novedades de Mia y trucos para vender más por WhatsApp.',
+    placeholder: 'tu@email.com',
+  },
+  /**
+   * Sin URL todavía. Se pintan como texto, no como enlaces: seis iconos
+   * sociales que no llevan a ningún perfil son seis promesas incumplidas, y
+   * además el `href="#"` que tenían devolvía al usuario al principio de la
+   * página cada vez que pulsaba uno. Añade la `url` de cada perfil y se
+   * convierten en enlaces solos (con target/rel correctos).
+   */
+  social: [
+    { label: 'WhatsApp' },
+    { label: 'Instagram' },
+    { label: 'TikTok' },
+    { label: 'Facebook' },
+    { label: 'LinkedIn' },
+    { label: 'YouTube' },
+  ],
+  legal: {
+    recaptcha: 'Este sitio está protegido por reCAPTCHA. Se aplican la',
+    privacyLink: 'Política de privacidad',
+    and: 'y los',
+    termsLink: 'Términos del servicio',
+    copyright: `© ${new Date().getFullYear()} Vendemia · Hecho en Perú 🇵🇪`,
+    address: 'Mia, tu vendedor digital en WhatsApp · Lima, Perú',
+  },
+} as const;

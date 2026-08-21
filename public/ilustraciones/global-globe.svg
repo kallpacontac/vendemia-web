@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 1200" width="1200" height="1200" role="img">
+<defs>
+<radialGradient id="halo">
+<stop offset="0" stop-color="#FF4900" stop-opacity="0.22"/>
+<stop offset="1" stop-color="#FF4900" stop-opacity="0"/>
+</radialGradient>
+</defs>
+<circle cx="600" cy="520" r="430" fill="none" stroke="#2E2E2E" stroke-width="2"/>
+<circle cx="600" cy="520" r="352" fill="none" stroke="#2E2E2E" stroke-width="2"/>
+<line x1="600" y1="168" x2="600" y2="90" stroke="#FF4900"
+stroke-width="10" stroke-linecap="round" opacity="1"/><line x1="691.1043038760873" y1="179.99410914624798" x2="711.292189394084" y2="104.6518946957006" stroke="#FF4900"
+stroke-width="5" stroke-linecap="round" opacity="0.5"/><line x1="776" y1="215.15905786787755" x2="815" y2="147.60907637269133" stroke="#FF4900"
+stroke-width="5" stroke-linecap="round" opacity="0.5"/><line x1="848.9015869776647" y1="271.0984130223353" x2="904.0559159102154" y2="215.9440840897846" stroke="#FF4900"
+stroke-width="5" stroke-linecap="round" opacity="0.5"/><line x1="904.8409421321223" y1="344" x2="972.3909236273087" y2="305" stroke="#FF4900"
+stroke-width="5" stroke-linecap="round" opacity="0.5"/><line x1="940.005890853752" y1="428.8956961239127" x2="1015.3481053042995" y2="408.7078106059161" stroke="#FF4900"
+stroke-width="5" stroke-linecap="round" opacity="0.5"/><line x1="952" y1="520" x2="1030" y2="520" stroke="#FF4900"
+stroke-width="10" stroke-linecap="round" opacity="1"/><line x1="940.005890853752" y1="611.1043038760873" x2="1015.3481053042993" y2="631.292189394084" stroke="#FF4900"
+stroke-width="5" stroke-linecap="round" opacity="0.5"/><line x1="904.8409421321224" y1="696" x2="972.3909236273087" y2="734.9999999999999" stroke="#FF4900"
+stroke-width="5" stroke-linecap="round" opacity="0.5"/><line x1="848.9015869776647" y1="768.9015869776647" x2="904.0559159102154" y2="824.0559159102154" stroke="#FF4900"
+stroke-width="5" stroke-linecap="round" opacity="0.5"/><line x1="776" y1="824.8409421321224" x2="815" y2="892.3909236273087" stroke="#FF4900"
+stroke-width="5" stroke-linecap="round" opacity="0.5"/><line x1="691.1043038760874" y1="860.005890853752" x2="711.2921893940841" y2="935.3481053042993" stroke="#FF4900"
+stroke-width="5" stroke-linecap="round" opacity="0.5"/><line x1="600" y1="872" x2="600" y2="950" stroke="#FF4900"
+stroke-width="10" stroke-linecap="round" opacity="1"/><line x1="508.8956961239128" y1="860.0058908537521" x2="488.7078106059162" y2="935.3481053042995" stroke="#FF4900"
+stroke-width="5" stroke-linecap="round" opacity="0.5"/><line x1="423.9999999999999" y1="824.8409421321223" x2="384.9999999999999" y2="892.3909236273087" stroke="#FF4900"
+stroke-width="5" stroke-linecap="round" opacity="0.5"/><line x1="351.0984130223353" y1="768.9015869776647" x2="295.9440840897846" y2="824.0559159102154" stroke="#FF4900"
+stroke-width="5" stroke-linecap="round" opacity="0.5"/><line x1="295.15905786787766" y1="696.0000000000001" x2="227.60907637269145" y2="735.0000000000001" stroke="#FF4900"
+stroke-width="5" stroke-linecap="round" opacity="0.5"/><line x1="259.994109146248" y1="611.1043038760872" x2="184.6518946957006" y2="631.2921893940838" stroke="#FF4900"
+stroke-width="5" stroke-linecap="round" opacity="0.5"/><line x1="248" y1="520" x2="170" y2="520" stroke="#FF4900"
+stroke-width="10" stroke-linecap="round" opacity="1"/><line x1="259.9941091462479" y1="428.89569612391284" x2="184.6518946957006" y2="408.7078106059163" stroke="#FF4900"
+stroke-width="5" stroke-linecap="round" opacity="0.5"/><line x1="295.1590578678776" y1="344" x2="227.6090763726914" y2="304.99999999999994" stroke="#FF4900"
+stroke-width="5" stroke-linecap="round" opacity="0.5"/><line x1="351.0984130223352" y1="271.0984130223353" x2="295.9440840897845" y2="215.9440840897846" stroke="#FF4900"
+stroke-width="5" stroke-linecap="round" opacity="0.5"/><line x1="423.99999999999983" y1="215.15905786787766" x2="384.9999999999998" y2="147.60907637269145" stroke="#FF4900"
+stroke-width="5" stroke-linecap="round" opacity="0.5"/><line x1="508.8956961239127" y1="179.99410914624798" x2="488.7078106059161" y2="104.6518946957006" stroke="#FF4900"
+stroke-width="5" stroke-linecap="round" opacity="0.5"/>
+<circle cx="600" cy="520" r="300" fill="url(#halo)"/>
+<circle cx="600" cy="520" r="230" fill="#141414" stroke="#242424" stroke-width="2"/>
+<text x="600" y="490" fill="#FFFFFF" font-size="132" font-weight="800"
+font-family="system-ui,-apple-system,'Segoe UI',Roboto,sans-serif"
+text-anchor="middle" dominant-baseline="central">24/7</text>
+<rect x="492" y="576" width="216" height="4" rx="2" fill="#2E2E2E"/>
+<text x="600" y="626" fill="#8A8A8A" font-size="40" font-weight="600"
+font-family="system-ui,-apple-system,'Segoe UI',Roboto,sans-serif"
+text-anchor="middle" dominant-baseline="central">siempre abierto</text>
+<circle cx="600" cy="290" r="22" fill="#FF4900"/>
+</svg>

@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 400" width="600" height="400" role="img">
+<defs>
+<radialGradient id="halo">
+<stop offset="0" stop-color="#FF4900" stop-opacity="0.22"/>
+<stop offset="1" stop-color="#FF4900" stop-opacity="0"/>
+</radialGradient>
+</defs>
+<rect width="600" height="400" fill="#0A0A0A"/>
+<circle cx="491.99999999999994" cy="64" r="252" fill="url(#halo)"/>
+<path d="M54,40 h222 a14,14 0 0 1 14,14 v32 a14,14 0 0 1 -14,14 h-232 a4,4 0 0 1 -4,-4 v-42 a14,14 0 0 1 14,-14 z" fill="#141414" stroke="#242424" stroke-width="1"/>
+<rect x="62" y="60" width="170" height="7" rx="3.5" fill="#2E2E2E"/><rect x="62" y="73" width="118" height="7" rx="3.5" fill="#2E2E2E"/>
+<path d="M264,122 h292 a4,4 0 0 1 4,4 v56 a14,14 0 0 1 -14,14 h-282 a14,14 0 0 1 -14,-14 v-46 a14,14 0 0 1 14,-14 z" fill="#FF4900"/>
+<rect x="272" y="144" width="250" height="7" rx="3.5" fill="rgba(255,255,255,.6)"/><rect x="272" y="157" width="190" height="7" rx="3.5" fill="rgba(255,255,255,.6)"/>
+<path d="M524,176 l4,4 l8,-9 M531,176 l4,4 l8,-9" fill="none" stroke="#FFD9C4"
+stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="112" cy="268" r="44" fill="none" stroke="#2E2E2E" stroke-width="8"/>
+<circle cx="112" cy="268" r="44" fill="none" stroke="#FF4900" stroke-width="8"
+stroke-linecap="round" stroke-dasharray="276.46015351590177"
+stroke-dashoffset="252.96104046705014"
+transform="rotate(-90 112 268)"/>
+<text x="112" y="268" fill="#fff" font-size="26" font-weight="700"
+font-family="system-ui,-apple-system,'Segoe UI',Roboto,sans-serif"
+text-anchor="middle" dominant-baseline="central">30s</text>
+<text x="180" y="254" fill="#8A8A8A" font-size="17" font-weight="600"
+font-family="system-ui,-apple-system,'Segoe UI',Roboto,sans-serif"
+text-anchor="start" dominant-baseline="central">respondido</text>
+<rect x="180" y="276" width="150" height="7" rx="3.5" fill="#2E2E2E"/>
+</svg>

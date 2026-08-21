@@ -1,0 +1,29 @@
+# Dependencias
+node_modules/
+
+# Salida de Next
+.next/
+out/
+next-env.d.ts
+tsconfig.tsbuildinfo
+
+# out/ ESTÁ IGNORADO A PROPÓSITO.
+# Es el sitio construido: se regenera entero con `npm run publicar` a partir de
+# lo que sí está versionado. Versionar un artefacto genera conflictos en cada
+# build (los nombres de _next/ llevan hash) y no aporta nada que no se pueda
+# reconstruir en 40 segundos.
+
+# Entorno
+.env
+.env.local
+.env*.local
+
+# Sistema
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editores
+.vscode/*
+!.vscode/extensions.json
+.idea/

@@ -1,0 +1,441 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ══════════════════════════════════════════════════════════
+   BLOQUE A · TOKENS DE COLOR
+   ══════════════════════════════════════════════════════════ */
+:root {
+  /* Acento */
+  --orange-500: #ff4900;   /* acento de marca: badges, pines, viñetas, iconos */
+  --orange-400: #ff6a1f;
+  --orange-glow: #ff7a18;  /* núcleo de resplandores */
+  --amber-300: #ffb067;    /* borde de resplandores */
+
+  /**
+   * EL NARANJA DE LOS BOTONES · más claro que el de la marca, a propósito.
+   *
+   * Los CTA sólidos usan #ff6a1f y NO el #ff4900 del acento. Tiene un motivo
+   * medible además del gusto: sobre el naranja va tinta (ver --on-orange), y
+   * cuanto más claro es el fondo, mejor se lee.
+   *
+   *                 tinta encima
+   *   #ff4900          5.71
+   *   #ff6a1f          6.74   ← botón
+   *   #ff8340          7.88   ← hover
+   *
+   * El hover ACLARA, así que el contraste sube al pasar el ratón en vez de
+   * bajar. Con el texto blanco de antes pasaba justo lo contrario: 3.38 en
+   * reposo y 2.86 al pasar por encima, o sea que el botón se volvía menos
+   * legible en el momento en que lo estabas mirando.
+   *
+   * El #ff4900 SIGUE siendo el acento de la marca y no se toca: viñetas, el
+   * punto de la barra de anuncio, los iconos de los badges, los resplandores.
+   * Que el botón sea un punto más claro que el acento es lo que hace que el
+   * botón se despegue del resto del naranja de la página en vez de fundirse.
+   */
+  --orange-cta: #ff6a1f;
+  --orange-cta-hover: #ff8340;
+
+  /**
+   * TEXTO SOBRE NARANJA · siempre este token, nunca blanco.
+   *
+   * Medido con la fórmula de contraste de WCAG 2.1:
+   *
+   *              sobre --orange-cta   sobre --orange-cta-hover
+   *   #ffffff          2.86  ✗✗             2.44  ✗✗
+   *   #1a0a00          6.74  ✓              7.88  ✓
+   *
+   * El blanco no llegaba al 4.5 que pide AA para texto normal, y encima EMPEORA
+   * al pasar el ratón por encima: el hover aclara el fondo, así que el botón se
+   * volvía menos legible justo en el momento en que el usuario lo está mirando.
+   * Con tinta pasa lo contrario — sube a 7.88 — que es la dirección correcta.
+   *
+   * No es negro puro: lleva una pizca de rojo para que no se vea como un agujero
+   * frío dentro del naranja.
+   *
+   * ⚠️ Esto vale para TEXTO. Los ICONOS blancos sobre naranja (el rayo del
+   * Playground, la flecha de enviar) se quedan como están: son objetos gráficos
+   * y el mínimo de AA para ellos es 3:1, que 3.38 sí cumple. Pintarlos de tinta
+   * "por coherencia" no arreglaría nada y perdería el contraste de la marca.
+   */
+  --on-orange: #1a0a00;
+
+  /* Oscuro */
+  --bg-900: #000000;       /* fondo de página */
+  --bg-850: #060200;       /* fondo del hero — negro con tinte cálido */
+  --bg-intro: #171717;     /* fondo de la intro — MÁS CLARO que el hero, a propósito */
+  --surface-800: #0a0a0a;  /* tarjetas dark */
+  --surface-700: #141414;  /* hover / chips */
+  --border-dark: #1f1f1f;
+  --border-darker: #1a1a1a;
+
+  /* Claro */
+  --bg-cream: #f9f9f6;     /* secciones claras — NUNCA blanco puro */
+  --border-light: #eaeae6;
+
+  /* Texto */
+  --text-hi: #ffffff;
+  --text-mid: #a1a1a1;
+  --text-low: #6b6b6b;
+  --text-dark: #0a0a0a;
+  --text-muted: #5c5c5c;
+
+  /* Alturas fijas medidas del original */
+  --announce-h: 36px;
+  --navbar-h: 72px;
+  --nav-pill-h: 48px;
+
+  /**
+   * Cuánto tiene que respetar un salto de ancla por arriba.
+   *
+   * El cromo es FIJO y no ocupa flujo, así que sin esto el navegador deja la
+   * sección a ras del viewport y el navbar la tapa. Medido antes de arreglarlo:
+   * los cinco destinos (#pricing, #faq, #final-cta, #bento-a, #always-on)
+   * quedaban 108 px por debajo del borde del cromo, o sea con el titular
+   * escondido.
+   *
+   * Se calcula sobre la PÍLDORA (48px) y no sobre la barra completa (108px):
+   * la barra colapsa a partir de 80px de scroll, y cualquier salto a una
+   * sección aterriza mucho más abajo de eso. Los 16px son el `top-4` desde el
+   * que flota la píldora y los 24 el aire para que el titular no quede pegado.
+   */
+  --anchor-offset: calc(16px + var(--nav-pill-h) + 24px);
+
+  /**
+   * La familia. Antes la inyectaba next/font en la clase de <html>; ahora llega
+   * por <link> desde Google Fonts (ver la nota de app/layout.tsx) y la variable
+   * se declara aquí para que el resto del CSS no se entere del cambio.
+   */
+  --font-sans: 'Plus Jakarta Sans';
+}
+
+/* Vale para el salto NATIVO del navegador: primera carga con hash en la URL,
+   `prefers-reduced-motion` (donde Lenis ni se monta) y navegación sin JS.
+   Cuando Lenis está vivo el desplazamiento lo hace él y usa el mismo valor
+   leído desde JS — ver SmoothScroll.tsx. */
+:target {
+  scroll-margin-top: var(--anchor-offset);
+}
+section[id] {
+  scroll-margin-top: var(--anchor-offset);
+}
+
+* {
+  border-color: var(--border-dark);
+}
+
+html {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  background: var(--bg-900);
+  color: var(--text-hi);
+  font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+  /* Aquí había `font-feature-settings: 'ss01', 'cv11'`. Se retiró al pasar a
+     Plus Jakarta Sans: ss01 y cv11 son ejes de INTER, y estaban puestos para
+     imitar los glifos de Satoshi con ella. Con otra familia o no existen —y no
+     hacen nada— o activan una alternativa distinta que nadie ha elegido. Un
+     font-feature-settings que nombra los ejes de otra fuente es una trampa
+     silenciosa: no da error, solo deja de significar lo que decía. */
+}
+
+/* Bloqueo de scroll durante la intro. Se libera en onComplete. */
+body[data-intro-locked='true'] {
+  overflow: hidden;
+}
+
+::selection {
+  background: var(--orange-500);
+  color: #fff;
+}
+
+:focus-visible {
+  outline: 2px solid var(--orange-500);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+
+/* ══════════════════════════════════════════════════════════
+   M1 · REVEAL DE TÍTULO POR PALABRA
+   Estado inicial. El estado final lo aplica GSAP.
+   ══════════════════════════════════════════════════════════ */
+.word {
+  display: inline-block;
+  will-change: transform, opacity, filter;
+}
+[data-reveal-words='pending'] .word {
+  opacity: 0;
+  transform: translateY(0.4em) scale(0.96);
+  filter: blur(8px);
+}
+
+/* ══════════════════════════════════════════════════════════
+   M1b · CASCADA DE OPACIDAD — el gesto del wordmark de la intro
+   Solo opacidad. Ni transform, ni filter: si le añades algo, deja de ser
+   el mismo gesto que forma "VENDEMIA" y pasa a ser otra animación más.
+   ══════════════════════════════════════════════════════════ */
+.cascade-part {
+  display: inline-block;
+  will-change: opacity;
+}
+[data-cascade='pending'] .cascade-part {
+  opacity: 0;
+}
+
+/* M2 · ENTRADA DIRECCIONAL — estado inicial por dirección */
+[data-reveal='left'] { opacity: 0; transform: translateX(-60px); }
+[data-reveal='right'] { opacity: 0; transform: translateX(60px); }
+[data-reveal='up'] { opacity: 0; transform: translateY(40px); }
+[data-reveal='scale'] { opacity: 0; transform: translateY(60px) scale(0.96); }
+
+/* M7 · BARRIDO VERTICAL — la tarjeta crece desde abajo, no se desplaza.
+   Borde inferior clavado, ancho constante. */
+[data-wipe='up'] {
+  clip-path: inset(100% 0 0 0);
+}
+
+/* EL PUNTO — estado colapsado, EN CSS y no en JS.
+   Tiene que estar así desde el primer paint. Si lo colapsa el useEffect, hay
+   un fotograma con la píldora entera y se ve el parpadeo.
+
+   Y ojo: el punto NO lleva animación de entrada. En la referencia ya está ahí,
+   negro y redondo, desde que asoma el crema; lo único que hace es subir con el
+   panel. Al añadirle yo un scale-in por encima, se sumaban dos movimientos y
+   el resultado se leía como un punto "arrastrado". */
+[data-pill='collapsed'] {
+  width: 36px;
+  padding-left: 0;
+  padding-right: 0;
+  gap: 0;
+}
+[data-pill='collapsed'] .pill-label {
+  width: 0;
+  opacity: 0;
+  display: inline-block;
+  overflow: hidden;
+}
+
+/* Estado inicial del hero.
+   IMPRESCINDIBLE: sin esto, el badge, el párrafo y los botones se pintan
+   visibles mientras el telón sube, y al terminar GSAP los pone a opacity 0 de
+   golpe para animarlos. Se ve un parpadeo feísimo justo en la entrega. */
+[data-hero] {
+  opacity: 0;
+}
+
+/* M3 · TELÓN — el wrapper de la página arranca abajo y sube a cubrir la intro.
+   El estado inicial lo decide un script bloqueante en <head> que escribe
+   data-intro="run" | "skip" en <html>. Así no hay flash: si la intro no toca
+   (segunda visita o reduced-motion), la página nunca se desplaza. */
+.page-curtain {
+  position: relative;
+  z-index: 1;
+}
+html[data-intro='run'] .page-curtain {
+  /* ⚠️ 100vh, NUNCA 100%.
+     `translateY(100%)` es el 100 % de la ALTURA DEL PROPIO ELEMENTO, y este
+     wrapper envuelve la página entera: unos 15 000 px. Con 100% el telón
+     recorría 15 000 px en el tiempo de uno, o sea ~14 000 px/s. Eso no se ve
+     como un deslizamiento: se ve como un parpadeo. Era la causa real del
+     "corte brusco", no la curva de easing. */
+  transform: translateY(100vh);
+  z-index: 1000; /* por encima del overlay: la página SUBE Y TAPA al lockup */
+  will-change: transform;
+}
+
+/* Estados iniciales de la intro.
+   Tienen que vivir en CSS, no en el useEffect: entre el primer paint y la
+   ejecución del efecto hay una ventana (en dev, medio segundo largo) en la que
+   el lockup se veía YA TERMINADO. Es decir, se veía el final de la animación
+   antes del principio. */
+html[data-intro='run'] .brand-intro .dot {
+  /* Solo la opacidad. La posición de partida del vuelo (xPercent/rotate) la
+     fija GSAP en el fromTo del acto 1: escribirla también aquí obligaría a
+     mantener los dos sitios en sincronía y el único síntoma de que se
+     desincronizan es un salto de un frame, que no se ve venir. Con opacity 0
+     basta para tapar esa ventana entre el primer paint y el useEffect. */
+  opacity: 0;
+}
+html[data-intro='run'] .brand-intro .letter {
+  opacity: 0;
+}
+/* Los trazos del logotipo (sonrisa y globo) arrancan sin dibujar.
+   ⚠️ SIN UNIDADES, y aquí y no con gsap.set().
+   Los paths llevan `pathLength="1"`, o sea que su recorrido está normalizado a
+   1 y estos valores viven en ESE espacio. Poniéndolos desde JS, GSAP los
+   escribe como "1px" y luego no sabe interpolar esa unidad contra el recorrido
+   normalizado: el tween salta de golpe a 0 en su primer frame y el trazo
+   aparece entero en vez de dibujarse. Medido: 2 cambios de valor en 156
+   frames. Con el valor sin unidad puesto desde CSS, GSAP lee un número y lo
+   recorre. Es el mismo patrón que usaban los trazos del circuito del hero. */
+html[data-intro='run'] .brand-intro .brand-smile,
+html[data-intro='run'] .brand-intro .brand-bubble {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+}
+/* El wordmark del navbar espera apagado a su renacimiento — pero SOLO si la
+   intro va a correr. Sin esta condición, en la segunda visita (o con la intro
+   saltada) el evento `nexor:mark-rebirth` no llega nunca y el nombre de la
+   marca se quedaría invisible para siempre. Por eso el estado inicial cuelga de
+   html[data-intro='run'] y no del propio elemento. */
+html[data-intro='run'] .nav-word .cascade-part {
+  opacity: 0;
+}
+html[data-intro='run'] body {
+  overflow: hidden;
+}
+/* El overlay se renderiza siempre (para que el ref exista en el primer efecto)
+   pero solo se ve si la intro toca. */
+html:not([data-intro='run']) .brand-intro {
+  display: none;
+}
+
+/* M4 · SECCIONES APILADAS — solo secciones 1, 2 y 3 */
+.stacked {
+  position: sticky;
+  top: 0;
+  min-height: 100vh;
+  border-radius: 32px 32px 0 0;
+  overflow: hidden;
+}
+.stacked:first-child {
+  border-radius: 0;
+}
+@media (max-width: 767px) {
+  /* En móvil las apiladas pasan a scroll normal */
+  .stacked {
+    position: relative;
+    min-height: auto;
+    border-radius: 0;
+  }
+}
+
+/* Red de seguridad por ALTURA, no solo por ancho.
+   El apilado depende de que la sección quepa entera en 100vh. En una pantalla
+   baja (un portátil de 13" con la barra de marcadores abierta, por ejemplo) ni
+   con paddings fluidos cabe, y lo que sobra queda recortado e inalcanzable:
+   la sección siguiente sube y lo tapa antes de que puedas llegar.
+   Por debajo de 720px de alto se renuncia al efecto y se scrollea normal. */
+@media (max-height: 720px) {
+  .stacked {
+    position: relative;
+    min-height: auto;
+    overflow: visible;
+  }
+}
+
+/* M5 · MARQUEE */
+.marquee-mask {
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 10%, #000 90%, transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 10%, #000 90%, transparent);
+}
+.marquee-track {
+  display: flex;
+  width: max-content;
+  will-change: transform;
+}
+
+/* Sin JS no hay GSAP, y sin GSAP los estados iniciales de M1/M2 dejarían la
+   página en blanco. Red de seguridad: */
+.no-js [data-wipe] {
+  clip-path: none !important;
+}
+.no-js [data-pill='collapsed'],
+.no-js [data-pill='collapsed'] .pill-label {
+  width: auto;
+  padding: revert;
+  gap: revert;
+  opacity: 1;
+}
+.no-js [data-reveal],
+.no-js [data-hero],
+.no-js [data-reveal-words='pending'] .word,
+.no-js [data-cascade='pending'] .cascade-part {
+  opacity: 1 !important;
+  transform: none !important;
+  filter: none !important;
+}
+.no-js .brand-intro {
+  display: none !important;
+}
+.no-js .page-curtain {
+  transform: none !important;
+}
+
+/* Cuadrícula tenue del hero */
+.hero-grid {
+  background-image:
+    linear-gradient(to right, rgba(255, 255, 255, 0.06) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.06) 1px, transparent 1px);
+  background-size: 80px 80px;
+  opacity: 0.03;
+}
+
+/* Borde con gradiente para la tarjeta destacada de pricing */
+.gradient-border {
+  position: relative;
+}
+.gradient-border::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(180deg, var(--orange-500), rgba(255, 73, 0, 0.05) 60%, transparent);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+/* Acordeón — apertura con grid-template-rows, no con max-height */
+.accordion-panel {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.accordion-panel[data-open='true'] {
+  grid-template-rows: 1fr;
+}
+.accordion-panel > div {
+  overflow: hidden;
+}
+
+/* content-visibility en secciones fuera de pantalla */
+.cv-auto {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 800px;
+}
+
+/* ══════════════════════════════════════════════════════════
+   REGLA GLOBAL · prefers-reduced-motion
+   Todas las entradas se desactivan, los loops se detienen.
+   ══════════════════════════════════════════════════════════ */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+  [data-wipe] {
+    clip-path: none !important;
+  }
+  [data-reveal],
+  [data-hero],
+  [data-reveal-words='pending'] .word,
+  [data-cascade='pending'] .cascade-part {
+    opacity: 1 !important;
+    transform: none !important;
+    filter: none !important;
+  }
+  .stacked {
+    position: relative;
+    min-height: auto;
+  }
+}

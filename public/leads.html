@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Leads · Vendemia</title>
+<link rel="stylesheet" href="./assets/app.css">
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+<style>
+.mini-row{display:flex;gap:12px;margin-bottom:18px}
+.mini{display:flex;align-items:center;gap:12px;background:#fff;border-radius:var(--r-md);padding:14px 20px;box-shadow:var(--sh-card)}
+.mini .ic{width:40px;height:40px;border-radius:11px;display:grid;place-items:center}
+.mini .ic svg{width:20px;height:20px}
+.mini b{font-size:22px;font-weight:800;display:block;line-height:1}
+.mini small{font-size:12px;color:var(--ink-soft);font-weight:600}
+.toolbar{display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap}
+.toolbar .search{width:280px}
+.select{width:auto;min-width:150px;cursor:pointer}
+.pagination{display:flex;gap:6px;justify-content:center;margin-top:20px}
+.pagination button{min-width:36px;height:36px;border-radius:10px;border:1px solid var(--line-2);background:#fff;cursor:pointer;font:600 13px 'Plus Jakarta Sans';color:var(--ink-soft)}
+.pagination button.active{background:var(--brand);color:#fff;border-color:var(--brand)}
+.pagination button:disabled{opacity:.4;cursor:not-allowed}
+.table-card{background:#fff;border-radius:var(--r-lg);box-shadow:var(--sh-card);overflow:visible}
+.mini-select{border:1.5px solid var(--line-2);border-radius:var(--r-full);padding:5px 26px 5px 11px;font:700 11.5px 'Plus Jakarta Sans';cursor:pointer;background:#fff;outline:none;appearance:none;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%239AA1AC' stroke-width='3'><path d='M6 9l6 6 6-6'/></svg>");background-repeat:no-repeat;background-position:right 9px center}
+@media(max-width:720px){.mini-row{flex-wrap:wrap}.mini{flex:1}.table-card{overflow-x:auto}}
+</style>
+</head>
+<body>
+<aside id="sidebar"></aside>
+
+<main class="main"><div class="wrap">
+  <div class="topbar">
+    <div class="topbar__title"><h1>Leads</h1><p>Todos tus contactos de WhatsApp</p></div>
+    <div class="topbar__actions">
+      <div class="wa-pill"><span class="live"></span> WhatsApp conectado</div>
+      <div class="icon-btn"><i data-lucide="bell"></i></div>
+      <div class="avatar"><img src="./assets/logos/logo-azul.webp" alt="perfil"></div>
+    </div>
+  </div>
+
+  <!-- KPI mini -->
+  <div class="mini-row">
+    <div class="mini fade"><div class="ic" style="background:#FFF1E6;color:#F58220"><i data-lucide="users"></i></div><div><b id="mTotal">0</b><small>Total leads</small></div></div>
+    <div class="mini fade"><div class="ic" style="background:#FFECEC;color:#FF4757"><i data-lucide="flame"></i></div><div><b id="mHot">0</b><small>Calientes 🔥</small></div></div>
+    <div class="mini fade"><div class="ic" style="background:#E9FBF3;color:#00C48C"><i data-lucide="check-circle"></i></div><div><b id="mConv">0</b><small>Convertidos ✓</small></div></div>
+  </div>
+
+  <!-- Toolbar -->
+  <div class="toolbar">
+    <div class="search"><i data-lucide="search"></i><input placeholder="Buscar por nombre o teléfono…" oninput="setSearch(this.value)"></div>
+    <select class="select" id="fIntent" onchange="render()">
+      <option value="">Toda intención</option>
+      <option value="purchase_ready">Listo p/ comprar</option>
+      <option value="quote">Cotizando</option>
+      <option value="inquiry">Consulta</option>
+      <option value="support">Soporte</option>
+    </select>
+    <select class="select" id="fStatus" onchange="render()">
+      <option value="">Todo estado</option>
+      <option value="new">Nuevo</option><option value="contacted">Contactado</option>
+      <option value="paid">Pagado</option><option value="closed">Cerrado</option>
+    </select>
+    <div class="spacer"></div>
+    <button class="btn btn-ghost" onclick="exportCsv()"><i data-lucide="download"></i> Exportar</button>
+  </div>
+
+  <!-- Tabla -->
+  <div class="table-card">
+    <table class="table">
+      <thead><tr><th>Lead</th><th>Teléfono</th><th>Intención</th><th>Estado</th><th>Último mensaje</th><th>Fecha</th><th style="text-align:right">Acciones</th></tr></thead>
+      <tbody id="rows"></tbody>
+    </table>
+  </div>
+  <div class="pagination" id="pager"></div>
+</div></main>
+
+<script src="./assets/data.js"></script>
+<script>
+lucide.createIcons();
+VD.renderSidebar('leads');
+
+let LEADS=[], search='', page=1, per=6;
+function setSearch(v){search=v;page=1;render();}
+
+function filtered(){
+  const q=search.toLowerCase(), fi=document.getElementById('fIntent').value, fs=document.getElementById('fStatus').value;
+  return LEADS.filter(l=>{
+    if(fi&&l.intent!==fi)return false;
+    if(fs&&l.status!==fs)return false;
+    if(q&&!(l.name.toLowerCase().includes(q)||l.phone.includes(q)))return false;
+    return true;
+  });
+}
+function render(){
+  const data=filtered(); const pages=Math.max(1,Math.ceil(data.length/per));
+  if(page>pages)page=pages;
+  const slice=data.slice((page-1)*per,page*per);
+  document.getElementById('rows').innerHTML=slice.map(l=>{
+    const it=VD.INTENT[l.intent], st=VD.STATUS[l.status];
+    const date=new Date(l.created_at*1000).toLocaleDateString('es-PE',{day:'numeric',month:'short'});
+    const intOpts=Object.entries(VD.INTENT).map(([k,v])=>`<option value="${k}" ${l.intent===k?'selected':''}>${v.short}</option>`).join('');
+    const stOpts=Object.entries(VD.STATUS).map(([k,v])=>`<option value="${k}" ${l.status===k?'selected':''}>${v.label}</option>`).join('');
+    return `<tr>
+      <td><div class="cell-user"><div class="ava-ini" style="background:${l.color}">${l.initials}</div>
+        <div><b>${l.name}</b><small>${l.handoff_at?'🙋 modo manual':'🤖 automático'}</small></div></div></td>
+      <td>${l.phone}</td>
+      <td><select class="mini-select" style="color:${it.color};border-color:${it.color}55" onchange="updIntent('${l.id}',this.value)">${intOpts}</select></td>
+      <td><select class="mini-select" style="color:${st.color};border-color:${st.color}55" onchange="updStatus('${l.id}',this.value)">${stOpts}</select></td>
+      <td class="muted" style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${l.last_message||'—'}</td>
+      <td class="muted">${date}</td>
+      <td style="text-align:right"><button class="btn btn-ghost btn-sm" onclick="location.href='./mensajes.html'"><i data-lucide="message-circle"></i> Ver chat</button></td>
+    </tr>`;
+  }).join('')||'<tr><td colspan="7" class="muted" style="text-align:center;padding:30px">Sin resultados.</td>';
+  document.getElementById('mHot').textContent=LEADS.filter(l=>l.intent==='purchase_ready').length+9;
+  lucide.createIcons();
+  // pager
+  let p='<button onclick="go('+(page-1)+')" '+(page===1?'disabled':'')+'>‹</button>';
+  for(let i=1;i<=pages;i++)p+=`<button class="${i===page?'active':''}" onclick="go(${i})">${i}</button>`;
+  p+='<button onclick="go('+(page+1)+')" '+(page===pages?'disabled':'')+'>›</button>';
+  document.getElementById('pager').innerHTML=pages>1?p:'';
+}
+function go(p){page=p;render();}
+function updIntent(id,v){const l=LEADS.find(x=>x.id===id);l.intent=v;VD.api.saveLead(id,{intent:v});render();}
+function updStatus(id,v){const l=LEADS.find(x=>x.id===id);l.status=v;VD.api.saveLead(id,{status:v});render();}
+
+function exportCsv(){
+  const rows=[['Nombre','Telefono','Intencion','Estado','Ultimo mensaje']].concat(
+    filtered().map(l=>[l.name,l.phone,VD.INTENT[l.intent].label,VD.STATUS[l.status].label,(l.last_message||'').replace(/,/g,';')]));
+  const csv=rows.map(r=>r.join(',')).join('\n');
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'})); a.download='leads-vendemia.csv'; a.click();
+}
+
+(async()=>{
+  LEADS=await VD.api.leads();
+  VD.countUp(document.getElementById('mTotal'),234);
+  VD.countUp(document.getElementById('mConv'),47);
+  render();
+})();
+</script>
+</body>
+</html>

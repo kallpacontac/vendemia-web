@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="Vendemia">
+  <!--
+    FAVICON · el avión de papel de lib/plane.ts sobre lienzo cuadrado.
+
+    Tres decisiones que solo se ven a 16 px, que es donde se mira un favicon:
+
+    · LIENZO CUADRADO CON FONDO, no el avión suelto sobre transparente. El
+      avión es ancho y bajo (640×360); metido en un cuadrado sin fondo deja el
+      45 % del alto vacío y a 16 px queda una astilla naranja de 16×9 flotando.
+      El fondo le da cuerpo y encima lo ancla al color del sitio.
+
+    · COLORES EN HEX, no variables CSS. El navegador pinta este fichero FUERA
+      del documento: no hay :root del que heredar y una var() no resolvería,
+      con lo que el icono saldría negro. Ver la nota en lib/plane.ts.
+
+      (Y ojo con este comentario: un comentario XML no puede contener dos
+      guiones seguidos. Escribir aquí una variable CSS con su prefijo rompe el
+      parseo del SVG, y el fallo no aparece al verlo en el navegador sino al
+      rasterizarlo en `npm run logo`.)
+
+    · El avión ocupa el 78 % del ancho (400 de 512) y va centrado ópticamente,
+      no matemáticamente: el morro llega casi al borde y la cola deja aire, que
+      es como se lee que va hacia algún sitio.
+
+    Generado a mano a partir de lib/plane.ts. Si mueves un vértice allí,
+    muévelo aquí — y luego `npm run logo` para rehacer los PNG.
+  -->
+  <rect width="512" height="512" rx="112" fill="#0A0A0A"/>
+  <g transform="translate(56 144) scale(0.625)">
+    <path fill="#FF4900" d="M2 128 L633 5 L342 262 L165 200 L151 178 Z"/>
+    <path fill="#FF6A1F" d="M633 5 L392 322 L342 262 Z"/>
+    <path fill="#D03E02" d="M165 200 L342 262 L263 360 Z"/>
+  </g>
+</svg>

@@ -1,0 +1,34 @@
+{
+  "name": "vendemia-web",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "logo": "node scripts/logo.mjs",
+    "typecheck": "tsc --noEmit",
+    "publicar": "node scripts/publicar.mjs"
+  },
+  "dependencies": {
+    "gsap": "^3.12.5",
+    "lenis": "^1.1.13",
+    "lucide-react": "^0.427.0",
+    "next": "14.2.5",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.14",
+    "@types/react": "^18.3.3",
+    "@types/react-dom": "^18.3.0",
+    "autoprefixer": "^10.4.19",
+    "postcss": "^8.4.40",
+    "potrace": "^2.1.8",
+    "sharp": "^0.35.3",
+    "tailwindcss": "^3.4.7",
+    "typescript": "^5.5.4"
+  },
+  "description": "La web de Vendemia: landing + panel, en un solo proyecto."
+}

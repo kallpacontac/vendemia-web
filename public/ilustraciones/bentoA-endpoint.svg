@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 600" width="600" height="600" role="img">
+<defs>
+<radialGradient id="halo">
+<stop offset="0" stop-color="#FF4900" stop-opacity="0.22"/>
+<stop offset="1" stop-color="#FF4900" stop-opacity="0"/>
+</radialGradient>
+</defs>
+<rect width="600" height="600" fill="#0A0A0A"/>
+<circle cx="491.99999999999994" cy="96" r="252" fill="url(#halo)"/>
+<rect x="70" y="70" width="460" height="400" rx="26" fill="#141414" stroke="#242424"/>
+<rect x="70" y="70" width="460" height="66" rx="26" fill="rgba(255,73,0,.08)"/>
+<rect x="102" y="96" width="150" height="10" rx="5" fill="#8A8A8A"/>
+<circle cx="486" cy="103" r="9" fill="#FF4900"/>
+<rect x="102" y="168" width="84" height="60" rx="16" fill="rgba(255,255,255,.04)" stroke="#242424"/><rect x="124" y="194" width="40" height="8" rx="4" fill="#2E2E2E"/><rect x="204" y="168" width="84" height="60" rx="16" fill="rgba(255,255,255,.04)" stroke="#242424"/><rect x="226" y="194" width="40" height="8" rx="4" fill="#2E2E2E"/><rect x="306" y="168" width="84" height="60" rx="16" fill="rgba(255,255,255,.04)" stroke="#242424"/><rect x="328" y="194" width="40" height="8" rx="4" fill="#2E2E2E"/><rect x="408" y="168" width="84" height="60" rx="16" fill="rgba(255,255,255,.04)" stroke="#242424"/><rect x="430" y="194" width="40" height="8" rx="4" fill="#2E2E2E"/><rect x="102" y="252" width="84" height="60" rx="16" fill="rgba(255,255,255,.04)" stroke="#242424"/><rect x="124" y="278" width="40" height="8" rx="4" fill="#2E2E2E"/><rect x="204" y="252" width="84" height="60" rx="16" fill="rgba(255,255,255,.04)" stroke="#242424"/><rect x="226" y="278" width="40" height="8" rx="4" fill="#2E2E2E"/><rect x="306" y="252" width="84" height="60" rx="16" fill="#FF4900"/><rect x="328" y="278" width="40" height="8" rx="4" fill="rgba(26,10,0,.55)"/><rect x="408" y="252" width="84" height="60" rx="16" fill="rgba(255,255,255,.04)" stroke="#242424"/><rect x="430" y="278" width="40" height="8" rx="4" fill="#2E2E2E"/><rect x="102" y="336" width="84" height="60" rx="16" fill="rgba(255,255,255,.04)" stroke="#242424"/><rect x="124" y="362" width="40" height="8" rx="4" fill="#2E2E2E"/><rect x="204" y="336" width="84" height="60" rx="16" fill="rgba(255,255,255,.04)" stroke="#242424"/><rect x="226" y="362" width="40" height="8" rx="4" fill="#2E2E2E"/><rect x="306" y="336" width="84" height="60" rx="16" fill="rgba(255,255,255,.04)" stroke="#242424"/><rect x="328" y="362" width="40" height="8" rx="4" fill="#2E2E2E"/><rect x="408" y="336" width="84" height="60" rx="16" fill="rgba(255,255,255,.04)" stroke="#242424"/><rect x="430" y="362" width="40" height="8" rx="4" fill="#2E2E2E"/>
+<rect x="102" y="402" width="121" height="30" rx="15" fill="#FF4900"/><text x="162.5" y="417" fill="#1A0A00" font-size="15" font-weight="700"
+font-family="system-ui,-apple-system,'Segoe UI',Roboto,sans-serif"
+text-anchor="middle" dominant-baseline="central">Confirmado</text>
+<path d="M240,419 l4,4 l8,-9 M247,419 l4,4 l8,-9" fill="none" stroke="#FF7A18"
+stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

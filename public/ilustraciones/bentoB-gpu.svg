@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 400" width="600" height="400" role="img">
+<defs>
+<radialGradient id="halo">
+<stop offset="0" stop-color="#FF4900" stop-opacity="0.22"/>
+<stop offset="1" stop-color="#FF4900" stop-opacity="0"/>
+</radialGradient>
+</defs>
+<rect width="600" height="400" fill="#0A0A0A"/>
+<circle cx="491.99999999999994" cy="64" r="252" fill="url(#halo)"/>
+<circle cx="72" cy="66" r="20" fill="#FF4900"
+stroke="none" stroke-width="4"/><path d="M63,66 l6,6 l13,-14" fill="none" stroke="#1A0A00" stroke-width="4"
+stroke-linecap="round" stroke-linejoin="round"/><rect x="112" y="56" width="250" height="9" rx="4.5" fill="#FFFFFF"/><rect x="112" y="76" width="150" height="7" rx="3.5" fill="#2E2E2E"/><path d="M72,90 V120" stroke="#2E2E2E" stroke-width="3"/><circle cx="72" cy="142" r="20" fill="#FF4900"
+stroke="none" stroke-width="4"/><path d="M63,142 l6,6 l13,-14" fill="none" stroke="#1A0A00" stroke-width="4"
+stroke-linecap="round" stroke-linejoin="round"/><rect x="112" y="132" width="250" height="9" rx="4.5" fill="#FFFFFF"/><rect x="112" y="152" width="150" height="7" rx="3.5" fill="#2E2E2E"/><path d="M72,166 V196" stroke="#2E2E2E" stroke-width="3"/><circle cx="72" cy="218" r="20" fill="none"
+stroke="#2E2E2E" stroke-width="4"/><rect x="112" y="208" width="180" height="9" rx="4.5" fill="#2E2E2E"/><rect x="112" y="228" width="150" height="7" rx="3.5" fill="#2E2E2E"/>
+<text x="468" y="168" fill="#FF4900" font-size="40" font-weight="800"
+font-family="system-ui,-apple-system,'Segoe UI',Roboto,sans-serif"
+text-anchor="end" dominant-baseline="central">10:00</text>
+<text x="468" y="200" fill="#8A8A8A" font-size="16" font-weight="600"
+font-family="system-ui,-apple-system,'Segoe UI',Roboto,sans-serif"
+text-anchor="end" dominant-baseline="central">minutos</text>
+</svg>

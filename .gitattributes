@@ -1,0 +1,17 @@
+# Normaliza los saltos de línea.
+#
+# Sin esto, en Windows git avisa en CADA fichero ("LF will be replaced by CRLF")
+# y, peor, un compañero en Mac o Linux ve el fichero entero como modificado
+# aunque no se haya tocado una línea. Con `text=auto` git guarda LF en el
+# repositorio y entrega a cada quien lo que su sistema usa.
+* text=auto
+
+# Binarios: que git no intente convertir nada dentro.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.webp binary
+*.ico binary
+*.mp4 binary
+*.woff  binary
+*.woff2 binary

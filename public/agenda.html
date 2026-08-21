@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Agenda · Vendemia</title>
+<link rel="stylesheet" href="./assets/app.css">
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+<style>
+.agenda-head{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:14px;margin-bottom:16px}
+.week-nav{display:flex;align-items:center;gap:12px}
+.week-nav b{font-size:15px;font-weight:800;min-width:220px;text-align:center}
+.week-nav .nb{width:34px;height:34px;border-radius:10px;background:#fff;border:1px solid var(--line);display:grid;place-items:center;cursor:pointer;color:var(--ink-soft)}
+.week-nav .nb:hover{color:var(--brand);border-color:var(--brand-soft)}
+.view-toggle{display:inline-flex;background:#fff;border:1px solid var(--line);border-radius:var(--r-full);padding:4px;box-shadow:var(--sh-sm)}
+.view-toggle button{border:none;background:none;cursor:pointer;font:700 13px 'Plus Jakarta Sans';color:var(--ink-soft);padding:8px 16px;border-radius:var(--r-full);display:flex;align-items:center;gap:6px}
+.view-toggle button svg{width:15px;height:15px}
+.view-toggle button.active{background:var(--brand);color:#fff}
+
+.legend2{display:flex;gap:16px;flex-wrap:wrap;margin-bottom:14px;font-size:12px;font-weight:600;color:var(--ink-soft)}
+.legend2 span{display:flex;align-items:center;gap:6px}
+.legend2 i{width:13px;height:13px;border-radius:4px;display:inline-block}
+
+.cal-scroll{overflow-x:auto;background:#fff;border-radius:var(--r-lg);box-shadow:var(--sh-card);padding:14px}
+.cal-grid{display:grid;grid-template-columns:60px repeat(7,minmax(128px,1fr));gap:6px;min-width:940px}
+.gh{padding:8px 4px;text-align:center}
+.gh .wd{font-size:11px;color:var(--ink-mute);font-weight:700;text-transform:capitalize}
+.gh .dt{font-size:16px;font-weight:800;margin-top:2px}
+.gh.today .dt{background:var(--brand);color:#fff;width:30px;height:30px;border-radius:10px;display:inline-grid;place-items:center;margin-top:2px}
+.hourlbl{font-size:11px;color:var(--ink-mute);font-weight:700;display:flex;align-items:flex-start;justify-content:flex-end;padding-right:6px;padding-top:4px}
+
+.cell{min-height:62px;border-radius:11px;padding:6px;font-size:11px;display:flex;flex-direction:column;gap:3px;transition:.12s}
+.cell.free{background:#F5F7FF;border:1.5px dashed #D9DFF6;color:var(--ink-mute);align-items:center;justify-content:center;font-weight:600}
+.cell.past{background:var(--bg-soft);opacity:.55}
+.cell.closed{background:repeating-linear-gradient(45deg,#F1F3F9,#F1F3F9 6px,#E9ECF4 6px,#E9ECF4 12px);color:var(--ink-mute);align-items:center;justify-content:center;font-weight:600}
+/* business booking block */
+.bk{background:linear-gradient(135deg,#EEF1FF,#E7ECFF);border-left:3px solid var(--brand);border-radius:8px;padding:5px 7px}
+.bk b{font-size:11.5px;font-weight:700;display:block;line-height:1.15}
+.bk .sv{color:var(--ink-soft);font-size:10.5px}
+.bk .bb{display:inline-flex;align-items:center;gap:3px;background:#fff;border-radius:6px;padding:1px 6px;font-size:9.5px;font-weight:700;color:var(--brand);margin-top:2px}
+.more{font-size:10px;color:var(--brand);font-weight:700;text-align:center}
+/* client view */
+.cell.avail{background:var(--brand-soft);border:1.5px solid var(--brand);color:var(--brand-d);align-items:center;justify-content:center;font-weight:700;cursor:pointer;text-align:center}
+.cell.avail:hover{background:var(--brand);color:#fff;transform:translateY(-1px)}
+.cell.avail .sl{font-size:9.5px;font-weight:600;opacity:.85}
+.cell.full{background:#FFECEF;border:1.5px solid #FBD0D8;color:#E5484D;align-items:center;justify-content:center;font-weight:700}
+
+.summary{display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap}
+.sm{display:flex;align-items:center;gap:10px;background:#fff;border-radius:var(--r-md);padding:12px 18px;box-shadow:var(--sh-card)}
+.sm .ic{width:36px;height:36px;border-radius:10px;display:grid;place-items:center}.sm .ic svg{width:18px;height:18px}
+.sm b{font-size:18px;font-weight:800;display:block;line-height:1}.sm small{font-size:11px;color:var(--ink-soft)}
+
+.toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--ink);color:#fff;
+  padding:13px 22px;border-radius:var(--r-full);font-size:13.5px;font-weight:600;box-shadow:var(--sh-lg);opacity:0;transition:.25s;z-index:200;display:flex;align-items:center;gap:8px;pointer-events:none}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.toast svg{width:16px;height:16px;color:var(--bot-on)}
+</style>
+</head>
+<body>
+<aside id="sidebar"></aside>
+
+<main class="main"><div class="wrap">
+  <div class="topbar">
+    <div class="topbar__title"><h1>Agenda</h1><p>Disponibilidad y reservas · Barbería El Corte</p></div>
+    <div class="topbar__actions">
+      <div class="wa-pill"><span class="live"></span> WhatsApp conectado</div>
+      <div class="avatar"><img src="./assets/logos/logo-azul.webp" alt="perfil"></div>
+    </div>
+  </div>
+
+  <!-- Resumen -->
+  <div class="summary">
+    <div class="sm"><div class="ic" style="background:var(--brand-soft);color:var(--brand)"><i data-lucide="calendar-check"></i></div><div><b id="sBooked">0</b><small>Reservas esta semana</small></div></div>
+    <div class="sm"><div class="ic" style="background:#E8FBF2;color:#0FA968"><i data-lucide="check-circle"></i></div><div><b id="sFree">0</b><small>Cupos libres</small></div></div>
+    <div class="sm"><div class="ic" style="background:#FFECEF;color:#FF5B79"><i data-lucide="flame"></i></div><div><b id="sOcc">0%</b><small>Ocupación</small></div></div>
+  </div>
+
+  <!-- Cabecera agenda -->
+  <div class="agenda-head">
+    <div class="week-nav">
+      <div class="nb" onclick="weekMove(-1)"><i data-lucide="chevron-left"></i></div>
+      <b id="weekLabel">—</b>
+      <div class="nb" onclick="weekMove(1)"><i data-lucide="chevron-right"></i></div>
+    </div>
+    <div class="view-toggle" id="viewToggle">
+      <button class="active" data-v="business"><i data-lucide="briefcase"></i> Vista negocio</button>
+      <button data-v="client"><i data-lucide="user"></i> Vista cliente</button>
+    </div>
+  </div>
+
+  <!-- Leyenda -->
+  <div class="legend2" id="legend"></div>
+
+  <!-- Grilla -->
+  <div class="cal-scroll"><div class="cal-grid" id="grid"></div></div>
+</div></main>
+
+<div class="toast" id="toast"><i data-lucide="check-circle"></i> <span id="toastMsg"></span></div>
+
+<script src="./assets/data.js"></script>
+<script>
+lucide.createIcons();
+VD.renderSidebar('agenda');
+
+let CAL=null, view='business';
+const MESES=['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+function fmt(dstr){const [y,m,d]=dstr.split('-').map(Number);return `${d} ${MESES[m-1]}`;}
+
+function bookingsAt(slotStart){return CAL.bookings.filter(b=>b.slotStart===slotStart);}
+
+function render(){
+  // Leyenda según vista
+  document.getElementById('legend').innerHTML = view==='business'
+    ? `<span><i style="background:var(--brand)"></i>Reservado</span><span><i style="background:#F5F7FF;border:1px dashed #D9DFF6"></i>Libre</span><span><i style="background:#E9ECF4"></i>Cerrado</span>`
+    : `<span><i style="background:var(--brand-soft);border:1px solid var(--brand)"></i>Disponible</span><span><i style="background:#FFECEF;border:1px solid #FBD0D8"></i>Copado</span><span><i style="background:#E9ECF4"></i>Cerrado</span>`;
+
+  const hours=CAL.days[0].slots.map(s=>s.time);
+  let h='<div></div>'; // esquina
+  CAL.days.forEach(d=>{
+    h+=`<div class="gh ${d.isToday?'today':''}"><div class="wd">${d.weekday.slice(0,3)}</div><div class="dt">${d.date.split('-')[2]}</div></div>`;
+  });
+  hours.forEach((time,hi)=>{
+    h+=`<div class="hourlbl">${time}</div>`;
+    CAL.days.forEach(d=>{ h+=cell(d.slots[hi]); });
+  });
+  document.getElementById('grid').innerHTML=h;
+  lucide.createIcons();
+}
+
+function cell(s){
+  if(s.closed) return `<div class="cell closed">—</div>`;
+  if(view==='business'){
+    if(s.booked>0){
+      const bks=bookingsAt(s.slotStart);
+      let inner=bks.slice(0,2).map(b=>`<div class="bk"><b>${b.client}</b><span class="sv">${b.service}</span><span class="bb"><i data-lucide="scissors" style="width:9px;height:9px"></i>${b.employee}</span></div>`).join('');
+      if(bks.length>2)inner+=`<div class="more">+${bks.length-2} más</div>`;
+      return `<div class="cell" style="gap:4px">${inner}</div>`;
+    }
+    if(s.past) return `<div class="cell past"></div>`;
+    return `<div class="cell free">Libre</div>`;
+  } else {
+    if(s.available) return `<div class="cell avail" onclick="reservar('${s.slotStart}',${s.spotsLeft})">Disponible<span class="sl">${s.spotsLeft} cupo${s.spotsLeft>1?'s':''}</span></div>`;
+    if(s.past) return `<div class="cell past"></div>`;
+    return `<div class="cell full">Copado</div>`;
+  }
+}
+
+function reservar(slotStart,left){
+  const [date,time]=slotStart.split(' ');
+  showToast(`Reserva solicitada · ${fmt(date)} ${time} (Mia confirmará por WhatsApp)`);
+}
+let toastT;
+function showToast(msg){
+  const t=document.getElementById('toast'); document.getElementById('toastMsg').textContent=msg;
+  t.classList.add('show'); clearTimeout(toastT); toastT=setTimeout(()=>t.classList.remove('show'),3200);
+}
+
+document.getElementById('viewToggle').addEventListener('click',e=>{
+  const b=e.target.closest('button'); if(!b)return;
+  view=b.dataset.v; document.querySelectorAll('.view-toggle button').forEach(x=>x.classList.toggle('active',x===b));
+  render();
+});
+
+let weekOffset=0;
+function weekMove(d){weekOffset+=d;load();}
+async function load(){
+  CAL=await VD.api.calendar(weekOffset);
+  document.getElementById('weekLabel').textContent=(weekOffset===0?'Esta semana · ':'')+fmt(CAL.days[0].date)+' – '+fmt(CAL.days[6].date);
+  let booked=0,free=0,cap=0;
+  CAL.days.forEach(d=>d.slots.forEach(s=>{if(!s.closed){booked+=s.booked;free+=s.spotsLeft;cap+=s.capacity;}}));
+  document.getElementById('sBooked').textContent=booked;
+  document.getElementById('sFree').textContent=free;
+  document.getElementById('sOcc').textContent=(cap?Math.round(booked/cap*100):0)+'%';
+  render();
+}
+load();
+</script>
+</body>
+</html>

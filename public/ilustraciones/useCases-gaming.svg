@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 380" width="600" height="380" role="img">
+<defs>
+<radialGradient id="halo">
+<stop offset="0" stop-color="#FF4900" stop-opacity="0.14"/>
+<stop offset="1" stop-color="#FF4900" stop-opacity="0"/>
+</radialGradient>
+</defs>
+<rect width="600" height="380" fill="#F1F1EE"/>
+<circle cx="108" cy="60.800000000000004" r="252" fill="url(#halo)"/>
+<g opacity="0.9"><circle cx="136" cy="176" r="92" fill="#FFFFFF"/>
+<circle cx="136" cy="176" r="92" fill="none" stroke="#E4E4DE" stroke-width="1.5"/>
+<g transform="translate(136,176)" fill="none" stroke="#0A0A0A" stroke-width="6"
+stroke-linecap="round" stroke-linejoin="round"><path d="M-40,-18 V18 M-24,-30 V30 M24,-30 V30 M40,-18 V18 M-24,0 H24"/></g></g>
+<path d="M276,46 h198 a14,14 0 0 1 14,14 v32 a14,14 0 0 1 -14,14 h-208 a4,4 0 0 1 -4,-4 v-42 a14,14 0 0 1 14,-14 z" fill="#FFFFFF" stroke="#E4E4DE" stroke-width="1"/><rect x="284" y="66" width="150" height="8" rx="4" fill="#D8D8D2"/><rect x="284" y="82" width="104" height="8" rx="4" fill="#D8D8D2"/><path d="M314,130 h240 a4,4 0 0 1 4,4 v62 a14,14 0 0 1 -14,14 h-230 a14,14 0 0 1 -14,-14 v-52 a14,14 0 0 1 14,-14 z" fill="#FF4900"/><rect x="322" y="152" width="196" height="8" rx="4" fill="rgba(255,255,255,.62)"/><rect x="322" y="169" width="148" height="8" rx="4" fill="rgba(255,255,255,.62)"/><path d="M524,192 l4,4 l8,-9 M531,192 l4,4 l8,-9" fill="none" stroke="#FFD9C4"
+stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+<g transform="translate(262,268)"><rect x="0" y="0" width="290" height="14" rx="7" fill="#FFFFFF" stroke="#E4E4DE"/><rect x="2" y="2" width="234.51999999999998" height="10" rx="5" fill="#FF4900"/><text x="0" y="36" fill="#8A8A8A" font-size="15" font-weight="600"
+font-family="system-ui,-apple-system,'Segoe UI',Roboto,sans-serif"
+text-anchor="start" dominant-baseline="central">Membresía renovada</text></g>
+</svg>
