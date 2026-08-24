@@ -1,0 +1,153 @@
+/**
+ * ══════════════════════════════════════════════════════════════════════════
+ * LA ÚNICA FORMA DE CAMBIAR ALGO: LA COLA DE COMANDOS
+ * ══════════════════════════════════════════════════════════════════════════
+ *
+ * > El panel LEE tablas y vistas. Para CAMBIAR algo, inserta una fila en
+ * > `commands`.
+ *
+ * No es una convención de estilo. Los GRANT de Postgres solo permiten `select`,
+ * más `insert` en `commands`: un `update` desde el navegador falla siempre. Y
+ * si un día no fallara, el siguiente barrido del espejo reescribiría la fila
+ * con lo que hay en el SQLite del bot y el cambio desaparecería sin error ni
+ * aviso — el *lost update* clásico.
+ *
+ * El bot escucha por websocket saliente, aplica el cambio en su SQLite y el
+ * espejo lo devuelve a Supabase. Por eso lo que se ve en pantalla tarda 1-2 s:
+ * es lo que el bot tiene DE VERDAD, no un optimismo que puede revertirse.
+ *
+ * ⚠️ Nunca mandes `status`, `attempts` ni `created_by` en el insert. Los dos
+ * primeros los fuerza la política ('pending' / 0) y mandarlos hace fallar el
+ * insert entero; `created_by` lo rellena Postgres con auth.uid(), y es lo que
+ * le permite al bot comprobar permisos.
+ */
+import { supabase } from './client';
+
+/** Los tipos de comando que el bot sabe ejecutar. Uno desconocido acaba en `error`. */
+export type TipoComando =
+  | 'update_company'
+  | 'upsert_catalog_item'
+  | 'delete_catalog_item'
+  | 'upsert_employee'
+  | 'delete_employee'
+  | 'send_message'
+  | 'toggle_bot'
+  | 'handoff'
+  | 'resolve_escalation'
+  | 'add_member';
+
+export interface ResultadoUpdateCompany {
+  updated: string[];
+  /** Campos del patch que NO se aplicaron por no estar en la lista blanca. */
+  ignored: string[];
+}
+
+export interface ResultadoAddMember {
+  email: string;
+  user_id: string;
+  ya_existia: boolean;
+  /** null si la persona YA tenía cuenta: su contraseña no se toca. */
+  password_temporal: string | null;
+}
+
+/**
+ * Se lanza cuando el comando se encoló bien pero el bot no contestó a tiempo.
+ *
+ * Importa distinguirlo de un fallo de verdad: **el comando NO se perdió**.
+ * Queda en `pending` y se drena en cuanto el bot arranca. Decirle al usuario
+ * "no se guardó" sería mentira, y volvería a darle a guardar.
+ */
+export class BotNoResponde extends Error {
+  constructor() {
+    super('El bot no respondió. El cambio se aplicará cuando vuelva a estar en línea.');
+    this.name = 'BotNoResponde';
+  }
+}
+
+/**
+ * Encola un comando y espera su resultado por Realtime.
+ *
+ * @param timeoutMs cuánto esperar antes de rendirse. El bot vive en un portátil
+ *        que puede estar apagado; la UI no puede quedarse colgada.
+ */
+export function encolar<T = unknown>(
+  companyId: string,
+  type: TipoComando,
+  payload: Record<string, unknown>,
+  timeoutMs = 15000,
+): Promise<T> {
+  const sb = supabase();
+
+  return new Promise<T>((resolve, reject) => {
+    void (async () => {
+      const { data: cmd, error } = await sb
+        .from('commands')
+        .insert({ company_id: companyId, type, payload })
+        .select('id')
+        .single();
+
+      if (error || !cmd) return reject(error ?? new Error('No se pudo encolar el comando'));
+
+      let cerrado = false;
+      const cerrar = () => {
+        if (cerrado) return;
+        cerrado = true;
+        clearTimeout(reloj);
+        void sb.removeChannel(canal);
+      };
+
+      const canal = sb
+        .channel(`cmd-${cmd.id}`)
+        .on(
+          'postgres_changes',
+          { event: 'UPDATE', schema: 'public', table: 'commands', filter: `id=eq.${cmd.id}` },
+          ({ new: fila }: { new: Record<string, unknown> }) => {
+            if (fila.status === 'done') {
+              cerrar();
+              resolve(fila.result as T);
+            }
+            if (fila.status === 'error') {
+              cerrar();
+              reject(new Error(String(fila.error ?? 'El comando falló')));
+            }
+          },
+        )
+        .subscribe();
+
+      const reloj = setTimeout(() => {
+        cerrar();
+        reject(new BotNoResponde());
+      }, timeoutMs);
+    })();
+  });
+}
+
+/**
+ * Los campos de `companies` que el bot acepta en un `update_company`.
+ *
+ * Es una COPIA de la lista blanca del bot (EDITABLE_COMPANY_FIELDS en
+ * src/services/db.service.ts). Sirve para no mandar de más, pero no manda: la
+ * autoridad es el bot, y por eso hay que mirar SIEMPRE `result.ignored`.
+ */
+export const CAMPOS_EDITABLES = [
+  'name',
+  'bot_name',
+  'bot_tone',
+  'hook_question',
+  'custom_rules',
+  'return_policy',
+  'schedule',
+  'payment_methods',
+  'business_mode',
+  'delivery_type',
+  'whatsapp_phone',
+  'owner_phone',
+  'admin_phone',
+  'location',
+  'slot_minutes',
+  'require_payment_to_confirm',
+  'welcome_note',
+  'closing_note',
+  'reminder_config',
+  'business_description',
+] as const;

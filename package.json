@@ -12,6 +12,7 @@
     "publicar": "node scripts/publicar.mjs"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.112.3",
     "gsap": "^3.12.5",
     "lenis": "^1.1.13",
     "lucide-react": "^0.427.0",
@@ -24,11 +25,15 @@
     "@types/react": "^18.3.3",
     "@types/react-dom": "^18.3.0",
     "autoprefixer": "^10.4.19",
+    "playwright": "^1.62.1",
     "postcss": "^8.4.40",
     "potrace": "^2.1.8",
     "sharp": "^0.35.3",
     "tailwindcss": "^3.4.7",
     "typescript": "^5.5.4"
   },
-  "description": "La web de Vendemia: landing + panel, en un solo proyecto."
+  "description": "La web de Vendemia: landing + panel, en un solo proyecto.",
+  "engines": {
+    "node": ">=18.17"
+  }
 }
