@@ -7,37 +7,154 @@ del panel. Si buscas dónde tocar algo, es aquí.
 
 | | dónde | cómo se edita |
 |---|---|---|
-| **La landing** | `app/`, `components/`, `lib/content.ts` | React + Tailwind. Todo el copy está en `lib/content.ts`, nada suelto en el JSX. |
-| **El panel** | `public/login.html`, `dashboard.html`, `agenda.html`, `leads.html`, `mensajes.html`, `metricas.html`, `configuracion.html` | HTML a mano, con `public/assets/app.css` y `public/assets/data.js`. |
-| **El sitio publicado** | `out/` | **Generado.** No lo edites: se rehace entero en cada build. |
+| **La landing** | `app/(landing)/`, `components/`, `lib/content.ts` | React + Tailwind. Todo el copy está en `lib/content.ts`, nada suelto en el JSX. |
+| **El panel** | `app/(panel)/panel/*`, `app/(acceso)/login`, `components/panel/`, `app/panel.css` | React. Los datos salen de Supabase (`lib/supabase/`). |
+| **El contrato con el bot** | `docs/contrato-backend.md` | **Copia**, sincronizada el 2026-08-19. El original vive en el repo del bot y gana siempre. Ya está desfasada en un punto: recomienda `sync_state.last_mirror_at`, y esa tabla se eliminó — ver la regla 3 más abajo. |
+| **El sitio publicado** | `out/` | **Generado**, y solo la landing. El sitio de verdad se despliega en Vercel. |
 
-Las páginas del panel están en `public/` porque Next las sirve tal cual desde la
-raíz, sin build. Es deliberado: son HTML sencillo que ya funciona, y pasarlas a
-React solo por uniformidad habría sido reescribir siete páginas sin ganar nada.
-Sus enlaces relativos (`./login.html`, `./assets/app.css`) valen igual en
-desarrollo y en producción.
+El panel era una carpeta de HTML sueltos en `public/` con datos de mentira.
+Ahora son rutas de esta misma aplicación y los datos son reales: el panel lee
+las tablas espejadas de Supabase y, para cambiar algo, **inserta una fila en
+`commands`** — nunca hace `update`. El porqué de esa regla, y el catálogo
+entero de comandos, está en [docs/contrato-backend.md](docs/contrato-backend.md).
+
+El diseño no se ha rehecho: `app/panel.css` es el `public/assets/app.css` de
+antes, con los `<style>` de cada página añadidos al final y solo dos reglas
+acotadas (las que al dejar de estar dentro de su HTML se pisaban entre sí).
 
 ## Comandos
 
 ```bash
 npm install
+cp .env.example .env.local   # y pon las claves de Supabase
 npm run dev          # http://localhost:3000 — landing Y panel a la vez
 npm run typecheck    # tsc --noEmit
-npm run publicar     # construye out/ = el sitio entero, listo para subir
+npm run build        # lo mismo que ejecuta Vercel
+npm run publicar     # construye out/ = SOLO la landing, para un estático suelto
 npm run publicar -- --ver   # además lo sirve en http://localhost:4173
 npm run logo         # regenera los assets de marca desde el logo original
 ```
 
-En `npm run dev`, `http://localhost:3000/login.html` también funciona: el
-producto completo se ve con un solo servidor.
+En `npm run dev`, `http://localhost:3000/login` y `/panel` también funcionan: el
+producto completo se ve con un solo servidor. Sin `.env.local`, la landing va
+igual y el login lo dice con todas las letras en vez de romperse.
 
 ## Desplegar
 
-`npm run publicar` deja `out/` con el sitio entero. Se sube tal cual a cualquier
-servidor estático. **No hace falta configurar nada**: todas las rutas son
-relativas, así que funciona en la raíz de un dominio, en un subdirectorio o
-abierto desde el disco. Está comprobado sirviéndolo desde un subdirectorio,
-que es el caso donde una sola ruta absoluta rompería.
+### El sitio (Vercel)
+
+Es un proyecto de Next normal: Vercel lo detecta solo, sin `vercel.json` ni
+ajustes raros.
+
+1. **Importa el repositorio** en Vercel. Framework: Next.js. Build `npm run
+   build`, output por defecto — no toques nada.
+2. **Variables de entorno** (Settings › Environment Variables), en Production,
+   Preview y Development:
+
+   | Variable | Valor |
+   |---|---|
+   | `NEXT_PUBLIC_SUPABASE_URL` | `https://xxxx.supabase.co` |
+   | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | la clave **anon** (`sb_publishable_…`) |
+   | `NEXT_PUBLIC_SITE_URL` | el dominio final, para la imagen de Open Graph |
+
+   ⚠️ **Nunca la `service_role`.** Se salta el RLS entero: con ella en el bundle
+   cualquiera lee y escribe todas las compañías. Esa clave es solo del bot.
+
+   `NEXT_PUBLIC_*` se incrusta al construir, así que **después de cambiarlas hay
+   que volver a desplegar**; no basta con guardar.
+3. **En Supabase**, Authentication › URL Configuration:
+   - *Site URL*: tu dominio.
+   - *Redirect URLs*, las cuatro:
+
+     ```
+     https://<tu-dominio>/nueva-clave
+     https://<tu-dominio>/callback
+     http://localhost:3000/nueva-clave      ← solo desarrollo
+     http://localhost:3000/callback         ← solo desarrollo
+     ```
+
+     Sin `/nueva-clave` no funciona «olvidé mi contraseña»; sin `/callback` no
+     funciona entrar con Google. **Nada de comodines**
+     (`https://*.vercel.app/**`): eso convierte cualquier preview en un destino
+     válido al que mandar una sesión.
+   - **Configura un SMTP propio.** El de Supabase manda unos pocos correos por
+     hora para todo el proyecto y cae en spam: con él, la recuperación de
+     contraseña falla justo cuando hace falta.
+4. **Entrar con Google** (opcional pero recomendado, evita el correo entero):
+   - Google Cloud Console › APIs & Services › Credentials › *OAuth client ID* ›
+     **Web application**. Authorized redirect URI, exactamente una:
+     `https://<tu-proyecto>.supabase.co/auth/v1/callback`
+   - Supabase › Authentication › Providers › **Google**: activar y pegar el
+     *Client ID* y el *Client Secret*.
+   - Con los scopes `email` y `profile` **no hace falta que Google verifique la
+     app**: son no sensibles.
+4. Despliega y entra en `tudominio.com/login`.
+
+### La landing sola (servidor estático)
+
+`npm run publicar` deja en `out/` **la landing y nada más** — el panel se borra
+de ese artefacto a propósito. Se sube tal cual a cualquier sitio: todas sus
+rutas son relativas, así que funciona en la raíz de un dominio, en un
+subdirectorio o abierta desde el disco.
+
+El panel no puede salir por ahí: necesita las claves incrustadas en el bundle, y
+con rutas anidadas (`/panel/leads`) el prefijo relativo `./` que hace posible lo
+anterior deja de valer. Los detalles están en el encabezado de
+`scripts/publicar.mjs`.
+
+## Seguridad
+
+Está en **[SEGURIDAD.md](SEGURIDAD.md)**, y se resume en una frase: *el front no
+protege nada; la frontera es el RLS de Postgres*. Todo el panel corre en el
+navegador, así que cualquiera puede saltarse nuestras pantallas y llamar a
+Supabase a mano.
+
+**Verificado contra el proyecto real el 2026-08-23** con
+[`scripts/verificar-seguridad.sql`](scripts/verificar-seguridad.sql): RLS activo
+en las 18 tablas, las cinco vistas `v_*` son `security_invoker` (no se saltan el
+RLS), y la política de `INSERT` en `commands` comprueba la membresía.
+
+Los dos avisos que salieron —permisos de más en `instances` /
+`v_instance_health`, y el `search_path` de `is_member`— quedaron cerrados ese
+mismo día. Y el aislamiento entre empresas se **probó en vivo**: una cuenta
+autenticada sin membresía no lee ni una fila de ninguna de las 23 tablas y
+vistas, y no puede encolar comandos contra un negocio ajeno.
+
+## El panel y Supabase, en cinco reglas
+
+El contrato completo está en [docs/contrato-backend.md](docs/contrato-backend.md).
+Esto es lo que hay que tener en la cabeza para tocar el panel sin romperlo:
+
+1. **El panel LEE tablas y vistas. Para CAMBIAR algo, inserta una fila en
+   `commands`.** No hay `update` posible: los `GRANT` solo permiten `select`, y
+   si algún día no fallaran, el siguiente barrido del espejo pisaría el cambio.
+   Todo eso vive en `lib/supabase/commands.ts` — usa `encolar()` o, mejor, el
+   `useComando()` de `components/panel/Avisos.tsx`.
+2. **Lo que el panel enseña ya ocurrió.** Son las filas que las tools del bot
+   escribieron y el espejo subió. Por eso los cambios tardan 1-2 s en verse: es
+   lo que el bot tiene de verdad, no un optimismo que puede revertirse. No
+   pintes nada como hecho antes de que vuelva.
+3. **El bot puede estar apagado** — vive en un portátil. Entonces `encolar()`
+   lanza `BotNoResponde`, y eso **no** es un fallo: el comando queda en
+   `pending` y se drena al arrancar. Decir "no se guardó" sería mentira.
+
+   Para saber si está en línea, `v_instance_health` (ver
+   `components/panel/Salud.tsx`), nunca `sync_state`: esa tabla **se eliminó**,
+   y aunque existiera sería peor señal — el latido y el volcado del espejo
+   salen del mismo proceso, así que si uno falla el otro ya falló, y la vista
+   además dice por qué. Ojo con sus tres estados: sin fila es **desconocido**
+   (compañía sin instancia registrada), no "caído"; y `vivo` y `wa_connected`
+   son dos problemas distintos con dos arreglos distintos.
+4. **Tres rarezas del espejo**, resueltas en `lib/supabase/parse.ts`: los
+   booleanos son `0/1`, los campos JSON son `text` (hay que parsear y
+   serializar) y toda fecha viene dos veces — usa siempre `*_ts`.
+5. **`update_company` puede ignorar campos.** Mira `result.ignored` y avísalo,
+   o el usuario creerá que guardó algo que no se guardó.
+
+Y dos cosas que el panel **no** hace, a propósito: no enseña un QR de WhatsApp
+(quien lo escanea se lleva la sesión del negocio; el emparejamiento es en
+persona) y no edita la intención ni el estado de un lead (no hay comando para
+eso, y son campos que el bot deduce solo).
 
 ## Historia, para que nadie se pierda
 
@@ -91,10 +208,28 @@ Para probar el comportamiento real de la intro sin hacer build:
 
 ```
 app/
-  layout.tsx            script bloqueante de la intro + fuentes + telón
-  page.tsx              orden de secciones y activación de M4
-  globals.css           tokens, estados iniciales de M1/M2, reduced-motion
-  dev/assets/page.tsx   checklist de producción de assets
+  layout.tsx            <html>, fuentes, metadatos y el script de la intro
+  globals.css           tokens de la LANDING · M1/M2, reduced-motion
+  panel.css             sistema de diseño del PANEL (el antiguo app.css)
+  (landing)/
+    layout.tsx          intro + Lenis + telón · solo para la landing
+    page.tsx            orden de secciones y activación de M4
+    dev/assets/page.tsx checklist de producción de assets
+  (acceso)/login/       entrar y crear cuenta (Supabase Auth)
+  (panel)/
+    layout.tsx          sesión, guardia de entrada y barra lateral
+    panel/              dashboard · mensajes · leads · agenda · métricas · ajustes
+lib/supabase/
+  client.ts             el único cliente (clave anon, nunca service_role)
+  types.ts              los tipos del contrato
+  parse.ts              0/1 → boolean, JSON en text, fechas
+  queries.ts            TODA la lectura
+  commands.ts           TODA la escritura: la cola de comandos
+lib/panel/
+  format.ts             etiquetas, colores, teléfonos y fechas
+  charts.ts             SVG a mano · líneas, donut, sparkline
+  agenda.ts             la rejilla semanal, calculada en el navegador
+components/panel/       Sesión · Sidebar · Topbar · Avisos · useCargar
 components/
   BrandIntro.tsx        sección 0 · el corte comercial
   Mark.tsx              el isotipo · avión de papel, Mia y avatar
