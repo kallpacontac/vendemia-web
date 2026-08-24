@@ -118,7 +118,7 @@ export default function ChatDemo() {
       className="cv-auto relative"
       style={{ background: 'var(--bg-cream)', color: 'var(--text-dark)' }}
     >
-      <div className="mx-auto w-full max-w-container px-6 py-[64px] md:py-[120px]">
+      <div className="mx-auto w-full max-w-container px-6 pb-[64px] pt-[36px] md:pb-[120px] md:pt-[64px]">
         <div className="text-center">
           <RevealHeading
             as="h2"
