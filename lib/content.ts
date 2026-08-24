@@ -95,13 +95,18 @@ export const BRAND = {
  * módulo y la página entera se queda en blanco. Si mueves este bloque,
  * muévelo hacia arriba, nunca hacia abajo.
  *
- * RUTAS RELATIVAS, no absolutas. Todo el backoffice enlaza con "./login.html"
- * y así funciona igual servido en la raíz de un dominio, en un subdirectorio o
- * abierto a pelo desde el disco. Poner "/login.html" lo ataría a la raíz.
+ * ⚠️ AHORA SON RUTAS DE NEXT, Y POR ESO SON ABSOLUTAS.
+ *
+ * Antes eran "./login.html" y "./dashboard.html": el panel era una carpeta de
+ * HTML sueltos y el prefijo relativo permitía servirlo también desde un
+ * subdirectorio o abierto a pelo desde el disco. El panel ya son rutas de la
+ * misma aplicación (app/(acceso)/login, app/(panel)/panel), así que van con
+ * barra inicial — un "./login" desde /panel/leads resolvería a
+ * /panel/leads/login, que no existe.
  */
 export const SITIO = {
-  login: './login.html',
-  panel: './dashboard.html',
+  login: '/login',
+  panel: '/panel',
 } as const;
 
 

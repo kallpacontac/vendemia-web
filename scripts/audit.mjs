@@ -8,13 +8,18 @@
  */
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join, extname } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-const ROOT = new URL('..', import.meta.url).pathname;
+// fileURLToPath y no .pathname: en Windows, .pathname devuelve "/C:/…" y
+// join() lo convierte en "C:C:…" — el script no arrancaba en Windows.
+const ROOT = fileURLToPath(new URL('..', import.meta.url));
 const files = [];
 
 (function walk(dir) {
   for (const name of readdirSync(dir)) {
-    if (['node_modules', '.next', 'scripts'].includes(name)) continue;
+    // El panel tiene su propio sistema de diseño (app/panel.css, paleta azul):
+    // esta auditoría es del spec de la LANDING y allí solo produciría ruido.
+    if (['node_modules', '.next', 'scripts', '(panel)', '(acceso)', 'panel.css'].includes(name)) continue;
     const p = join(dir, name);
     if (statSync(p).isDirectory()) walk(p);
     else if (['.tsx', '.ts', '.css'].includes(extname(p))) files.push(p);
@@ -102,7 +107,7 @@ console.log('\n4 · Ritmo dark → cream → dark …');
 {
   const EXPECTED = [
     ['Hero', 'bg-850'], ['Benefit', 'bg-cream'], ['BentoA', 'bg-900'],
-    ['BentoB', 'bg-900'], ['GlobalNetwork', 'bg-900'], ['Playground', 'bg-cream'],
+    ['BentoB', 'bg-900'], ['GlobalNetwork', 'bg-900'], ['ChatDemo', 'bg-cream'],
     ['UseCases', 'bg-cream'], ['Pricing', 'bg-900'], ['Faq', 'bg-900'],
     ['FinalCta', 'bg-900'], ['Related', 'bg-900'], ['Footer', 'bg-900'],
   ];
@@ -208,7 +213,7 @@ console.log('\n9 · Regresiones conocidas');
   const intro = read(join(ROOT, 'components/BrandIntro.tsx'));
   const mark = read(join(ROOT, 'components/Mark.tsx'));
   const reveal = read(join(ROOT, 'components/RevealHeading.tsx'));
-  const page = read(join(ROOT, 'app/page.tsx'));
+  const page = read(join(ROOT, 'app/(landing)/page.tsx'));
 
   // F1 · el telón medía el 100 % de la PÁGINA (~15 000 px), no del viewport
   if (/transform:\s*translateY\(100%\)/.test(css)) {

@@ -1,7 +1,4 @@
 import type { Metadata } from 'next';
-import './globals.css';
-import BrandIntro from '@/components/BrandIntro';
-import SmoothScroll from '@/components/SmoothScroll';
 
 /**
  * TIPOGRAFÍA · Plus Jakarta Sans, desde Google Fonts
@@ -78,6 +75,26 @@ const INTRO_GATE = `
 (function(){
   document.documentElement.classList.remove('no-js');
 
+  /* ⚠️ TODO LO DE AQUÍ ABAJO ES SOLO DE LA LANDING.
+
+     Este script vive en el layout raíz porque tiene que ser bloqueante y correr
+     en <head>, y eso solo se puede hacer aquí. Pero el panel también pasa por
+     este layout, y allí no hay intro, ni telón, ni una sola página que
+     preservar: borrarle el hash a /panel/mensajes#lead-3 o forzarle el scroll
+     al principio sería romper cosas que sí funcionan.
+
+     Y hay algo peor que romper el scroll: el acceso con Google y el enlace de
+     recuperar contraseña vuelven con la sesión DENTRO del hash
+     (#access_token=...). Borrarlo antes de que supabase-js lo lea deja al
+     usuario fuera, sin mensaje y sin pista — el fallo se ve en /login o en
+     /callback, a mil kilómetros de este script. Ver (acceso)/callback/page.tsx.
+
+     La landing es "/" y nada más. El resto sale por aquí sin tocar nada. */
+  if (location.pathname !== '/') {
+    document.documentElement.dataset.intro = 'skip';
+    return;
+  }
+
   /* ⚠️ Lo más importante de este script, y tiene que ir ANTES que nada.
      Por defecto el navegador restaura la posición de scroll al recargar. En una
      página normal eso se agradece; aquí lo rompe todo a la vez:
@@ -150,17 +167,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         />
         <script dangerouslySetInnerHTML={{ __html: INTRO_GATE }} />
       </head>
-      <body>
-        <SmoothScroll />
-        <BrandIntro />
-
-        {/*
-          M3 · El contenido SIEMPRE se renderiza, desde el primer paint. Nunca
-          lo montes al terminar la intro: eso mediría 3 segundos de LCP.
-          Solo está transformado hacia abajo mientras la intro corre.
-        */}
-        <div className="page-curtain">{children}</div>
-      </body>
+      {/*
+        Ni telón, ni Lenis, ni intro aquí: eso es de la landing y vive en
+        app/(landing)/layout.tsx. Este layout solo pone el <html>, la fuente y
+        los metadatos, que sí son de todo el sitio.
+      */}
+      <body>{children}</body>
     </html>
   );
 }

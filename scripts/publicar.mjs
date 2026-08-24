@@ -1,22 +1,29 @@
 /**
- * CONSTRUIR EL SITIO COMPLETO · node scripts/publicar.mjs
+ * CONSTRUIR LA LANDING ESTÁTICA · node scripts/publicar.mjs
  *
- * Deja en out/ el sitio entero listo para subir a cualquier servidor estático:
- * la landing (index.html) y las páginas del panel (login, dashboard, agenda…),
- * con sus assets. No hay segundo proyecto ni segunda carpeta.
+ * Deja en out/ la landing —una sola página, con sus assets— lista para subir a
+ * cualquier servidor estático, servida en la raíz de un dominio, dentro de un
+ * subdirectorio o abierta a pelo desde el disco.
  *
  *   npm run publicar        → construye out/ y comprueba que está entero
  *   npm run publicar --ver  → además lo sirve en localhost para mirarlo
  *
- * ── DE DÓNDE SALE CADA COSA ───────────────────────────────────────────────
- *   index.html                 lo genera Next desde app/ y components/
- *   _next/, ilustraciones/     lo genera Next desde public/ y el build
- *   login.html, dashboard.html…  se copian tal cual desde public/
+ * ⚠️ ESTO YA NO PUBLICA EL PANEL, Y NO ES UN DESCUIDO.
  *
- * Las páginas del panel se editan A MANO en public/. Next no las toca: las
- * copia. Eso es a propósito — son HTML sencillo que no necesita build, y
- * meterlas en React solo para "unificar" habría sido reescribir siete páginas
- * que ya funcionan.
+ * El sitio de verdad se despliega en Vercel: ahí van la landing Y el panel, que
+ * es lo que se enseña al cliente. Ver README › Desplegar.
+ *
+ * El panel no puede salir por aquí por dos razones que se suman:
+ *
+ *   1 · Necesita las variables NEXT_PUBLIC_SUPABASE_*, que se incrustan en el
+ *       bundle al construir. Un out/ suelto se queda con las que hubiera en esa
+ *       máquina, y viajando en un .zip eso es una clave paseándose.
+ *   2 · El prefijo relativo "./" que permite abrir la landing desde cualquier
+ *       carpeta solo funciona con UNA página en la raíz. Desde /panel/leads,
+ *       "./_next/…" resuelve a /panel/_next/… — 404, página sin estilos ni JS.
+ *
+ * Así que el paso 2 borra de out/ las rutas del panel: sale solo la landing, y
+ * con eso el prefijo relativo vuelve a ser correcto.
  *
  * ── HISTÓRICO ─────────────────────────────────────────────────────────────
  * Este script copiaba el resultado a una carpeta hermana (kallpabot-backoffice)
@@ -48,12 +55,19 @@ execFileSync('npx', ['next', 'build'], {
   shell: process.platform === 'win32',
 });
 
-/* ── 2 · Fuera la página de desarrollo ─────────────────────────────────────
+/* ── 2 · Fuera lo que no es la landing ─────────────────────────────────────
    /dev/assets es el inventario de assets: útil trabajando, y algo embarazoso
-   en producción. */
-if (existsSync(join(SALIDA, 'dev'))) {
-  rmSync(join(SALIDA, 'dev'), { recursive: true, force: true });
-  bien('/dev/assets excluido');
+   en producción.
+
+   El panel y el login se quitan por lo explicado arriba: este artefacto es la
+   landing sola. Quien quiera el panel, que lo despliegue en Vercel. */
+for (const sobra of ['dev', 'panel', 'panel.html', 'panel.txt', 'login', 'login.html', 'login.txt',
+                     'nueva-clave.html', 'nueva-clave.txt', 'callback.html', 'callback.txt']) {
+  const ruta = join(SALIDA, sobra);
+  if (existsSync(ruta)) {
+    rmSync(ruta, { recursive: true, force: true });
+    bien(`/${sobra} excluido`);
+  }
 }
 
 /* ── 3 · Rutas relativas ───────────────────────────────────────────────────
@@ -83,9 +97,7 @@ bien(`rutas absolutas pasadas a relativas · ${reescritos} fichero(s)`);
    No basta con que compile: si alguien borra una página de public/ por error,
    el build sigue saliendo verde y el sitio se queda sin panel. */
 const IMPRESCINDIBLES = [
-  'index.html', 'login.html', 'dashboard.html', 'agenda.html',
-  'leads.html', 'mensajes.html', 'metricas.html', 'configuracion.html',
-  'assets/app.css', 'assets/data.js', '_next',
+  'index.html', '_next', 'brand', 'ilustraciones', 'assets/logos',
 ];
 const faltan = IMPRESCINDIBLES.filter((f) => !existsSync(join(SALIDA, f)));
 if (faltan.length) {
@@ -93,8 +105,15 @@ if (faltan.length) {
 }
 bien(`${IMPRESCINDIBLES.length} piezas imprescindibles presentes`);
 
+/* /login y /panel SON absolutas a propósito y no cuentan como error: apuntan
+   al despliegue de Vercel, que es donde vive el panel. Si un día esta landing
+   se cuelga en otro dominio, esos dos enlaces tendrán que ser absolutos de
+   verdad (https://…), no relativos — pero eso es otra decisión. */
+const ESPERADAS = ['/login', '/panel'];
 const sueltas = [...readFileSync(join(SALIDA, 'index.html'), 'utf8')
-  .matchAll(/(?:src|href)="(\/[^"/][^"]*)"/g)].map((m) => m[1]);
+  .matchAll(/(?:src|href)="(\/[^"/][^"]*)"/g)]
+  .map((m) => m[1])
+  .filter((u) => !ESPERADAS.includes(u));
 if (sueltas.length) {
   console.warn(`\n  ⚠️  Quedan rutas absolutas en index.html:\n${[...new Set(sueltas)].map((u) => '       ' + u).join('\n')}`);
 } else {
