@@ -18,9 +18,13 @@
  *     hace que Mia ofrezca una hora que la tool luego rechaza, delante del
  *     cliente. Lo que no se duplica no se puede contradecir.
  *
- * 2 · `update_company` PUEDE IGNORAR CAMPOS. `result.ignored` trae los que no
- *     estaban en la lista blanca del bot. Sin avisar, el usuario cree que
- *     guardó algo que no se guardó.
+ * 2 · SOLO SE MANDA LO QUE CAMBIÓ, y no es una optimización. El bot calcula
+ *     `ignored` comparando el valor antes y después, así que un campo mandado
+ *     con el valor que ya tenía vuelve ahí igual que uno rechazado. Mandándolo
+ *     todo, pulsar Guardar sin tocar nada devolvía los 20 campos en `ignored` y
+ *     la pantalla acusaba al bot de un fallo inexistente. Con el patch reducido
+ *     a lo modificado, `ignored` vacío es lo normal y lo que aparezca ahí sí es
+ *     un problema. Ver construirPatch() y guardar().
  *
  * 3 · NO HAY QR, Y NO LO VA A HABER. Un QR de WhatsApp es una sesión completa:
  *     quien lo escanea antes que el dueño se queda con el número del negocio.
@@ -33,14 +37,18 @@ import {
   ArrowRight,
   CalendarClock,
   Check,
+  ChevronDown,
+  ChevronUp,
   Clock,
   FileText,
+  ListChecks,
   MessageSquare,
   Plus,
   Scissors,
   Store,
   Trash2,
   UserPlus,
+  UserSquare,
   Wallet,
   Wifi,
 } from 'lucide-react';
@@ -53,7 +61,14 @@ import { supabase } from '@/lib/supabase/client';
 import { getCatalogo, getCompania, type ItemCatalogo } from '@/lib/supabase/queries';
 import { b01 } from '@/lib/supabase/parse';
 import type { ResultadoAddMember, ResultadoUpdateCompany } from '@/lib/supabase/commands';
-import type { BusinessMode, ClaveDia, Horario, MetodoPago, TipoPago } from '@/lib/supabase/types';
+import type {
+  BusinessMode,
+  ClaveDia,
+  Horario,
+  MetodoPago,
+  PreguntaObligatoria,
+  TipoPago,
+} from '@/lib/supabase/types';
 
 const DIAS: { clave: ClaveDia; nombre: string }[] = [
   { clave: 'monday', nombre: 'Lunes' },
@@ -94,6 +109,53 @@ interface Formulario {
   return_policy: string;
 }
 
+/**
+ * Una pregunta lista para viajar: sin espacios de más, sin claves vacías.
+ *
+ * Importa que sea DETERMINISTA —mismas claves, mismo orden— porque el patch se
+ * calcula comparando cadenas: `qualifying_questions` es `text`, no `jsonb`. Si
+ * reserializáramos con las claves en otro orden, el campo saldría como cambiado
+ * cada vez que se abre la pantalla aunque nadie hubiera tocado nada.
+ */
+function limpiar(p: PreguntaObligatoria): PreguntaObligatoria {
+  const clave = p.field_key?.trim();
+  return {
+    question: p.question.trim(),
+    reject_if: p.reject_if?.trim() || null,
+    reject_message: p.reject_message?.trim() || null,
+    is_terminal: Boolean(p.is_terminal),
+    // Sin `field_key` no hay dónde guardar la respuesta, y entonces `required`
+    // no significa nada. Las dos se caen juntas.
+    ...(clave ? { field_key: clave, required: Boolean(p.required) } : {}),
+  };
+}
+
+/**
+ * El patch COMPLETO, como si todo hubiera cambiado. No se manda tal cual: es la
+ * foto contra la que guardar() compara para quedarse solo con lo modificado.
+ *
+ * Se usa también para la foto inicial, y eso es justo lo que hace que la
+ * comparación funcione: los dos lados salen del mismo serializador, así que un
+ * campo intacto produce una cadena idéntica byte a byte.
+ */
+function construirPatch(
+  form: Formulario,
+  horario: Horario,
+  pagos: MetodoPago[],
+  preguntas: PreguntaObligatoria[],
+  pideEmpleado: boolean,
+): Record<string, string | number> {
+  return {
+    ...form,
+    require_payment_to_confirm: b01(form.require_payment_to_confirm),
+    ask_employee: b01(pideEmpleado),
+    // ⚠️ Los tres son `text` en el espejo, no jsonb.
+    schedule: JSON.stringify(horario),
+    payment_methods: JSON.stringify(pagos),
+    qualifying_questions: JSON.stringify(preguntas.map(limpiar)),
+  };
+}
+
 export default function Configuracion() {
   const { companyId, esDueno } = useSesion();
   const { salud, desconocido } = useSalud();
@@ -104,7 +166,14 @@ export default function Configuracion() {
   const [form, setForm] = useState<Formulario | null>(null);
   const [horario, setHorario] = useState<Horario>({});
   const [pagos, setPagos] = useState<MetodoPago[]>([]);
+  const [preguntas, setPreguntas] = useState<PreguntaObligatoria[]>([]);
+  const [pideEmpleado, setPideEmpleado] = useState(false);
   const [guardando, setGuardando] = useState(false);
+  /**
+   * La foto de cómo estaba todo al cargar. Es lo único que distingue "esto no
+   * cambió" de "el bot lo rechazó" cuando llega la respuesta del comando.
+   */
+  const [original, setOriginal] = useState<Record<string, string | number> | null>(null);
 
   const { datos, recargar } = useCargar(async () => {
     if (!companyId) return null;
@@ -122,7 +191,7 @@ export default function Configuracion() {
   useEffect(() => {
     const e = datos?.empresa;
     if (!e || form) return;
-    setForm({
+    const inicial: Formulario = {
       name: e.name ?? '',
       bot_name: e.bot_name ?? '',
       business_mode: e.business_mode ?? 'appointment',
@@ -140,9 +209,13 @@ export default function Configuracion() {
       closing_note: e.closing_note ?? '',
       custom_rules: e.custom_rules ?? '',
       return_policy: e.return_policy ?? '',
-    });
+    };
+    setForm(inicial);
     setHorario(e.horario);
     setPagos(e.pagos);
+    setPreguntas(e.preguntas);
+    setPideEmpleado(e.pideEmpleado);
+    setOriginal(construirPatch(inicial, e.horario, e.pagos, e.preguntas, e.pideEmpleado));
   }, [datos, form]);
 
   const set = <K extends keyof Formulario>(k: K, v: Formulario[K]) =>
@@ -161,22 +234,58 @@ export default function Configuracion() {
       return;
     }
 
-    setGuardando(true);
-    const patch: Record<string, unknown> = {
-      ...form,
-      require_payment_to_confirm: b01(form.require_payment_to_confirm),
-      // ⚠️ schedule y payment_methods son `text` en el espejo, no jsonb.
-      schedule: JSON.stringify(horario),
-      payment_methods: JSON.stringify(pagos),
-    };
+    // Una pregunta sin texto no se puede hacer. Y `required` sin `field_key` no
+    // tiene dónde guardar la respuesta: limpiar() lo tira, así que mejor
+    // decirlo aquí que dejar que desaparezca en silencio.
+    if (preguntas.some((p) => !p.question.trim())) {
+      avisar('Hay una pregunta obligatoria sin texto. Escríbela o bórrala.', 'error');
+      setPaso(4);
+      return;
+    }
+    const huerfana = preguntas.find((p) => p.required && !p.field_key?.trim());
+    if (huerfana) {
+      avisar(
+        `"${huerfana.question.trim()}" está marcada como dato obligatorio pero no tiene clave donde guardarse.`,
+        'error',
+      );
+      setPaso(4);
+      return;
+    }
 
+    /**
+     * SOLO lo que cambió. Ver la nota 2 de la cabecera: mandarlo todo hace que
+     * el bot devuelva el formulario entero en `ignored` y que esta pantalla
+     * denuncie un fallo que no ha ocurrido.
+     */
+    const completo = construirPatch(form, horario, pagos, preguntas, pideEmpleado);
+    const patch = Object.fromEntries(
+      Object.entries(completo).filter(([k, v]) => !original || v !== original[k]),
+    );
+
+    if (Object.keys(patch).length === 0) {
+      avisar('No hay nada que guardar: no cambiaste ningún campo.');
+      return;
+    }
+
+    setGuardando(true);
     const r = await comando<ResultadoUpdateCompany>('update_company', { patch }, 'Configuración guardada');
     setGuardando(false);
 
+    /**
+     * Ahora sí es una alarma de verdad: todo lo que iba en el patch llevaba un
+     * valor distinto del que había, así que si vuelve en `ignored` es porque el
+     * bot no lo acepta — normalmente un campo fuera de EDITABLE_COMPANY_FIELDS.
+     */
     if (r?.ignored?.length) {
       avisar(`El bot no aceptó estos campos: ${r.ignored.join(', ')}`, 'error');
     }
-    if (r) recargar();
+    // La foto se rehace con lo que se acaba de mandar para que un segundo
+    // Guardar seguido no vuelva a mandar lo mismo. recargar() trae el espejo,
+    // pero tarda 1-2s y el usuario puede pulsar antes.
+    if (r) {
+      setOriginal(completo);
+      recargar();
+    }
   }
 
   if (!form) {
@@ -197,7 +306,12 @@ export default function Configuracion() {
 
         <div className="stepper-card">
           <div className="stepper">
-            {['Mi negocio', 'Servicios, horario y pagos', 'Personalidad y reglas'].map((txt, i) => (
+            {[
+              'Mi negocio',
+              'Servicios, horario y pagos',
+              'Personalidad y reglas',
+              'Preguntas obligatorias',
+            ].map((txt, i) => (
               <div key={txt} style={{ display: 'contents' }}>
                 {i > 0 && <div className={`step__line ${paso > i ? 'done' : ''}`} />}
                 <div
@@ -539,6 +653,68 @@ export default function Configuracion() {
             <button className="btn btn-ghost" onClick={() => setPaso(2)}>
               <ArrowLeft size={16} /> Atrás
             </button>
+            <button className="btn btn-primary" onClick={() => setPaso(4)}>
+              Continuar <ArrowRight size={16} />
+            </button>
+          </div>
+        </div>
+
+        {/* ══ PASO 4 · PREGUNTAS OBLIGATORIAS ══ */}
+        <div className={`card panel ${paso === 4 ? 'active' : ''}`}>
+          <div className="sec">
+            <h4>
+              <ListChecks /> Preguntas obligatorias
+            </h4>
+            <p className="muted" style={{ fontSize: 13, marginTop: -4, marginBottom: 12 }}>
+              Mia las hace <b>siempre</b>, en este orden, antes de cerrar. No son un guion de
+              conversación: son un filtro. Cada una puede descalificar al cliente, guardar un dato
+              en su ficha, o las dos cosas.
+            </p>
+            <Preguntas lista={preguntas} alCambiar={setPreguntas} />
+          </div>
+
+          {/*
+            El interruptor vive aquí, pegado al editor, y no en el paso 1 a
+            propósito: es la trampa que hay que ver justo antes de escribir una
+            pregunta. Ver el aviso de abajo.
+          */}
+          {form.business_mode === 'appointment' && (
+            <div className="sec">
+              <h4>
+                <UserSquare /> Quién atiende
+              </h4>
+              <div className="toggle-row">
+                <div className="t">
+                  <b>Preguntar por el profesional</b>
+                  <small>
+                    Mia pide el nombre antes de cerrar la cita, lo valida contra tu equipo y ofrece
+                    solo los huecos libres de esa persona
+                  </small>
+                </div>
+                <div
+                  className={`toggle ${pideEmpleado ? 'on' : ''}`}
+                  onClick={() => setPideEmpleado((v) => !v)}
+                  role="switch"
+                  aria-checked={pideEmpleado}
+                />
+              </div>
+              <div
+                className="desfase"
+                style={{ background: '#EEF1FF', borderColor: '#D8DFFF', color: '#2C46D8', marginTop: 12 }}
+              >
+                Si activas esto, <b>no añadas además una pregunta obligatoria del tipo «¿con qué
+                barbero?»</b>. Van por caminos distintos: la respuesta de aquí entra en el motor de
+                horarios, y la de una pregunta obligatoria acaba en la ficha del cliente, que el
+                motor de reservas no lee. Mia lo preguntaría dos veces y la segunda no serviría de
+                nada.
+              </div>
+            </div>
+          )}
+
+          <div className="nav-btns">
+            <button className="btn btn-ghost" onClick={() => setPaso(3)}>
+              <ArrowLeft size={16} /> Atrás
+            </button>
             <button
               className="btn btn-primary"
               style={{ height: 52, padding: '0 26px' }}
@@ -551,6 +727,181 @@ export default function Configuracion() {
         </div>
       </div>
     </main>
+  );
+}
+
+/**
+ * El editor de `qualifying_questions`.
+ *
+ * EL ORDEN IMPORTA: el bot las hace de arriba abajo, así que una que descalifica
+ * duro conviene tenerla arriba — no tiene sentido pedirle cinco datos a alguien
+ * a quien vas a rechazar por el primero.
+ *
+ * `is_terminal` es la decisión con más peso de esta pantalla, y por eso está
+ * escrita como dos opciones con su consecuencia y no como un interruptor
+ * llamado "terminal": duro corta la conversación; aviso deja al cliente
+ * insistir y seguir comprando.
+ */
+function Preguntas({
+  lista,
+  alCambiar,
+}: {
+  lista: PreguntaObligatoria[];
+  alCambiar: (v: PreguntaObligatoria[]) => void;
+}) {
+  const editar = (i: number, patch: Partial<PreguntaObligatoria>) =>
+    alCambiar(lista.map((p, j) => (j === i ? { ...p, ...patch } : p)));
+
+  const mover = (i: number, delta: number) => {
+    const j = i + delta;
+    if (j < 0 || j >= lista.length) return;
+    const copia = [...lista];
+    [copia[i], copia[j]] = [copia[j], copia[i]];
+    alCambiar(copia);
+  };
+
+  return (
+    <>
+      {lista.length === 0 && (
+        <p className="vacio">
+          <b>Sin preguntas obligatorias</b>
+          Mia atiende a todo el que escriba. Añade una si necesitas filtrar —por zona, por edad, por
+          lo que sea— o guardar un dato antes de cerrar.
+        </p>
+      )}
+
+      {lista.map((p, i) => (
+        <div className="q-item" key={i}>
+          <div className="q-head">
+            <span className="q-num">{i + 1}</span>
+            <input
+              className="input"
+              placeholder="¿Desde qué distrito nos escribes?"
+              value={p.question}
+              onChange={(e) => editar(i, { question: e.target.value })}
+            />
+            <button
+              type="button"
+              className="q-icon"
+              aria-label="Subir"
+              disabled={i === 0}
+              onClick={() => mover(i, -1)}
+            >
+              <ChevronUp size={16} />
+            </button>
+            <button
+              type="button"
+              className="q-icon"
+              aria-label="Bajar"
+              disabled={i === lista.length - 1}
+              onClick={() => mover(i, 1)}
+            >
+              <ChevronDown size={16} />
+            </button>
+            <button
+              type="button"
+              className="q-icon q-icon--del"
+              aria-label="Eliminar pregunta"
+              onClick={() => alCambiar(lista.filter((_, j) => j !== i))}
+            >
+              <Trash2 size={16} />
+            </button>
+          </div>
+
+          <div className="grid-form">
+            <div className="full">
+              <label className="field-label">Descalifica si…</label>
+              <input
+                className="input"
+                placeholder="El distrito NO está en: Jesús María, Lince, San Isidro, Magdalena"
+                value={p.reject_if ?? ''}
+                onChange={(e) => editar(i, { reject_if: e.target.value })}
+              />
+              <small className="muted" style={{ fontSize: 11.5 }}>
+                Escríbelo en lenguaje normal: lo interpreta el modelo, no es una fórmula. Déjalo
+                vacío si la pregunta solo sirve para guardar un dato.
+              </small>
+            </div>
+            <div className="full">
+              <label className="field-label">Y entonces le dice</label>
+              <input
+                className="input"
+                placeholder="Nuestra sede está en Jesús María. Desde tu distrito el viaje puede ser largo 📍"
+                value={p.reject_message ?? ''}
+                onChange={(e) => editar(i, { reject_message: e.target.value })}
+              />
+            </div>
+          </div>
+
+          {p.reject_if?.trim() && (
+            <div className="q-modo">
+              <button
+                type="button"
+                className={`q-modo__op ${p.is_terminal ? '' : 'sel'}`}
+                onClick={() => editar(i, { is_terminal: false })}
+              >
+                <b>Solo avisar</b>
+                <small>Se lo dice, pero si insiste sigue atendiéndole</small>
+              </button>
+              <button
+                type="button"
+                className={`q-modo__op ${p.is_terminal ? 'sel' : ''}`}
+                onClick={() => editar(i, { is_terminal: true })}
+              >
+                <b>Rechazo duro</b>
+                <small>Corta ahí. No hay venta ni reserva</small>
+              </button>
+            </div>
+          )}
+
+          <div className="grid-form" style={{ marginTop: 12 }}>
+            <div>
+              <label className="field-label">Guardar la respuesta en la ficha como</label>
+              <input
+                className="input"
+                placeholder="age"
+                value={p.field_key ?? ''}
+                onChange={(e) => editar(i, { field_key: e.target.value })}
+              />
+              <small className="muted" style={{ fontSize: 11.5 }}>
+                Una clave corta y sin espacios. Aparece en los datos del cliente. Vacío = no se
+                guarda.
+              </small>
+            </div>
+          </div>
+
+          {p.field_key?.trim() && (
+            <div className="toggle-row" style={{ marginTop: 10 }}>
+              <div className="t">
+                <b>Es un dato imprescindible</b>
+                <small>
+                  Mia <b>no cierra</b> la venta ni la reserva hasta tenerlo. Úsalo con cuidado: es la
+                  forma más rápida de que deje de vender
+                </small>
+              </div>
+              <div
+                className={`toggle ${p.required ? 'on' : ''}`}
+                onClick={() => editar(i, { required: !p.required })}
+                role="switch"
+                aria-checked={Boolean(p.required)}
+              />
+            </div>
+          )}
+        </div>
+      ))}
+
+      <button
+        className="btn btn-ghost btn-sm"
+        onClick={() =>
+          alCambiar([
+            ...lista,
+            { question: '', reject_if: null, reject_message: null, is_terminal: false },
+          ])
+        }
+      >
+        <Plus size={15} /> Añadir pregunta
+      </button>
+    </>
   );
 }
 

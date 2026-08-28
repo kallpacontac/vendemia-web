@@ -60,7 +60,15 @@ export default function Leads() {
   const convertidos = leads.filter((l) => l.status === 'paid').length;
 
   function exportarCsv() {
-    const filas = [['Nombre', 'Telefono', 'Intencion', 'Estado', 'Ultimo mensaje', 'Alta']].concat(
+    /*
+      Las claves de `custom_data` las inventa quien configura las preguntas, así
+      que las columnas del CSV no se pueden fijar aquí: se sacan de los leads que
+      se están exportando. Un lead sin esa clave deja la celda vacía.
+    */
+    const claves = [...new Set(filtrados.flatMap((l) => Object.keys(l.datos)))].sort();
+    const filas = [
+      ['Nombre', 'Telefono', 'Intencion', 'Estado', 'Ultimo mensaje', 'Alta', ...claves],
+    ].concat(
       filtrados.map((l) => [
         l.name ?? '',
         l.phone,
@@ -68,6 +76,7 @@ export default function Leads() {
         status(l.status).label,
         (l.last_message ?? '').replace(/[,\n]/g, ' '),
         l.creado ? l.creado.toISOString().slice(0, 10) : '',
+        ...claves.map((k) => l.datos[k] ?? ''),
       ]),
     );
     const csv = filas.map((f) => f.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
@@ -170,6 +179,7 @@ export default function Leads() {
                 <th>Intención</th>
                 <th>Estado</th>
                 <th>Último mensaje</th>
+                <th>Datos recogidos</th>
                 <th>Alta</th>
                 <th style={{ textAlign: 'right' }}>Acciones</th>
               </tr>
@@ -177,14 +187,14 @@ export default function Leads() {
             <tbody>
               {cargando && (
                 <tr>
-                  <td colSpan={7} className="muted" style={{ textAlign: 'center', padding: 30 }}>
+                  <td colSpan={8} className="muted" style={{ textAlign: 'center', padding: 30 }}>
                     Cargando…
                   </td>
                 </tr>
               )}
               {!cargando && visibles.length === 0 && (
                 <tr>
-                  <td colSpan={7}>
+                  <td colSpan={8}>
                     <div className="vacio">
                       <b>Sin resultados</b>
                       {leads.length === 0
@@ -229,6 +239,25 @@ export default function Leads() {
                       }}
                     >
                       {l.last_message || '—'}
+                    </td>
+                    {/*
+                      Lo que el bot guardó por las preguntas obligatorias con
+                      `field_key`. Se enseña con la clave delante porque la
+                      elige el dueño: sin ella, un "3" suelto no dice nada.
+                    */}
+                    <td>
+                      {Object.keys(l.datos).length === 0 ? (
+                        <span className="muted">—</span>
+                      ) : (
+                        <div className="dato-pills">
+                          {Object.entries(l.datos).map(([k, v]) => (
+                            <span className="dato-pill" key={k} title={`${k}: ${v}`}>
+                              <b>{k}</b>
+                              {v}
+                            </span>
+                          ))}
+                        </div>
+                      )}
                     </td>
                     <td className="muted">{cuando(l.creado)}</td>
                     <td style={{ textAlign: 'right' }}>

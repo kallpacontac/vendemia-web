@@ -674,3 +674,45 @@ a{color:inherit;text-decoration:none}
 .separador{display:flex;align-items:center;gap:12px;margin:18px 0 6px;
   font-size:12px;font-weight:600;color:var(--ink-mute);text-transform:none}
 .separador::before,.separador::after{content:"";flex:1;height:1px;background:var(--line)}
+
+/* ── Preguntas obligatorias (qualifying_questions) ──────────────────── */
+/* Cada pregunta es una tarjeta con borde, no una fila: lleva dentro cinco
+   controles y dos avisos condicionales, y sin una caja alrededor el ojo no
+   sabe dónde acaba una y empieza la siguiente. */
+.q-item{border:1.5px solid var(--line-2);border-radius:var(--r-md);padding:16px;margin-bottom:14px;background:var(--bg-soft)}
+.q-item .grid-form{margin-top:12px}
+
+.q-head{display:flex;align-items:center;gap:8px;margin-bottom:2px}
+.q-head .input{flex:1;font-weight:600}
+/* El número no es decoración: el bot las hace en este orden, y las flechas de
+   al lado solo tienen sentido si se ve cuál es cuál. */
+.q-num{flex:none;width:26px;height:26px;border-radius:50%;display:grid;place-items:center;
+  background:var(--brand-soft);color:var(--brand);font:700 12.5px 'Plus Jakarta Sans'}
+
+.q-icon{flex:none;width:32px;height:32px;border-radius:9px;display:grid;place-items:center;
+  background:none;border:none;cursor:pointer;color:var(--ink-mute);transition:.14s}
+.q-icon:hover:not(:disabled){background:#fff;color:var(--ink)}
+.q-icon:disabled{opacity:.3;cursor:default}
+.q-icon--del:hover{color:#E5484D}
+
+/* Dos opciones con su consecuencia escrita, no un interruptor: "terminal" no
+   le dice nada a un dueño de barbería, y la diferencia entre cortar la
+   conversación y solo avisar es la decisión más cara de esta pantalla. */
+.q-modo{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
+.q-modo__op{text-align:left;padding:11px 13px;border-radius:var(--r-sm);cursor:pointer;transition:.14s;
+  background:#fff;border:1.5px solid var(--line-2)}
+.q-modo__op b{display:block;font-size:13px;color:var(--ink)}
+.q-modo__op small{display:block;margin-top:2px;font-size:11.5px;color:var(--ink-soft);line-height:1.4}
+.q-modo__op:hover{border-color:var(--ink-mute)}
+.q-modo__op.sel{border-color:var(--brand);background:var(--brand-soft)}
+.q-modo__op.sel b{color:var(--brand-d)}
+@media(max-width:620px){.q-modo{grid-template-columns:1fr}}
+
+/* Los datos que el bot recogió de cada lead, en la tabla de Leads. Se limita
+   el ancho porque las claves y los valores los escribe el dueño: sin tope, un
+   "notas_del_cliente" largo empuja la columna de acciones fuera de la vista. */
+.dato-pills{display:flex;flex-wrap:wrap;gap:5px;max-width:210px}
+.dato-pill{display:inline-flex;align-items:center;gap:5px;max-width:100%;
+  background:var(--bg-input);border-radius:7px;padding:3px 8px;font-size:11.5px;color:var(--ink);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dato-pill b{color:var(--ink-mute);font-weight:700;text-transform:uppercase;font-size:10px;letter-spacing:.03em}
