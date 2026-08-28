@@ -36,9 +36,29 @@ export type TipoComando =
   | 'resolve_escalation'
   | 'add_member';
 
+/**
+ * ⚠️ `ignored` NO significa "rechazado". Significa "esto no cambió".
+ *
+ * El bot lo calcula comparando el valor antes y después de aplicar el patch, así
+ * que un campo mandado con el MISMO valor que ya tenía sale en `ignored` igual
+ * que uno fuera de la lista blanca. Si el dueño abre la pantalla, no toca nada y
+ * pulsa Guardar, vuelve TODO en `ignored` — y un panel que enseñe "el bot no
+ * aceptó estos campos" estaría acusando al backend de un fallo que no existe.
+ *
+ * La forma limpia de que la ambigüedad desaparezca sola es mandar únicamente los
+ * campos que el usuario modificó. Así `ignored` vacío es el caso normal y
+ * cualquier cosa que aparezca ahí sí es un problema de verdad. Eso es justo lo
+ * que hace guardar() en (panel)/panel/configuracion/page.tsx.
+ *
+ * Corolario de que los campos JSON viajen como TEXTO: si se reserializa
+ * `schedule`, `payment_methods` o `qualifying_questions` con las claves en otro
+ * orden, el campo sale en `updated` aunque el contenido sea equivalente. Es
+ * inofensivo, pero explica algún "guardado" que parece de más.
+ */
 export interface ResultadoUpdateCompany {
+  /** Campos cuyo valor quedó distinto del que había. */
   updated: string[];
-  /** Campos del patch que NO se aplicaron por no estar en la lista blanca. */
+  /** Campos que no cambiaron nada: mismo valor, o fuera de la lista blanca. */
   ignored: string[];
 }
 
@@ -150,4 +170,7 @@ export const CAMPOS_EDITABLES = [
   'closing_note',
   'reminder_config',
   'business_description',
+  // Confirmados en EDITABLE_COMPANY_FIELDS del bot: los dos se guardan.
+  'qualifying_questions',
+  'ask_employee',
 ] as const;

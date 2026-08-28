@@ -255,6 +255,8 @@ Tres convenciones que valen para todo:
 | `slot_minutes` | integer | duración por defecto de un turno |
 | `require_payment_to_confirm` | 0/1 | 1 = la cita queda `pending_payment` hasta el voucher |
 | `owner_phone`, `admin_phone`, `whatsapp_phone` | text | formato `51987654321`, sin `+` |
+| `qualifying_questions` | JSON | preguntas obligatorias — ver abajo |
+| `ask_employee` | 0/1 | solo en `appointment`: preguntar por el profesional antes de cerrar |
 | `is_active` | 0/1 | empresa activa |
 
 ```jsonc
@@ -277,6 +279,57 @@ Tres convenciones que valen para todo:
 // OJO: yape/plin SIN number se imprimen vacíos en el prompt ("• Yape:  a nombre de").
 // Si el panel deja elegir Yape, el número tiene que ser obligatorio en el formulario.
 ```
+
+##### `qualifying_questions` — las preguntas obligatorias
+
+Un array, **guardado como `text`**: hay que `JSON.parse()` al leer y `JSON.stringify()` al
+escribir. El bot las hace **siempre y en orden** antes de cerrar.
+
+```ts
+{
+  question:       string          // lo que el bot pregunta
+  reject_if:      string | null   // regla en lenguaje natural que descalifica al cliente
+  reject_message: string | null   // qué le dice si lo descalifica
+  is_terminal:    boolean         // true = rechazo duro; false = aviso, el cliente puede insistir
+  field_key?:     string          // si está, la respuesta se guarda en lead.custom_data[field_key]
+  required?:      boolean         // con field_key: el bot NO cierra la venta sin este dato
+}
+```
+
+```jsonc
+// Ejemplo real, de una academia de natación
+[
+  {
+    "question": "¿Desde qué distrito nos escribes?",
+    "reject_if": "El distrito NO está en: Jesús María, Lince, San Isidro, Magdalena",
+    "reject_message": "Nuestra sede está en Jesús María. Desde tu distrito el viaje puede ser largo 📍",
+    "is_terminal": false
+  },
+  {
+    "question": "¿Para qué edad son las clases?",
+    "reject_if": "La edad mencionada es menor a 3 años",
+    "reject_message": "Para menores de 3 añitos aún no tenemos clases 🏊",
+    "is_terminal": true,
+    "field_key": "age",
+    "required": true
+  }
+]
+```
+
+`reject_if` se escribe en lenguaje normal: lo interpreta el modelo, no es una expresión.
+`required: true` es lo más fuerte de aquí — el bot **literalmente no cierra** la reserva sin
+ese dato, así que uno de más es la forma más rápida de que deje de vender.
+
+##### `ask_employee` — quién atiende
+
+`0`/`1`, y **solo aplica en modo `appointment`**. Con `1` el bot pregunta siempre por el
+profesional antes de cerrar la cita, valida el nombre contra `employees` y ajusta la
+disponibilidad al horario de ESA persona.
+
+**No lo dupliques como `qualifying_question`.** Van por caminos distintos: la respuesta de
+`ask_employee` entra en el motor de horarios; la de una pregunta obligatoria acaba en
+`custom_data`, que el motor de reservas no lee. Se preguntaría dos veces y la segunda no
+serviría de nada.
 
 #### `leads` — el cliente
 
@@ -481,21 +534,44 @@ guardar.
 Un `type` desconocido queda en `error` con `tipo desconocido: X`. Un comando que falla se
 reintenta hasta 3 veces antes de quedarse en `error`.
 
-### `update_company` puede ignorar campos
+### Cómo leer la respuesta del comando `update_company`
 
-`result.ignored` trae los campos del `patch` que **no se aplicaron**, porque no están en la
-lista blanca de campos editables. El panel tiene que avisar:
+El bot devuelve `{ updated: string[], ignored: string[] }`.
+
+**`ignored` NO significa «rechazado». Significa «esto no cambió».** Se calcula comparando el
+valor antes y después, así que un campo mandado con el mismo valor que ya tenía aparece ahí
+igualmente. Si el dueño abre la pantalla, no toca nada y pulsa Guardar, vuelve **todo** en
+`ignored` — y un panel que enseñe *«no se pudo guardar: …»* con esa lista estaría acusando al
+backend de fallar cuando no ha fallado nada.
+
+Regla: solo trátalo como error si mandaste ese campo con un valor **distinto** del que ya
+tenías en el formulario. Y eso lo sabe el panel, que tiene el estado previo.
+
+Lo más limpio es **mandar únicamente los campos que el usuario modificó** — así `ignored`
+vacío es el caso normal y la ambigüedad desaparece sola:
 
 ```ts
+const completo = construirPatch(form)                       // todo, como si todo cambiara
+const patch = Object.fromEntries(
+  Object.entries(completo).filter(([k, v]) => v !== original[k]),
+)
+if (!Object.keys(patch).length) return avisar('No hay nada que guardar')
+
 const r = await encolar(companyId, 'update_company', { patch })
-if (r.ignored.length) toast.warn(`No se pudieron guardar: ${r.ignored.join(', ')}`)
+if (r.ignored.length) avisar(`El bot no aceptó: ${r.ignored.join(', ')}`, 'error')
 ```
 
-Sin ese aviso el usuario cree que guardó algo que no se guardó. Campos editables: `name`,
+**Los campos JSON viajan como texto.** Si reserializas `schedule`, `payment_methods` o
+`qualifying_questions` con las claves en otro orden, el campo saldrá en `updated` aunque el
+contenido sea equivalente. Es inofensivo, pero explica algún «guardado» que parece de más: la
+forma de evitarlo es que la foto inicial y el patch salgan del **mismo** serializador.
+
+Campos editables: `name`,
 `bot_name`, `bot_tone`, `hook_question`, `custom_rules`, `return_policy`, `schedule`,
 `payment_methods`, `business_mode`, `delivery_type`, `whatsapp_phone`, `owner_phone`,
 `admin_phone`, `location`, `slot_minutes`, `require_payment_to_confirm`, `welcome_note`,
-`closing_note`, `reminder_config`, `business_description`… (lista completa:
+`closing_note`, `reminder_config`, `business_description`, `qualifying_questions`,
+`ask_employee`… (lista completa:
 `EDITABLE_COMPANY_FIELDS` en `src/services/db.service.ts`).
 
 Cuando el cambio entra, el prompt del bot se reconstruye solo en el siguiente mensaje del
@@ -557,7 +633,7 @@ avisar — no hay botón que lo arregle.
 `*_ts`** para mostrar y comparar; `created_at` solo para ordenar.
 
 **Varios campos JSON son texto, no `jsonb`.** `schedule`, `payment_methods`, `custom_data`,
-`sales_questions`, `items` de `orders`… se espejan tal cual salen de SQLite, que no tiene tipo
+`qualifying_questions`, `items` de `orders`… se espejan tal cual salen de SQLite, que no tiene tipo
 JSON. Hay que `JSON.parse()` al leer y `JSON.stringify()` al mandar en un `patch`.
 
 **El bot puede estar apagado.** Es normal: es un portátil. Las lecturas siguen funcionando (la
@@ -573,7 +649,8 @@ enseñar cifras de ayer como si fueran de ahora.
 - ❌ `update` / `insert` / `delete` sobre tablas espejadas. Falla, y si un día no fallara el
   cambio se perdería igual al siguiente barrido del espejo.
 - ❌ Mandar `status`, `attempts` o `created_by` al insertar un comando.
-- ❌ Dar por hecho que un `update_company` aplicó todo el `patch` — mira `ignored`.
+- ❌ Mandar el formulario entero en un `update_company`: manda solo lo que cambió, o `ignored`
+  vuelve lleno de campos que nadie tocó y el panel denuncia un fallo que no existe.
 - ❌ Confiar solo en ocultar botones para los permisos. El bot revalida; el front oculta por
   comodidad, no por seguridad.
 - ❌ Enseñar un QR o prometer re-emparejar desde el panel.

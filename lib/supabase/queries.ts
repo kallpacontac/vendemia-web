@@ -28,6 +28,7 @@ import type {
   MessageRow,
   MetodoPago,
   OrderRow,
+  PreguntaObligatoria,
   ProductoIngreso,
   PuntoDia,
   PuntoIntencion,
@@ -64,6 +65,10 @@ export async function misCompanias(): Promise<CompaniaAccesible[]> {
 export interface Compania extends CompanyRow {
   horario: Horario;
   pagos: MetodoPago[];
+  /** `qualifying_questions` ya parseado. Ver PreguntaObligatoria en types.ts. */
+  preguntas: PreguntaObligatoria[];
+  /** `ask_employee` como boolean. Solo significa algo en modo appointment. */
+  pideEmpleado: boolean;
 }
 
 export async function getCompania(companyId: string): Promise<Compania | null> {
@@ -80,6 +85,14 @@ export async function getCompania(companyId: string): Promise<Compania | null> {
     ...row,
     horario: json<Horario>(row.schedule, {}),
     pagos: json<MetodoPago[]>(row.payment_methods, []),
+    /**
+     * Si el texto viene corrupto, json() devuelve []. Es lo correcto aquí: una
+     * lista vacía es "sin filtros", que es el estado por defecto de un negocio
+     * recién dado de alta. Lo que NO se puede hacer es dejar la pantalla en
+     * blanco por un JSON que el panel no escribió.
+     */
+    preguntas: json<PreguntaObligatoria[]>(row.qualifying_questions, []),
+    pideEmpleado: bool(row.ask_employee),
   };
 }
 
@@ -89,6 +102,14 @@ export interface Lead extends LeadRow {
   botActivo: boolean;
   enManual: boolean;
   creado: Date | null;
+  /**
+   * `custom_data` ya parseado: lo que el bot fue recogiendo por el camino.
+   *
+   * Las claves las decide quien configura las preguntas obligatorias
+   * (`field_key` de cada PreguntaObligatoria), así que aquí no se pueden
+   * conocer de antemano ni traducir: se enseñan tal cual las escribió el dueño.
+   */
+  datos: Record<string, string>;
 }
 
 export async function getLeads(companyId: string, limite = 500): Promise<Lead[]> {
@@ -106,6 +127,14 @@ export async function getLeads(companyId: string, limite = 500): Promise<Lead[]>
     botActivo: bool(l.bot_active, true),
     enManual: !bool(l.bot_active, true),
     creado: fecha(l.created_ts),
+    // Se normaliza a string: el bot guarda números y booleanos tal cual salen
+    // de la conversación, y una tabla no puede pintar un objeto.
+    datos: Object.fromEntries(
+      Object.entries(json<Record<string, unknown>>(l.custom_data, {})).map(([k, v]) => [
+        k,
+        typeof v === 'string' ? v : JSON.stringify(v),
+      ]),
+    ),
   }));
 }
 

@@ -86,7 +86,44 @@ export interface CompanyRow {
   admin_phone: string | null;
   whatsapp_phone: string | null;
   is_active: Bool01 | null;
+  /**
+   * JSON en text: PreguntaObligatoria[]. Ver getCompania() en queries.ts, que
+   * ya lo entrega parseado.
+   */
+  qualifying_questions: string | null;
+  /**
+   * Solo aplica en modo `appointment`. Con 1 el bot pregunta SIEMPRE por el
+   * profesional antes de cerrar la cita, valida el nombre contra `employees` y
+   * ajusta la disponibilidad al horario de ESE profesional.
+   */
+  ask_employee: Bool01 | null;
   created_ts: string | null;
+}
+
+/**
+ * Una pregunta obligatoria de `qualifying_questions`.
+ *
+ * Esto NO es un guion de conversación: es un filtro. El bot la hace, mira la
+ * respuesta contra `reject_if` —una regla en lenguaje natural, la interpreta el
+ * modelo— y si encaja suelta `reject_message`.
+ *
+ * ⚠️ `required: true` con `field_key` es lo más fuerte que hay aquí: el bot
+ * literalmente NO cierra la venta ni la reserva sin ese dato. Poner uno de más
+ * es la forma más rápida de que deje de vender.
+ */
+export interface PreguntaObligatoria {
+  /** Lo que el bot pregunta, tal cual. */
+  question: string;
+  /** Regla en lenguaje natural que descalifica al cliente. */
+  reject_if: string | null;
+  /** Qué le dice el bot si lo descalifica. */
+  reject_message: string | null;
+  /** true = rechazo duro. false = aviso; el cliente puede insistir y sigue. */
+  is_terminal: boolean;
+  /** Si está, la respuesta se guarda en `lead.custom_data[field_key]`. */
+  field_key?: string;
+  /** Con `field_key`: el bot no cierra la venta sin este dato. */
+  required?: boolean;
 }
 
 export interface LeadRow {
