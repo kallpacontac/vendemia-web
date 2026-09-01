@@ -37,6 +37,27 @@ export const metadata: Metadata = {
   title: 'Vendemia · Tu vendedor digital en WhatsApp',
   description:
     'Mia atiende en 30 segundos, resuelve objeciones, agenda citas y cobra por WhatsApp — también de madrugada y en domingo. Listo en 10 minutos, desde S/89 al mes.',
+  /**
+   * El canonical deja por escrito cuál de los dos nombres de host es el bueno.
+   *
+   * Hay dos: `www.vendemias.com` redirige al apex con un 308, y esa redirección
+   * ya basta para que Google elija bien casi siempre. Pero "casi siempre" lo
+   * decide él, y basta con que alguien comparta un enlace con `www`, con
+   * `?utm_source=…` o con la URL de Vercel para que aparezca una segunda
+   * dirección con el mismo contenido. Con el canonical no hay nada que decidir.
+   *
+   * Va como '/' y no como URL completa a propósito: se resuelve contra
+   * metadataBase, así que en local apunta a localhost y en producción al
+   * dominio, sin una variable más que mantener.
+   */
+  alternates: { canonical: '/' },
+  /**
+   * og:url es el mismo trabajo para lo que se comparte en WhatsApp y LinkedIn.
+   * Las demás etiquetas Open Graph no se repiten aquí: Next las hereda de
+   * `title` y `description`, y duplicarlas solo crea dos sitios donde
+   * corregirlas.
+   */
+  openGraph: { url: '/' },
 };
 
 /**
