@@ -1,11 +1,10 @@
 'use client';
 
-import { ChevronRight } from 'lucide-react';
 import Mark from '@/components/Mark';
 import AssetSlot from '@/components/AssetSlot';
 import Reveal from '@/components/Reveal';
 import { Starfield } from '@/components/ui';
-import { FOOTER, BRAND } from '@/lib/content';
+import { FOOTER, BRAND, whatsappLink } from '@/lib/content';
 
 /**
  * 12 · FOOTER — dark (#000)
@@ -109,31 +108,20 @@ export default function Footer() {
           </div>
 
           <p className="max-w-[320px] text-center text-[15px] font-medium leading-[1.5] lg:text-left">
-            {FOOTER.newsletter.title}
+            {FOOTER.contacto.title}
           </p>
 
-          <form
-            className="flex h-12 w-[320px] max-w-full items-center gap-2 rounded-full border pl-5 pr-1"
-            style={{ borderColor: 'var(--border-dark)' }}
-            onSubmit={(e) => e.preventDefault()}
+          {/* Aquí vivía el formulario del newsletter, que se tragaba el correo
+              sin enviarlo a ninguna parte ni avisar de nada. Ver la nota en
+              FOOTER.contacto (content.ts). Mismo hueco, mismos 320px, misma
+              altura de 48px — y ahora sí hace algo. */}
+          <a
+            {...whatsappLink(FOOTER.contacto.cta)}
+            className="flex h-12 w-[320px] max-w-full items-center justify-center rounded-full px-6 text-[15px] font-semibold"
+            style={{ background: 'var(--orange-cta)', color: 'var(--on-orange)' }}
           >
-            <input
-              type="email"
-              required
-              placeholder={FOOTER.newsletter.placeholder}
-              aria-label="Correo electrónico"
-              className="h-full flex-1 bg-transparent text-[14px] outline-none"
-              style={{ color: 'var(--text-hi)' }}
-            />
-            <button
-              type="submit"
-              aria-label="Suscribirse"
-              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full"
-              style={{ background: 'var(--surface-700)' }}
-            >
-              <ChevronRight size={16} />
-            </button>
-          </form>
+            {FOOTER.contacto.cta}
+          </a>
         </div>
 
         <hr className="my-0 border-0 border-t" style={{ borderColor: 'var(--border-darker)' }} />
@@ -141,13 +129,8 @@ export default function Footer() {
         {/* Franja inferior */}
         <div className="flex flex-col gap-6 py-6 lg:flex-row lg:items-end lg:justify-between">
           <div className="space-y-1 text-[12px] leading-[1.6]" style={{ color: 'var(--text-low)' }}>
-            {/* Subrayado sí, enlace no: las páginas legales aún no existen y un
-                `href="#"` aquí es especialmente feo — el usuario que pulsa
-                "Política de privacidad" acaba en el principio de la landing. */}
-            <p>
-              {FOOTER.legal.recaptcha} <span className="underline">{FOOTER.legal.privacyLink}</span>{' '}
-              {FOOTER.legal.and} <span className="underline">{FOOTER.legal.termsLink}</span>.
-            </p>
+            {/* El aviso de reCAPTCHA se retiró: la página no lleva reCAPTCHA.
+                Ver la nota en FOOTER.legal (content.ts). */}
             <p>{FOOTER.legal.copyright}</p>
             <p>{FOOTER.legal.address}</p>
           </div>

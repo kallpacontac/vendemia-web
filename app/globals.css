@@ -439,3 +439,78 @@ html:not([data-intro='run']) .brand-intro {
     min-height: auto;
   }
 }
+
+/* ══════════════════════════════════════════════════════════════════════════
+   CONTROLES DE LA CALCULADORA DE PÉRDIDA  (components/sections/Calculadora.tsx)
+   ══════════════════════════════════════════════════════════════════════════
+
+   ⚠️ EL INPUT MIDE 44px DE ALTO AUNQUE LA BARRA SE VEA DE 6px.
+   Es el mínimo de la WCAG para un objetivo táctil, y aquí no es una casilla de
+   accesibilidad que marcar: más del 60 % del tráfico llega desde un teléfono y
+   este control es el que sostiene toda la sección. Una barra de 6px reales es
+   una barra que con el pulgar no se puede coger. El alto lo pone el input; el
+   track pintado va centrado dentro.
+
+   ⚠️ EL COLOR DEL RELLENO ENTRA POR --relleno, NO POR `background`.
+   `::-moz-range-progress` solo existe en Firefox y
+   `::-webkit-slider-runnable-track` no se puede colorear por tramos, así que
+   el tramo naranja es un gradiente con parada dura que calcula el componente.
+   Puesto como `background` del input, WebKit lo dibuja DEBAJO del track y no
+   se ve; puesto como variable, llega al pseudo-elemento y funciona en los dos
+   motores con una sola declaración. */
+.rango {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 44px;
+  background: transparent;
+  cursor: pointer;
+  outline: none;
+}
+
+.rango::-webkit-slider-runnable-track {
+  height: 6px;
+  border-radius: 999px;
+  background: var(--relleno);
+}
+
+/* El margen negativo es lo que centra el pulgar sobre la barra: (6 − 22) / 2.
+   Sin él, WebKit lo alinea por arriba y el control se ve descuadrado. */
+.rango::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  margin-top: -8px;
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  background: #ffffff;
+  border: 2px solid var(--orange-cta);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.45);
+}
+
+.rango::-moz-range-track {
+  height: 6px;
+  border-radius: 999px;
+  background: var(--relleno);
+}
+
+.rango::-moz-range-thumb {
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  background: #ffffff;
+  border: 2px solid var(--orange-cta);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.45);
+}
+
+/* Foco visible en el pulgar y no en la caja de 44px: el contorno de la caja
+   entera se lee como un error de maquetación, no como "estás aquí". */
+.rango:focus-visible::-webkit-slider-thumb {
+  outline: 2px solid var(--orange-500);
+  outline-offset: 2px;
+}
+
+.rango:focus-visible::-moz-range-thumb {
+  outline: 2px solid var(--orange-500);
+  outline-offset: 2px;
+}

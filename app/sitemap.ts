@@ -16,6 +16,19 @@ import type { MetadataRoute } from 'next';
  */
 const SITIO = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://vendemias.com';
 
+/**
+ * Las paginas legales SI van al sitemap, aunque no sean comerciales.
+ *
+ * Dos motivos. Uno, que existan indexadas es parte de parecer —y ser— un
+ * negocio formal: quien duda antes de pagar S/89 al mes a una web que no
+ * conoce, busca justamente esto. Y dos, el Libro de Reclamaciones tiene que
+ * ser accesible de verdad, no solo estar enlazado en el pie.
+ *
+ * `changeFrequency: 'yearly'` y prioridad baja: cambian poco y no compiten con
+ * la landing por la atencion del rastreador.
+ */
+const LEGALES = ['/terminos', '/privacidad', '/garantia', '/reclamaciones'];
+
 export default function sitemap(): MetadataRoute.Sitemap {
   return [
     {
@@ -24,5 +37,11 @@ export default function sitemap(): MetadataRoute.Sitemap {
       changeFrequency: 'weekly',
       priority: 1,
     },
+    ...LEGALES.map((ruta) => ({
+      url: `${SITIO}${ruta}`,
+      lastModified: new Date(),
+      changeFrequency: 'yearly' as const,
+      priority: 0.3,
+    })),
   ];
 }

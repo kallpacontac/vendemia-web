@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import gsap from 'gsap';
 import { MessageSquare, ShieldCheck, CalendarCheck, BarChart3, Info } from 'lucide-react';
 import RevealHeading from '@/components/RevealHeading';
-import { PRICING } from '@/lib/content';
+import { PRICING, whatsappLink } from '@/lib/content';
 import { registerGsap, prefersReducedMotion, DIRECTIONAL_CUBIC } from '@/lib/motion';
 
 /**
@@ -203,7 +203,7 @@ export default function Pricing() {
               </ul>
 
               <a
-                href="#final-cta"
+                {...whatsappLink(plan.cta ?? PRICING.cta, plan.waMessage)}
                 className="mt-auto flex h-12 items-center justify-center rounded-btn text-[15px] font-medium transition-colors duration-[250ms]"
                 style={
                   plan.featured

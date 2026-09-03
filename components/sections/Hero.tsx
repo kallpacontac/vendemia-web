@@ -5,36 +5,27 @@ import gsap from 'gsap';
 import { Sparkles } from 'lucide-react';
 import RevealHeading from '@/components/RevealHeading';
 import CascadeText from '@/components/CascadeText';
-import CountUp from '@/components/CountUp';
 import AssetSlot from '@/components/AssetSlot';
-import { HERO } from '@/lib/content';
+import { HERO, whatsappLink } from '@/lib/content';
 import { ASSETS } from '@/lib/assets';
-import {
-  registerGsap,
-  prefersReducedMotion,
-  DIRECTIONAL_CUBIC,
-  wordStaggerFor,
-} from '@/lib/motion';
+import { registerGsap, prefersReducedMotion, DIRECTIONAL_CUBIC } from '@/lib/motion';
 
 /** Retraso del H1 dentro del timeline del hero. Lo usan el titular y la cuenta. */
 const H1_DELAY = 0.25;
 
-/**
- * CUÁNDO ARRANCA LA CUENTA — derivado, no escrito a mano.
+/*
+ * AQUI VIVIA EL ARRANQUE DEL CONTADOR DEL H1 (H1_WORDS / COUNT_DELAY).
  *
- * El número tiene que empezar a subir cuando su propia palabra ya se ve. Si
- * arranca antes, la cuenta corre debajo de un `opacity: 0` y el usuario se
- * pierde justo el tramo que más se mueve.
+ * El titular ya no lleva ninguna cifra: la que llevaba se sorteaba con
+ * Math.random() en cada carga y era un dato inventado presentado como dato
+ * -- el razonamiento completo esta en HERO.h1, en content.ts. Con el token
+ * `{n}` fuera del copy, el calculo del retraso ya no tenia nada que retrasar.
  *
- * Esa palabra aparece en `H1_DELAY + stagger · índice`, así que el retraso se
- * calcula de la propia frase en vez de fijarlo en un número: si mañana el copy
- * mueve el `{n}` de sitio o cambia de largo, esto sigue cuadrando solo. El
- * +0.30 mete la cuenta ya dentro del fundido de la palabra, no justo al
- * empezarlo, para que las cifras se lean desde el primer frame que se mueven.
+ * <CountUp> sigue en components/ y no se ha tocado: es un componente correcto
+ * y bien documentado, y no era el culpable. El problema no era el contador
+ * sino lo que se le pedia contar. Si vuelve al hero, que sea hacia una cifra
+ * REAL -- por ejemplo la de la calculadora de BENEFIT.
  */
-const H1_WORDS = HERO.h1.split(' ');
-const COUNT_DELAY =
-  H1_DELAY + wordStaggerFor(H1_WORDS.length) * H1_WORDS.indexOf('{n}') + 0.3;
 
 /**
  * 1 · HERO — dark (#060200), min-h-screen, apilada (M4)
@@ -203,25 +194,18 @@ export default function Hero() {
             {HERO.badge}
           </span>
 
-          {/* El `{n}` del copy es un hueco: lo rellena el contador, que sortea
-              una cifra nueva en cada carga. Va DENTRO del titular, así que M1
-              lo revela como a una palabra más. */}
+          {/* Titular limpio: sin huecos y sin `slots`. M1 lo revela palabra a
+              palabra igual que antes. */}
           <RevealHeading
             as="h1"
             text={HERO.h1}
             awaitIntro
             delay={H1_DELAY}
-            slots={{
-              '{n}': (
-                <CountUp
-                  min={HERO.lostSalesRange.min}
-                  max={HERO.lostSalesRange.max}
-                  awaitIntro
-                  delay={COUNT_DELAY}
-                />
-              ),
-            }}
-            className="mt-6 text-[40px] font-semibold leading-[1.05] tracking-[-0.02em] md:text-[48px] lg:text-h1"
+            // 34px y no 40 en el escalon mas pequeno: a 40px este titular
+            // ocupa cuatro lineas en una pantalla de 360px y empuja los
+            // botones fuera de la primera pantalla, que es el unico sitio
+            // donde de verdad se pulsan.
+            className="mt-6 text-[34px] font-semibold leading-[1.05] tracking-[-0.02em] sm:text-[40px] md:text-[48px] lg:text-h1"
           />
 
           {/* M1b · el párrafo se forma con la MISMA cascada de opacidad con la
@@ -237,21 +221,41 @@ export default function Hero() {
             style={{ color: 'var(--text-mid)' }}
           />
 
-          <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
+          {/* ⚠️ EN MOVIL LOS BOTONES VAN APILADOS Y A TODO EL ANCHO.
+              Con `flex-wrap` y ancho automatico, en una pantalla de 360px los
+              dos caian a lineas distintas y con anchos distintos: dos pildoras
+              descuadradas, ninguna de las cuales parece la principal. Apilados
+              y a ancho completo, el primero es inequivocamente el boton de la
+              pagina y ademas mide lo que mide el pulgar. Desde `sm` vuelven a
+              la fila centrada de siempre. */}
+          <div className="mt-8 flex flex-col items-stretch gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-center">
+            {/* EL BOTON PRINCIPAL YA NO LLEVA A #pricing.
+                Decia "Empieza gratis - sin tarjeta" y aterrizaba en una tabla
+                que empieza en S/89 al mes: la promesa se rompia en el segundo
+                exacto en que el lector mas queria creersela. Ahora dice lo que
+                de verdad pasa al pulsar y abre la conversacion de WhatsApp,
+                que ademas es el propio canal que vendemos -- el primer
+                contacto es ya la demostracion. */}
             <a
               data-hero="btn"
-              href="#pricing"
-              className="flex h-10 items-center rounded-full px-6 text-[14px] font-semibold transition-colors duration-[250ms]"
+              {...whatsappLink(HERO.primaryCta)}
+              className="flex h-12 w-full items-center justify-center rounded-full px-6 text-[14px] font-semibold transition-colors duration-[250ms] sm:w-auto md:h-10"
               style={{ background: 'var(--orange-cta)', color: 'var(--on-orange)' }}
               onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--orange-cta-hover)')}
               onMouseLeave={(e) => (e.currentTarget.style.background = 'var(--orange-cta)')}
             >
               {HERO.primaryCta}
             </a>
+            {/* EL SECUNDARIO LLEVABA A #final-cta, o sea al PIE DE LA PAGINA.
+                Quien queria "ver como funciona" se saltaba de un golpe la
+                calculadora, el mecanismo, la demo, los rubros y los precios, y
+                aterrizaba en la peticion final sin haber leido un solo
+                argumento. Ahora lleva a #demo, que es literalmente verlo
+                funcionar y ademas es la seccion que mas convence. */}
             <a
               data-hero="btn"
-              href="#final-cta"
-              className="flex h-10 items-center rounded-full border px-6 text-[14px] font-medium transition-colors duration-[250ms] hover:bg-white/5"
+              href="#demo"
+              className="flex h-12 w-full items-center justify-center rounded-full border px-6 text-[14px] font-medium transition-colors duration-[250ms] hover:bg-white/5 sm:w-auto md:h-10"
               style={{ borderColor: 'var(--border-dark)' }}
             >
               {HERO.secondaryCta}
@@ -290,9 +294,11 @@ export default function Hero() {
 
             Fuera del `max-w-hero` para que la fila respire a todo el ancho.
 
-            ⚠️ Estos nombres son NEGOCIOS REALES. Si alguno deja de ser
-            cliente o retira el permiso, se quita de HERO.socialProof — no se
-            deja "porque queda bien". */}
+            ⚠️ Estos nombres son NEGOCIOS REALES —los cuatro clientes de
+            verdad—. Los seis anteriores no lo eran. Si alguno deja de ser
+            cliente o retira el permiso, se quita de HERO.socialProof: no se
+            deja "porque queda bien", y no se rellena con inventados para que
+            la fila se vea mas larga. Cuatro ciertos pesan mas que seis. */}
         <div data-hero="proof" className="mt-14">
           {/* Mismo caso que el pie de arriba: --text-low se quedaba en 3.88.
               La jerarquía frente a los nombres no la da el color sino el

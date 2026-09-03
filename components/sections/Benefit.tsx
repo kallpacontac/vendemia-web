@@ -5,6 +5,7 @@ import gsap from 'gsap';
 import { Sparkles } from 'lucide-react';
 import RevealHeading from '@/components/RevealHeading';
 import RevealParagraph from '@/components/RevealParagraph';
+import Calculadora from '@/components/sections/Calculadora';
 import AssetSlot from '@/components/AssetSlot';
 import { BENEFIT } from '@/lib/content';
 import {
@@ -343,27 +344,23 @@ export default function Benefit() {
               con los ~402px de columna son el 4:5 medido en la referencia; en
               pantallas más bajas se recorta antes que salirse. Preferible una
               tarjeta algo menos alargada que una tarjeta cortada. */}
+          {/* ⚠️ AQUI HABIA UNA ILUSTRACION FIJA CON EL PIE "Mueve los controles
+              con tus numeros reales y mira la cuenta" — Y NO HABIA CONTROLES.
+              La pagina pedia al lector que hiciera algo imposible, en la unica
+              seccion cuyo trabajo es responder "¿me pasa a mi?". Ahora hay
+              calculadora de verdad; el pie con el supuesto vive dentro de ella
+              y conserva el `data-b="media-caption"` que busca el timeline.
+
+              El alto: fijo en lg (es donde manda la reja 1fr/2fr y la seccion
+              apilada tiene que caber en 100vh) y automatico por debajo, para
+              que en un telefono los controles no queden recortados por un alto
+              pensado para escritorio. */}
           <div
             data-b="media"
             data-wipe="up"
-            className="relative h-[clamp(260px,44vh,503px)] overflow-hidden rounded-card"
+            className="min-h-[340px] lg:h-[clamp(260px,44vh,503px)] lg:min-h-0"
           >
-            <AssetSlot
-              id="benefit.mediaCard"
-              tone="dark"
-              label="Imagen abstracta de marca"
-              className="absolute inset-0 h-full w-full"
-            />
-            <div
-              data-b="media-caption"
-              data-reveal="up"
-              className="pointer-events-none absolute inset-x-0 bottom-0 p-6"
-              style={{ background: 'linear-gradient(to top, rgba(0,0,0,.85), transparent)' }}
-            >
-              <p className="text-[18px] font-semibold leading-snug text-white">
-                {BENEFIT.mediaHeadline}
-              </p>
-            </div>
+            <Calculadora />
           </div>
 
           {/* DERECHA · blanco sobre crema, SIN borde ni sombra */}
@@ -380,6 +377,13 @@ export default function Benefit() {
               className="mt-5 text-body"
               style={{ color: 'var(--text-muted)' }}
             />
+
+            {/* La procedencia del 21× y del 78 %. Va pegada al parrafo que los
+                usa y no en un pie de pagina: una cifra y su fuente separadas
+                por dos pantallas de scroll es una cifra sin fuente. */}
+            <p className="mt-3 text-[12px]" style={{ color: 'var(--text-muted)', opacity: 0.75 }}>
+              {BENEFIT.source}
+            </p>
 
             {/* M5 · MARQUEE — 3 filas, direcciones alternas.
                 Va en su propia caja con un tono ligeramente distinto y se

@@ -1,6 +1,7 @@
 import '../globals.css';
 import BrandIntro from '@/components/BrandIntro';
 import SmoothScroll from '@/components/SmoothScroll';
+import { jsonLdLanding } from '@/lib/schema';
 
 /**
  * ══════════════════════════════════════════════════════════════════════════
@@ -24,6 +25,20 @@ import SmoothScroll from '@/components/SmoothScroll';
 export default function LandingLayout({ children }: { children: React.ReactNode }) {
   return (
     <>
+      {/* ⚠️ LOS DATOS ESTRUCTURADOS VAN AQUI Y NO EN EL LAYOUT RAIZ.
+          Describen ESTA pagina —precios, FAQ, la oferta— y el layout raiz
+          tambien envuelve al panel y al login, donde declarar un FAQPage seria
+          decirle a Google que la pantalla de acceso tiene preguntas
+          frecuentes. Un grupo de rutas es justo para esto.
+
+          Es un componente de servidor, asi que el <script> sale ya en el HTML
+          que recibe el rastreador: no depende de que se ejecute React. Ver
+          lib/schema.ts para el porque de cada bloque. */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLdLanding()) }}
+      />
+
       <SmoothScroll />
       <BrandIntro />
 

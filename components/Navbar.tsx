@@ -282,7 +282,15 @@ export default function Navbar() {
               <Mark size={24} variant="plane" />
               <span className="text-[18px] font-semibold tracking-[0.06em]">{BRAND.name}</span>
             </div>
-            <button type="button" onClick={() => setMobileOpen(false)} aria-label="Cerrar menú">
+            {/* El icono mide 22px y el boton medía lo mismo: la mitad del
+                minimo tactil. `-m-3 p-3` le da los 46px de zona de toque sin
+                mover ni un pixel la posicion del aspa. */}
+            <button
+              type="button"
+              onClick={() => setMobileOpen(false)}
+              aria-label="Cerrar menú"
+              className="-m-3 p-3"
+            >
               <X size={22} />
             </button>
           </div>

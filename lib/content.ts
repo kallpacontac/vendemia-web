@@ -111,6 +111,40 @@ export const SITIO = {
 
 
 /**
+ * UN SOLO NOMBRE PARA LA ACCION PRINCIPAL, EN TODA LA PAGINA.
+ *
+ * Habia cuatro etiquetas distintas para el mismo clic -- "Prueba gratis" en el
+ * navbar, "Empieza gratis - sin tarjeta" en el hero, "Empiezo con Starter" en
+ * precios y "Quiero probar Mia gratis" en el cierre -- y encima llevaban a TRES
+ * destinos distintos (#pricing, #final-cta y wa.me). Quien baja la pagina no
+ * reconoce que le han pedido lo mismo cuatro veces: lee cuatro ofertas y se
+ * queda sin saber cual es la buena.
+ *
+ * Y LA PALABRA "GRATIS" SE HA IDO DE TODAS ELLAS.
+ *
+ * No hay periodo de prueba: se paga desde el primer mes y lo que hay es
+ * garantia de reembolso a 30 dias. Prometer "gratis, sin tarjeta" y aterrizar
+ * en una tabla que empieza en S/89 rompe la confianza en el punto exacto de
+ * maxima intencion, que es el peor sitio donde se puede romper. Lo que si es
+ * cierto -- riesgo cero -- vende igual de bien y ademas se puede sostener.
+ *
+ * `long` va en el hero y en el cierre, donde hay sitio para decir a donde
+ * lleva el clic. `short` va en el navbar, donde la pildora no da para mas.
+ * Los dos abren la MISMA conversacion de WhatsApp.
+ *
+ * OJO: "Probar Mia" solo es cierto si al otro lado contesta Mia. Si de momento
+ * contestas tu a mano, cambia `long` por 'Escribeme por WhatsApp' -- prometer
+ * que va a probar el producto y que le conteste un humano es justo la primera
+ * impresion que este producto no se puede permitir.
+ */
+export const CTA = {
+  long: 'Probar Mia por WhatsApp',
+  short: 'Probar Mia',
+  secondary: 'Ver a Mia vendiendo',
+} as const;
+
+
+/**
  * ⚠️ TODO ENLACE LLEVA A ALGÚN SITIO, O NO ES UN ENLACE.
  *
  * Aquí no hay `href: '#'`. Un ancla vacía no es un enlace pendiente: navega al
@@ -155,7 +189,7 @@ export const NAV_LINKS = [
 
 export const NAV_CTA = {
   ghost: 'Iniciar sesión',
-  solid: 'Prueba gratis',
+  solid: CTA.short,
 } as const;
 
 /* ── WhatsApp ─────────────────────────────────────────────── */
@@ -180,7 +214,12 @@ export const NAV_CTA = {
 export const WHATSAPP = {
   /** +51 947 144 701 */
   phone: '51947144701',
-  message: 'Hola 👋 Quiero probar Vendemia gratis en mi negocio.',
+  // Decia "Quiero probar Vendemia GRATIS en mi negocio". Lo peor no es que el
+  // mensaje lo escriba la pagina: es que lo escribe EL CLIENTE, en primera
+  // persona, y llega a tu WhatsApp con una expectativa de trial que no existe.
+  // La conversacion arrancaba con un malentendido que tenias que deshacer tu
+  // en el primer mensaje, que es el peor sitio para tener que decir "no".
+  message: 'Hola 👋 Quiero probar Mia en el WhatsApp de mi negocio.',
 } as const;
 
 /** Construye el enlace de WhatsApp con el mensaje ya escrito. */
@@ -244,30 +283,51 @@ export function whatsappLink(label: string, message?: string) {
 export const HERO = {
   badge: 'Mia atiende 24/7',
   /**
-   * `{n}` es un HUECO, no texto: lo rellena <CountUp> con una cifra que sube.
-   * Va como token dentro de la cadena y no partiendo el titular en trozos de
-   * JSX porque el reparto del stagger de M1 se calcula sobre el número total
-   * de palabras — ver el prop `slots` de RevealHeading.
+   * AQUI HABIA UNA CIFRA SORTEADA CON Math.random() EN CADA CARGA.
    *
-   * Si cambias esta frase, cuenta con que la posición del token decide cuándo
-   * arranca la cuenta: Hero.tsx la deriva del índice, no la lleva escrita.
+   * El titular decia "Cada minuto que tardas, pierdes {n} ventas" y <CountUp>
+   * rellenaba el hueco con un numero al azar entre 4 y 99. Tres problemas, y
+   * con el primero basta:
+   *
+   *  1 · Es un dato inventado presentado como dato. Dos visitas seguidas ven
+   *      cifras distintas, y quien lo nota deja de creerse tambien el 78 %, el
+   *      21x y el S/1,497 -- que esos si estan sostenidos. Una cifra falsa no
+   *      cuesta una cifra: cuesta todas las demas.
+   *  2 · Nadie pierde 4 ni 99 ventas por minuto. La frase no aguanta el primer
+   *      segundo de aritmetica mental de un dueno de negocio, que es
+   *      exactamente el lector que tenemos.
+   *  3 · El servidor pinta siempre el valor inicial, asi que a Google le
+   *      llegaba literalmente "pierdes 4 ventas" como H1.
+   *
+   * El gancho numerico no se pierde: vive 300 px mas abajo, en la calculadora
+   * de BENEFIT, donde la cifra sale de LOS SUYOS y por eso convence.
+   *
+   * El titular nuevo hace tres trabajos de una vez: nombra el dolor en las
+   * primeras palabras ("perder ventas"), nombra la causa ("responder tarde") y
+   * nombra el canal ("WhatsApp"). Y son, ademas, las tres expresiones con las
+   * que se busca esto en Peru, asi que el H1 pasa a trabajar tambien para SEO.
    */
-  h1: 'Cada minuto que tardas, pierdes {n} ventas',
-  /** Rango del que sale la cifra del H1. Se sortea una nueva en cada carga. */
-  lostSalesRange: { min: 4, max: 99 },
+  h1: 'Deja de perder ventas por responder tarde en WhatsApp',
   /**
    * El párrafo del hero hace UN trabajo: decir qué categoría es esto.
    *
-   * El titular ya dio el dolor con una cifra; aquí toca la respuesta a "¿qué
+   * El titular ya dio el dolor y la causa; aquí toca la respuesta a "¿qué
    * es?" en la primera línea, y el "¿qué hace?" en la segunda. Los cuatro
    * verbos van en el orden real de una venta —atender, objeción, agendar,
    * cobrar— porque enumerar capacidades sueltas se lee como lista de
    * funciones, y en secuencia se lee como un trabajo hecho de principio a fin.
    */
+  // El H1 ya dice "WhatsApp", asi que el parrafo se lo ahorra y gana sitio
+  // para "por Yape", que en Peru vale mas que cualquier adjetivo: es la prueba
+  // de que esto esta hecho aqui y no traducido.
   paragraph:
-    'Mia es tu vendedor digital en WhatsApp: atiende en 30 segundos, resuelve la objeción, agenda la cita y cobra. Trabaja mientras tú atiendes el local, duermes o descansas el domingo.',
-  primaryCta: 'Empieza gratis — sin tarjeta',
-  secondaryCta: 'Ver cómo funciona',
+    'Mia es tu vendedor digital: atiende en 30 segundos, resuelve la objeción, agenda la cita y cobra por Yape. Trabaja mientras tú atiendes el local, duermes o descansas el domingo.',
+  primaryCta: CTA.long,
+  // Llevaba a #final-cta, o sea al PIE de la pagina: quien queria ver como
+  // funciona se saltaba de un golpe la calculadora, el mecanismo, la demo y
+  // los precios, y aterrizaba en la peticion final sin un solo argumento
+  // leido. Ahora lleva a #demo, que es donde se ve funcionando de verdad.
+  secondaryCta: CTA.secondary,
   footnote: 'Garantía de reembolso · Sin costo de instalación · Funciona en 10 minutos',
   /**
    * ⚠️ ESTA LISTA AFIRMA EN PÚBLICO QUE SON CLIENTES. TRÁTALA COMO TAL.
@@ -288,24 +348,117 @@ export const HERO = {
    * página en vez de pedir que se los crean.
    */
   socialProofLabel: 'Negocios peruanos que ya venden con Mia',
+  // Los seis nombres anteriores (Barbería El Corte, DentPlus, FreshMart,
+  // EstiloShop, MediTurno, Nails Studio) NO eran clientes. Cuatro nombres
+  // reales sostienen la pagina; seis inventados la hunden, porque el lector es
+  // del sector y nota que no existe ninguno. Ademas es lo que dice el aviso de
+  // arriba: publicar una relacion comercial que no existe es publicidad
+  // enganosa (Indecopi).
   socialProof: [
-    'Barbería El Corte',
-    'DentPlus',
-    'FreshMart',
-    'EstiloShop',
-    'MediTurno',
-    'Nails Studio',
+    'Peluquería Jhoyner',
+    'Tienda Elvis',
+    'Academia de Natación Kallpa',
+    'Agencia Werner',
   ],
 } as const;
 
-/** Ticker superior — datos que justifican toda la propuesta */
+/**
+ * Ticker superior — datos que justifican toda la propuesta.
+ *
+ * ⚠️ LAS DOS CIFRAS DECIAN MAS DE LO QUE DICE EL ESTUDIO. Se comprobo contra
+ * la fuente (Lead Response Management Study, MIT / InsideSales) y ninguna de
+ * las dos versiones anteriores se sostenia:
+ *
+ *  · "reduce 21x tu probabilidad de VENTA" — el estudio mide la probabilidad
+ *    de CALIFICAR al prospecto, que es llegar a hablar con el, no de venderle.
+ *    Y no compara "menos de 5 minutos" contra "mas": compara 5 MINUTOS CONTRA
+ *    30. Dicho como estaba, el numero era mas grande de lo que nadie ha medido.
+ *
+ *  · "el 78 % DECIDE con el primer contacto" — el dato es que el 78 % le COMPRA
+ *    A QUIEN LE RESPONDE PRIMERO. Es otra cosa, y ademas es mejor para
+ *    nosotros: "decide" habla de la cabeza del cliente, "le compra al primero"
+ *    habla de una carrera que se puede ganar. Que es lo que vendemos.
+ *
+ * La version corregida es igual de dura y ya no hay que cruzar los dedos si
+ * alguien busca la fuente. En una pagina cuyo argumento entero son numeros,
+ * que un solo numero no aguante la comprobacion los tumba todos.
+ */
 export const TICKER = [
-  'El 78 % de tus clientes decide con el PRIMER contacto',
-  'Responder en más de 5 min reduce 21× tu probabilidad de venta',
+  'El 78 % le compra a quien le responde PRIMERO',
+  'De 5 a 30 minutos: 21× menos opciones de llegar a hablar con él',
   'Cada minuto que tardas, un competidor cierra esa venta',
 ] as const;
 
 /* ── 2 · La calculadora de pérdida ────────────────────────── */
+
+/**
+ * ⚠️ LA CALCULADORA ESTABA ESCRITA AQUI Y NO EXISTIA EN LA PANTALLA.
+ *
+ * `BENEFIT.calculator` llevaba etiquetas, metricas y hasta el texto del
+ * supuesto, y Benefit.tsx no leia ni una sola de ellas: en su sitio pintaba una
+ * ilustracion fija con el pie "Mueve los controles con tus numeros reales y
+ * mira la cuenta". O sea que la pagina invitaba a mover unos controles que no
+ * estaban. Es el tercer caso del mismo tipo en este fichero (el parrafo de
+ * precios, el pie del hero) y de largo el mas caro: de todos los elementos de
+ * una landing, un estimador con LOS NUMEROS DEL LECTOR es el que mas convierte,
+ * porque deja de ser una afirmacion nuestra y pasa a ser una cuenta suya.
+ *
+ * ── DE DONDE SALE LA CIFRA, Y POR QUE ASI ────────────────────────────────
+ *
+ * El S/1,497 que habia escrito en `body` no se podia reconstruir con ningun
+ * modelo: no cuadraba con las 20 consultas ni con el ticket de S/120 que la
+ * propia frase declaraba. Un numero que el lector no puede rehacer con una
+ * regla de tres es un numero en el que no va a confiar, y este ademas es EL
+ * numero de la pagina.
+ *
+ * Ahora sale de dos supuestos, los dos escritos en pantalla debajo del
+ * resultado, y de una cadena que se puede seguir de cabeza:
+ *
+ *   consultas/dia × fuga × cierre × 30 dias = ventas perdidas al mes
+ *   ventas perdidas × ticket                = soles perdidos al mes
+ *
+ * Con los valores por defecto: 20 × 0.25 × 0.30 × 30 = 45 ventas, S/5,400.
+ * Son el 7,5 % de las consultas del mes, que para un negocio que no contesta
+ * fuera de horario es conservador y no heroico. Y el S/89 del plan Starter
+ * sigue siendo menos de lo que se pierde en dos dias, que es lo que promete
+ * PRICING.subtitle.
+ *
+ * ⚠️ ESTOS DOS NUMEROS SON TUYOS, NO MIOS. Son los unicos supuestos del
+ * modelo y estan aqui, solos, para que los ajustes con lo que veas en tus
+ * clientes. Todo lo demas de la seccion —el texto de `body` incluido— se
+ * recalcula de ellos, asi que la pagina ya no se puede contradecir a si misma.
+ */
+export const MODELO_PERDIDA = {
+  /** Parte de las consultas que llega cuando NO puedes contestar en 5 minutos. */
+  fuga: 0.25,
+  /** De las que si contestas a tiempo, cuantas acaban en venta. */
+  cierre: 0.3,
+  diasMes: 30,
+  leads: { min: 5, max: 100, step: 1, def: 20 },
+  ticket: { min: 20, max: 1000, step: 10, def: 120 },
+} as const;
+
+/** Ventas que se pierden al mes con `leads` consultas al dia. */
+export function ventasPerdidasMes(leads: number): number {
+  return leads * MODELO_PERDIDA.fuga * MODELO_PERDIDA.cierre * MODELO_PERDIDA.diasMes;
+}
+
+/** Los mismos soles que pinta la calculadora, para poder citarlos en el copy. */
+export function perdidaMensual(leads: number, ticket: number): number {
+  return Math.round(ventasPerdidasMes(leads) * ticket);
+}
+
+/**
+ * Miles con coma, a mano.
+ *
+ * `toLocaleString('es-PE')` habria sido lo obvio y es justo lo que no se puede
+ * usar: el Node del servidor y el navegador del cliente no siempre llevan los
+ * mismos datos de ICU, asi que uno puede escribir "5,400" y el otro "5400" —
+ * y eso es un hydration mismatch en el numero mas visible de la pagina.
+ */
+export function formatoSoles(n: number): string {
+  return Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+}
 
 export const BENEFIT = {
   h2: '¿Cuánto te cuesta responder tarde?',
@@ -324,26 +477,70 @@ export const BENEFIT = {
     { label: '¿Qué es?', href: '#benefit', icon: 'sparkles' },
     { label: '¿Cómo funciona?', href: '#bento-a' },
   ],
-  mediaHeadline: 'Mueve los controles con tus números reales y mira la cuenta.',
-  lead: 'Responder en más de 5 minutos reduce 21 veces tu probabilidad de venta.',
+  // `mediaHeadline` se ha ido: era el pie de la ilustracion que prometia unos
+  // controles inexistentes. Ahora los controles existen y se explican solos,
+  // asi que la frase no tiene nada que anunciar. Se borra en vez de dejarla
+  // "por si acaso": copy que no se pinta es exactamente como llego esta seccion
+  // a tener una calculadora escrita y ninguna en pantalla.
+  lead: 'Pasar de 5 a 30 minutos multiplica por 21 las probabilidades de que ese cliente ya ni llegue a hablar contigo.',
+  // La cifra ya NO esta escrita a mano: sale del mismo modelo que la
+  // calculadora de al lado. Antes eran dos numeros independientes que podian
+  // separarse en cuanto alguien tocara uno, y el lector que hiciera la cuenta
+  // con los controles y la comparara con el parrafo se encontraba con dos
+  // respuestas distintas a la misma pregunta.
   body:
-    'No es una cifra de marketing: es el punto donde el cliente ya le escribió a otro. Con 20 consultas al día y un ticket de S/120, la cuenta sale a unos S/1,497 al mes que no ves porque nunca llegaron a ser venta. Mia responde en 30 segundos y recupera hasta el 78 % de esos clientes.',
+    `No es una cifra de marketing: es el punto donde el cliente ya le escribió a otro. Con ${MODELO_PERDIDA.leads.def} consultas al día y un ticket de S/${MODELO_PERDIDA.ticket.def}, la cuenta sale a unos S/${formatoSoles(perdidaMensual(MODELO_PERDIDA.leads.def, MODELO_PERDIDA.ticket.def))} al mes que no ves porque nunca llegaron a ser venta. Mia responde en 30 segundos, así que el primero en contestar pasas a ser tú.`,
+  /**
+   * ⚠️ CITAR LA FUENTE NO ES UNA NOTA AL PIE: ES PARTE DEL ARGUMENTO.
+   *
+   * La seccion apoya toda su credibilidad en dos numeros ajenos y hasta ahora
+   * los daba sin decir de donde salian, que es exactamente como se leen las
+   * cifras inventadas. Una linea de seis palabras con el nombre del estudio
+   * cambia el genero del bloque: deja de ser publicidad con numeros y pasa a
+   * ser un dato con procedencia. Cuesta una linea y la puede comprobar
+   * cualquiera, que es justo el punto.
+   */
+  source: 'Lead Response Management Study (MIT / InsideSales).',
   /** Chips del marquee: lo que Mia resuelve sin que intervengas */
   chipRows: [
     ['Responde al instante', 'Maneja objeciones', 'Agenda citas', 'Cobra por Yape'],
     ['Seguimiento a 24h', 'Remarketing', 'Resumen diario', 'Deriva a humano'],
     ['Consulta de precios', 'Disponibilidad', 'Ubicación y horarios', 'Confirma pedidos'],
   ],
-  /** Etiquetas de la calculadora */
+  /**
+   * Etiquetas de la calculadora. Ahora SI se pintan, en components/sections/
+   * Calculadora.tsx, que ocupa el sitio de la ilustracion fija.
+   *
+   * `metrics` se ha ido. Eran cuatro cifras a la vez —perdidos/dia, ticket,
+   * perdida diaria, perdida anual— y de las cuatro solo una decide algo. Un
+   * tablero de metricas se lee con la parte del cerebro que compara y duda; un
+   * numero grande y solo se lee con la que se asusta, que es la que aqui hace
+   * falta. La perdida anual sobre todo hacia dano: multiplicar por doce una
+   * estimacion la vuelve inverosimil justo cuando mas hay que creersela.
+   */
   calculator: {
-    tag: 'Tiempo real',
-    assumption:
-      'Este cálculo asume que tardas más de 5 minutos en responder — el punto donde la probabilidad de venta cae 21 veces.',
+    tag: 'Tu cuenta, en tiempo real',
     leadsLabel: 'Clientes que te escriben al día',
     ticketLabel: 'Ticket promedio de venta',
     resultLabel: 'Estás perdiendo aproximadamente',
-    metrics: ['Clientes perdidos/día', 'Ticket promedio', 'Pérdida diaria', 'Pérdida anual'],
-    tip: 'Con Vendemia, Mia responde en 30 segundos y recupera hasta el 78 % de esos clientes automáticamente.',
+    perMonth: 'al mes',
+    // El plural se resuelve en el componente: "1 venta" / "45 ventas".
+    salesLabel: 'que no llegan a serlo',
+    // El supuesto va DEBAJO DEL NUMERO y visible, no en letra pequena ni en un
+    // tooltip. Una cifra de perdida sin sus supuestos a la vista se lee como
+    // una exageracion de vendedor; con ellos delante se lee como una cuenta, y
+    // el lector puede discutirla — que es exactamente lo que queremos que haga,
+    // porque para discutirla tiene que hacerla suya.
+    // Acortada a dos lineas: en tres, la tarjeta no cabia en el hueco que le
+    // deja la seccion apilada y el resultado se recortaba. Dice lo mismo.
+    assumption:
+      'Supone 1 de cada 4 consultas sin respuesta en 5 minutos, y 3 cierres de cada 10 atendidas a tiempo.',
+    // Decia "recupera hasta el 78 % de esos clientes". El 78 % es el dato de
+    // que la gente le compra a quien responde primero: NO es una tasa de
+    // recuperacion, y menos una nuestra. Usar el mismo numero para dos cosas
+    // distintas en la misma pagina es la clase de descuido que, cuando alguien
+    // lo nota, se lleva por delante tambien los numeros que si son ciertos.
+    tip: 'Mia responde en 30 segundos: el primero en contestar pasas a ser tú.',
   },
 } as const;
 
@@ -409,7 +606,7 @@ export const BENTO_B = {
       body: [
         { text: 'A cualquier hora, también domingo y a las 3 de la mañana. ' },
         { text: 'El 78 %', strong: true },
-        { text: ' de tus clientes decide con el primer contacto: ese primer contacto ahora siempre es el tuyo.' },
+        { text: ' le compra a quien le responde primero — y el primero ahora eres tú.' },
       ] as RichText,
     },
     {
@@ -786,13 +983,22 @@ export const PRICING = {
     { code: 'USD', symbol: '$', rate: 0.27 },
   ],
   period: '/ mes',
-  cta: 'Empezar ahora',
+  // Respaldo por si algun dia entra un plan sin `cta` propio. Decia "Empezar
+  // ahora": generico, imperativo y sin decir que se lleva quien pulsa.
+  cta: 'Quiero este plan',
   plans: [
     {
       header: 'Starter · para el que atiende solo',
       price: 89,
       featured: false,
       cta: 'Empiezo con Starter',
+      // EL BOTON DE PRECIOS YA NO MANDA AL PIE DE LA PAGINA.
+      // Llevaba a #final-cta: el lector elegia plan, bajaba, y se encontraba
+      // OTRO boton que tenia que volver a pulsar. Dos clics para una sola
+      // decision, y entre uno y otro un scroll entero para arrepentirse.
+      // Ahora abre WhatsApp con el plan ya nombrado, asi que la conversacion
+      // empieza en "quiero Starter" y no en "hola, informacion".
+      waMessage: 'Hola 👋 Quiero el plan Starter de Vendemia (S/89 al mes) para mi negocio.',
       specs: [
         { icon: 'chat', label: 'Hasta 300 conversaciones/mes' },
         { icon: 'shield', label: 'Objeciones automáticas' },
@@ -805,6 +1011,7 @@ export const PRICING = {
       price: 149,
       featured: true,
       cta: 'Empiezo con Seller',
+      waMessage: 'Hola 👋 Quiero el plan Seller de Vendemia (S/149 al mes) para mi negocio.',
       specs: [
         { icon: 'chat', label: 'Hasta 800 conversaciones/mes' },
         { icon: 'shield', label: 'Seguimiento inteligente 24h' },
@@ -817,6 +1024,7 @@ export const PRICING = {
       price: 189,
       featured: false,
       cta: 'Empiezo con Best Seller',
+      waMessage: 'Hola 👋 Quiero el plan Best Seller de Vendemia (S/189 al mes) para mi negocio.',
       specs: [
         { icon: 'chat', label: 'Conversaciones ilimitadas' },
         { icon: 'shield', label: 'Multi-negocio en un panel' },
@@ -850,6 +1058,24 @@ export const FAQ = {
       ],
     },
     {
+      /**
+       * ⚠️ ESTA ES LA PRIMERA OBJECION REAL DEL PRODUCTO Y NO ESTABA EN NINGUNA
+       * PARTE DE LA PAGINA.
+       *
+       * Antes de preguntarse cuanto cuesta, quien vende por WhatsApp se
+       * pregunta si va a tener que cambiar el numero que lleva anos repartiendo
+       * en tarjetas, en el letrero y en su perfil de Instagram. Mientras esa
+       * duda no se responde, todo lo demas de la pagina se lee con un "ya, pero
+       * ¿y mi numero?" de fondo. Va la segunda, justo despues de saber que es
+       * esto y antes de nada mas.
+       */
+      q: '¿Necesito otro número de WhatsApp o puedo usar el mío?',
+      a: [
+        'El tuyo. Mia trabaja sobre el número que ya repartes: no hay que comprar otra línea ni avisar a nadie de ningún cambio.',
+        'Y si hay contactos que prefieres que no atienda, los excluyes y esas conversaciones siguen siendo solo tuyas.',
+      ],
+    },
+    {
       q: '¿Cuánto tiempo toma configurarlo?',
       a: [
         '10 minutos. Sin asesores, sin código, sin llamadas de onboarding. Tú solo, desde tu celular.',
@@ -864,13 +1090,30 @@ export const FAQ = {
     {
       q: '¿Qué pasa si no funciona?',
       a: [
-        'Te devolvemos el dinero sin preguntas. Si Mia no te ayuda a responder más rápido y cerrar más ventas, no mereces pagar.',
+        // Decia "no mereces pagar", que significa lo contrario de lo que
+        // queria decir: deja al cliente sin merito en vez de dejarnos a
+        // nosotros sin derecho a cobrar. Es la frase de la garantia, o sea la
+        // que mas trabaja de todo el FAQ.
+        'Te devolvemos el dinero sin preguntas. Si Mia no te ayuda a responder más rápido y cerrar más ventas, no tienes por qué pagarla.',
       ],
     },
     {
       q: '¿Funciona para barberías, clínicas y e-commerce?',
       a: [
         'Sí. Vendemia se configura por tipo de negocio: agenda citas para barberías y clínicas, vende productos para e-commerce, y combina ambos si los necesitas.',
+      ],
+    },
+    {
+      /**
+       * La otra objecion que faltaba. Quien deja su WhatsApp en manos de algo
+       * automatico no teme que falle: teme ENTERARSE TARDE. Por eso la
+       * respuesta no promete que Mia no se equivoque —eso no seria creible— sino
+       * que cuando pasa te enteras en el momento y hay alguien que entra.
+       */
+      q: '¿Y si Mia se equivoca?',
+      a: [
+        'Cuando algo no cuadra no improvisa: avisa al dueño y a un asesor en el momento, con la conversación a la vista, para que alguien entre enseguida.',
+        'Prefiere pasarte el chat antes que inventarse una respuesta.',
       ],
     },
     {
@@ -913,7 +1156,7 @@ export const FINAL_CTA = {
     'Sin instalación. Sin esperar a un asesor.',
     'Sin pagar S/500 para empezar.',
   ],
-  cta: 'Quiero probar Mia gratis',
+  cta: CTA.long,
   footnote: 'Garantía de reembolso 30 días · Funciona en 10 minutos',
 } as const;
 
@@ -927,7 +1170,13 @@ export const RELATED = {
     {
       icon: 'wallet',
       title: 'S/0 de instalación',
-      body: 'Otros cobran S/500 antes de que vendas nada. En 6 meses eso es más de S/1,200 que te ahorras solo en arrancar.',
+      // El "más de S/1,200 en 6 meses" no salia de ninguna parte: la pagina
+      // declara un cobro unico de S/500 y no dice cual es la mensualidad del
+      // otro, asi que el lector no puede rehacer la cuenta ni de lejos. Un
+      // ahorro que no se puede comprobar se lee como un ahorro inventado, y
+      // encima tapaba el dato bueno, que es sencillo y verificable: aqui la
+      // instalacion no se cobra.
+      body: 'Otros cobran S/500 de instalación antes de que vendas nada. Aquí ese cobro no existe: el primer mes te cuesta S/89 y ni un sol más.',
     },
     {
       icon: 'clock',
@@ -937,7 +1186,11 @@ export const RELATED = {
     {
       icon: 'shield',
       title: '30 días de garantía',
-      body: 'Si no te ayuda a responder más rápido y cerrar más, te devolvemos el dinero sin preguntas. Nadie más lo ofrece.',
+      // "Nadie más lo ofrece" es una afirmación sobre TODO el mercado que no
+      // podemos sostener si alguien la discute — y en Perú una comparativa sin
+      // respaldo es justo lo que mira Indecopi. Ademas no hacia falta: la
+      // garantia ya es el argumento, y el superlativo solo le quitaba peso.
+      body: 'Si no te ayuda a responder más rápido y cerrar más, te devolvemos el dinero sin preguntas. Treinta días dan de sobra para saberlo.',
     },
   ],
   // Se retiró `link: 'Ver comparativa completa'`. No se pintaba en ninguna
@@ -987,18 +1240,45 @@ export const FOOTER = {
       ],
     },
     {
+      /**
+       * ⚠️ LOS CUATRO ERAN TEXTO MUERTO, Y UNO DE ELLOS ES OBLIGATORIO.
+       *
+       * "Libro de reclamaciones" anunciado y sin enlace no es un enlace
+       * pendiente: el Codigo de Proteccion y Defensa del Consumidor (Ley
+       * 29571) obliga a quien vende por internet a tenerlo, en formato
+       * virtual y accesible. Escribirlo en el pie sin que lleve a ninguna
+       * parte es declarar que existe algo que no existia — peor que no
+       * mencionarlo.
+       *
+       * Ahora los cuatro son rutas de verdad, en app/(legal)/. El texto vive
+       * en lib/legal.ts, donde estan tambien los datos de la empresa que
+       * faltan por rellenar.
+       */
       title: 'Legal',
       links: [
-        { label: 'Términos' },
-        { label: 'Privacidad' },
-        { label: 'Garantía de reembolso' },
-        { label: 'Libro de reclamaciones' },
+        { label: 'Términos', href: '/terminos' },
+        { label: 'Privacidad', href: '/privacidad' },
+        { label: 'Garantía de reembolso', href: '/garantia' },
+        { label: 'Libro de reclamaciones', href: '/reclamaciones' },
       ],
     },
   ],
-  newsletter: {
-    title: 'Recibe las novedades de Mia y trucos para vender más por WhatsApp.',
-    placeholder: 'tu@email.com',
+  /**
+   * ⚠️ AQUI HABIA UN NEWSLETTER QUE SE TRAGABA EL CORREO EN SILENCIO.
+   *
+   * El formulario hacia `preventDefault()` y ahi se acababa: no habia destino,
+   * ni aviso, ni error. El visitante escribia su correo, pulsaba, y no pasaba
+   * absolutamente nada — ni siquiera un mensaje diciendo que habia fallado. De
+   * todas las formas de perder a alguien que ya te habia dado su correo, esa es
+   * la unica que ademas le hace pensar que fue culpa suya.
+   *
+   * Y no hacia falta arreglarlo: hacia falta quitarlo. Toda la pagina lleva a
+   * WhatsApp, el producto ES WhatsApp, y el correo no lo lee nadie aqui. Un
+   * canal menos que mantener y una promesa menos que incumplir.
+   */
+  contacto: {
+    title: '¿Tienes una duda antes de decidir? Pregúntanos por WhatsApp.',
+    cta: 'Escribir por WhatsApp',
   },
   /**
    * Sin URL todavía. Se pintan como texto, no como enlaces: seis iconos
@@ -1015,11 +1295,26 @@ export const FOOTER = {
     { label: 'LinkedIn' },
     { label: 'YouTube' },
   ],
+  /**
+   * ⚠️ SE RETIRO EL AVISO DE reCAPTCHA PORQUE ERA FALSO.
+   *
+   * Decia "Este sitio esta protegido por reCAPTCHA. Se aplican la Politica de
+   * privacidad y los Terminos del servicio". Se comprobo en el navegador: no
+   * hay ningun script de reCAPTCHA en la pagina ni objeto `grecaptcha`. No es
+   * un detalle: ese aviso es un requisito que Google impone a quien SI usa
+   * reCAPTCHA, no un sello de confianza que se pega porque queda serio.
+   * Declarar una proteccion que no existe es afirmar algo falso sobre la web
+   * en el unico bloque de la pagina cuyo trabajo entero es ser exacto.
+   *
+   * Y encima "Politica de privacidad" y "Terminos del servicio" iban
+   * subrayados sin ser enlaces, o sea que parecian llevar a unas paginas que
+   * tampoco existen. Los dos nombres siguen en la columna Legal, que es su
+   * sitio, esperando a que existan.
+   *
+   * Si algun dia se anade reCAPTCHA de verdad (por ejemplo al formulario del
+   * newsletter), este aviso vuelve — pero entonces con los enlaces puestos.
+   */
   legal: {
-    recaptcha: 'Este sitio está protegido por reCAPTCHA. Se aplican la',
-    privacyLink: 'Política de privacidad',
-    and: 'y los',
-    termsLink: 'Términos del servicio',
     copyright: `© ${new Date().getFullYear()} Vendemia · Hecho en Perú 🇵🇪`,
     address: 'Mia, tu vendedor digital en WhatsApp · Lima, Perú',
   },
