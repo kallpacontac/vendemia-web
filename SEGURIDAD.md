@@ -221,20 +221,61 @@ conviene confirmarlo.
   recuperación de contraseña falla justo cuando hay alguien delante esperando.
   Es la misma razón por la que `add_member` enseña la contraseña temporal en
   pantalla en vez de mandarla por correo.
-- **Duración del token**: por defecto 1 hora con refresco. Para un panel que se
-  deja abierto en un mostrador, considera bajarlo.
+- **Flujo PKCE, no `implicit`** (`flowType: 'pkce'` en `lib/supabase/client.ts`).
+  Con el flujo por defecto de supabase-js, la vuelta de Google y del correo de
+  recuperación traen el *access token* **y el refresh token** en el fragmento de
+  la URL. La librería lo limpia enseguida, pero durante ese instante lo puede
+  leer cualquier script de la página o extensión del navegador. Con PKCE viaja
+  un código de un solo uso que no sirve sin un verificador que solo tiene el
+  navegador que empezó el flujo.
+
+  El coste, asumido: **un enlace de recuperación abierto en otro dispositivo no
+  funciona**. Se avisa antes (mensaje de `/login`) y se explica después
+  (`useSesionDeLaUrl.ts`).
+
+- **Duración de los tokens** (Authentication › Sessions). Los cinco valores, y
+  por qué cada uno:
+
+  | Ajuste | Valor | Qué corta |
+  |---|---|---|
+  | Access token (JWT) expiry | `900` | La ventana en la que un token robado o revocado sigue leyendo datos. Ver el riesgo de la sección 3 |
+  | Time-box user sessions | `168` h | El tope absoluto. Sin él, un refresh token en el ordenador de recepción vale indefinidamente |
+  | Inactivity timeout | `8` h | Recepción cierra y la sesión muere sola. Una jornada |
+  | Refresh token rotation | activado | Cada refresco invalida el anterior |
+  | Reuse interval | `10` s | Margen para dos pestañas refrescando a la vez. Más alto es una ventana para reutilizar un token robado |
+
+- **Contraseñas** (Authentication › Providers › Email): mínimo 10, exigir
+  símbolos y activar *Prevent leaked passwords*, que compara contra
+  HaveIBeenPwned y ataja el ataque más común — la contraseña reutilizada de otra
+  filtración. ⚠️ Si subes el mínimo ahí, sube también `MINIMO` en
+  `app/(acceso)/nueva-clave/page.tsx`: hoy los dos están en 6 y el formulario
+  dejaría pasar contraseñas que Supabase luego rechaza.
+
+- **Plantilla del correo de recuperación** (Authentication › Emails). Tiene que
+  usar `{{ .ConfirmationURL }}`. Con PKCE, cambiarla a `{{ .Token }}` o
+  `{{ .TokenHash }}` rompe la recuperación entera.
 
 ### 2.7 · El enlace de recuperación ES una sesión
 
-`/nueva-clave` recibe una sesión temporal en la URL: **quien abra ese enlace
-está dentro de la cuenta**, sin saber la contraseña vieja. Por eso:
+`/nueva-clave` recibe un código de un solo uso que se canjea por una sesión:
+**quien consiga abrir ese enlace está dentro de la cuenta**, sin saber la
+contraseña vieja. Por eso:
 
 - Caduca y se usa una sola vez (lo gestiona Supabase; la pantalla distingue el
   enlace caducado y ofrece pedir otro).
+- Con PKCE, además, **el código no vale en otro navegador**: hace falta el
+  verificador del que pidió el enlace. Un enlace interceptado en el correo no es
+  suficiente.
 - Esa pantalla **no enseña ningún dato del negocio**, solo el formulario.
 - El aviso al pedirlo no confirma si el correo existe: un «ese correo no está
   registrado» convierte el formulario en una forma cómoda de averiguar quién es
   cliente.
+- **Cambiar la contraseña echa a las demás sesiones**
+  (`signOut({ scope: 'others' })`). Supabase **no** lo hace solo, y sin eso el
+  caso que trae aquí a la mitad de la gente —«creo que alguien entró en mi
+  cuenta»— no se resuelve: el intruso sigue dentro con su token, que se renueva
+  indefinidamente sin necesitar la contraseña. `'others'` conserva la sesión
+  actual, que es lo que permite entrar directo al panel después.
 
 ---
 
@@ -246,6 +287,7 @@ está dentro de la cuenta**, sin saber la contraseña vieja. Por eso:
 | Los errores de Postgres se enseñan tal cual | Un `permission denied for table X` le dice al usuario más de lo necesario sobre el esquema. A cambio, cuando algo falla se puede diagnosticar. Si el panel sale de círculos de confianza, conviene filtrarlos. |
 | El filtro de Realtime no es un control | `escucharMensajes` filtra por `lead_id`, pero eso es una comodidad del canal. Lo que impide recibir mensajes ajenos es el RLS aplicado a Realtime: **hay que tener RLS activo en `messages`** (2.1). |
 | Sin CSP de scripts | Explicado arriba. |
+| **Revocar una sesión no corta el acceso a los datos al instante** | Y es contraintuitivo, así que conviene tenerlo escrito. Al revocar, el *refresh token* muere en el acto: esa sesión no se puede renovar nunca más. Pero el *access token* que el navegador ya tenía **sigue leyendo datos hasta que caduca solo**, porque PostgREST valida la firma y la fecha en local, sin preguntarle al servidor de auth si la sesión sigue viva. Medido el 2026-08-31: token revocado, `GET /rest/v1/memberships` → `200` con filas reales, 38 minutos por delante. La única palanca es el **JWT expiry** (2.6): con `900` la ventana pasa de una hora a un cuarto de hora. Bajarlo a cero no es opción — cada refresco es una petición de red. |
 | La clave `anon` está en el bundle | Es su función. Lo que nunca puede aparecer es la `service_role`: se salta el RLS entero. No está en el repo ni en Vercel — solo en el `.env` del bot. |
 
 ---
@@ -358,3 +400,46 @@ Para repetirlo cuando cambie algo del esquema: hace falta una cuenta confirmada
 sin membresía (el proyecto tiene `mailer_autoconfirm: false` y las altas
 anónimas desactivadas, así que se necesita un buzón real o la `service_role`), y
 después las mismas llamadas de arriba con su token.
+
+---
+
+## 5 · Verificación en vivo de la sesión · 2026-08-31
+
+Ejecutado contra **producción** (`vendemias.com`) con dos perfiles de navegador
+distintos y una cuenta real, no en local ni con simulacros.
+
+### Montaje
+
+| Perfil | Papel |
+|---|---|
+| A | Pide el enlace de recuperación y lo abre. Guarda el verificador PKCE |
+| B | El «otro dispositivo»: sesión abierta con la contraseña vieja |
+
+### Lo que salió
+
+| Comprobación | Resultado |
+|---|---|
+| Enlace del correo | `token=pkce_…` — el flujo nuevo está activo de punta a punta |
+| Canje en el perfil A | ✅ aterriza en `/nueva-clave`, sin errores de consola |
+| Cambio de contraseña | ✅ *«Contraseña cambiada y cerrada la sesión en los demás dispositivos»* |
+| Sesión del perfil B · `GET /auth/v1/user` | `403 session_not_found` — «Session from session_id claim in JWT does not exist» |
+| Sesión del perfil B · refresh | `400 refresh_token_not_found` |
+| Sesión del perfil B · `GET /rest/v1/memberships` | ⚠️ `200` **con filas**, 2300 s antes de caducar |
+
+Las dos últimas filas juntas son el hallazgo: la sesión está muerta para el
+servidor de auth y viva para el de datos. Ver el riesgo aceptado de la sección 3.
+
+### Un fallo de configuración que este test encontró
+
+El primer enlace de recuperación llegó con
+`redirect_to=http://localhost:3000`. El código pedía
+`https://vendemias.com/nueva-clave` —está en el bundle desplegado— pero Supabase
+lo rechazó por no estar en las *Redirect URLs* y **cayó al Site URL**, que seguía
+apuntando al portátil desde el desarrollo.
+
+O sea: **la recuperación de contraseña estaba rota en producción** y ninguna
+prueba local lo habría enseñado, porque en local `localhost:3000` es
+exactamente lo que uno espera ver. Arreglado poniendo el Site URL en
+`https://vendemias.com` y las cuatro rutas exactas de 2.6.
+
+Cuando se active Google, la vuelta del login se habría roto por la misma causa.
