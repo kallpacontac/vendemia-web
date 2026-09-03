@@ -109,7 +109,7 @@ export default function Topbar({
         <div className="profile">
           <div className="avatar">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/assets/logos/logo-azul.webp" alt="perfil" />
+            <img src="/assets/logos/logo-mia.webp" alt="perfil" />
           </div>
           <div>
             <b>{email.split('@')[0] || 'Cuenta'}</b>

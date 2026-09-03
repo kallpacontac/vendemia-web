@@ -153,7 +153,7 @@ export default function Login() {
     <div className="acceso">
       <form className="acceso__card" onSubmit={enviar}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img className="acceso__logo" src="/assets/logos/logo-principal.webp" alt="Vendemia" />
+        <img className="acceso__logo" src="/assets/logos/logo-naranja.webp" alt="Vendemia" />
         <h1>
           {modo === 'entrar'
             ? 'Entra a tu panel'

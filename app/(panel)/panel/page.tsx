@@ -500,7 +500,7 @@ export default function Dashboard() {
             <div className="rail">
               <div className="prof">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src="/assets/logos/logo-azul.webp" alt="perfil" />
+                <img src="/assets/logos/logo-mia.webp" alt="perfil" />
                 <div className="who">
                   <b>{datos?.empresa?.name ?? compania?.nombre}</b>
                   <small>{datos?.empresa?.location || 'Sin ubicación configurada'}</small>

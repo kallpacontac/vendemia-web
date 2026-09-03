@@ -132,7 +132,7 @@ export default function NuevaClave() {
       <div className="acceso">
         <div className="acceso__card">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img className="acceso__logo" src="/assets/logos/logo-principal.webp" alt="Vendemia" />
+          <img className="acceso__logo" src="/assets/logos/logo-naranja.webp" alt="Vendemia" />
           <h1>Este enlace ya no vale</h1>
           <p className="sub">
             Los enlaces de recuperación caducan y solo se pueden usar una vez.
@@ -150,7 +150,7 @@ export default function NuevaClave() {
     <div className="acceso">
       <form className="acceso__card" onSubmit={guardar}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img className="acceso__logo" src="/assets/logos/logo-principal.webp" alt="Vendemia" />
+        <img className="acceso__logo" src="/assets/logos/logo-naranja.webp" alt="Vendemia" />
         <h1>Nueva contraseña</h1>
         <p className="sub">Escríbela dos veces y entras directo.</p>
 

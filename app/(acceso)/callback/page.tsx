@@ -44,7 +44,7 @@ export default function Callback() {
       <div className="acceso">
         <div className="acceso__card">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img className="acceso__logo" src="/assets/logos/logo-principal.webp" alt="Vendemia" />
+          <img className="acceso__logo" src="/assets/logos/logo-naranja.webp" alt="Vendemia" />
           <h1>No se pudo entrar</h1>
           <p className="sub">La vuelta de Google no traía una sesión válida.</p>
           {error && <div className="acceso__error">{error}</div>}

@@ -38,7 +38,7 @@ export default function Sidebar({ pendientes = 0 }: { pendientes?: number }) {
     <aside className="sidebar">
       <div className="sidebar__brand">
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/assets/logos/logo-principal.webp" alt="Vendemia" />
+        <img src="/assets/logos/logo-naranja.webp" alt="Vendemia" />
       </div>
 
       <nav className="sidebar__nav">
