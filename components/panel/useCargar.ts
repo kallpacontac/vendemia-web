@@ -5,7 +5,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 /**
  * Cuándo volver a preguntar después de un `recargar()`, en milisegundos.
  *
- * ══ POR QUÉ NO BASTA CON PEDIRLO UNA VEZ ═════════════════════════════════
+ * ══ POR QUÉ SE PREGUNTA OCHO VECES Y NO UNA ══════════════════════════════
  *
  * Un comando pasa por dos sistemas, no por uno:
  *
@@ -14,19 +14,35 @@ import { useCallback, useEffect, useRef, useState } from 'react';
  *
  * `encolar()` resuelve en el paso 1, que es lo correcto: es cuando el cambio
  * existe de verdad. Pero la pantalla lee lo del paso 2, y entre uno y otro pasa
- * un instante. Medido en producción: el bot tardó 1,48 s y el espejo 0,19 s más.
+ * un rato MUY variable. Medido en producción, dos veces el mismo día: 0,19 s
+ * una y 2,44 s otra.
  *
- * Refrescando una sola vez, esos 190 ms deciden si ves tu cambio o no. Y cuando
- * pierdes la carrera no hay segunda oportunidad: la pantalla se queda con los
- * datos viejos hasta que alguien recarga a mano. Comprobado con Playwright
- * contra producción — mismo test, dos pasadas: en una el producto salió a los
- * 2,6 s, en la otra no salió en 24 s. Ese es exactamente el "tengo que
- * actualizar la página para que aparezca".
+ * Con un solo refresco, ese rato decide si ves tu cambio. Y al perder la
+ * carrera no hay segunda oportunidad: la pantalla se queda con lo viejo hasta
+ * que alguien recarga a mano. Reproducido con Playwright contra producción —
+ * mismo test, tres pasadas: 4,6 s, 6,7 s, y una que no salió en 24 s. Eso es
+ * exactamente el "tengo que actualizar la página para que aparezca".
  *
- * Así que se pregunta varias veces repartidas. Son tres consultas de más por
- * acción, y valen lo que cuestan.
+ * ⚠️ Lo CORRECTO sería escuchar la tabla por Realtime en vez de preguntar. No
+ * se puede: `catalog` no está en la publicación `supabase_realtime`. El canal
+ * se suscribe sin dar error y no llega ni un evento — comprobado. Si algún día
+ * se añaden las tablas del espejo a la publicación, esto se sustituye por una
+ * suscripción y se acabaron los reintentos.
+ *
+ * Mientras tanto: espaciado creciente hasta 12,5 s, y se para en cuanto los
+ * datos cambian de verdad (ver `firma`), que es el caso normal a los 2-3 s. En
+ * la práctica son dos o tres consultas de más, no ocho.
  */
-const REINTENTOS_MS = [900, 2200, 4500];
+const REINTENTOS_MS = [600, 1300, 2200, 3400, 5000, 7000, 9500, 12500];
+
+/** Huella del contenido, para saber si una recarga trajo algo distinto. */
+const firma = (d: unknown): string => {
+  try {
+    return JSON.stringify(d);
+  } catch {
+    return String(d);
+  }
+};
 
 /**
  * Cargar datos de Supabase en una pantalla del panel.
@@ -51,12 +67,25 @@ export function useCargar<T>(
   /** Para no enseñar la rueda en los reintentos: ya hay datos buenos puestos. */
   const hayDatos = useRef(false);
   const relojes = useRef<ReturnType<typeof setTimeout>[]>([]);
+  /** Huella de lo último que llegó. */
+  const ultimaFirma = useRef<string>('');
+  /** Huella de ANTES del comando: los reintentos paran cuando deja de coincidir. */
+  const firmaObjetivo = useRef<string | null>(null);
+
+  const pararReintentos = useCallback(() => {
+    relojes.current.forEach(clearTimeout);
+    relojes.current = [];
+    firmaObjetivo.current = null;
+  }, []);
 
   const recargar = useCallback(() => {
-    relojes.current.forEach(clearTimeout);
+    pararReintentos();
+    // Se guarda cómo estaban los datos ANTES. En cuanto una recarga traiga algo
+    // distinto, se cancelan los reintentos que queden: ya llegó el espejo.
+    firmaObjetivo.current = ultimaFirma.current;
     relojes.current = REINTENTOS_MS.map((ms) => setTimeout(() => setRonda((r) => r + 1), ms));
     setRonda((r) => r + 1);
-  }, []);
+  }, [pararReintentos]);
 
   // Si alguien se va de la pantalla a media ráfaga, los reintentos se cancelan.
   useEffect(() => () => relojes.current.forEach(clearTimeout), []);
@@ -92,10 +121,14 @@ export function useCargar<T>(
 
     cargar()
       .then((d) => {
-        if (vivo) {
-          setDatos(d);
-          hayDatos.current = d !== null;
-        }
+        if (!vivo) return;
+        setDatos(d);
+        hayDatos.current = d !== null;
+
+        const nueva = firma(d);
+        // ¿Ya llegó lo que estábamos esperando? Entonces sobran los reintentos.
+        if (firmaObjetivo.current !== null && nueva !== firmaObjetivo.current) pararReintentos();
+        ultimaFirma.current = nueva;
       })
       .catch((e: unknown) => {
         if (vivo) setError(e instanceof Error ? e.message : 'No se pudieron cargar los datos');
