@@ -66,13 +66,30 @@ export function ProveedorSesion({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
+  /**
+   * ⚠️ LA DEPENDENCIA ES EL ID DEL USUARIO, NO EL OBJETO `session`.
+   *
+   * supabase-js renueva el token al volver a la pestaña, y cada renovación
+   * emite un objeto `session` NUEVO aunque sea la misma persona. Con el objeto
+   * como dependencia, ese cambio volvía a pedir las membresías y —peor— volvía
+   * a poner `cargando` en true. La guardia de (panel)/layout.tsx enseña la
+   * pantalla de carga mientras `cargando`, así que el panel entero se
+   * DESMONTABA y se volvía a montar: todas las consultas de la pantalla se
+   * repetían solas cada vez que alguien cambiaba de pestaña y volvía.
+   *
+   * Con el id, un token renovado no cambia nada. Un usuario distinto, sí.
+   */
+  const usuarioId = session?.user?.id ?? null;
+
   useEffect(() => {
-    if (!session) {
+    if (!usuarioId) {
       setCargando(false);
       return;
     }
     let vivo = true;
-    setCargando(true);
+    // Solo bloquea la primera vez. Al recargar por otro motivo no se vacía la
+    // pantalla: ya hay datos buenos puestos.
+    setCargando((c) => (companias.length ? c : true));
 
     void misCompanias()
       .then((lista) => {
@@ -93,7 +110,8 @@ export function ProveedorSesion({ children }: { children: React.ReactNode }) {
     return () => {
       vivo = false;
     };
-  }, [session]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [usuarioId]);
 
   const valor = useMemo<Estado>(() => {
     const compania = companias.find((c) => c.id === companyId) ?? null;
