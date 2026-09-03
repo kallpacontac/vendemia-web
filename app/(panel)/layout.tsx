@@ -7,7 +7,6 @@ import Link from 'next/link';
 import { ProveedorSesion, useSesion } from '@/components/panel/Sesion';
 import { ProveedorAvisos } from '@/components/panel/Avisos';
 import Sidebar from '@/components/panel/Sidebar';
-import AvisoBot from '@/components/panel/AvisoBot';
 import { ProveedorSalud } from '@/components/panel/Salud';
 
 /**
@@ -67,9 +66,21 @@ function Guardia({ children }: { children: React.ReactNode }) {
     );
   }
 
+  /*
+    Aquí vivía <AvisoBot />, un aviso fijo con el diagnóstico del bot.
+
+    Se quita porque decía por tercera vez lo que ya dicen la píldora de la barra
+    superior y la tarjeta "Estado del bot" del dashboard. Y estaba flotando
+    sobre el contenido: un mensaje que no se puede cerrar, tapando pantalla, con
+    información que está dos clics más arriba, es de las cosas que enseñan a la
+    gente a ignorar los avisos.
+
+    Si alguna vez hace falta un aviso realmente bloqueante —el bot lleva días
+    caído y el dueño no se ha enterado—, que sea uno que se pueda cerrar y que
+    diga algo que no esté ya en pantalla.
+  */
   return (
     <>
-      <AvisoBot />
       <Sidebar />
       {children}
     </>
