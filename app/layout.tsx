@@ -34,9 +34,24 @@ export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000'),
   // Ni "bot" ni "chatbot", tampoco aquí: el título de Google es lo primero que
   // lee el cliente y es donde se decide en qué categoría te mete.
-  title: 'Vendemia · Tu vendedor digital en WhatsApp',
+  //
+  // ⚠️ LA MARCA VA AL FINAL, NO AL PRINCIPIO.
+  // Decía 'Vendemia · Tu vendedor digital en WhatsApp'. Nadie busca "Vendemia"
+  // todavía —no hay marca que buscar—, así que la primera palabra del título,
+  // que es la que más pesa para Google y la única que se lee entera en un
+  // móvil, se estaba gastando en el único término por el que NO va a llegar
+  // nadie. Delante va lo que sí se busca, y "en Perú" es la señal geográfica
+  // que separa este resultado de las webs de bots de WhatsApp de España y
+  // México, que es contra quien compite este dominio.
+  title: 'Vendedor digital para WhatsApp en Perú · Vendemia',
+  // La anterior contaba lo que hace Mia pero no decía PARA QUIÉN, y las
+  // búsquedas de este mercado son de cola larga y por rubro: "responder
+  // whatsapp automático barbería", "agendar citas clínica whatsapp". Nombrar
+  // los cuatro rubros mete esas expresiones en el fragmento y además hace que
+  // el lector se reconozca antes de entrar. Se recortó a ~157 caracteres para
+  // que Google no la corte a mitad.
   description:
-    'Mia atiende en 30 segundos, resuelve objeciones, agenda citas y cobra por WhatsApp — también de madrugada y en domingo. Listo en 10 minutos, desde S/89 al mes.',
+    'Mia atiende tu WhatsApp en 30 segundos, resuelve objeciones, agenda citas y cobra por Yape. Para barberías, clínicas, tiendas y gimnasios. Desde S/89 al mes.',
   /**
    * El canonical deja por escrito cuál de los dos nombres de host es el bueno.
    *
@@ -105,10 +120,12 @@ const INTRO_GATE = `
      al principio sería romper cosas que sí funcionan.
 
      Y hay algo peor que romper el scroll: el acceso con Google y el enlace de
-     recuperar contraseña vuelven con la sesión DENTRO del hash
-     (#access_token=...). Borrarlo antes de que supabase-js lo lea deja al
-     usuario fuera, sin mensaje y sin pista — el fallo se ve en /login o en
-     /callback, a mil kilómetros de este script. Ver (acceso)/callback/page.tsx.
+     recuperar contraseña vuelven con credenciales en la URL. Con el flujo PKCE
+     el código va en la query (?code=...), que este script no toca, pero los
+     ERRORES siguen llegando en el hash (#error=access_denied&error_code=...) y
+     borrarlos deja al usuario ante un "no hay sesión" sin explicación. Ver
+     useSesionDeLaUrl.ts. Y si alguien volviera a 'implicit', ahí viajaría la
+     sesión entera en el hash y borrarlo dejaría a la gente fuera del panel.
 
      La landing es "/" y nada más. El resto sale por aquí sin tocar nada. */
   if (location.pathname !== '/') {
@@ -160,12 +177,38 @@ const INTRO_GATE = `
     }
   } catch (e) {}
 
+  /* ⚠️ QUIEN LLEGA DESDE UN ANUNCIO NO VE LA INTRO.
+
+     La intro dura 2,7 s mas 0,7 s de telon: casi tres segundos y medio antes
+     de que el hero se pueda leer. Para quien llega por marca o por un enlace
+     eso es una entrada, y esta bien que la vea.
+
+     Para quien llega desde un anuncio es otra cosa. Ha hecho clic en una
+     promesa concreta, viene con un coste por clic detras, casi siempre desde
+     un telefono y muchas veces con datos moviles — y lo primero que se
+     encuentra es una animacion de marca de una marca que todavia no le importa.
+     Ahi tres segundos y medio no son elegancia: son la ventana entera en la
+     que se decide si se queda.
+
+     Se detecta por los parametros que ponen las propias plataformas (gclid de
+     Google, fbclid de Meta, ttclid de TikTok) y por cualquier utm_. No hace
+     falta configurar nada en los anuncios: ya vienen puestos.
+
+     Los dos forzados siguen mandando sobre todo lo demas, para poder probar:
+     ?intro=1 la reproduce aunque la visita venga de un anuncio, ?intro=0 la
+     salta siempre. */
   try {
     var replay = ${REPLAY_INTRO_ON_RELOAD};              /* ⚠️ DEV ONLY */
-    var forced = new URLSearchParams(location.search).get('intro');
+    var q = new URLSearchParams(location.search);
+    var forced = q.get('intro');
     var seen = (replay || forced === '1') ? null : sessionStorage.getItem('intro_seen');
     var reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    var run = forced === '0' ? false : (!seen && !reduced);
+    var dePago = !!(q.get('gclid') || q.get('fbclid') || q.get('ttclid') ||
+                    q.get('msclkid') || q.get('utm_source') || q.get('utm_medium') ||
+                    q.get('utm_campaign'));
+    var run = forced === '0' ? false
+            : forced === '1' ? true
+            : (!seen && !reduced && !dePago);
     document.documentElement.dataset.intro = run ? 'run' : 'skip';
   } catch (e) {
     document.documentElement.dataset.intro = 'skip';

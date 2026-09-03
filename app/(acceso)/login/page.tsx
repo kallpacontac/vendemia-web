@@ -87,9 +87,17 @@ export default function Login() {
          * forma cómoda de averiguar quién es cliente. Supabase tampoco lo
          * distingue en la respuesta.
          */
+        /**
+         * ⚠️ El aviso de "en este mismo navegador" no es un detalle: el cliente
+         * usa flujo PKCE, así que el verificador se queda AQUÍ. Un enlace
+         * abierto en el móvil cuando se pidió en el portátil falla, y aunque
+         * useSesionDeLaUrl.ts lo explica cuando pasa, para entonces la persona
+         * ya perdió un viaje. Mejor decirlo antes. Ver la nota de flowType en
+         * lib/supabase/client.ts.
+         */
         setOk(
           'Si ese correo tiene cuenta, le acaba de llegar un enlace para cambiar la contraseña. ' +
-            'Revisa también la carpeta de spam.',
+            'Ábrelo en este mismo navegador. Revisa también la carpeta de spam.',
         );
         setModo('entrar');
       } else {

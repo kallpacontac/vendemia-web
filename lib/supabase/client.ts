@@ -74,16 +74,47 @@ export function supabase(): SupabaseClient {
         /**
          * ⚠️ TIENE QUE ESTAR EN true, o «olvidé mi contraseña» no funciona.
          *
-         * El enlace del correo de recuperación vuelve al sitio con la sesión
-         * temporal en la URL —en el fragmento (`#access_token=…`) o como
-         * `?code=` según el flujo—. Esto es lo que hace que supabase-js la lea,
-         * la canjee y dispare el evento PASSWORD_RECOVERY. En false, el enlace
-         * abre /nueva-clave sin sesión y no hay forma de cambiar la contraseña.
+         * El enlace del correo de recuperación y la vuelta de Google aterrizan
+         * con un `?code=` en la URL. Esto es lo que hace que supabase-js lo lea,
+         * lo canjee por una sesión y dispare PASSWORD_RECOVERY o SIGNED_IN. En
+         * false, el enlace abre /nueva-clave sin sesión y no hay forma de
+         * cambiar la contraseña.
          *
          * Efecto secundario asumido: en cada carga de página la librería mira
          * la URL por si trae credenciales. Es barato y no toca nada más.
          */
         detectSessionInUrl: true,
+        /**
+         * ══════════════════════════════════════════════════════════════════
+         * PKCE, Y NO EL 'implicit' QUE VIENE POR DEFECTO
+         * ══════════════════════════════════════════════════════════════════
+         *
+         * Con `implicit` —el defecto de esta versión de auth-js, comprobado en
+         * GoTrueClient— la vuelta de Google y del correo de recuperación traen
+         * el ACCESS TOKEN y el REFRESH TOKEN en el fragmento de la URL. El de
+         * refresco es el que importa: es la credencial de larga vida, la que se
+         * renueva sola cada hora indefinidamente. supabase-js limpia el
+         * fragmento justo después (replaceState y hash=''), así que no queda en
+         * el historial — pero durante ese instante lo puede leer cualquier
+         * script de la página o extensión del navegador, y basta con que
+         * alguien copie la URL antes de que se limpie.
+         *
+         * Con PKCE lo que viaja es un código de un solo uso que caduca en
+         * segundos y que NO sirve sin un verificador que solo tiene este
+         * navegador. Aunque se filtre, no se puede canjear.
+         *
+         * ⚠️ EL COSTE, QUE ES REAL: el verificador se guarda en el navegador
+         * que PIDIÓ el enlace. O sea que un enlace de «olvidé mi contraseña»
+         * pedido en el portátil y abierto en el móvil YA NO FUNCIONA. Está
+         * asumido y dicho en pantalla — ver el mensaje de /login en modo
+         * recuperar y la traducción de fallos de useSesionDeLaUrl.ts. Si algún
+         * día pesa más esa comodidad que el riesgo del token en la URL, esto es
+         * lo único que hay que volver a cambiar.
+         *
+         * El acceso con Google no tiene ese problema: empieza y acaba en el
+         * mismo navegador siempre.
+         */
+        flowType: 'pkce',
         // Nombre propio para no chocar con otro proyecto de Supabase abierto
         // en el mismo navegador durante el desarrollo.
         storageKey: 'vendemia-auth',
