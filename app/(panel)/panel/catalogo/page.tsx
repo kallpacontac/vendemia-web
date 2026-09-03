@@ -15,10 +15,19 @@
  *     que renombrar uno cambia lo que hay que decirle a Mia para pedirlo. Por
  *     eso el campo avisa en vez de comportarse como un campo más.
  *
- * 2 · DESACTIVAR ES EL BORRADO DE VERDAD. `delete_catalog_item` hace borrado
- *     lógico: pone `is_active` a 0. Un producto desactivado desaparece del
- *     catálogo del bot pero sigue en las citas y pedidos viejos, que es
- *     justo lo que se quiere. Aquí se llama "Ocultar" porque es lo que hace.
+ * 2 · NO HAY "ELIMINAR DE PLANO", Y NO ES UNA DECISIÓN DE ESTA PANTALLA.
+ *     `delete_catalog_item` hace borrado LÓGICO: pone `is_active` a 0. Y no hay
+ *     otra vía — comprobado contra producción, un DELETE directo sobre
+ *     `catalog` responde "permission denied for table catalog", igual que el
+ *     UPDATE. La única escritura posible es la cola de comandos.
+ *
+ *     Por eso el botón se llama "Ocultar" y no "Eliminar": llamarlo Eliminar
+ *     sería el mismo comando con la etiqueta cambiada, y mentir en la etiqueta
+ *     de un botón destructivo es peor que no tenerlo.
+ *
+ *     Lo que sí se hace es quitarlos de en medio: la lista NO los enseña salvo
+ *     que se pidan. Para un borrado real hace falta un comando nuevo en el bot
+ *     (ver el filtro `verOcultos` de abajo, donde se conecta en dos líneas).
  *
  * 3 · LO QUE EL BOT DECIDE, EL PANEL LO CUENTA. Máximo dos adjuntos por
  *     mensaje, la foto manda sobre el vídeo, y el pie lo escribe el bot con el
@@ -40,6 +49,8 @@ import {
   Check,
   ChevronDown,
   ChevronUp,
+  Eye,
+  EyeOff,
   ImagePlus,
   Package,
   Plus,
@@ -116,6 +127,15 @@ export default function Catalogo() {
   const avisar = useAvisar();
 
   const [busqueda, setBusqueda] = useState('');
+  /**
+   * Los ocultos NO se enseñan por defecto. Un producto que el dueño quitó no
+   * tiene por qué seguir estorbando en la lista cada vez que entra — que es
+   * justo la sensación de "no puedo eliminarlo".
+   *
+   * Pero tampoco se esconden del todo: sin una forma de verlos, un producto
+   * ocultado por error queda inalcanzable y no hay manera de recuperarlo.
+   */
+  const [verOcultos, setVerOcultos] = useState(false);
   const [abierto, setAbierto] = useState<string | null>(null);
   const [creando, setCreando] = useState(false);
   const [nombreNuevo, setNombreNuevo] = useState('');
@@ -130,13 +150,16 @@ export default function Catalogo() {
   const items = useMemo(() => datos?.items ?? [], [datos]);
   const modo = datos?.modo ?? 'appointment';
 
+  const ocultos = items.filter((i) => !i.activo).length;
+
   const visibles = useMemo(() => {
     const q = busqueda.trim().toLowerCase();
-    if (!q) return items;
-    return items.filter(
-      (i) => i.name.toLowerCase().includes(q) || (i.description ?? '').toLowerCase().includes(q),
-    );
-  }, [items, busqueda]);
+    return items.filter((i) => {
+      if (!verOcultos && !i.activo) return false;
+      if (!q) return true;
+      return i.name.toLowerCase().includes(q) || (i.description ?? '').toLowerCase().includes(q);
+    });
+  }, [items, busqueda, verOcultos]);
 
   const activos = items.filter((i) => i.activo).length;
   const sinFoto = items.filter((i) => i.activo && !(datos?.medios[i.id]?.length)).length;
@@ -207,6 +230,17 @@ export default function Catalogo() {
               onChange={(e) => setBusqueda(e.target.value)}
             />
           </div>
+          {/* Solo aparece si hay alguno oculto: un interruptor que nunca cambia
+              nada es ruido en la barra. */}
+          {ocultos > 0 && (
+            <button
+              className={`btn btn-sm ${verOcultos ? 'btn-primary' : 'btn-ghost'}`}
+              onClick={() => setVerOcultos((v) => !v)}
+            >
+              {verOcultos ? <EyeOff size={15} /> : <Eye size={15} />}
+              {verOcultos ? 'Esconder ocultos' : `Ver ocultos (${ocultos})`}
+            </button>
+          )}
           <button className="btn btn-primary btn-sm" onClick={() => setCreando((v) => !v)}>
             <Plus size={15} /> Añadir producto
           </button>
@@ -246,10 +280,18 @@ export default function Catalogo() {
 
         {!cargando && visibles.length === 0 && (
           <p className="vacio">
-            <b>{items.length ? 'Sin resultados' : 'El catálogo está vacío'}</b>
-            {items.length
-              ? 'Prueba con otra búsqueda.'
-              : 'Mia no puede vender lo que no está aquí: añade tus servicios o productos.'}
+            <b>
+              {!items.length
+                ? 'El catálogo está vacío'
+                : ocultos === items.length && !verOcultos
+                  ? 'Todo está oculto para Mia'
+                  : 'Sin resultados'}
+            </b>
+            {!items.length
+              ? 'Mia no puede vender lo que no está aquí: añade tus servicios o productos.'
+              : ocultos === items.length && !verOcultos
+                ? `Tienes ${ocultos} producto(s), pero ninguno visible. Mia no puede vender nada ahora mismo.`
+                : 'Prueba con otra búsqueda.'}
           </p>
         )}
 
@@ -532,7 +574,15 @@ function Ficha({
 
           <div className="nav-btns" style={{ marginTop: 18 }}>
             <button className="btn btn-ghost" onClick={() => void alternarVisible()}>
-              {item.activo ? 'Ocultar para Mia' : 'Volver a mostrar'}
+              {item.activo ? (
+                <>
+                  <EyeOff size={15} /> Ocultar para Mia
+                </>
+              ) : (
+                <>
+                  <Eye size={15} /> Volver a mostrar
+                </>
+              )}
             </button>
             <button className="btn btn-primary" onClick={() => void guardar()} disabled={guardando}>
               <Check size={16} /> {guardando ? 'Guardando…' : 'Guardar producto'}
