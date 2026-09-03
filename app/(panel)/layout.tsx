@@ -79,14 +79,18 @@ function Guardia({ children }: { children: React.ReactNode }) {
 export default function PanelLayout({ children }: { children: React.ReactNode }) {
   return (
     <ProveedorSesion>
-      <ProveedorAvisos>
-        {/* Salud va DENTRO de Sesión (necesita la compañía activa) y FUERA de
-            la guardia, para que la píldora de la barra superior y el aviso
-            flotante lean la misma consulta en vez de hacer una cada uno. */}
-        <ProveedorSalud>
+      {/* Salud va DENTRO de Sesión (necesita la compañía activa) y FUERA de la
+          guardia, para que la píldora de la barra superior y el aviso flotante
+          lean la misma consulta en vez de hacer una cada uno.
+
+          ⚠️ Y va POR ENCIMA de Avisos, no por debajo: useComando() consulta la
+          salud para no hacerte esperar 15 segundos a un bot que ya sabemos que
+          está apagado. Si se invierte el orden, ese useSalud() revienta. */}
+      <ProveedorSalud>
+        <ProveedorAvisos>
           <Guardia>{children}</Guardia>
-        </ProveedorSalud>
-      </ProveedorAvisos>
+        </ProveedorAvisos>
+      </ProveedorSalud>
     </ProveedorSesion>
   );
 }

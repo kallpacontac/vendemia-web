@@ -16,6 +16,7 @@ import { createContext, useCallback, useContext, useState } from 'react';
 import { AlertTriangle, CheckCircle, Info } from 'lucide-react';
 import { BotNoResponde, encolar, type TipoComando } from '@/lib/supabase/commands';
 import { useSesion } from './Sesion';
+import { useSalud } from './Salud';
 
 type Tono = 'ok' | 'error' | 'espera';
 
@@ -67,9 +68,21 @@ export function useAvisar() {
  * si refresca la pantalla; lo normal es no tocar nada y esperar a que el cambio
  * vuelva por el espejo en 1-2 segundos, que es cuando existe de verdad.
  */
+/** Cuánto esperar al bot cuando la salud dice que está apagado. */
+const ESPERA_CORTA_MS = 3000;
+
 export function useComando() {
   const { companyId } = useSesion();
+  const { salud, desconocido } = useSalud();
   const avisar = useAvisar();
+
+  /**
+   * ¿Sabemos ya que el bot está apagado?
+   *
+   * `desconocido` es distinto de apagado: sin fila en v_instance_health no se
+   * puede afirmar nada, y ahí sí toca esperar lo normal.
+   */
+  const botCaido = !desconocido && salud?.vivo === false;
 
   return useCallback(
     async <T,>(
@@ -79,13 +92,21 @@ export function useComando() {
     ): Promise<T | undefined> => {
       if (!companyId) return undefined;
       try {
-        const r = await encolar<T>(companyId, type, payload);
+        /**
+         * Con el bot apagado, el comando SE ENCOLA IGUAL —es lo correcto, se
+         * aplicará cuando arranque— pero no tiene sentido tener a alguien
+         * mirando una rueda 15 segundos para acabar diciéndole lo que ya
+         * sabíamos antes de empezar.
+         */
+        const r = await encolar<T>(companyId, type, payload, botCaido ? ESPERA_CORTA_MS : undefined);
         if (exito) avisar(exito, 'ok');
         return r;
       } catch (e) {
         if (e instanceof BotNoResponde) {
           avisar(
-            'El bot no está en línea ahora mismo. El cambio quedó encolado y se aplicará solo cuando arranque.',
+            botCaido
+              ? 'El bot está apagado. El cambio quedó en la cola y se aplicará solo cuando arranque — hasta entonces no vas a verlo en la pantalla.'
+              : 'El bot no está en línea ahora mismo. El cambio quedó encolado y se aplicará solo cuando arranque.',
             'espera',
           );
         } else {
@@ -94,6 +115,6 @@ export function useComando() {
         return undefined;
       }
     },
-    [companyId, avisar],
+    [companyId, avisar, botCaido],
   );
 }

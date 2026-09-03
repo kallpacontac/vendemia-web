@@ -139,7 +139,7 @@ export function encolar<T = unknown>(
   companyId: string,
   type: TipoComando,
   payload: Record<string, unknown>,
-  timeoutMs = 15000,
+  timeoutMs: number = 15000,
 ): Promise<T> {
   const sb = supabase();
 
