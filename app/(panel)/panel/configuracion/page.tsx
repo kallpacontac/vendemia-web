@@ -32,6 +32,7 @@
  *     que puede hacer el panel es avisar.
  */
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import {
   ArrowLeft,
   ArrowRight,
@@ -58,7 +59,7 @@ import { botOperativo, useSalud } from '@/components/panel/Salud';
 import { useAvisar, useComando } from '@/components/panel/Avisos';
 import { useCargar } from '@/components/panel/useCargar';
 import { supabase } from '@/lib/supabase/client';
-import { getCatalogo, getCompania, type ItemCatalogo } from '@/lib/supabase/queries';
+import { getCatalogo, getCompania } from '@/lib/supabase/queries';
 import { b01 } from '@/lib/supabase/parse';
 import type { ResultadoAddMember, ResultadoUpdateCompany } from '@/lib/supabase/commands';
 import type {
@@ -401,11 +402,36 @@ export default function Configuracion() {
 
         {/* ══ PASO 2 · SERVICIOS, HORARIO Y PAGOS ══ */}
         <div className={`card panel ${paso === 2 ? 'active' : ''}`}>
+          {/*
+            El catálogo tenía aquí su propio editor, y eran DOS sitios para lo
+            mismo con distintos campos: este tocaba 4 de los 14 de `catalog` y
+            no sabía nada de fotos. Dos editores del mismo dato es una forma
+            garantizada de que alguien edite en el que no toca y no entienda por
+            qué no cambia nada.
+
+            Se queda el enlace y no el editor: desde aquí se ve cuántos hay
+            —que es el dato que importa mientras configuras, porque Mia no
+            puede vender lo que no está— y se va al sitio donde se editan.
+          */}
           <div className="sec">
             <h4>
               <Scissors /> Servicios y productos
             </h4>
-            <Catalogo items={datos?.catalogo ?? []} alCambiar={recargar} />
+            <div className="cfg-enlace">
+              <div>
+                <b>
+                  {(datos?.catalogo.length ?? 0) === 0
+                    ? 'Todavía no hay nada en el catálogo'
+                    : `${datos?.catalogo.length} en el catálogo, ${datos?.catalogo.filter((c) => c.activo).length} visibles para Mia`}
+                </b>
+                <small>
+                  Los precios, el stock y las fotos se editan en su propia pantalla.
+                </small>
+              </div>
+              <Link className="btn btn-ghost btn-sm" href="/panel/catalogo">
+                Ir al catálogo <ArrowRight size={15} />
+              </Link>
+            </div>
           </div>
 
           <div className="sec">
@@ -929,141 +955,6 @@ function Campo({
   );
 }
 
-/**
- * El catálogo se guarda ítem a ítem, no con el resto del formulario: cada uno
- * es su propio comando (`upsert_catalog_item`), y el bot devuelve el id.
- *
- * ⚠️ `name` es la clave real: el modelo pide los servicios por nombre exacto.
- * Cambiar el nombre de un ítem cambia lo que Mia tiene que decir para pedirlo.
- */
-function Catalogo({ items, alCambiar }: { items: ItemCatalogo[]; alCambiar: () => void }) {
-  const comando = useComando();
-  const [nuevo, setNuevo] = useState<{ name: string; price: string; duration: string } | null>(null);
-
-  async function guardarItem(item: ItemCatalogo, patch: Partial<ItemCatalogo>) {
-    const r = await comando(
-      'upsert_catalog_item',
-      {
-        item: {
-          id: item.id,
-          name: patch.name ?? item.name,
-          price: patch.price ?? item.price,
-          duration_minutes: patch.duration_minutes ?? item.duration_minutes,
-          is_active: patch.is_active ?? item.is_active,
-        },
-      },
-      'Servicio actualizado',
-    );
-    if (r) alCambiar();
-  }
-
-  async function crear() {
-    if (!nuevo?.name.trim()) return;
-    const r = await comando(
-      'upsert_catalog_item',
-      {
-        item: {
-          name: nuevo.name.trim(),
-          price: Number(nuevo.price) || 0,
-          duration_minutes: Number(nuevo.duration) || 0,
-          is_active: 1,
-        },
-      },
-      'Servicio añadido',
-    );
-    if (r) {
-      setNuevo(null);
-      alCambiar();
-    }
-  }
-
-  async function borrar(item: ItemCatalogo) {
-    const r = await comando('delete_catalog_item', { id: item.id }, 'Servicio eliminado');
-    if (r) alCambiar();
-  }
-
-  return (
-    <>
-      {items.length === 0 && !nuevo && (
-        <p className="vacio">
-          <b>El catálogo está vacío</b>
-          Mia no puede vender lo que no está aquí: añade tus servicios o productos.
-        </p>
-      )}
-
-      {items.map((it) => (
-        <div className="svc-item" key={it.id}>
-          <div>
-            <span className="lbl">Nombre</span>
-            <input defaultValue={it.name} onBlur={(e) => void guardarItem(it, { name: e.target.value })} />
-          </div>
-          <div>
-            <span className="lbl">Precio</span>
-            <input
-              type="number"
-              defaultValue={it.price ?? 0}
-              onBlur={(e) => void guardarItem(it, { price: Number(e.target.value) })}
-            />
-          </div>
-          <div>
-            <span className="lbl">Minutos</span>
-            <input
-              type="number"
-              defaultValue={it.duration_minutes ?? 0}
-              onBlur={(e) => void guardarItem(it, { duration_minutes: Number(e.target.value) })}
-            />
-          </div>
-          <div>
-            <span className="lbl">Activo</span>
-            <div
-              className={`toggle ${it.activo ? 'on' : ''}`}
-              role="switch"
-              aria-checked={it.activo}
-              onClick={() => void guardarItem(it, { is_active: it.activo ? 0 : 1 })}
-            />
-          </div>
-          <Trash2 size={16} className="del" onClick={() => void borrar(it)} />
-        </div>
-      ))}
-
-      {nuevo ? (
-        <div className="svc-item">
-          <div>
-            <span className="lbl">Nombre</span>
-            <input
-              autoFocus
-              value={nuevo.name}
-              onChange={(e) => setNuevo({ ...nuevo, name: e.target.value })}
-            />
-          </div>
-          <div>
-            <span className="lbl">Precio</span>
-            <input type="number" value={nuevo.price} onChange={(e) => setNuevo({ ...nuevo, price: e.target.value })} />
-          </div>
-          <div>
-            <span className="lbl">Minutos</span>
-            <input
-              type="number"
-              value={nuevo.duration}
-              onChange={(e) => setNuevo({ ...nuevo, duration: e.target.value })}
-            />
-          </div>
-          <button className="btn btn-primary btn-sm" onClick={() => void crear()}>
-            <Check size={14} /> Guardar
-          </button>
-          <Trash2 size={16} className="del" onClick={() => setNuevo(null)} />
-        </div>
-      ) : (
-        <button
-          className="btn btn-ghost btn-sm"
-          onClick={() => setNuevo({ name: '', price: '', duration: '' })}
-        >
-          <Plus size={15} /> Agregar servicio
-        </button>
-      )}
-    </>
-  );
-}
 
 /**
  * Dar acceso a otra persona. Solo el dueño.

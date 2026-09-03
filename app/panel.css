@@ -812,3 +812,10 @@ a{color:inherit;text-decoration:none}
   font:700 12px 'Plus Jakarta Sans'}
 .medio--add:hover:not(:disabled){border-color:var(--brand);color:var(--brand-txt)}
 .medio--add:disabled{cursor:default}
+
+/* Enlace a otra pantalla desde un paso de Ajustes: dice el estado actual y
+   lleva al sitio donde se cambia, en vez de duplicar el editor. */
+.cfg-enlace{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;
+  background:var(--bg-soft);border:1px solid var(--line);border-radius:var(--r-sm);padding:14px 16px}
+.cfg-enlace b{display:block;font-size:13.5px;color:var(--ink)}
+.cfg-enlace small{display:block;font-size:12px;color:var(--ink-soft);margin-top:2px}
