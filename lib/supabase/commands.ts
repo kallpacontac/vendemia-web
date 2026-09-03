@@ -28,6 +28,8 @@ export type TipoComando =
   | 'update_company'
   | 'upsert_catalog_item'
   | 'delete_catalog_item'
+  | 'upsert_catalog_media'
+  | 'delete_catalog_media'
   | 'upsert_employee'
   | 'delete_employee'
   | 'send_message'
@@ -60,6 +62,26 @@ export interface ResultadoUpdateCompany {
   updated: string[];
   /** Campos que no cambiaron nada: mismo valor, o fuera de la lista blanca. */
   ignored: string[];
+}
+
+/**
+ * Lo que devuelve `upsert_catalog_media`.
+ *
+ * El payload es `{ catalog_id, url, media_type, id?, sort_order? }`.
+ *
+ * · Sin `sort_order`, la foto va al final — y el bot calcula MAX+1, no cuenta
+ *   filas, así que borrar una del medio no provoca colisiones.
+ * · Reenviar con el MISMO `id` sustituye el fichero **conservando la posición**.
+ *   Eso es lo que hay que usar para "cambiar esta foto": borrar y volver a
+ *   añadir la mandaría al final, y con el tope de 2 adjuntos podría dejar de
+ *   enviarse sin que nadie entienda por qué.
+ * · El bot valida `catalog_id` contra el catálogo real de la compañía. Un id
+ *   ajeno devuelve error, no una fila huérfana.
+ */
+export interface ResultadoCatalogMedia {
+  id: string;
+  catalog_id: string;
+  sort_order: number;
 }
 
 export interface ResultadoAddMember {

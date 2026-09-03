@@ -157,20 +157,67 @@ export interface MessageRow {
 export interface CatalogRow {
   id: string;
   company_id: string;
+  /**
+   * ⚠️ LA CLAVE REAL. El modelo pide los productos por nombre EXACTO, así que
+   * renombrar un ítem cambia lo que Mia tiene que decir para pedirlo. No es un
+   * campo de adorno.
+   */
   name: string;
   description: string | null;
   price: number | null;
+  /** Por defecto `PEN`. */
   currency: string | null;
+  /** Solo significa algo en modo `appointment`. */
   duration_minutes: number | null;
+  /**
+   * 0 lo oculta del catálogo del bot. Es el borrado de verdad:
+   * `delete_catalog_item` hace borrado lógico, no quita la fila.
+   */
   is_active: Bool01 | null;
   sort_order: number | null;
+  /** `null` = sin control de stock. Con ≤5 el bot mete urgencia en el prompt. */
   stock: number | null;
+  /** Solo en modo `appointment`. */
   capacity: number | null;
-  /** JSON en text: array de nombres */
+  /**
+   * Descuento máximo por unidad que el bot puede ofrecer. `0` = sin descuento.
+   * No se usa en `appointment`.
+   */
+  max_discount: number | null;
+  /**
+   * JSON en text: array de **`catalog.id`**, NO de nombres. Convierte el ítem
+   * en un pack. ⚠️ Si algún día vuelves a leerlo como nombres, el pack apuntará
+   * a la nada sin dar error.
+   */
   package_services: string | null;
-  /** JSON en text: solo en negocios `recurring` */
+  /** JSON en text: solo en negocios `recurring_appointment`. */
   schedule_slots: string | null;
+  /**
+   * ⚠️ CAMPO MUERTO. El bot NO lo envía nunca. Las fotos viven en
+   * `catalog_media`. No lo ofrezcas en ningún formulario: quien lo rellene
+   * creerá que sirve y la foto no saldrá jamás.
+   */
   image_url: string | null;
+}
+
+/**
+ * Una foto o un vídeo de un producto. Tabla espejada, se lee como cualquier otra.
+ *
+ * ⚠️ Se consulta por `catalog_id`, NUNCA por `product_name` (migración 0012).
+ * `product_name` sigue en la tabla como etiqueta legible, pero se queda
+ * obsoleto en cuanto alguien renombra el producto.
+ */
+export interface CatalogMediaRow {
+  id: string;
+  company_id: string;
+  catalog_id: string;
+  url: string;
+  media_type: 'image' | 'video';
+  /** Decide cuáles son los 2 que de verdad se envían. Ver TOPE_ADJUNTOS. */
+  sort_order: number | null;
+  /** Etiqueta heredada. NO usar para buscar ni para nada. */
+  product_name: string | null;
+  created_ts: string | null;
 }
 
 /** Un grupo semanal de un negocio recurrente (dentro de catalog.schedule_slots). */

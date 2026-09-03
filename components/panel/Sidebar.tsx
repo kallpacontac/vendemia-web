@@ -13,6 +13,7 @@ import {
   LayoutDashboard,
   LogOut,
   MessageCircle,
+  Package,
   Settings,
   Sparkles,
   Users,
@@ -24,6 +25,7 @@ const NAV = [
   { href: '/panel/mensajes', icon: MessageCircle, label: 'Mensajes' },
   { href: '/panel/leads', icon: Users, label: 'Leads' },
   { href: '/panel/agenda', icon: CalendarDays, label: 'Agenda' },
+  { href: '/panel/catalogo', icon: Package, label: 'Catálogo' },
   { href: '/panel/metricas', icon: BarChart2, label: 'Métricas' },
   { href: '/panel/configuracion', icon: Settings, label: 'Ajustes' },
 ];

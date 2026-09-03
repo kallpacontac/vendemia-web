@@ -14,6 +14,7 @@ import { supabase } from './client';
 import { bool, json, fecha } from './parse';
 import type {
   AppointmentRow,
+  CatalogMediaRow,
   CatalogRow,
   CompanyRow,
   DailyMetricRow,
@@ -202,6 +203,46 @@ export async function getCatalogo(companyId: string): Promise<ItemCatalogo[]> {
     activo: bool(c.is_active, true),
     paquete: json<string[]>(c.package_services, []),
   }));
+}
+
+/**
+ * Las fotos y vídeos de un producto, en el orden en que el bot los usaría.
+ *
+ * ⚠️ Se filtra por `catalog_id`, no por `product_name`: esa columna es una
+ * etiqueta heredada que se queda obsoleta en cuanto se renombra el producto.
+ */
+export async function getMediosCatalogo(catalogId: string): Promise<CatalogMediaRow[]> {
+  const { data, error } = await supabase()
+    .from('catalog_media')
+    .select('*')
+    .eq('catalog_id', catalogId)
+    .order('sort_order', { ascending: true });
+  if (error) throw error;
+  return (data ?? []) as CatalogMediaRow[];
+}
+
+/**
+ * Lo mismo para VARIOS productos de una vez, que es lo que necesita la lista.
+ *
+ * Una consulta y no una por ítem: con treinta productos serían treinta viajes,
+ * y la pantalla tardaría un segundo largo en pintar las miniaturas.
+ */
+export async function getMediosDeVarios(
+  catalogIds: string[],
+): Promise<Record<string, CatalogMediaRow[]>> {
+  if (!catalogIds.length) return {};
+  const { data, error } = await supabase()
+    .from('catalog_media')
+    .select('*')
+    .in('catalog_id', catalogIds)
+    .order('sort_order', { ascending: true });
+  if (error) throw error;
+
+  const porItem: Record<string, CatalogMediaRow[]> = {};
+  for (const m of (data ?? []) as CatalogMediaRow[]) {
+    (porItem[m.catalog_id] ??= []).push(m);
+  }
+  return porItem;
 }
 
 /* ── Citas ──────────────────────────────────────────────────────────────── */
