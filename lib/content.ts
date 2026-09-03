@@ -1,3 +1,6 @@
+import type { MouseEvent } from 'react';
+import { evento, sufijoAtribucion } from '@/lib/medicion';
+
 /**
  * Todo el copy de la página, tipado. Nada hardcodeado en el JSX.
  *
@@ -242,12 +245,35 @@ export function whatsappUrl(message: string = WHATSAPP.message): string {
  *                        WhatsApp hasta que ya está fuera.
  */
 export function whatsappLink(label: string, message?: string) {
+  const base = message ?? WHATSAPP.message;
   return {
-    href: whatsappUrl(message),
-    target: '_blank',
+    href: whatsappUrl(base),
+    target: '_blank' as const,
     rel: 'noopener noreferrer',
     'aria-label': `${label} — escríbenos por WhatsApp`,
-  } as const;
+    /**
+     * ⚠️ EL `href` SE REESCRIBE EN EL CLIC, NO EN EL RENDER.
+     *
+     * La atribución solo se conoce en el navegador, así que meterla en el
+     * `href` durante el render daría un href en el servidor y otro en el
+     * cliente: hydration mismatch en el botón principal de la página, que es
+     * el peor sitio donde puede haber uno.
+     *
+     * Y NO se hace `preventDefault()` + `window.open()`, que sería lo obvio:
+     * eso rompe el clic con Ctrl, el clic con la rueda y "abrir en pestaña
+     * nueva" del menú contextual. Mutar el `href` y dejar que el navegador
+     * navegue solo conserva todo eso, porque el atributo se lee DESPUÉS de que
+     * corra el manejador.
+     *
+     * El evento va antes de tocar nada: si algo fallara al componer la URL,
+     * la conversión ya está contada.
+     */
+    onClick: (e: MouseEvent<HTMLAnchorElement>) => {
+      evento('Contact', { content_name: label, content_category: 'whatsapp' });
+      const sufijo = sufijoAtribucion();
+      if (sufijo) e.currentTarget.href = whatsappUrl(base + sufijo);
+    },
+  };
 }
 
 /* ── 1 · Hero ─────────────────────────────────────────────── */

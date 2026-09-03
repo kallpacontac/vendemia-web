@@ -1,6 +1,7 @@
 import '../globals.css';
 import BrandIntro from '@/components/BrandIntro';
 import SmoothScroll from '@/components/SmoothScroll';
+import Medicion from '@/components/Medicion';
 import { jsonLdLanding } from '@/lib/schema';
 
 /**
@@ -38,6 +39,15 @@ export default function LandingLayout({ children }: { children: React.ReactNode 
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLdLanding()) }}
       />
+
+      {/* ⚠️ EL PIXEL VIVE AQUÍ Y NO EN EL LAYOUT RAÍZ, A PROPÓSITO.
+          El layout raíz envuelve también /login y /panel. Medir a un cliente
+          que ya paga mientras usa su panel no sirve para optimizar nada —no se
+          le va a volver a vender— y además mete en el público de retargeting
+          justo a la gente a la que no hay que anunciarle. Peor: las URLs del
+          panel llevan identificadores de conversaciones y de leads, y el pixel
+          manda la URL de la página a Meta. El pixel se queda en la puerta. */}
+      <Medicion />
 
       <SmoothScroll />
       <BrandIntro />

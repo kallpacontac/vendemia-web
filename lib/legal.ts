@@ -197,9 +197,20 @@ export const PRIVACIDAD: PaginaLegal = {
       ],
     },
     {
-      h: 'Cookies',
+      /**
+       * ⚠️ ESTE APARTADO DECÍA QUE NO HABÍA SEGUIMIENTO DE TERCEROS, Y DEJÓ DE
+       * SER CIERTO EN EL MOMENTO EN QUE SE AÑADIÓ EL PIXEL DE META.
+       *
+       * Una política de privacidad que se queda vieja no es un descuido de
+       * redacción: es exactamente la infracción que se sanciona. Si mañana se
+       * añade otra herramienta —Google Ads, TikTok, un mapa de calor— hay que
+       * volver aquí ANTES de desplegarla, no después.
+       */
+      h: 'Cookies y medición',
       p: [
-        'Esta web no instala cookies de publicidad ni de seguimiento de terceros. El panel usa únicamente el almacenamiento local imprescindible para mantener tu sesión iniciada.',
+        'Esta web usa el píxel de Meta para medir la efectividad de nuestros anuncios en Facebook e Instagram: nos permite saber cuántas personas que vieron un anuncio llegaron a la web y cuántas nos escribieron. Meta puede usar esa información para mostrarte nuestros anuncios de nuevo.',
+        'Lo que le enviamos son datos de navegación —la página visitada y qué botón se pulsó—, nunca tu nombre, tu correo, tu teléfono ni el contenido de ninguna conversación.',
+        'Puedes bloquearlo desde la configuración de tu navegador o con cualquier extensión de bloqueo, y la web sigue funcionando igual. Fuera de eso, no instalamos cookies de publicidad de terceros. El panel usa únicamente el almacenamiento local imprescindible para mantener tu sesión iniciada.',
       ],
     },
   ],
