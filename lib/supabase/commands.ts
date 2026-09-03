@@ -106,8 +106,31 @@ export class BotNoResponde extends Error {
   }
 }
 
+/** Cada cuánto se relee la fila del comando por si Realtime no la trajo. */
+const SONDEO_MS = 1200;
+
 /**
- * Encola un comando y espera su resultado por Realtime.
+ * Encola un comando y espera su resultado.
+ *
+ * ══ POR QUÉ HAY DOS CAMINOS Y NO SOLO REALTIME ═══════════════════════════
+ *
+ * Realtime es el camino rápido, pero NO se puede depender solo de él, y esto
+ * costó un rato entenderlo:
+ *
+ * El canal se suscribe DESPUÉS del insert — no hay otra forma, hace falta el id
+ * de la fila para filtrar. Entre una cosa y otra hay una ventana: el bot puede
+ * aplicar el comando y dejar la fila en `done` antes de que el WebSocket
+ * termine de unirse al canal. Ese UPDATE ya no lo recibe nadie, la promesa se
+ * agota a los 15 s y `useComando` devuelve `undefined`.
+ *
+ * El síntoma no se parece a la causa: el comando SÍ se aplicó, pero la pantalla
+ * dice "el bot no está en línea" y no refresca. Quien lo sufre concluye que el
+ * botón de borrar no funciona, cuando borró perfectamente.
+ *
+ * Así que se sondea la fila en paralelo. El sondeo es la garantía y Realtime es
+ * la velocidad: si el evento llega, se resuelve en milisegundos; si se pierde
+ * —por la carrera, o porque Realtime no esté habilitado en la tabla— el sondeo
+ * lo recoge como muy tarde en SONDEO_MS.
  *
  * @param timeoutMs cuánto esperar antes de rendirse. El bot vive en un portátil
  *        que puede estar apagado; la UI no puede quedarse colgada.
@@ -135,7 +158,24 @@ export function encolar<T = unknown>(
         if (cerrado) return;
         cerrado = true;
         clearTimeout(reloj);
+        clearInterval(sonda);
         void sb.removeChannel(canal);
+      };
+
+      /** Resuelve o rechaza según el estado de la fila. Ignora `pending`. */
+      const resolver = (fila: Record<string, unknown> | null): boolean => {
+        if (!fila) return false;
+        if (fila.status === 'done') {
+          cerrar();
+          resolve(fila.result as T);
+          return true;
+        }
+        if (fila.status === 'error') {
+          cerrar();
+          reject(new Error(String(fila.error ?? 'El comando falló')));
+          return true;
+        }
+        return false;
       };
 
       const canal = sb
@@ -143,18 +183,24 @@ export function encolar<T = unknown>(
         .on(
           'postgres_changes',
           { event: 'UPDATE', schema: 'public', table: 'commands', filter: `id=eq.${cmd.id}` },
-          ({ new: fila }: { new: Record<string, unknown> }) => {
-            if (fila.status === 'done') {
-              cerrar();
-              resolve(fila.result as T);
-            }
-            if (fila.status === 'error') {
-              cerrar();
-              reject(new Error(String(fila.error ?? 'El comando falló')));
-            }
-          },
+          ({ new: fila }: { new: Record<string, unknown> }) => resolver(fila),
         )
         .subscribe();
+
+      const mirar = async () => {
+        if (cerrado) return;
+        const { data } = await sb
+          .from('commands')
+          .select('status, result, error')
+          .eq('id', cmd.id)
+          .maybeSingle();
+        resolver(data as Record<string, unknown> | null);
+      };
+
+      // La primera lectura va inmediata: cierra la ventana entre el insert y la
+      // suscripción, que es justo donde se perdía el evento.
+      void mirar();
+      const sonda = setInterval(() => void mirar(), SONDEO_MS);
 
       const reloj = setTimeout(() => {
         cerrar();
