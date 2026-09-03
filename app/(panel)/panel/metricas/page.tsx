@@ -41,7 +41,7 @@ import type { LeadIntent } from '@/lib/supabase/types';
 const DIAS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
 /** El heatmap tiene 12 columnas en el CSS: de 9:00 a 20:00. */
 const HORAS = Array.from({ length: 12 }, (_, i) => 9 + i);
-const COLORES = ['#3D5AF1', '#F26B45', '#3ED598', '#FBB040', '#A78BFA'];
+const COLORES = ['#FF4900', '#0E7C86', '#FBB040', '#0FA968', '#7C5CFF'];
 
 export default function Metricas() {
   const { companyId, compania } = useSesion();
@@ -205,12 +205,12 @@ export default function Metricas() {
                 <svg viewBox="0 0 700 200" preserveAspectRatio="none">
                   <defs>
                     <linearGradient id="gL" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0" stopColor="#3D5AF1" stopOpacity=".2" />
-                      <stop offset="1" stopColor="#3D5AF1" stopOpacity="0" />
+                      <stop offset="0" stopColor="#FF4900" stopOpacity=".2" />
+                      <stop offset="1" stopColor="#FF4900" stopOpacity="0" />
                     </linearGradient>
                   </defs>
                   <path d={areaPath(puntosLeads, 700, 200)} fill="url(#gL)" />
-                  <path d={smoothPath(puntosLeads)} fill="none" stroke="#3D5AF1" strokeWidth="2.5" />
+                  <path d={smoothPath(puntosLeads)} fill="none" stroke="#FF4900" strokeWidth="2.5" />
                 </svg>
               ) : (
                 <p className="vacio">Todavía no hay suficientes días con datos.</p>

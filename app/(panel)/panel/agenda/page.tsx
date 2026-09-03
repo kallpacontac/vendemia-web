@@ -153,11 +153,11 @@ export default function Agenda() {
                     Reservado
                   </span>
                   <span>
-                    <i style={{ background: '#F5F7FF', border: '1px dashed #D9DFF6' }} />
+                    <i style={{ background: 'var(--bg-soft)', border: '1px dashed var(--line-2)' }} />
                     Libre
                   </span>
                   <span>
-                    <i style={{ background: '#E9ECF4' }} />
+                    <i style={{ background: '#E7E7E1' }} />
                     Cerrado
                   </span>
                 </>
@@ -172,7 +172,7 @@ export default function Agenda() {
                     Copado
                   </span>
                   <span>
-                    <i style={{ background: '#E9ECF4' }} />
+                    <i style={{ background: '#E7E7E1' }} />
                     Cerrado
                   </span>
                 </>

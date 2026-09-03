@@ -591,7 +591,7 @@ export default function Configuracion() {
             <h4>
               <FileText /> Reglas y política
             </h4>
-            <div className="desfase" style={{ background: '#EEF1FF', borderColor: '#D8DFFF', color: '#2C46D8' }}>
+            <div className="desfase" style={{ background: 'var(--brand-soft)', borderColor: '#FFD9C7', color: 'var(--brand-txt)' }}>
               Las reglas son para <b>cómo comportarse</b>, no para repetir horarios ni precios: eso
               ya vive arriba, y si se contradicen Mia ofrece una hora que luego el sistema rechaza.
             </div>
@@ -700,7 +700,7 @@ export default function Configuracion() {
               </div>
               <div
                 className="desfase"
-                style={{ background: '#EEF1FF', borderColor: '#D8DFFF', color: '#2C46D8', marginTop: 12 }}
+                style={{ background: 'var(--brand-soft)', borderColor: '#FFD9C7', color: 'var(--brand-txt)', marginTop: 12 }}
               >
                 Si activas esto, <b>no añadas además una pregunta obligatoria del tipo «¿con qué
                 barbero?»</b>. Van por caminos distintos: la respuesta de aquí entra en el motor de

@@ -43,10 +43,10 @@ import {
 } from '@/lib/supabase/queries';
 
 const DIAS_CORTOS = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
-const COLORES_SERVICIO = ['#3D5AF1', '#F26B45', '#3ED598', '#FBB040', '#A78BFA'];
+const COLORES_SERVICIO = ['#FF4900', '#0E7C86', '#FBB040', '#0FA968', '#7C5CFF'];
 const ICONOS_CITA = [
   ['#FDEBE4', '#F26B45', Scissors],
-  ['#E9EDFF', '#3D5AF1', CalendarDays],
+  ['#FFEFE7', '#FF4900', CalendarDays],
   ['#FFE9EE', '#FF5B79', User],
   ['#E8FBF2', '#0FA968', Check],
 ] as const;
@@ -183,7 +183,7 @@ export default function Dashboard() {
               <div className="num">{soles(ingresosHoy)}</div>
               <div className="bars-legend">
                 <span>
-                  <i style={{ background: '#3D5AF1' }} />
+                  <i style={{ background: '#FF4900' }} />
                   Ingresos · últimos 7 días
                 </span>
               </div>
@@ -206,7 +206,7 @@ export default function Dashboard() {
                     <i
                       style={{
                         height: `${(d.ingresos / maxIngreso) * 100}%`,
-                        background: i === 6 ? '#3D5AF1' : '#8FA0FF',
+                        background: i === 6 ? '#FF4900' : '#FFB08A',
                       }}
                     />
                   </div>
@@ -301,15 +301,15 @@ export default function Dashboard() {
                   <svg viewBox="0 0 300 52" preserveAspectRatio="none">
                     <defs>
                       <linearGradient id="gS" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0" stopColor="#3D5AF1" stopOpacity=".2" />
-                        <stop offset="1" stopColor="#3D5AF1" stopOpacity="0" />
+                        <stop offset="0" stopColor="#FF4900" stopOpacity=".2" />
+                        <stop offset="1" stopColor="#FF4900" stopOpacity="0" />
                       </linearGradient>
                     </defs>
                     <path d={areaPath(chispa, 300, 52)} fill="url(#gS)" />
                     <path
                       d={smoothPath(chispa)}
                       fill="none"
-                      stroke="#3D5AF1"
+                      stroke="#FF4900"
                       strokeWidth="2.5"
                       strokeLinecap="round"
                     />
@@ -338,7 +338,7 @@ export default function Dashboard() {
                       cy="18"
                       r="15.9"
                       fill="none"
-                      stroke="#3D5AF1"
+                      stroke="#FF4900"
                       strokeWidth="3.5"
                       strokeLinecap="round"
                       strokeDasharray={`${anillo.pct} ${100 - anillo.pct}`}
