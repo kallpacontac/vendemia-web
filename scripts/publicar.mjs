@@ -34,7 +34,7 @@
 
 import { execFileSync } from 'node:child_process';
 import { createServer } from 'node:http';
-import { existsSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { cpSync, existsSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { dirname, extname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -48,12 +48,47 @@ const bien = (s) => console.log(`  ✓ ${s}`);
 console.log('\n▸ Construyendo el sitio…');
 rmSync(SALIDA, { recursive: true, force: true });
 rmSync(join(RAIZ, '.next'), { recursive: true, force: true });
-execFileSync('npx', ['next', 'build'], {
-  cwd: RAIZ,
-  stdio: 'inherit',
-  env: { ...process.env, EXPORTAR_ESTATICO: '1' },
-  shell: process.platform === 'win32',
-});
+
+/* ⚠️ app/api NO CABE EN UN EXPORT ESTÁTICO, y hay que apartarlo antes de
+   construir, no después.
+
+   `app/api/cloudinary/firma` firma las subidas de fotos del catálogo: es la
+   única pieza de servidor del proyecto. Con `output: 'export'` el build no
+   avisa ni la ignora — falla entero:
+
+     Error: export const dynamic = "force-dynamic" on page
+     "/api/cloudinary/firma" cannot be used with "output: export"
+
+   Y es correcto que falle: un artefacto estático no puede tener un endpoint que
+   firma con un secreto. Así que se aparta durante el build y se devuelve
+   después, con el mismo criterio que el resto de este paso — este artefacto es
+   la landing sola, y la landing no sube fotos.
+
+   Se usa un `try/finally` para que un build fallido NO deje el proyecto sin
+   `app/api`: eso rompería el despliegue de Vercel sin que nadie relacione una
+   cosa con la otra. */
+const API = join(RAIZ, 'app', 'api');
+const API_GUARDADA = join(RAIZ, '.api-apartada');
+const habiaApi = existsSync(API);
+if (habiaApi) {
+  rmSync(API_GUARDADA, { recursive: true, force: true });
+  cpSync(API, API_GUARDADA, { recursive: true });
+  rmSync(API, { recursive: true, force: true });
+}
+try {
+  execFileSync('npx', ['next', 'build'], {
+    cwd: RAIZ,
+    stdio: 'inherit',
+    env: { ...process.env, EXPORTAR_ESTATICO: '1' },
+    shell: process.platform === 'win32',
+  });
+} finally {
+  if (habiaApi) {
+    cpSync(API_GUARDADA, API, { recursive: true });
+    rmSync(API_GUARDADA, { recursive: true, force: true });
+    bien('app/api devuelto a su sitio');
+  }
+}
 
 /* ── 2 · Fuera lo que no es la landing ─────────────────────────────────────
    /dev/assets es el inventario de assets: útil trabajando, y algo embarazoso
