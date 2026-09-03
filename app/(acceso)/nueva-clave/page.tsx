@@ -10,11 +10,14 @@
  *   1 · /login (modo recuperar) llama a resetPasswordForEmail con
  *       redirectTo = <origen>/nueva-clave
  *   2 · Supabase manda un correo con un enlace a su propio /auth/v1/verify,
- *       que valida el token y redirige AQUÍ con una sesión temporal en la URL
- *       (`#access_token=…` o `?code=…`, según el flujo configurado).
+ *       que valida el token y redirige AQUÍ con un `?code=…` de un solo uso.
+ *       Solo se puede canjear en el navegador que pidió el enlace: el flujo es
+ *       PKCE — ver la nota de flowType en lib/supabase/client.ts.
  *   3 · supabase-js la lee sola —por eso `detectSessionInUrl: true` en
  *       client.ts— y dispara PASSWORD_RECOVERY.
  *   4 · Con esa sesión, `updateUser({ password })` cambia la contraseña.
+ *   5 · Y se echan las DEMÁS sesiones — ver `signOut({ scope: 'others' })`
+ *       abajo. Sin ese paso, cambiar la contraseña no expulsa a nadie.
  *
  * ⚠️ Esa sesión temporal ES una sesión: quien abra el enlace está dentro. Por
  * eso el enlace caduca, se usa una vez, y esta pantalla no enseña ningún dato
@@ -44,6 +47,8 @@ export default function NuevaClave() {
   const [enviando, setEnviando] = useState(false);
   const [errorPropio, setErrorPropio] = useState<string | null>(null);
   const [hecho, setHecho] = useState(false);
+  /** true si la contraseña cambió pero no se pudieron cerrar las otras sesiones. */
+  const [sesionesVivas, setSesionesVivas] = useState(false);
 
   const error = errorPropio ?? errorUrl;
   const setError = setErrorPropio;
@@ -65,12 +70,34 @@ export default function NuevaClave() {
 
     setEnviando(true);
     try {
-      const { error } = await supabase().auth.updateUser({ password: clave });
+      const sb = supabase();
+      const { error } = await sb.auth.updateUser({ password: clave });
       if (error) throw error;
       setHecho(true);
+
+      /**
+       * ⚠️ CAMBIAR LA CONTRASEÑA NO ECHA A NADIE. HAY QUE PEDIRLO.
+       *
+       * Supabase deja vivas las demás sesiones al cambiar la contraseña, y eso
+       * vacía de sentido el caso que trae aquí a la mitad de la gente: «creo
+       * que alguien entró en mi cuenta». Sin esta línea el intruso sigue
+       * dentro — su token de refresco se renueva solo cada hora, indefinidamente,
+       * y la contraseña nueva no le afecta porque ya no la necesita.
+       *
+       * `scope: 'others'` revoca todas las demás y CONSERVA esta, que es lo que
+       * hace que el redirect a /panel de abajo siga funcionando. Con 'global'
+       * cerraría también la propia y aterrizaría en el login.
+       *
+       * Si falla, la contraseña YA está cambiada: no se puede tratar como un
+       * error del formulario. Se dice aparte, porque quien vino huyendo de un
+       * intruso necesita saber que sigue dentro.
+       */
+      const { error: errorRevocar } = await sb.auth.signOut({ scope: 'others' });
+      if (errorRevocar) setSesionesVivas(true);
+
       // Ya hay sesión válida: entrar directo es lo que espera quien acaba de
       // cambiarla, y evita pedirle la contraseña que acaba de escribir.
-      setTimeout(() => router.replace('/panel'), 1200);
+      setTimeout(() => router.replace('/panel'), errorRevocar ? 6000 : 1200);
     } catch (err) {
       setError(traducir(err instanceof Error ? err.message : 'No se pudo cambiar la contraseña'));
     } finally {
@@ -179,7 +206,18 @@ export default function NuevaClave() {
         />
 
         {error && <div className="acceso__error">{error}</div>}
-        {hecho && <div className="acceso__ok">Contraseña cambiada. Entrando a tu panel…</div>}
+        {hecho && !sesionesVivas && (
+          <div className="acceso__ok">
+            Contraseña cambiada y cerrada la sesión en los demás dispositivos. Entrando a tu
+            panel…
+          </div>
+        )}
+        {hecho && sesionesVivas && (
+          <div className="acceso__error">
+            La contraseña nueva ya funciona, pero no pudimos cerrar las sesiones abiertas en otros
+            dispositivos. Si crees que alguien más tiene acceso, escríbenos.
+          </div>
+        )}
 
         <button className="btn btn-primary" type="submit" disabled={enviando || hecho}>
           {enviando ? 'Guardando…' : 'Guardar y entrar'}
