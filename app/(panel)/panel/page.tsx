@@ -19,7 +19,6 @@ import Link from 'next/link';
 import {
   CalendarDays,
   Check,
-  CheckCircle,
   ChevronLeft,
   ChevronRight,
   MessageCircle,
@@ -29,7 +28,6 @@ import {
 } from 'lucide-react';
 import Topbar from '@/components/panel/Topbar';
 import { useSesion } from '@/components/panel/Sesion';
-import { useSalud } from '@/components/panel/Salud';
 import { useCargar } from '@/components/panel/useCargar';
 import { areaPath, seriesPts, smoothPath } from '@/lib/panel/charts';
 import { cuando, hora, intent, isoLocal, hace, soles } from '@/lib/panel/format';
@@ -53,7 +51,6 @@ const ICONOS_CITA = [
 
 export default function Dashboard() {
   const { companyId, compania } = useSesion();
-  const { salud, desconocido } = useSalud();
   const [mesOffset, setMesOffset] = useState(0);
   const [tip, setTip] = useState<{ x: number; y: number; texto: string } | null>(null);
 
@@ -243,58 +240,31 @@ export default function Dashboard() {
               </div>
             </div>
 
-            {/* ── Estado del bot ── */}
+            {/*
+              ── Leads de los últimos 30 días ──
+
+              Aquí había una tarjeta "Estado del bot" con dos chips —Proceso:
+              En línea/Apagado, WhatsApp: Vinculado/Caído— y el diagnóstico de
+              `v_instance_health` pintado tal cual, que dice cosas como «La
+              instancia no da señales».
+
+              Se quitó entera. Que el proceso esté encendido es problema
+              nuestro: corre en un portátil nuestro y lo arreglamos nosotros.
+              Poner "Apagado" en rojo en la primera pantalla que ve el dueño
+              cada mañana no le da ninguna acción que tomar, le hace dudar de
+              que su negocio esté funcionando y nos genera una llamada por
+              algo que ya estamos resolviendo.
+
+              Lo único que sí es asunto suyo —re-emparejar el WhatsApp, que
+              necesita su teléfono— vive ahora en la barra de arriba, en
+              pequeño y solo cuando toca. Ver components/panel/Salud.tsx.
+
+              La gráfica se queda porque son SUS leads, no nuestra máquina.
+            */}
             <div className="card">
               <div className="card-mini-head">
-                <h3>Estado del bot</h3>
-                <span className={`badge-pill ${desconocido ? 'b-mute' : salud?.vivo ? 'b-new' : 'b-hot'}`}>
-                  {desconocido ? 'sin registrar' : (salud?.status ?? '—')}
-                </span>
-              </div>
-              {/*
-                Dos chips y no uno: el proceso puede estar perfectamente vivo
-                con la sesión de WhatsApp caída. Son dos problemas distintos y
-                se arreglan de dos maneras distintas, así que se enseñan por
-                separado. Sin instancia registrada, ninguno de los dos se pinta
-                en rojo — todavía no hay nada que afirmar.
-              */}
-              <div className="status-top">
-                <div className="status-chip">
-                  <div
-                    className="d"
-                    style={
-                      desconocido
-                        ? { background: 'var(--bg-input)', color: 'var(--ink-mute)' }
-                        : salud?.vivo
-                          ? { background: '#E8FBF2', color: '#0FA968' }
-                          : { background: '#FFE9EE', color: '#FF5B79' }
-                    }
-                  >
-                    <CheckCircle size={14} />
-                  </div>
-                  <div>
-                    <b>{desconocido ? '—' : salud?.vivo ? 'En línea' : 'Apagado'}</b>
-                    <small>Proceso</small>
-                  </div>
-                </div>
-                <div className="status-chip">
-                  <div
-                    className="d"
-                    style={
-                      desconocido
-                        ? { background: 'var(--bg-input)', color: 'var(--ink-mute)' }
-                        : salud?.wa_connected
-                          ? { background: 'var(--brand-soft)', color: 'var(--brand)' }
-                          : { background: '#FFE9EE', color: '#FF5B79' }
-                    }
-                  >
-                    <MessageCircle size={14} />
-                  </div>
-                  <div>
-                    <b>{desconocido ? '—' : salud?.wa_connected ? 'Vinculado' : 'Caído'}</b>
-                    <small>WhatsApp</small>
-                  </div>
-                </div>
+                <h3>Leads</h3>
+                <span className="badge-pill b-mute">30 días</span>
               </div>
               <div className="spark">
                 {chispa.length > 0 && (
@@ -317,10 +287,9 @@ export default function Dashboard() {
                 )}
               </div>
               <p className="muted" style={{ fontSize: 12 }}>
-                {/* El diagnóstico viene ya redactado desde la vista: no se reescribe aquí. */}
-                {desconocido
-                  ? 'Esta compañía todavía no tiene una instancia del bot registrada.'
-                  : (salud?.diagnostico ?? 'Leads de los últimos 30 días.')}
+                {chispa.length > 0
+                  ? 'Conversaciones nuevas de los últimos 30 días.'
+                  : 'Todavía no hay suficientes días con datos para dibujar la curva.'}
               </p>
             </div>
 

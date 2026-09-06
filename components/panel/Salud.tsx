@@ -2,26 +2,28 @@
 
 /**
  * ══════════════════════════════════════════════════════════════════════════
- * ¿ESTÁ FUNCIONANDO EL BOT DE ESTE CLIENTE?
+ * ¿HACE FALTA HACER ALGO CON EL WHATSAPP DE ESTE CLIENTE?
  * ══════════════════════════════════════════════════════════════════════════
  *
- * Una sola consulta a `v_instance_health` para todo el panel: la píldora de la
- * barra superior y el aviso flotante beben de aquí. Antes cada uno consultaba
- * por su cuenta y podían contradecirse durante un minuto.
+ * Una sola consulta a `v_instance_health` para todo el panel.
  *
- * ── TRES ESTADOS, NO DOS ─────────────────────────────────────────────────
+ * ── QUÉ SE ENSEÑA Y QUÉ NO ───────────────────────────────────────────────
  *
- *   cargando     · todavía no se sabe. No enseñes nada rojo.
- *   desconocido  · la consulta no devolvió fila: esta compañía aún no tiene
- *                  instancia registrada. Eso NO es "el bot está caído" — es
- *                  que no hay nada que mirar. Una alarma permanente aquí es
- *                  peor que el silencio: se aprende a ignorarla.
- *   con datos    · `vivo` y `wa_connected` son cosas DISTINTAS. El proceso
- *                  puede estar perfectamente vivo con la sesión de WhatsApp
- *                  caída: dos problemas con dos arreglos distintos.
+ * Esto nació para contarle al dueño si el bot estaba encendido. Ya no lo
+ * hace. Que el proceso esté vivo es responsabilidad NUESTRA, no suya: corre
+ * en un portátil que se reinicia, se queda sin luz o tarda en arrancar, y
+ * avisarle de cada bache solo consigue dos cosas malas — que nos escriba por
+ * algo que ya estamos arreglando, y que aprenda a ignorar los avisos, con lo
+ * que el día que salga uno de verdad tampoco lo lea.
  *
- * `diagnostico` viene ya redactado desde la vista ("Hay que ir a re-emparejar
- * el WhatsApp"). Se enseña tal cual; no lo reescribas aquí.
+ * Queda UNA cosa que sí es asunto del cliente: re-emparejar el WhatsApp. Eso
+ * no lo podemos resolver solos —hay que quedar con él y escanear el código
+ * con su teléfono delante—, así que ahí sí se avisa: arriba y en pequeño.
+ *
+ * ⚠️ NO pintes `diagnostico` tal cual en ninguna pantalla. Lo redacta la
+ * vista del backend y entre sus textos está «La instancia no da señales»,
+ * que es justo lo que no queremos que lea el cliente. Sirve para decidir, no
+ * para enseñar; el texto visible lo escribimos nosotros.
  *
  * ⚠️ No uses `sync_state.last_mirror_at` para saber si los datos están al día:
  * esa tabla se eliminó. Y aunque existiera, sería peor señal — el latido y el
@@ -73,6 +75,21 @@ export function ProveedorSalud({ children }: { children: React.ReactNode }) {
 
 export const useSalud = (): EstadoSalud => useContext(Ctx);
 
-/** Atajo: ¿el bot está funcionando de verdad, proceso Y WhatsApp? */
-export const botOperativo = (s: InstanceHealthRow | null): boolean =>
-  Boolean(s?.vivo && s?.wa_connected);
+/**
+ * ¿Hay que quedar con el cliente para re-emparejar el WhatsApp?
+ *
+ * Es lo ÚNICO que este módulo saca a pantalla. Dos caminos:
+ *
+ *   `needs_qr` · el backend lo afirma explícitamente: el bot está pidiendo un
+ *                código. Sigue siendo cierto aunque el proceso esté apagado.
+ *
+ *   vivo && !wa_connected · el `vivo` va a propósito. Con el proceso caído,
+ *                `wa_connected` es un dato viejo que casi siempre vale false,
+ *                así que sin esa condición el cliente vería «hay que emparejar
+ *                el WhatsApp» cada noche que se apaga el portátil. Falso, y
+ *                además nos genera la llamada que queremos evitar. Solo cuando
+ *                el proceso está en pie y dice que la sesión no está vinculada
+ *                sabemos de verdad que hace falta.
+ */
+export const necesitaEmparejar = (s: InstanceHealthRow | null): boolean =>
+  Boolean(s && (s.status === 'needs_qr' || (s.vivo && !s.wa_connected)));

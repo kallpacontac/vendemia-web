@@ -148,8 +148,15 @@ a{color:inherit;text-decoration:none}
 .icon-btn:hover{color:var(--brand-txt)}
 .icon-btn svg{width:19px;height:19px}
 .icon-btn .dot{position:absolute;top:-3px;right:-3px;min-width:18px;height:18px;padding:0 4px;border-radius:9px;background:var(--brand);color:var(--on-brand);font-size:10px;font-weight:700;display:grid;place-items:center;border:2px solid #fff}
+/* La píldora verde de "WhatsApp conectado" ya no se pinta nunca: la barra
+   está callada mientras todo va bien. Los estilos base se quedan porque los
+   hereda el aviso, que es la única variante viva. */
 .wa-pill{display:flex;align-items:center;gap:8px;background:rgba(62,213,152,.14);color:#0FA968;
   border:1px solid rgba(62,213,152,.24);border-radius:var(--r-full);padding:9px 15px;font-size:12.5px;font-weight:700}
+/* Ámbar, no rojo, y sin animación: es "quedamos un día de estos", no una
+   urgencia. El rojo de alarma estaba reservado para el estado del proceso,
+   que ya no se enseña. */
+.wa-pill--aviso{background:#FFF4E5;color:#8A4B00;border-color:#FFD9A8;font-weight:600}
 .wa-pill .live{width:8px;height:8px;border-radius:50%;background:var(--bot-on);animation:pulse 1.8s infinite}
 @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(62,213,152,.5)}70%{box-shadow:0 0 0 7px rgba(62,213,152,0)}100%{box-shadow:0 0 0 0 rgba(62,213,152,0)}}
 .profile{display:flex;align-items:center;gap:10px;cursor:pointer}

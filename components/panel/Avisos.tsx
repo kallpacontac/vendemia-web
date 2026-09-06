@@ -105,8 +105,8 @@ export function useComando() {
         if (e instanceof BotNoResponde) {
           avisar(
             botCaido
-              ? 'El bot está apagado. El cambio quedó en la cola y se aplicará solo cuando arranque — hasta entonces no vas a verlo en la pantalla.'
-              : 'El bot no está en línea ahora mismo. El cambio quedó encolado y se aplicará solo cuando arranque.',
+              ? 'Guardado. Se está aplicando y puede tardar un poco en aparecer en la pantalla; no hace falta que lo vuelvas a escribir.'
+              : 'Guardado. Se está aplicando y puede tardar un momento en aparecer en la pantalla.',
             'espera',
           );
         } else {

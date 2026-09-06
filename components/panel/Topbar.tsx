@@ -1,62 +1,40 @@
 'use client';
 
 /**
- * La barra superior: título de la pantalla, estado real del bot y selector de
+ * La barra superior: título de la pantalla, aviso de WhatsApp y selector de
  * compañía.
  *
- * La píldora de WhatsApp sale de `v_instance_health`, no de un adorno fijo:
- * `vivo` y `wa_connected` son cosas distintas —el proceso puede estar
- * perfectamente vivo con la sesión de WhatsApp caída— y el `diagnostico` viene
- * ya redactado desde la vista, así que se enseña tal cual.
+ * El aviso está callado el 99% del tiempo, y eso es la funcionalidad. Aquí
+ * había una píldora permanente con el estado del proceso: «WhatsApp
+ * conectado» en verde, «El bot no está en línea» en rojo. Se quitó porque el
+ * proceso corre en un portátil nuestro, no del cliente: los baches los
+ * arreglamos nosotros y contárselos solo enseña a ignorar la barra.
+ *
+ * Queda el único caso que el cliente sí tiene que saber, porque sin él no se
+ * puede arreglar: hay que re-emparejar el WhatsApp y eso se hace con su
+ * teléfono delante.
  */
 import { Bell } from 'lucide-react';
 import { useSesion } from './Sesion';
-import { botOperativo, useSalud } from './Salud';
+import { necesitaEmparejar, useSalud } from './Salud';
 
-export function PildoraBot() {
-  const { salud, cargando, desconocido } = useSalud();
-
-  if (cargando) return <div className="wa-pill">Comprobando…</div>;
-
-  // Sin instancia registrada no hay nada que afirmar. Gris y en pasado: ni
-  // "conectado" (mentira) ni rojo de alarma (tampoco es verdad).
-  if (desconocido || !salud) {
-    return (
-      <div
-        className="wa-pill"
-        title="Esta compañía todavía no tiene una instancia del bot registrada."
-        style={{ background: 'var(--bg-input)', color: 'var(--ink-soft)', borderColor: 'var(--line-2)' }}
-      >
-        Bot sin registrar
-      </div>
-    );
-  }
-
-  const ok = botOperativo(salud);
+/**
+ * Silencio mientras todo va bien: devuelve `null` en todos los casos menos
+ * uno. Ni "conectado" en verde —el cliente no necesita que le confirmemos
+ * cada minuto que su negocio funciona— ni "cargando", que solo produce un
+ * parpadeo en cada carga de pantalla.
+ *
+ * El texto lo escribimos aquí y NO se toma de `salud.diagnostico`: ese campo
+ * lo redacta el backend y dice cosas como «La instancia no da señales», que
+ * es ruido nuestro colado en la pantalla del cliente.
+ */
+function AvisoWhatsApp() {
+  const { salud } = useSalud();
+  if (!necesitaEmparejar(salud)) return null;
 
   return (
-    <div
-      className="wa-pill"
-      title={salud.diagnostico ?? ''}
-      style={
-        ok
-          ? undefined
-          : {
-              background: 'rgba(255,91,121,.12)',
-              color: '#E5484D',
-              borderColor: 'rgba(255,91,121,.2)',
-            }
-      }
-    >
-      {/* `vivo` y `wa_connected` son dos problemas distintos, y el diagnóstico
-          de la vista ya distingue cuál de los dos es. */}
-      {ok ? (
-        <>
-          <span className="live" /> WhatsApp conectado
-        </>
-      ) : (
-        (salud.diagnostico ?? (salud.vivo ? 'WhatsApp desvinculado' : 'El bot no está en línea'))
-      )}
+    <div className="wa-pill wa-pill--aviso" title="Escríbenos y lo dejamos vinculado en un minuto.">
+      Hay que volver a vincular el WhatsApp
     </div>
   );
 }
@@ -102,7 +80,7 @@ export default function Topbar({
       <div className="topbar__actions">
         {children}
         <SelectorCompania />
-        <PildoraBot />
+        <AvisoWhatsApp />
         <div className="icon-btn">
           <Bell size={18} />
         </div>

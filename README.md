@@ -142,9 +142,15 @@ Esto es lo que hay que tener en la cabeza para tocar el panel sin romperlo:
    `components/panel/Salud.tsx`), nunca `sync_state`: esa tabla **se eliminó**,
    y aunque existiera sería peor señal — el latido y el volcado del espejo
    salen del mismo proceso, así que si uno falla el otro ya falló, y la vista
-   además dice por qué. Ojo con sus tres estados: sin fila es **desconocido**
-   (compañía sin instancia registrada), no "caído"; y `vivo` y `wa_connected`
-   son dos problemas distintos con dos arreglos distintos.
+   además dice por qué.
+
+   **Pero el panel no le enseña nada de eso al cliente.** El bot corre en un
+   portátil nuestro: que esté encendido es mantenimiento nuestro, y avisarle
+   de cada bache no le da ninguna acción y le enseña a ignorar los avisos. Lo
+   único que sale a pantalla es `necesitaEmparejar()`, porque re-vincular el
+   WhatsApp necesita su teléfono y hay que quedar con él. Y nunca se pinta
+   `diagnostico` tal cual: lo redacta el backend y dice cosas como «La
+   instancia no da señales».
 4. **Tres rarezas del espejo**, resueltas en `lib/supabase/parse.ts`: los
    booleanos son `0/1`, los campos JSON son `text` (hay que parsear y
    serializar) y toda fecha viene dos veces — usa siempre `*_ts`.

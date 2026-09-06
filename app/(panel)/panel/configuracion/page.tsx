@@ -55,7 +55,7 @@ import {
 } from 'lucide-react';
 import Topbar from '@/components/panel/Topbar';
 import { useSesion } from '@/components/panel/Sesion';
-import { botOperativo, useSalud } from '@/components/panel/Salud';
+import { necesitaEmparejar, useSalud } from '@/components/panel/Salud';
 import { useAvisar, useComando } from '@/components/panel/Avisos';
 import { useCargar } from '@/components/panel/useCargar';
 import { supabase } from '@/lib/supabase/client';
@@ -159,7 +159,7 @@ function construirPatch(
 
 export default function Configuracion() {
   const { companyId, esDueno } = useSesion();
-  const { salud, desconocido } = useSalud();
+  const { salud } = useSalud();
   const comando = useComando();
   const avisar = useAvisar();
 
@@ -650,16 +650,21 @@ export default function Configuracion() {
             <div className="wa-box">
               <div>
                 {/*
-                  Tres estados, no dos: sin instancia registrada no se puede
-                  decir "revisar" — no hay nada que revisar todavía.
+                  Dos estados y ninguno habla del proceso. Antes había un
+                  tercero, "⚠️ Revisar", y debajo el `diagnostico` de la vista
+                  tal cual — que dice «La instancia no da señales» cuando el
+                  portátil está apagado. Eso no es algo que el dueño pueda
+                  revisar: es mantenimiento nuestro, y ponerlo aquí solo
+                  conseguía que abriera Ajustes preocupado.
+                  Ver components/panel/Salud.tsx.
                 */}
                 <b style={{ fontSize: 15 }}>
-                  {desconocido ? '➖ Sin registrar' : botOperativo(salud) ? '✅ Conectado' : '⚠️ Revisar'}
+                  {necesitaEmparejar(salud) ? '⚠️ Hay que volver a vincularlo' : '✅ Vinculado'}
                 </b>
                 <p className="muted" style={{ fontSize: 13, marginTop: 4, maxWidth: 420 }}>
-                  {desconocido
-                    ? 'Este negocio todavía no tiene una instancia del bot dada de alta.'
-                    : (salud?.diagnostico ?? 'Comprobando el estado de la instancia…')}
+                  {necesitaEmparejar(salud)
+                    ? 'La sesión de WhatsApp se desvinculó. Escríbenos y quedamos para volver a conectarla: hace falta tu teléfono.'
+                    : 'El número está vinculado y Mia responde por él.'}
                 </p>
                 {/*
                   Deliberadamente no hay botón de re-emparejar ni QR: quien
