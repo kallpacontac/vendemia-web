@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import gsap from 'gsap';
 import { MessageSquare, ShieldCheck, CalendarCheck, BarChart3, Info } from 'lucide-react';
 import RevealHeading from '@/components/RevealHeading';
-import { PRICING, whatsappLink } from '@/lib/content';
+import { PRICING, RELATED, whatsappLink } from '@/lib/content';
 import { registerGsap, prefersReducedMotion, DIRECTIONAL_CUBIC } from '@/lib/motion';
 
 /**
@@ -225,6 +225,26 @@ export default function Pricing() {
         <p className="mt-10 text-center text-[13px]" style={{ color: 'var(--text-mid)' }}>
           {PRICING.footnote}
         </p>
+
+        {/* ⚠️ LA COMPARATIVA ERA UNA SECCIÓN APARTE, Y ESTABA EN EL SITIO
+            EQUIVOCADO.
+            "El mismo canal. Distinto resultado." vivía DESPUÉS del FAQ, o sea
+            que rebatía la objeción de precio dos pantallas más tarde que el
+            momento en que aparece. La objeción de precio nace aquí, mirando
+            tres cifras. Aquí es donde hay que responderla — no en una sección
+            propia que además obligaba a bajar otra vez. */}
+        <div className="mx-auto mt-14 grid max-w-[900px] grid-cols-1 gap-8 border-t pt-12 md:grid-cols-3"
+          style={{ borderColor: 'var(--border-dark)' }}
+        >
+          {RELATED.cards.map((card) => (
+            <div key={card.title}>
+              <p className="text-[16px] font-semibold">{card.title}</p>
+              <p className="mt-2 text-[14px] leading-[1.6]" style={{ color: 'var(--text-mid)' }}>
+                {card.body}
+              </p>
+            </div>
+          ))}
+        </div>
       </div>
     </section>
   );

@@ -5,7 +5,7 @@ import RevealHeading from '@/components/RevealHeading';
 import Reveal from '@/components/Reveal';
 import AssetSlot from '@/components/AssetSlot';
 import { Badge, DarkCard, RichParagraph } from '@/components/ui';
-import { BENTO_A } from '@/lib/content';
+import { BENTO_A, BENTO_B } from '@/lib/content';
 
 /**
  * 3 · CAPACIDADES · bento A — dark (#000), apilada (M4)
@@ -72,6 +72,34 @@ export default function BentoA() {
               <RichParagraph parts={BENTO_A.cards.endpoint.body} className="mt-3" />
             </div>
           </DarkCard>
+        </Reveal>
+
+        {/* ⚠️ ESTO ERA UNA SECCIÓN ENTERA (BentoB) DE CINCO TARJETAS.
+            Venía justo después de estas dos y hacía el mismo trabajo: contar
+            qué más hace Mia. Dos bloques seguidos de tarjetas se leen como
+            relleno, y el segundo ya no lo mira nadie.
+
+            En una fila de titulares se lee de un vistazo y ocupa un octavo del
+            alto. Es lo que hay que hacer con las capacidades secundarias:
+            enumerarlas, no venderlas una a una. El detalle de cada una ya
+            estaba viviendo sin que nadie lo leyera. */}
+        <Reveal
+          from="up"
+          stagger={0.06}
+          childSelector="[data-cap]"
+          className="mt-10 grid grid-cols-2 gap-x-6 gap-y-5 border-t pt-10 md:grid-cols-3 lg:grid-cols-5"
+          style={{ borderColor: 'var(--border-dark)' }}
+        >
+          {BENTO_B.cards.map((card) => (
+            <p
+              key={card.title}
+              data-cap
+              data-reveal="up"
+              className="text-[14px] font-medium leading-[1.4]"
+            >
+              {card.title}
+            </p>
+          ))}
         </Reveal>
       </div>
     </section>

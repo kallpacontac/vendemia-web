@@ -628,9 +628,18 @@ export const BENTO_B = {
     {
       area: 'a',
       assetId: 'bentoB.privacy',
-      title: 'Responde en 30 segundos',
+      /**
+       * ⚠️ ESTA TARJETA SE COMIÓ LA SECCIÓN "Tu negocio cierra a las 8".
+       *
+       * Aquella sección era un viewport entero para decir una frase que ya
+       * estaba dicha en el hero ("trabaja mientras duermes"), aquí mismo ("a
+       * cualquier hora, también domingo") y en el cierre. Tres veces lo mismo
+       * no refuerza: hace que la página se sienta larga sin avanzar, y en
+       * móvil son tres scrolls que el visitante paga con paciencia.
+       */
+      title: 'Responde en 30 segundos, también un domingo',
       body: [
-        { text: 'A cualquier hora, también domingo y a las 3 de la mañana. ' },
+        { text: 'Tu negocio cierra a las 8; Mia no cierra nunca. El feriado, la madrugada, el domingo por la tarde. ' },
         { text: 'El 78 %', strong: true },
         { text: ' le compra a quien le responde primero — y el primero ahora eres tú.' },
       ] as RichText,
@@ -668,11 +677,26 @@ export const BENTO_B = {
     {
       area: 'e',
       assetId: 'bentoB.gpu',
+      /**
+       * ⚠️ ESTO DECÍA "TÚ SOLO, DESDE TU CELULAR" Y NO ERA VERDAD.
+       *
+       * No hay alta self-serve todavía: la configuración la hacemos nosotros
+       * por WhatsApp. La frase anterior prometía un producto que el visitante
+       * iba a descubrir que no existe en el primer mensaje — y justo después
+       * de haber pulsado el botón, que es el peor momento posible.
+       *
+       * El diferencial de verdad frente a LAIA nunca fue "no hablas con
+       * nadie": era NO ESPERAS A NADIE. El otro te hace agendar 45 minutos con
+       * un asesor para otro día; aquí lo dejas andando en la misma
+       * conversación en la que escribiste. Dicho así es cierto, y además vende
+       * mejor: un humano que contesta al momento es una ventaja, no una
+       * concesión.
+       */
       title: 'Listo en 10 minutos',
       body: [
-        { text: 'Sin código, sin asesor, sin llamada de onboarding. ' },
-        { text: 'Tú solo, desde tu celular', strong: true },
-        { text: '.' },
+        { text: 'Sin código y sin instalar nada. Lo dejamos funcionando contigo ' },
+        { text: 'en la misma conversación', strong: true },
+        { text: ' — no hay llamada que agendar para otro día.' },
       ] as RichText,
     },
   ],
@@ -912,18 +936,28 @@ export function guionDemo(negocioIdx: number, tonoIdx: number, casoIdx: number) 
 
 /* ── 7 · Casos de uso ─────────────────────────────────────── */
 
+/**
+ * ⚠️ ESTA SECCIÓN DEJÓ DE SER UNA SECCIÓN.
+ *
+ * Tenía badge, H2 propio y seis fichas de cuatro viñetas: veinticuatro líneas
+ * para decir "sirve para tu rubro", justo después de una demo donde el
+ * visitante ACABA de elegir su rubro y ver a Mia trabajando en él. La demo lo
+ * demuestra; esto solo lo repetía en texto.
+ *
+ * Ahora es la cola de la demo, sin titular que la separe, y con dos viñetas por
+ * rubro en vez de cuatro. Se quedan las dos que responden "¿y en MI caso?" —
+ * normalmente la primera es lo que el negocio hace todo el día, y la segunda
+ * es la que duele.
+ */
 export const USE_CASES = {
-  badge: 'Por tipo de negocio',
-  h2: 'Funciona igual de bien en una barbería que en una clínica',
+  h2: 'Y funciona igual en los demás',
   items: [
     {
       assetId: 'useCases.it',
       title: 'Barberías y peluquerías',
       bullets: [
         'Agenda el corte sin ida y vuelta',
-        'Recuerda la cita el día anterior',
         'Rellena los huecos que deja una cancelación',
-        'Avisa cuando toca volver',
       ],
     },
     {
@@ -931,29 +965,23 @@ export const USE_CASES = {
       title: 'Clínicas y consultorios',
       bullets: [
         'Filtra el motivo de consulta antes de agendar',
-        'Reparte según especialidad y disponibilidad',
         'Confirma y reduce las inasistencias',
-        'Responde precios y coberturas',
       ],
     },
     {
       assetId: 'useCases.auto',
       title: 'E-commerce',
       bullets: [
-        'Consulta de stock y tallas al instante',
-        'Recupera el carrito abandonado por WhatsApp',
+        'Stock y tallas al instante',
         'Cobra con Yape o Plin en la conversación',
-        'Da el estado del pedido sin que preguntes tú',
       ],
     },
     {
       assetId: 'useCases.gaming',
       title: 'Gimnasios y estudios',
       bullets: [
-        'Explica planes y compara membresías',
         'Agenda la clase de prueba',
         'Reactiva al que dejó de venir',
-        'Cobra la renovación antes de que caduque',
       ],
     },
     {
@@ -962,8 +990,6 @@ export const USE_CASES = {
       bullets: [
         'Toma el pedido para llevar',
         'Reserva mesa y confirma',
-        'Manda la carta del día',
-        'Responde horarios y ubicación',
       ],
     },
     {
@@ -971,8 +997,6 @@ export const USE_CASES = {
       title: 'Inmobiliarias y servicios',
       bullets: [
         'Califica al interesado antes de que pierdas la visita',
-        'Agenda la visita al inmueble',
-        'Manda ficha, fotos y ubicación',
         'Hace seguimiento hasta la decisión',
       ],
     },
@@ -1104,16 +1128,24 @@ export const FAQ = {
     {
       q: '¿Cuánto tiempo toma configurarlo?',
       a: [
-        '10 minutos. Sin asesores, sin código, sin llamadas de onboarding. Tú solo, desde tu celular.',
+        'Diez minutos por WhatsApp. Nos escribes, nos dices qué vendes, con qué precios y con qué horarios, y te dejamos a Mia funcionando en esa misma conversación. Sin código, sin instalar nada y sin agendar una llamada para el jueves.',
       ],
     },
     {
-      q: '¿Cuánto cuesta realmente?',
-      a: [
-        'Desde S/89 al mes, sin costo de instalación. Otros cobran S/500 solo para empezar, más el consumo mensual. Con Vendemia pagas lo que ves.',
-      ],
-    },
-    {
+      /**
+       * ⚠️ AQUÍ HABÍA TRES PREGUNTAS MÁS, Y SE FUERON A PROPÓSITO.
+       *
+       *  · "¿Cuánto cuesta realmente?" → lo dice el subtítulo de Precios y la
+       *    fila de comparativa que ahora vive debajo de los planes.
+       *  · "¿Funciona para barberías, clínicas y e-commerce?" → lo DEMUESTRA la
+       *    demo, donde el visitante elige su rubro y ve la conversación. Un FAQ
+       *    que repite en texto lo que la página acaba de enseñar funcionando
+       *    resta: sugiere que la demo no se entendió.
+       *
+       * Un FAQ largo no tranquiliza más; hace que el lector asuma que hay
+       * muchas trampas que aclarar. Cinco preguntas que sí duelen valen más que
+       * ocho donde tres son relleno.
+       */
       q: '¿Qué pasa si no funciona?',
       a: [
         // Decia "no mereces pagar", que significa lo contrario de lo que
@@ -1121,12 +1153,6 @@ export const FAQ = {
         // nosotros sin derecho a cobrar. Es la frase de la garantia, o sea la
         // que mas trabaja de todo el FAQ.
         'Te devolvemos el dinero sin preguntas. Si Mia no te ayuda a responder más rápido y cerrar más ventas, no tienes por qué pagarla.',
-      ],
-    },
-    {
-      q: '¿Funciona para barberías, clínicas y e-commerce?',
-      a: [
-        'Sí. Vendemia se configura por tipo de negocio: agenda citas para barberías y clínicas, vende productos para e-commerce, y combina ambos si los necesitas.',
       ],
     },
     {
@@ -1179,7 +1205,7 @@ export const FINAL_CTA = {
   badge: 'Cada minuto sin responder es dinero que pierdes',
   h2: 'Tu vendedor digital empieza hoy',
   paragraph: [
-    'Sin instalación. Sin esperar a un asesor.',
+    'Sin instalación. Sin agendar una llamada.',
     'Sin pagar S/500 para empezar.',
   ],
   cta: CTA.long,
@@ -1206,8 +1232,11 @@ export const RELATED = {
     },
     {
       icon: 'clock',
-      title: '10 minutos, tú solo',
-      body: 'Frente a los 45 minutos con asesor que pide el resto. Sin agendar llamada y sin esperar a que te devuelvan el mensaje.',
+      // Igual que en BENTO_B: el título decía "tú solo" y la configuración la
+      // hacemos nosotros. Lo que sí es cierto —y es el diferencial— es que se
+      // resuelve el mismo día, en el mismo chat, sin agendar nada.
+      title: '10 minutos, hoy mismo',
+      body: 'Frente a los 45 minutos con asesor que pide el resto. Sin agendar llamada y sin esperar a que te devuelvan el mensaje mañana.',
     },
     {
       icon: 'shield',

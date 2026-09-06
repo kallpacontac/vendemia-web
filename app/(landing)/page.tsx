@@ -5,14 +5,11 @@ import Navbar from '@/components/Navbar';
 import Hero from '@/components/sections/Hero';
 import Benefit from '@/components/sections/Benefit';
 import BentoA from '@/components/sections/BentoA';
-import BentoB from '@/components/sections/BentoB';
-import GlobalNetwork from '@/components/sections/GlobalNetwork';
 import ChatDemo from '@/components/sections/ChatDemo';
 import UseCases from '@/components/sections/UseCases';
 import Pricing from '@/components/sections/Pricing';
 import Faq from '@/components/sections/Faq';
 import FinalCta from '@/components/sections/FinalCta';
-import Related from '@/components/sections/Related';
 import Footer from '@/components/sections/Footer';
 import { registerGsap, initStackedSections } from '@/lib/motion';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
@@ -117,13 +114,31 @@ export default function Page() {
           El ritmo de fondos aguanta el cambio: la demo es CREMA y entra
           entre dos oscuras, que es exactamente lo que hace el contraste.
         */}
+        {/*
+          ⚠️ AQUÍ HABÍA DOCE SECCIONES. AHORA HAY SIETE.
+
+          Lo que se fue no se perdió: se fue porque ya estaba dicho.
+
+          · <GlobalNetwork/> — "Tu negocio cierra a las 8. Mia no cierra nunca."
+            Un viewport entero para una frase que el hero, la tarjeta de los 30
+            segundos y el cierre ya decían. Absorbida por BENTO_B.cards[0].
+          · <BentoB/> — cinco tarjetas de capacidades justo después de las dos
+            de BentoA, que hacen el mismo trabajo. Sus cinco titulares viven
+            ahora como una fila compacta dentro de BentoA.
+          · <Related/> — la comparativa (S/0 instalación · 10 minutos · 30 días).
+            Rebatía objeciones de precio en una sección propia, DESPUÉS de
+            Precios. Ahora está debajo de los planes, que es donde esa objeción
+            aparece de verdad.
+          · <UseCases/> sigue, pero ya no es una sección: perdió su badge y su
+            H2 y es la cola de la demo. El visitante acaba de elegir su rubro y
+            ver a Mia trabajando en él; repetirlo en texto sobraba.
+
+          Cada corte quita repetición, ninguno quita argumento.
+        */}
         <ChatDemo />
-        <BentoB />
-        <GlobalNetwork />
         <UseCases />
         <Pricing />
         <Faq />
-        <Related />
         <FinalCta />
       </main>
 

@@ -1,9 +1,7 @@
 'use client';
 
-import RevealHeading from '@/components/RevealHeading';
 import Reveal from '@/components/Reveal';
 import AssetSlot from '@/components/AssetSlot';
-import { Badge } from '@/components/ui';
 import { USE_CASES } from '@/lib/content';
 import type { AssetId } from '@/lib/assets';
 
@@ -22,20 +20,25 @@ export default function UseCases() {
       style={{ background: 'var(--bg-cream)', color: 'var(--text-dark)' }}
     >
       <div className="mx-auto w-full max-w-container px-6 pb-[64px] md:pb-[120px]">
-        <div className="flex flex-col items-center text-center">
-          <Badge tone="light">{USE_CASES.badge}</Badge>
-          <RevealHeading
-            as="h2"
-            text={USE_CASES.h2}
-            className="mt-6 max-w-[820px] text-[32px] font-semibold leading-[1.08] tracking-[-0.02em] md:text-[40px] lg:text-h2"
-          />
-        </div>
+        {/* ⚠️ ESTO YA NO ABRE SECCIÓN: ES LA COLA DE LA DEMO.
+            Tenía badge y un H2 de 40px ("Funciona igual de bien en una
+            barbería que en una clínica") justo después de que el visitante
+            eligiera su rubro en la demo y viera a Mia trabajando en él. Un
+            titular de ese tamaño anuncia un capítulo nuevo; aquí no empieza
+            ninguno, solo continúa el mismo argumento con los rubros que no
+            caben en el selector. Una línea basta. */}
+        <p
+          className="mx-auto max-w-[560px] text-center text-[17px] font-medium"
+          style={{ color: 'var(--text-dark)' }}
+        >
+          {USE_CASES.h2}
+        </p>
 
         <Reveal
           from="up"
           stagger={0.08}
           childSelector="[data-case]"
-          className="mt-14 grid grid-cols-1 gap-x-12 gap-y-16 md:grid-cols-2 lg:grid-cols-3"
+          className="mt-12 grid grid-cols-1 gap-x-12 gap-y-14 md:grid-cols-2 lg:grid-cols-3"
         >
           {USE_CASES.items.map((item) => (
             <article key={item.title} data-case data-reveal="up">

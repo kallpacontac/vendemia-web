@@ -24,11 +24,27 @@ import { BRAND, WHATSAPP } from '@/lib/content';
  * Rellénalos en `EMPRESA` y aparecen solos en las cuatro páginas.
  */
 
-/** ⚠️ RELLENAR ANTES DE PUBLICAR. */
+/**
+ * Datos de la empresa titular, tomados de la ficha RUC.
+ *
+ * ⚠️ QUEDA UN HUECO: el correo. Es el único dato que no me consta y no me lo
+ * invento — en las tres páginas se ofrece como vía para ejercer derechos ARCO
+ * y para pedir el reembolso, así que un correo que no existe convierte dos
+ * compromisos legales en papel mojado.
+ *
+ * ⚠️ Y HAY ALGO QUE CONVIENE CONSULTAR CON EL CONTADOR, NO CONMIGO:
+ * la actividad registrada de KALLPA TRIATLON S.A.C. es "Actividades
+ * Deportivas" (CIIU 92413). Vender suscripciones de software no encaja ahí.
+ * En Perú se pueden declarar actividades secundarias ante SUNAT, y facturar
+ * un servicio que no corresponde a ninguna actividad registrada es el tipo de
+ * cosa que aparece en una fiscalización, no en el lanzamiento. Merece una
+ * consulta antes de emitir la primera factura de Vendemia.
+ */
 export const EMPRESA = {
-  razonSocial: '[RAZÓN SOCIAL — completar]',
-  ruc: '[RUC — completar]',
-  domicilio: '[DOMICILIO FISCAL — completar]',
+  razonSocial: 'KALLPA TRIATLON S.A.C.',
+  ruc: '20608585541',
+  domicilio: 'Av. Talara Nro. 450, A.F. Angamos, Jesús María',
+  /** ⚠️ RELLENAR ANTES DE PUBLICAR. */
   email: '[CORREO DE CONTACTO — completar]',
   ciudad: 'Lima, Perú',
   whatsapp: `+${WHATSAPP.phone}`,
