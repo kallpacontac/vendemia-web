@@ -70,9 +70,9 @@ import {
   getMediosDeVarios,
   type ItemCatalogo,
 } from '@/lib/supabase/queries';
-import { b01 } from '@/lib/supabase/parse';
+import { b01, bool } from '@/lib/supabase/parse';
 import type { BusinessMode, CatalogMediaRow } from '@/lib/supabase/types';
-import type { ResultadoCatalogMedia } from '@/lib/supabase/commands';
+import type { ResultadoCatalogMedia, ResultadoSetPrimary } from '@/lib/supabase/commands';
 
 /** El bot manda como mucho dos adjuntos por mensaje. No es configurable. */
 const TOPE_ADJUNTOS = 2;
@@ -93,6 +93,38 @@ function losQueSalen(medios: CatalogMediaRow[]): Set<string> {
   if (fotos.length) return new Set(fotos.slice(0, TOPE_ADJUNTOS).map((m) => m.id));
   return new Set(medios.slice(0, 1).map((m) => m.id));
 }
+
+/**
+ * ⚠️ Las dos funciones de abajo dan por hecho que `medios` llega en el ORDEN
+ * DEL BOT: marcada primero, y entre las demás por orden de subida. De eso se
+ * encargan los dos `.order()` de getMediosDeVarios(). Si alguien reordena la
+ * lista en pantalla sin tocarlas, esto empieza a mentir en silencio.
+ */
+
+/** ¿Hay alguna marcada? `is_primary` es 0/1, no boolean: ver CatalogMediaRow. */
+const hayPrincipal = (medios: CatalogMediaRow[]): boolean =>
+  medios.some((m) => bool(m.is_primary));
+
+/**
+ * Cuál se enviaría AHORA MISMO si nadie ha marcado nada.
+ *
+ * Es la mitad importante de esta pantalla, y la que evita que el bug vuelva. El
+ * problema original no fue que el dueño no pudiera elegir: fue que no sabía
+ * cuál salía. Un botón para marcar solo sirve a quien ya sospecha que la foto
+ * está mal.
+ *
+ * ⚠️ Sin ninguna marcada NO se marca ninguna automáticamente. Sin marca, el bot
+ * hace lo de siempre, y esa compatibilidad es deliberada: escribir en la base
+ * de datos del cliente por el simple hecho de que abrió una pantalla es de las
+ * cosas que luego nadie sabe explicar.
+ *
+ * ⚠️ Y hay que recalcularlo tras BORRAR, no solo al cargar: borrar la principal
+ * no asciende a ninguna otra —el bot solo borra—, así que el producto se queda
+ * sin marca y vuelve al orden de subida sin decírselo a nadie. Aquí sale gratis
+ * porque se deriva de `medios` en cada render y `borrar()` refresca.
+ */
+const laQueSaldria = (medios: CatalogMediaRow[]): string | null =>
+  (medios.find((m) => m.media_type === 'image') ?? medios[0])?.id ?? null;
 
 /** Lo que el formulario de un ítem edita. Todo lo demás de la fila no se toca. */
 interface Borrador {
@@ -783,6 +815,32 @@ function Medios({
     if (r) alCambiar();
   }
 
+  /**
+   * Marcar la que se envía. El bot desmarca las demás en la misma operación,
+   * así que NO se encola un segundo comando para desmarcar.
+   *
+   * Tampoco se mueve la estrella en local antes de tiempo: este componente no
+   * hace update optimista en ninguna de sus acciones (ver la cabecera), y aquí
+   * pintar la marca por adelantado sería peor que en otros sitios — dejaría dos
+   * ★ a la vista hasta el refresco, que es exactamente la confusión que esta
+   * pantalla viene a quitar. Con el bot fuera, `comando()` avisa y la estrella
+   * se queda donde estaba, que es la verdad.
+   */
+  async function marcar(m: CatalogMediaRow) {
+    const r = await comando<ResultadoSetPrimary>(
+      'set_primary_media',
+      { id: m.id },
+      m.media_type === 'video' ? 'Vídeo principal cambiado' : 'Ya es la que se envía',
+    );
+    if (r) alCambiar();
+  }
+
+  /* Se derivan de `medios` en cada render a propósito: así se recalculan
+     solos tras borrar, que es el caso donde el bug se cuela — borrar la
+     principal no asciende a ninguna otra. Ver laQueSaldria(). */
+  const marcada = hayPrincipal(medios);
+  const porDefecto = laQueSaldria(medios);
+
   return (
     <div className="sec" style={{ marginTop: 4 }}>
       <h4>
@@ -795,10 +853,12 @@ function Medios({
       */}
       <div className="desfase" style={{ background: 'var(--brand-soft)', borderColor: '#FFD9C7', color: 'var(--brand-txt)' }}>
         Mia manda <b>como mucho {TOPE_ADJUNTOS} adjuntos</b> por mensaje, y las marcadas con ⭐ son
-        las que saldrían. <b>La foto manda sobre el vídeo</b>: el vídeo solo sale si el cliente lo
-        pide o si no hay ninguna foto, y ocupa el mensaje entero. El <b>pie lo escribe Mia</b> con el
-        nombre y el precio de arriba — no se edita aquí a propósito: un precio inventado en el pie de
-        una foto es justo donde más se lo cree el cliente.
+        las que saldrían. <b>Tú eliges cuál</b>: pulsa la estrella de una foto y esa será la que
+        Mia enseñe al presentar el producto. Si no marcas ninguna sale la primera que subiste, y la
+        pantalla te dice cuál es. <b>La foto manda sobre el vídeo</b>: el vídeo solo sale si el
+        cliente lo pide o si no hay ninguna foto, y ocupa el mensaje entero. El <b>pie lo escribe
+        Mia</b> con el nombre y el precio de arriba — no se edita aquí a propósito: un precio
+        inventado en el pie de una foto es justo donde más se lo cree el cliente.
       </div>
 
       {medios.length === 0 && (
@@ -809,41 +869,89 @@ function Medios({
       )}
 
       <div className="medios-grid">
-        {medios.map((m) => (
-          <div key={m.id} className={`medio ${salen.has(m.id) ? 'sale' : ''}`}>
-            {m.media_type === 'video' ? (
-              <div className="medio__video">
-                <Video size={22} />
-                <span>vídeo</span>
+        {medios.map((m) => {
+          const principal = bool(m.is_primary);
+          /* Solo cuando NADIE está marcado: el dueño tiene que poder saber cuál
+             sale sin haber tocado nada. Con una marcada, esta etiqueta sobra. */
+          const pordefecto = !marcada && m.id === porDefecto;
+          const esVideo = m.media_type === 'video';
+
+          return (
+            <div key={m.id} className={`medio ${principal || pordefecto ? 'sale' : salen.has(m.id) ? 'sale' : ''}`}>
+              {esVideo ? (
+                <div className="medio__video">
+                  <Video size={22} />
+                  <span>vídeo</span>
+                </div>
+              ) : (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={m.url} alt="" loading="lazy" />
+              )}
+
+              {/*
+                Una sola etiqueta por foto, en este orden. Tres insignias
+                compitiendo en una miniatura de 120px no informan: decoran.
+              */}
+              {principal ? (
+                <span className="medio__sale" title="Es la que Mia enseña al presentar el producto.">
+                  <Star size={12} /> Principal
+                </span>
+              ) : pordefecto ? (
+                <span
+                  className="medio__sale medio__sale--defecto"
+                  title="Nadie ha elegido, así que sale esta por ser la primera que se subió. Pulsa la estrella de otra para cambiarlo."
+                >
+                  Se enviará esta
+                </span>
+              ) : salen.has(m.id) ? (
+                <span
+                  className="medio__sale medio__sale--extra"
+                  title="Sale como «otra vista», detrás de la principal, cuando el cliente pregunta solo por este producto."
+                >
+                  también sale
+                </span>
+              ) : null}
+
+              {/*
+                La estrella va fuera de la barra de acciones y siempre visible:
+                dentro serían tres botones en 120px, y escondida tras el hover
+                no la encuentra quien no sabe que existe — que es justo el dueño
+                al que esta pantalla tiene que servir.
+              */}
+              {!principal && (
+                <button
+                  type="button"
+                  className="medio__estrella"
+                  disabled={subiendo}
+                  onClick={() => void marcar(m)}
+                  title={
+                    esVideo
+                      ? 'Marcarlo elige QUÉ vídeo se manda, pero el vídeo solo sale si el cliente pide verlo en movimiento. Para lo que Mia enseña de entrada, marca una foto.'
+                      : 'Que sea esta la que Mia enseñe al presentar el producto.'
+                  }
+                >
+                  <Star size={13} />
+                </button>
+              )}
+
+              <div className="medio__acciones">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSustituyendo(m.id);
+                    entrada.current?.click();
+                  }}
+                  disabled={subiendo}
+                >
+                  Cambiar
+                </button>
+                <button type="button" className="del" onClick={() => void borrar(m)} disabled={subiendo}>
+                  <Trash2 size={13} />
+                </button>
               </div>
-            ) : (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={m.url} alt="" loading="lazy" />
-            )}
-
-            {salen.has(m.id) && (
-              <span className="medio__sale" title="Esta sí se envía">
-                <Star size={12} /> se envía
-              </span>
-            )}
-
-            <div className="medio__acciones">
-              <button
-                type="button"
-                onClick={() => {
-                  setSustituyendo(m.id);
-                  entrada.current?.click();
-                }}
-                disabled={subiendo}
-              >
-                Cambiar
-              </button>
-              <button type="button" className="del" onClick={() => void borrar(m)} disabled={subiendo}>
-                <Trash2 size={13} />
-              </button>
             </div>
-          </div>
-        ))}
+          );
+        })}
 
         <button
           type="button"
@@ -872,8 +980,8 @@ function Medios({
         <p className="muted" style={{ fontSize: 12, marginTop: 10, display: 'flex', gap: 6 }}>
           <AlertTriangle size={14} style={{ flex: 'none', marginTop: 1 }} />
           Tienes {medios.length} y solo salen {TOPE_ADJUNTOS}. Las de más siguen guardadas, pero no
-          se envían: si quieres cambiar cuál sale, usa «Cambiar» sobre una de las marcadas en vez de
-          borrar y volver a subir.
+          se envían: pulsa la estrella de la que quieras que Mia enseñe, sin borrar ni volver a
+          subir nada.
         </p>
       )}
 

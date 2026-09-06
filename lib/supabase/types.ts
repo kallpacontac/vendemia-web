@@ -215,6 +215,19 @@ export interface CatalogMediaRow {
   media_type: 'image' | 'video';
   /** Decide cuáles son los 2 que de verdad se envían. Ver TOPE_ADJUNTOS. */
   sort_order: number | null;
+  /**
+   * La que el bot manda cuando presenta el producto (migración 0015).
+   *
+   * ⚠️ Es INTEGER 0/1, no boolean, como todo lo que cruza el espejo desde
+   * SQLite. Comprobado contra producción: `is_primary=is.true` responde
+   * 42804 «argument of IS TRUE must be type boolean, not type integer». Pásalo
+   * por `bool()` y filtra con `.eq('is_primary', 1)`, nunca con `true`.
+   *
+   * `null` o 0 en TODAS las fotos de un producto es el caso normal, no un
+   * error: sin ninguna marcada el bot cae al orden de subida, que es el
+   * comportamiento de siempre. Ver `hayPrincipal()` en la pantalla de catálogo.
+   */
+  is_primary: number | null;
   /** Etiqueta heredada. NO usar para buscar ni para nada. */
   product_name: string | null;
   created_ts: string | null;

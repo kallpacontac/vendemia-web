@@ -27,10 +27,10 @@ import { BRAND, WHATSAPP } from '@/lib/content';
 /**
  * Datos de la empresa titular, tomados de la ficha RUC.
  *
- * ⚠️ QUEDA UN HUECO: el correo. Es el único dato que no me consta y no me lo
- * invento — en las tres páginas se ofrece como vía para ejercer derechos ARCO
- * y para pedir el reembolso, así que un correo que no existe convierte dos
- * compromisos legales en papel mojado.
+ * El correo es una dirección REAL y con dueño: en las tres páginas se ofrece
+ * como vía para ejercer derechos ARCO y para pedir el reembolso, así que quien
+ * escriba ahí tiene que encontrar a alguien. Si algún día deja de leerse, hay
+ * que cambiarlo aquí antes de que caduque, no después.
  *
  * ⚠️ Y HAY ALGO QUE CONVIENE CONSULTAR CON EL CONTADOR, NO CONMIGO:
  * la actividad registrada de KALLPA TRIATLON S.A.C. es "Actividades
@@ -44,8 +44,7 @@ export const EMPRESA = {
   razonSocial: 'KALLPA TRIATLON S.A.C.',
   ruc: '20608585541',
   domicilio: 'Av. Talara Nro. 450, A.F. Angamos, Jesús María',
-  /** ⚠️ RELLENAR ANTES DE PUBLICAR. */
-  email: '[CORREO DE CONTACTO — completar]',
+  email: 'kallpa.contacto.peru@gmail.com',
   ciudad: 'Lima, Perú',
   whatsapp: `+${WHATSAPP.phone}`,
 } as const;

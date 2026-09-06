@@ -208,6 +208,13 @@ export async function getCatalogo(companyId: string): Promise<ItemCatalogo[]> {
 /**
  * Las fotos y vídeos de un producto, en el orden en que el bot los usaría.
  *
+ * ⚠️ LOS DOS `order` HACEN FALTA, Y EN ESTE ORDEN. La marcada manda; entre las
+ * demás decide el orden de subida. Si el panel ordenara solo por `sort_order`,
+ * enseñaría una lista que no es la que el bot recorre y el dueño volvería a
+ * creer que sale una foto distinta de la que sale — que es el bug que trajo
+ * todo esto: en una tienda de ropa se estaba mandando la ESPALDA de la
+ * camiseta porque se subió primero.
+ *
  * ⚠️ Se filtra por `catalog_id`, no por `product_name`: esa columna es una
  * etiqueta heredada que se queda obsoleta en cuanto se renombra el producto.
  */
@@ -216,6 +223,7 @@ export async function getMediosCatalogo(catalogId: string): Promise<CatalogMedia
     .from('catalog_media')
     .select('*')
     .eq('catalog_id', catalogId)
+    .order('is_primary', { ascending: false })
     .order('sort_order', { ascending: true });
   if (error) throw error;
   return (data ?? []) as CatalogMediaRow[];
@@ -235,6 +243,7 @@ export async function getMediosDeVarios(
     .from('catalog_media')
     .select('*')
     .in('catalog_id', catalogIds)
+    .order('is_primary', { ascending: false })
     .order('sort_order', { ascending: true });
   if (error) throw error;
 

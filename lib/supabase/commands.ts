@@ -30,6 +30,7 @@ export type TipoComando =
   | 'delete_catalog_item'
   | 'upsert_catalog_media'
   | 'delete_catalog_media'
+  | 'set_primary_media'
   | 'upsert_employee'
   | 'delete_employee'
   | 'send_message'
@@ -82,6 +83,28 @@ export interface ResultadoCatalogMedia {
   id: string;
   catalog_id: string;
   sort_order: number;
+}
+
+/**
+ * `set_primary_media` · payload `{ id }` — el id de la fila de `catalog_media`.
+ *
+ * Va aparte de `upsert_catalog_media` a propósito: marcar no es editar. El
+ * panel solo tiene el id, y obligarle a reenviar `url` y `media_type` para
+ * cambiar un flag invita a que mande cualquier cosa en esos campos y acabe
+ * pisando la foto que quería marcar.
+ *
+ * La marca es EXCLUSIVA y el bot desmarca las otras en la misma operación: el
+ * panel no encola un segundo comando para desmarcar. Un id de otra empresa no
+ * marca nada.
+ *
+ * ⚠️ Lo aplica el bot, así que con el bot fuera se queda en `pending` y la
+ * estrella no se mueve hasta que arranque. NO des la marca por hecha en local:
+ * la pantalla de catálogo no hace update optimista precisamente por esto, así
+ * que lo que se ve es lo que el bot tiene de verdad.
+ */
+export interface ResultadoSetPrimary {
+  id: string;
+  catalog_id: string;
 }
 
 export interface ResultadoAddMember {
