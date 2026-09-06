@@ -57,6 +57,15 @@ export const EMPRESA = {
  */
 export const ACTUALIZADO = '3 de septiembre de 2026';
 
+/**
+ * La misma fecha en ISO, para el `lastmod` del sitemap.
+ *
+ * ⚠️ Las dos se mueven JUNTAS o ninguna. Están separadas solo porque una la lee
+ * una persona al pie de la página y la otra un rastreador, no porque puedan
+ * decir cosas distintas.
+ */
+export const ACTUALIZADO_ISO = '2026-09-03';
+
 export type Bloque = { h?: string; p?: string[]; li?: string[] };
 export type PaginaLegal = {
   slug: string;

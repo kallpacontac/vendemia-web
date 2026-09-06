@@ -1,4 +1,5 @@
 import type { MetadataRoute } from 'next';
+import { ACTUALIZADO_ISO } from '@/lib/legal';
 
 /**
  * /sitemap.xml — el mapa que se le entrega a Google Search Console.
@@ -17,6 +18,23 @@ import type { MetadataRoute } from 'next';
 const SITIO = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://vendemias.com';
 
 /**
+ * ⚠️ FECHAS A MANO, NO `new Date()`.
+ *
+ * Con `new Date()` el `lastmod` era la hora del BUILD, así que cada despliegue
+ * —aunque solo tocara el panel, que ni siquiera está en el sitemap— le decía a
+ * Google que las cuatro páginas legales habían cambiado. Un `lastmod` que
+ * miente unas cuantas veces deja de servir para lo único que sirve: Google lo
+ * ignora y vuelve a rastrear cuando le parece.
+ *
+ * Es el mismo motivo por el que `ACTUALIZADO` está escrito a mano en
+ * lib/legal.ts. Cuándo cambió el texto solo lo sabe quien lo cambia.
+ *
+ * Sube esta fecha cuando cambies la landing de verdad (secciones, copy, oferta),
+ * no cuando toques el panel o un estilo.
+ */
+const LANDING_ACTUALIZADA = '2026-09-06';
+
+/**
  * Las paginas legales SI van al sitemap, aunque no sean comerciales.
  *
  * Dos motivos. Uno, que existan indexadas es parte de parecer —y ser— un
@@ -33,13 +51,13 @@ export default function sitemap(): MetadataRoute.Sitemap {
   return [
     {
       url: SITIO,
-      lastModified: new Date(),
+      lastModified: LANDING_ACTUALIZADA,
       changeFrequency: 'weekly',
       priority: 1,
     },
     ...LEGALES.map((ruta) => ({
       url: `${SITIO}${ruta}`,
-      lastModified: new Date(),
+      lastModified: ACTUALIZADO_ISO,
       changeFrequency: 'yearly' as const,
       priority: 0.3,
     })),
