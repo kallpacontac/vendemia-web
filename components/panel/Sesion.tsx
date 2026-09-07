@@ -26,6 +26,12 @@ interface Estado {
   compania: CompaniaAccesible | null;
   esDueno: boolean;
   cargando: boolean;
+  /**
+   * Hay una sesión guardada pero ahora mismo no hay una viva: el token caducó
+   * y el refresco todavía no ha respondido. NO es "no has entrado". Ver el
+   * comentario largo de abajo.
+   */
+  reconectando: boolean;
   elegirCompania: (id: string) => void;
   salir: () => Promise<void>;
 }
@@ -34,34 +40,104 @@ const Ctx = createContext<Estado | null>(null);
 
 const CLAVE_COMPANIA = 'vendemia_company';
 
+/**
+ * Donde supabase-js guarda la sesión. Tiene que coincidir con el `storageKey`
+ * de lib/supabase/client.ts: si alguien cambia uno y no el otro, esto deja de
+ * detectar la sesión guardada y vuelve el rebote al login.
+ */
+const CLAVE_SESION = 'vendemia-auth';
+
+/** ¿Queda una sesión guardada en este navegador, aunque no esté viva? */
+function haySesionGuardada(): boolean {
+  try {
+    return localStorage.getItem(CLAVE_SESION) !== null;
+  } catch {
+    // Ventana privada o cookies bloqueadas: sin almacenamiento no hay nada que
+    // recuperar, así que lo honesto es decir que no.
+    return false;
+  }
+}
+
+/**
+ * Cuánto se le da al refresco antes de rendirse y mandar al login.
+ *
+ * Generoso a propósito: el caso real es un portátil que despierta después de
+ * horas y cuya wifi tarda unos segundos en volver. Rendirse antes es
+ * exactamente el bug que esto arregla.
+ */
+const ESPERA_RECONEXION_MS = 12000;
+
 export function ProveedorSesion({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const [session, setSession] = useState<Session | null>(null);
   const [companias, setCompanias] = useState<CompaniaAccesible[]>([]);
   const [companyId, setCompanyId] = useState<string | null>(null);
   const [cargando, setCargando] = useState(true);
+  const [reconectando, setReconectando] = useState(false);
 
   useEffect(() => {
     const sb = supabase();
     let vivo = true;
 
-    // getSession() lee del almacenamiento local y NO va a la red, así que es lo
-    // que evita el parpadeo de "no hay sesión" al recargar una página del panel.
+    let relojReconexion: ReturnType<typeof setTimeout> | undefined;
+
+    /**
+     * ⚠️ getSession() SÍ VA A LA RED CUANDO EL TOKEN HA CADUCADO.
+     *
+     * Es la parte que no es obvia y la que producía el rebote «me manda al
+     * login y vuelvo solo al panel». Comprobado en el código de auth-js
+     * 2.112.3 (GoTrueClient, __loadSession): si `expires_at` ya pasó, llama a
+     * _callRefreshToken() y espera. Solo devuelve `session: null` si ese
+     * refresco FALLA.
+     *
+     * Y falla, sin que la sesión esté muerta, en el caso más común de todos:
+     * un portátil que despierta después de horas y cuya red todavía no está
+     * lista. Antes eso bajaba `cargando` a false con `session` en null, la
+     * guardia leía "no ha entrado" y redirigía a /login — y un segundo después
+     * el reintento automático de supabase-js funcionaba, emitía TOKEN_REFRESHED
+     * y el usuario volvía al panel sin haber tocado nada.
+     *
+     * Así que null NO significa "no ha entrado": significa "ahora mismo no
+     * tengo una sesión viva". Si queda una guardada en este navegador, lo
+     * correcto es esperar al reintento, no echar a nadie.
+     */
     void sb.auth.getSession().then(({ data }) => {
-      if (vivo) setSession(data.session);
+      if (!vivo) return;
+      setSession(data.session);
+      if (!data.session && haySesionGuardada()) {
+        setReconectando(true);
+        relojReconexion = setTimeout(() => {
+          // Se acabó el margen. A partir de aquí la guardia sí manda al login,
+          // que es lo correcto: sin sesión no hay panel que enseñar.
+          if (vivo) setReconectando(false);
+        }, ESPERA_RECONEXION_MS);
+      }
     });
 
     const { data: sub } = sb.auth.onAuthStateChange((_evento, s) => {
       if (!vivo) return;
       setSession(s);
-      if (!s) {
-        setCompanias([]);
-        setCompanyId(null);
+      if (s) {
+        // Volvió: se cancela el margen y se sigue como si nada.
+        setReconectando(false);
+        if (relojReconexion) clearTimeout(relojReconexion);
+        return;
       }
+      /**
+       * Sin sesión y sin nada guardado: esto es un cierre de sesión de verdad
+       * —el botón de salir, o un refresh token revocado— y hay que soltarlo
+       * inmediatamente. Distinguirlo del caso de arriba es justo lo que evita
+       * que un logout real se quede 12 segundos fingiendo que reconecta.
+       */
+      setReconectando(false);
+      if (relojReconexion) clearTimeout(relojReconexion);
+      setCompanias([]);
+      setCompanyId(null);
     });
 
     return () => {
       vivo = false;
+      if (relojReconexion) clearTimeout(relojReconexion);
       sub.subscription.unsubscribe();
     };
   }, []);
@@ -122,6 +198,7 @@ export function ProveedorSesion({ children }: { children: React.ReactNode }) {
       compania,
       esDueno: compania?.rol === 'owner',
       cargando,
+      reconectando,
       /**
        * ⚠️ Comprueba SIEMPRE que la compañía esté en la lista del usuario.
        *
@@ -144,6 +221,10 @@ export function ProveedorSesion({ children }: { children: React.ReactNode }) {
        * negocio anterior mientras carga el suyo.
        */
       salir: async () => {
+        // Antes que nada: salir es una decisión, no una desconexión. Sin esto,
+        // el margen de reconexión podría estar activo y la guardia se quedaría
+        // enseñando "Reconectando…" en vez de irse al login.
+        setReconectando(false);
         await supabase().auth.signOut();
         localStorage.removeItem(CLAVE_COMPANIA);
         setCompanias([]);
@@ -151,7 +232,7 @@ export function ProveedorSesion({ children }: { children: React.ReactNode }) {
         router.replace('/login');
       },
     };
-  }, [session, companias, companyId, cargando, router]);
+  }, [session, companias, companyId, cargando, reconectando, router]);
 
   return <Ctx.Provider value={valor}>{children}</Ctx.Provider>;
 }

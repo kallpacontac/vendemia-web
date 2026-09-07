@@ -27,17 +27,27 @@ import { ProveedorSalud } from '@/components/panel/Salud';
  */
 function Guardia({ children }: { children: React.ReactNode }) {
   const router = useRouter();
-  const { session, cargando, companias, companyId } = useSesion();
+  const { session, cargando, reconectando, companias, companyId } = useSesion();
 
+  /**
+   * ⚠️ `reconectando` es la diferencia entre "no has entrado" y "ahora mismo no
+   * llego al servidor". Sin ella, despertar el portátil después de unas horas
+   * te mandaba al login y, un segundo después, de vuelta al panel: el refresco
+   * había fallado por la red y luego funcionó. Ver Sesion.tsx.
+   */
   useEffect(() => {
-    if (!cargando && !session) router.replace('/login');
-  }, [cargando, session, router]);
+    if (!cargando && !reconectando && !session) router.replace('/login');
+  }, [cargando, reconectando, session, router]);
 
-  if (cargando || !session) {
+  if (cargando || reconectando || !session) {
     return (
       <div className="cargando">
         <div className="spin" />
-        {cargando ? 'Cargando tu panel…' : 'Necesitas iniciar sesión…'}
+        {cargando
+          ? 'Cargando tu panel…'
+          : reconectando
+            ? 'Reconectando…'
+            : 'Necesitas iniciar sesión…'}
       </div>
     );
   }
