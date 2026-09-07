@@ -46,6 +46,7 @@ import {
   MessageSquare,
   Plus,
   Scissors,
+  ShieldCheck,
   Store,
   Trash2,
   UserPlus,
@@ -101,6 +102,9 @@ interface Formulario {
   business_description: string;
   slot_minutes: number;
   require_payment_to_confirm: boolean;
+  verify_vouchers: boolean;
+  request_location: boolean;
+  proactive_venue: boolean;
   delivery_type: 'delivery' | 'pickup' | 'both';
   bot_tone: string;
   hook_question: string;
@@ -132,6 +136,34 @@ function limpiar(p: PreguntaObligatoria): PreguntaObligatoria {
 }
 
 /**
+ * ¿Las reglas del negocio siguen pidiendo el comprobante?
+ *
+ * ══════════════════════════════════════════════════════════════════════════
+ * ESTO ES LO QUE EVITA EL «EL INTERRUPTOR NO FUNCIONA»
+ * ══════════════════════════════════════════════════════════════════════════
+ *
+ * `custom_rules` es texto libre que entra tal cual en el prompt, y el alta
+ * antigua metía ahí «Pide el comprobante de pago antes de dar el pedido por
+ * cerrado». NINGUNA columna apaga ese texto.
+ *
+ * Así que un negocio que apaga la revisión automática y deja esa línea puesta
+ * se queda en el peor sitio posible: el bot sigue pidiendo una captura que ya
+ * no va a mirar nadie. Desde fuera eso se lee como «el interruptor no hace
+ * nada», y acaba en un mensaje de soporte.
+ *
+ * Devuelve la línea entera y no un booleano para poder citarla: leer sus
+ * propias palabras es lo que hace que el dueño sepa qué borrar.
+ */
+function reglaQuePideComprobante(reglas: string): string | null {
+  return (
+    reglas
+      .split('\n')
+      .map((l) => l.trim())
+      .find((l) => /comprobante|voucher|captura del pago/i.test(l)) ?? null
+  );
+}
+
+/**
  * El patch COMPLETO, como si todo hubiera cambiado. No se manda tal cual: es la
  * foto contra la que guardar() compara para quedarse solo con lo modificado.
  *
@@ -149,6 +181,9 @@ function construirPatch(
   return {
     ...form,
     require_payment_to_confirm: b01(form.require_payment_to_confirm),
+    verify_vouchers: b01(form.verify_vouchers),
+    request_location: b01(form.request_location),
+    proactive_venue: b01(form.proactive_venue),
     ask_employee: b01(pideEmpleado),
     // ⚠️ Los tres son `text` en el espejo, no jsonb.
     schedule: JSON.stringify(horario),
@@ -203,6 +238,16 @@ export default function Configuracion() {
       business_description: e.business_description ?? '',
       slot_minutes: e.slot_minutes ?? 30,
       require_payment_to_confirm: e.require_payment_to_confirm === 1,
+      /**
+       * ⚠️ `!== 0`, NO `=== 1`. En Postgres es `integer not null default 1`:
+       * encendido es el valor por defecto. Con `=== 1`, un `null` que llegara
+       * del espejo se pintaría apagado, y eso le diría al dueño que no le
+       * revisamos los pagos justo cuando sí se los estamos revisando. Ante la
+       * duda, la casilla dice la verdad conservadora.
+       */
+      verify_vouchers: e.verify_vouchers !== 0,
+      request_location: e.request_location === 1,
+      proactive_venue: e.proactive_venue === 1,
       delivery_type: e.delivery_type ?? 'pickup',
       bot_tone: e.bot_tone ?? '',
       hook_question: e.hook_question ?? '',
@@ -450,6 +495,13 @@ export default function Configuracion() {
                 />
               </div>
             </div>
+            {/*
+              ⚠️ Este y "Comprobantes de pago" (paso 2) suenan igual y no tienen
+              nada que ver. Este dice CUÁNDO se reserva el cupo; el otro, QUIÉN
+              comprueba que el pago llegó. Son independientes: se puede cobrar
+              por adelantado y aun así querer mirar los Yapes a mano. Por eso la
+              copia habla de la cita y no de "el pago" a secas.
+            */}
             <div className="toggle-row" style={{ marginTop: 12 }}>
               <div className="t">
                 <b>Requerir pago para confirmar</b>
@@ -559,6 +611,114 @@ export default function Configuracion() {
             <button className="btn btn-ghost btn-sm" onClick={() => setPagos((ps) => [...ps, { type: 'yape' }])}>
               <Plus size={15} /> Agregar método
             </button>
+          </div>
+
+          {/*
+            ⚠️ NO es "Requerir pago para confirmar", que está en el paso
+            anterior y suena igual. Aquel dice CUÁNDO se reserva el cupo; este,
+            QUIÉN comprueba que el pago llegó. Son independientes, y por eso las
+            dos opciones se describen por lo que le pasa al cliente en la
+            conversación y no por el nombre del campo.
+          */}
+          <div className="sec">
+            <h4>
+              <ShieldCheck /> Comprobantes de pago
+            </h4>
+
+            <div className="opciones">
+              <button
+                type="button"
+                className={`opcion ${form.verify_vouchers ? 'on' : ''}`}
+                onClick={() => set('verify_vouchers', true)}
+                role="radio"
+                aria-checked={form.verify_vouchers}
+              >
+                <b>Los revisa Mia</b>
+                <small>
+                  Analiza la captura, comprueba que el pago sea real y le confirma al cliente al
+                  momento.
+                </small>
+                <span className="opcion__def">por defecto</span>
+              </button>
+              <button
+                type="button"
+                className={`opcion ${!form.verify_vouchers ? 'on' : ''}`}
+                onClick={() => set('verify_vouchers', false)}
+                role="radio"
+                aria-checked={!form.verify_vouchers}
+              >
+                <b>Los revisas tú</b>
+                <small>
+                  Mia recibe la captura, la guarda y le dice al cliente que la confirmáis vosotros.
+                  No da ningún pago por bueno.
+                </small>
+              </button>
+            </div>
+
+            {/*
+              El aviso se enseña SIEMPRE que estén apagados y la regla exista, no
+              solo en el momento de apagarlo: alguien puede añadir esa frase a
+              las reglas tres meses después y romperlo otra vez sin enterarse.
+            */}
+            {!form.verify_vouchers && reglaQuePideComprobante(form.custom_rules) && (
+              <div
+                className="desfase"
+                style={{ background: '#FFF4E5', borderColor: '#FFD9A8', color: '#8A4B00', marginTop: 12 }}
+              >
+                <b>Tus reglas del negocio todavía piden el comprobante:</b>{' '}
+                «{reglaQuePideComprobante(form.custom_rules)}». Quítala en{' '}
+                <b>Reglas y política</b> (paso 3) o Mia seguirá pidiendo una captura que nadie va a
+                mirar.
+              </div>
+            )}
+
+            {/*
+              Lo que se pierde, dicho ANTES y no después. No es un fallo: es la
+              consecuencia razonable de revisar a mano, y el dueño merece leerla
+              mientras decide.
+            */}
+            {!form.verify_vouchers && (
+              <p className="muted" style={{ fontSize: 12, marginTop: 10 }}>
+                Sin comprobantes verificados no se registran pagos, así que este negocio deja de
+                distinguir «pagó a medias» de «no pagó nada» en el seguimiento de ventas. El pedido
+                sigue apareciendo como pendiente —que es lo que importa para llamar al cliente— pero
+                el motivo «pago inconcluso» desaparece.
+              </p>
+            )}
+
+            <div className="toggle-row" style={{ marginTop: 14 }}>
+              <div className="t">
+                <b>Pedir la ubicación para la entrega</b>
+                <small>Mia pide el punto de Maps cuando el pedido es a domicilio</small>
+              </div>
+              <div
+                className={`toggle ${form.request_location ? 'on' : ''}`}
+                onClick={() => set('request_location', !form.request_location)}
+                role="switch"
+                aria-checked={form.request_location}
+              />
+            </div>
+            <div className="toggle-row">
+              <div className="t">
+                <b>Mencionar la dirección del local</b>
+                <small>La dice sin que se la pidan, en vez de esperar a que pregunten</small>
+              </div>
+              <div
+                className={`toggle ${form.proactive_venue ? 'on' : ''}`}
+                onClick={() => set('proactive_venue', !form.proactive_venue)}
+                role="switch"
+                aria-checked={form.proactive_venue}
+              />
+            </div>
+
+            {/*
+              La duda razonable al tocar cualquiera de estos es "¿hay que
+              reiniciar el bot?". Si no se contesta, alguien apaga el bot de un
+              cliente para nada.
+            */}
+            <p className="muted" style={{ fontSize: 12, marginTop: 12 }}>
+              No hace falta reiniciar nada: el cambio entra en la siguiente conversación.
+            </p>
           </div>
 
           <div className="nav-btns">

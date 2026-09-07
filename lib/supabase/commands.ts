@@ -264,4 +264,10 @@ export const CAMPOS_EDITABLES = [
   // Confirmados en EDITABLE_COMPANY_FIELDS del bot: los dos se guardan.
   'qualifying_questions',
   'ask_employee',
+  // Comprobados en db.service.ts de este mismo repo raíz, EDITABLE_COMPANY_FIELDS.
+  // Sin estar en esa lista, el bot los descarta y vuelven en `ignored` sin
+  // decir por qué — que se lee igual que "no cambió nada".
+  'verify_vouchers',
+  'request_location',
+  'proactive_venue',
 ] as const;

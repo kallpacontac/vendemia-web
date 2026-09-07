@@ -80,8 +80,32 @@ export interface CompanyRow {
   delivery_type: 'delivery' | 'pickup' | 'both' | null;
   location: string | null;
   slot_minutes: number | null;
+  /**
+   * ¿El stock o el cupo se RESERVA antes de pagar, o después?
+   *
+   * ⚠️ No lo confundas con `verify_vouchers`, que está justo debajo y suena
+   * igual. Este dice CUÁNDO se reserva; el otro, QUIÉN comprueba el pago. Son
+   * independientes: se puede cobrar por adelantado y aun así querer mirar los
+   * comprobantes a mano.
+   */
   require_payment_to_confirm: Bool01 | null;
+  /**
+   * ¿Quién comprueba que el pago llegó — el bot o una persona? (migración 0017)
+   *
+   * ⚠️ EL VALOR POR DEFECTO ES 1, NO 0. En Postgres es `integer not null
+   * default 1`, así que trata cualquier cosa distinta de 0 como ENCENDIDO,
+   * nunca al revés. Un negocio que existía antes de la migración tiene 1, y
+   * pintarlo apagado le diría al dueño que no le revisamos los pagos cuando sí.
+   *
+   * Con 1 el bot analiza la captura de Yape con visión: comprueba que sea un
+   * comprobante, que esté completado, que el destinatario sea el número del
+   * negocio y que no esté repetida. Con 0 la recibe, la guarda y le dice al
+   * cliente que la confirma una persona — no da ningún pago por bueno.
+   */
+  verify_vouchers: Bool01 | null;
   request_location: Bool01 | null;
+  /** Con 1 el bot menciona la dirección del local sin que se la pidan. */
+  proactive_venue: Bool01 | null;
   owner_phone: string | null;
   admin_phone: string | null;
   whatsapp_phone: string | null;

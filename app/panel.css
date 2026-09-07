@@ -794,6 +794,22 @@ a{color:inherit;text-decoration:none}
 .pack-chip.sel{border-color:var(--brand);background:var(--brand-soft);color:var(--brand-txt)}
 
 /* La galería */
+/* Dos tarjetas excluyentes, no un interruptor.
+   Un toggle solo enseña una de las dos consecuencias —la del estado que NO
+   está puesto se queda sin decir—, y aquí las dos importan: quien lo apaga
+   tiene que leer qué pasa entonces, no deducirlo. */
+.opciones{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
+@media(max-width:720px){.opciones{grid-template-columns:1fr}}
+.opcion{position:relative;text-align:left;cursor:pointer;padding:12px 13px;border-radius:var(--r-sm);
+  border:1.5px solid var(--line-2);background:var(--bg-soft);transition:.14s;font-family:inherit}
+.opcion:hover{border-color:var(--brand-d)}
+.opcion.on{border-color:var(--brand);background:var(--brand-soft);box-shadow:0 0 0 3px var(--brand-soft)}
+.opcion b{display:block;font-size:13.5px;font-weight:800;color:var(--ink)}
+.opcion small{display:block;margin-top:4px;font-size:12px;line-height:1.45;color:var(--ink-soft)}
+.opcion__def{position:absolute;top:10px;right:10px;font-size:9.5px;font-weight:700;text-transform:uppercase;
+  letter-spacing:.04em;color:var(--ink-mute)}
+.opcion.on .opcion__def{color:var(--brand-txt)}
+
 .medios-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:10px;margin-top:12px}
 .medio{position:relative;aspect-ratio:1;border-radius:var(--r-sm);overflow:hidden;
   border:1.5px solid var(--line-2);background:var(--bg-soft)}
