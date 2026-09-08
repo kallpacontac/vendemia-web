@@ -160,18 +160,24 @@ export const CTA = {
  * igual, pero deja de mentir. En cuanto exista la página, se añade el href aquí
  * y se convierte en enlace solo.
  */
-export const ANNOUNCEMENT = {
-  text: 'Mia activa 24/7 · Responde en menos de 30 segundos',
-  // Es el aria-label de la flecha, y la flecha lleva a #pricing. Decía "Probar
-  // gratis": quien navega con lector de pantalla oía una cosa y aterrizaba en
-  // otra. La etiqueta tiene que describir el DESTINO, no el deseo.
-  cta: 'Ver precios',
-  links: [
-    { label: 'Iniciar sesión', href: SITIO.login },
-    { label: 'Precios', href: '#pricing' },
-    { label: 'FAQ', href: '#faq' },
-  ],
-} as const;
+/*
+ * ⚠️ AQUÍ VIVÍA ANNOUNCEMENT, LA BARRA DE 36px DE ARRIBA DEL TODO.
+ *
+ * Decía «Mia activa 24/7 · Responde en menos de 30 segundos» y llevaba a la
+ * derecha tres enlaces: Iniciar sesión, Precios y FAQ.
+ *
+ * Se quitó entera por dos motivos que se refuerzan:
+ *
+ * · Los tres enlaces YA estaban en el navbar de debajo, a 36px de distancia.
+ *   Repetirlos no daba una segunda vía: daba dos filas que hay que leer para
+ *   descubrir que dicen lo mismo.
+ * · Y el texto tampoco era nuevo. «24/7» está en el badge del hero y «30
+ *   segundos» en el subtítulo, los dos dentro del primer viewport. Tres veces
+ *   la misma promesa antes de que el visitante lea el titular.
+ *
+ * Los 36px que devuelve suben todo el hero, y con él la prueba social, que
+ * era justo lo que quedaba fuera de pantalla. Ver el marquee en Hero.tsx.
+ */
 
 /**
  * ⚠️ "Comparativa" apunta a #related, NO a la sección del 24/7.
@@ -383,6 +389,7 @@ export const HERO = {
   socialProof: [
     'Peluquería Jhoyner',
     'Tienda Elvis',
+    'Sold Out',
     'Academia de Natación Kallpa',
     'Agencia Werner',
   ],
@@ -694,9 +701,9 @@ export const BENTO_B = {
        */
       title: 'Listo en 10 minutos',
       body: [
-        { text: 'Sin código y sin instalar nada. Lo dejamos funcionando contigo ' },
+        { text: 'Escaneas un QR para vincular tu número —como cuando abres WhatsApp en la computadora— y lo dejamos funcionando contigo ' },
         { text: 'en la misma conversación', strong: true },
-        { text: ' — no hay llamada que agendar para otro día.' },
+        { text: '. Sin programar nada y sin llamada que agendar.' },
       ] as RichText,
     },
   ],
@@ -1128,7 +1135,26 @@ export const FAQ = {
     {
       q: '¿Cuánto tiempo toma configurarlo?',
       a: [
-        'Diez minutos por WhatsApp. Nos escribes, nos dices qué vendes, con qué precios y con qué horarios, y te dejamos a Mia funcionando en esa misma conversación. Sin código, sin instalar nada y sin agendar una llamada para el jueves.',
+        /**
+         * ⚠️ FALTABA EL PASO DEL QR, Y ES EL ÚNICO PASO TÉCNICO QUE HAY.
+         *
+         * Omitirlo no hacía la respuesta más corta: la hacía incompleta justo
+         * donde el lector está calculando cuánto esfuerzo le va a costar. Y
+         * quien descubre un paso que no le contaron —aunque sea trivial— deja
+         * de fiarse de que no haya más.
+         *
+         * Se dice comparándolo con WhatsApp Web a propósito. Escanear un QR
+         * suena a trámite; "lo mismo que ya haces para abrir WhatsApp en la
+         * computadora" es un gesto que el lector ya ha hecho y le salió bien.
+         * Es la diferencia entre añadir un requisito y quitar un miedo.
+         *
+         * ⚠️ Y POR ESO "sin código" TUVO QUE IRSE de esta respuesta.
+         * Decíamos "sin código" (sin programar) en la misma frase en la que
+         * ahora pedimos escanear "un código". La palabra choca consigo misma y
+         * el lector tropieza. "Sin programar nada" dice lo mismo sin colisión.
+         */
+        'Diez minutos por WhatsApp. Nos escribes, nos dices qué vendes, con qué precios y con qué horarios, y escaneas un QR con tu celular para vincular tu número — el mismo gesto que ya haces para abrir WhatsApp en la computadora.',
+        'Te dejamos a Mia funcionando en esa misma conversación: sin programar nada, sin instalar nada y sin agendar una llamada para el jueves.',
       ],
     },
     {

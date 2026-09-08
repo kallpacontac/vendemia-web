@@ -8,7 +8,13 @@ import CascadeText from '@/components/CascadeText';
 import AssetSlot from '@/components/AssetSlot';
 import { HERO, whatsappLink } from '@/lib/content';
 import { ASSETS } from '@/lib/assets';
-import { registerGsap, prefersReducedMotion, DIRECTIONAL_CUBIC } from '@/lib/motion';
+import {
+  registerGsap,
+  prefersReducedMotion,
+  duplicateForLoop,
+  marqueeClass,
+  DIRECTIONAL_CUBIC,
+} from '@/lib/motion';
 
 /** Retraso del H1 dentro del timeline del hero. Lo usan el titular y la cuenta. */
 const H1_DELAY = 0.25;
@@ -50,6 +56,21 @@ const H1_DELAY = 0.25;
  * rayo de luz, y nada más. Si vuelve a hacer falta, el componente y su
  * documentación están en el historial de esta conversación, no en el árbol.
  */
+/**
+ * La mitad de la pista del marquee.
+ *
+ * Cinco nombres miden unos 800px, y en una pantalla de 1280 eso deja ver el
+ * final de una vuelta y el principio de la siguiente AL MISMO TIEMPO: dos
+ * "Agencia Werner" en pantalla, que se lee como un fallo y no como un bucle.
+ * Repitiendo la lista hasta pasar de los 1600px, el nombre que vuelve ya está
+ * fuera de la pantalla cuando reaparece.
+ *
+ * El x2 final lo pone `duplicateForLoop`, que es lo que hace que el salto de
+ * -50% a 0 sea invisible. Aquí solo se ensancha la unidad.
+ */
+const REPETICIONES = 4;
+const UNIDAD = Array.from({ length: REPETICIONES }, () => HERO.socialProof).flat();
+
 export default function Hero() {
   const root = useRef<HTMLElement>(null);
 
@@ -176,7 +197,7 @@ export default function Hero() {
         quedaba pegado al navbar con 0px de aire, tocándolo. Los 40px son el
         suelo que garantiza que eso no pase por muy bajo que sea el viewport.
       */}
-      <div className="relative z-10 mx-auto w-full max-w-container px-6 pb-10 pt-[calc(var(--announce-h)+var(--navbar-h)+40px)] text-center">
+      <div className="relative z-10 mx-auto w-full max-w-container px-6 pb-10 pt-[calc(var(--navbar-h)+40px)] text-center">
         <div className="mx-auto max-w-hero">
           {/* PROPORCIÓN · 34px de alto, no 28.
               Debajo hay un titular de 72px; a 28px con 12px de padding el
@@ -299,24 +320,76 @@ export default function Hero() {
             cliente o retira el permiso, se quita de HERO.socialProof: no se
             deja "porque queda bien", y no se rellena con inventados para que
             la fila se vea mas larga. Cuatro ciertos pesan mas que seis. */}
-        <div data-hero="proof" className="mt-14">
+        <div data-hero="proof" className="mt-12">
           {/* Mismo caso que el pie de arriba: --text-low se quedaba en 3.88.
               La jerarquía frente a los nombres no la da el color sino el
               tamaño, la caja alta y el interletrado. */}
-          <p className="text-[12px] uppercase tracking-[0.14em]" style={{ color: 'var(--text-mid)' }}>
+          {/* El interletrado baja a 0.08em por debajo de sm: a 0.14em la frase
+              parte en dos líneas en un móvil de 390px, y una etiqueta de dos
+              líneas deja de leerse como etiqueta. */}
+          <p
+            className="text-[12px] uppercase tracking-[0.08em] sm:tracking-[0.14em]"
+            style={{ color: 'var(--text-mid)' }}
+          >
             {HERO.socialProofLabel}
           </p>
-          <ul className="mt-5 flex flex-wrap items-center justify-center gap-x-8 gap-y-3">
-            {HERO.socialProof.map((negocio) => (
-              <li
-                key={negocio}
-                className="text-[15px] font-medium"
-                style={{ color: 'var(--text-mid)' }}
+
+          {/*
+            ── MARQUEE, Y A SANGRE ──────────────────────────────────────
+
+            Era una lista envuelta dentro del contenedor: cuatro nombres
+            centrados que en un portátil quedaban al borde inferior del
+            viewport y desaparecían al primer scroll. Nadie los leía.
+
+            Tres cambios, cada uno por un motivo distinto:
+
+            · SE MUEVE. Un bloque quieto al final de una pantalla llena se
+              lee como pie de página. El movimiento lateral lo saca de esa
+              categoría sin robarle protagonismo al titular, que es lo que
+              haría cualquier cosa más grande o más brillante.
+            · VA A SANGRE. El `w-screen` con el margen negativo lo saca del
+              `max-w-container`: una fila que llega a los dos bordes se lee
+              como una banda, no como un párrafo que sobró.
+            · SE DUPLICA LA LISTA. El bucle necesita dos copias exactas para
+              que el salto de -50% a 0 sea invisible. Con una sola se ve la
+              costura en cada vuelta.
+
+            ⚠️ `left-1/2 -translate-x-1/2` y NO `-mx-6`: con márgenes
+            negativos el ancho depende del padding del padre, y en cuanto
+            alguien lo toque la banda se sale por un lado y abre scroll
+            horizontal. Anclada al centro del viewport no depende de nada.
+
+            ⚠️ `overflow-hidden` en el envoltorio es OBLIGATORIO. La pista
+            mide el doble de ancho que la pantalla; sin recorte, el documento
+            entero gana scroll lateral y aparecen los huecos negros a los
+            lados en móvil.
+          */}
+          <div className="relative left-1/2 mt-6 w-screen -translate-x-1/2 overflow-hidden">
+            <div className="marquee-mask">
+              <div
+                {...marqueeClass('right', 42)}
+                // gap-x en la pista y no margen en cada nombre: el hueco entre
+                // el último de una copia y el primero de la siguiente tiene que
+                // ser idéntico al de dentro, o la costura se ve al pasar.
+                style={{ ...marqueeClass('right', 42).style, columnGap: '3rem' }}
               >
-                {negocio}
-              </li>
-            ))}
-          </ul>
+                {duplicateForLoop(UNIDAD).map((negocio, i) => (
+                  <span
+                    key={`${negocio}-${i}`}
+                    className="shrink-0 whitespace-nowrap text-[15px] font-medium"
+                    style={{ color: 'var(--text-mid)' }}
+                    // Todo lo que no sea la PRIMERA pasada es decoración del
+                    // bucle. Un lector de pantalla que lo leyera anunciaría
+                    // cada negocio ocho veces, como si hubiera cuarenta
+                    // clientes en vez de cinco.
+                    aria-hidden={i >= HERO.socialProof.length}
+                  >
+                    {negocio}
+                  </span>
+                ))}
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 

@@ -545,7 +545,7 @@ export function duplicateForLoop<T>(items: T[]): T[] {
   return [...items, ...items];
 }
 
-export function marqueeClass(direction: 'left' | 'right', seconds = TIMING.marquee) {
+export function marqueeClass(direction: 'left' | 'right', seconds: number = TIMING.marquee) {
   return {
     className: `marquee-track ${direction === 'left' ? 'animate-marquee-left' : 'animate-marquee-right'}`,
     style: { animationDuration: `${seconds}s` } as CSSProperties,

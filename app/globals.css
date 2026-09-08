@@ -82,7 +82,6 @@
   --text-muted: #5c5c5c;
 
   /* Alturas fijas medidas del original */
-  --announce-h: 36px;
   --navbar-h: 72px;
   --nav-pill-h: 48px;
 
@@ -128,6 +127,17 @@ section[id] {
 html {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  /* Suelo contra el scroll lateral. Ninguna página de este sitio se lee de
+     lado, así que un desbordamiento horizontal SIEMPRE es un fallo — un
+     adorno posicionado fuera, una tarjeta que no encoge — y siempre se ve
+     igual de mal: franjas negras al deslizar.
+
+     `clip` y no `hidden` a propósito: `hidden` en el elemento raíz lo
+     convierte en contenedor de scroll, y eso rompe `position: sticky` (las
+     secciones apiladas) y el desplazamiento suave a las anclas. `clip` recorta
+     sin nada de eso, y al ser solo en X deja `overflow-y` en visible — con
+     `hidden` en un eje, el otro pasaría a `auto` solo. */
+  overflow-x: clip;
 }
 
 body {
@@ -323,7 +333,24 @@ html:not([data-intro='run']) .brand-intro {
   .stacked {
     position: relative;
     min-height: auto;
-    overflow: visible;
+    /* ⚠️ `clip`, NO `visible` NI `hidden`. Aquí ponía `visible`, y eso abría
+       scroll horizontal en TODOS los móviles en vertical.
+
+       El mecanismo, por si vuelve: esta regla tiene la misma especificidad que
+       la utilidad `overflow-hidden` de Tailwind (0,1,0) y va después en la
+       hoja, así que la gana. El hero deja de recortar, y dentro tiene un
+       destello decorativo de 700px anclado a `-right-[10%]` que se sale 234px
+       — los "huecos" negros al deslizar de lado. Solo pasa por debajo de 720px
+       de alto, que es cualquier teléfono en vertical: un Pixel 5 (727px) no lo
+       enseña y un iPhone 12 (664px) sí. Por eso no se ve estrechando la
+       ventana del escritorio, y por eso costó encontrarlo.
+
+       No vale `hidden` porque convierte la sección en contenedor de scroll y
+       rompe el `position: sticky` de las apiladas, que es justo lo que esta
+       media query intenta preservar. `clip` recorta sin crear contenedor.
+       Safari 15 y anteriores lo ignoran y se quedan como estaban: peor que
+       ahora, igual que antes. */
+    overflow: clip;
   }
 }
 

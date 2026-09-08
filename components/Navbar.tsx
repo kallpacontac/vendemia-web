@@ -2,9 +2,9 @@
 
 import { useEffect, useRef, useState } from 'react';
 import gsap from 'gsap';
-import { ChevronDown, ArrowRight, Menu, X } from 'lucide-react';
+import { ChevronDown, Menu, X } from 'lucide-react';
 import Mark from './Mark';
-import { ANNOUNCEMENT, NAV_LINKS, NAV_CTA, BRAND, SITIO, whatsappLink } from '@/lib/content';
+import { NAV_LINKS, NAV_CTA, BRAND, SITIO, whatsappLink } from '@/lib/content';
 import { registerGsap, prefersReducedMotion, cascadeText } from '@/lib/motion';
 
 /**
@@ -119,37 +119,9 @@ export default function Navbar() {
           pointerEvents: collapsed ? 'none' : 'auto',
         }}
       >
-        {/* Barra de anuncio · 36px */}
-        <div
-          className="flex h-[36px] items-center border-b"
-          style={{ borderColor: 'var(--border-dark)', background: 'rgba(0,0,0,.6)', backdropFilter: 'blur(12px)' }}
-        >
-          <div className="mx-auto flex w-full max-w-container items-center justify-between px-6">
-            <div className="flex items-center gap-2 text-[13px]">
-              <span className="h-[6px] w-[6px] rounded-full" style={{ background: 'var(--orange-500)' }} />
-              <span style={{ color: 'var(--text-mid)' }}>{ANNOUNCEMENT.text}</span>
-              <a
-                href="#pricing"
-                className="ml-1 inline-flex h-5 w-5 items-center justify-center rounded-full transition-colors duration-200 hover:bg-white/10"
-                aria-label={ANNOUNCEMENT.cta}
-              >
-                <ArrowRight size={12} style={{ color: 'var(--orange-500)' }} />
-              </a>
-            </div>
-            <div className="hidden items-center gap-6 md:flex">
-              {ANNOUNCEMENT.links.map((l) => (
-                <a
-                  key={l.label}
-                  href={l.href}
-                  className="text-[13px] transition-colors duration-200 hover:text-white"
-                  style={{ color: 'var(--text-low)' }}
-                >
-                  {l.label}
-                </a>
-              ))}
-            </div>
-          </div>
-        </div>
+        {/* Aquí estaba la barra de anuncio de 36px. Ver la nota en
+            lib/content.ts: sus tres enlaces ya estaban en el navbar de debajo
+            y su texto ya estaba dos veces en el hero. */}
 
         {/* Navbar · 72px */}
         <nav
