@@ -31,7 +31,7 @@
  *     El emparejamiento se hace en persona. Si `status = needs_qr`, lo único
  *     que puede hacer el panel es avisar.
  */
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import {
   ArrowLeft,
@@ -267,6 +267,57 @@ export default function Configuracion() {
   const set = <K extends keyof Formulario>(k: K, v: Formulario[K]) =>
     setForm((f) => (f ? { ...f, [k]: v } : f));
 
+  /**
+   * Lo que cambió desde que se abrió la pantalla.
+   *
+   * Se calcula UNA vez y lo usan las dos cosas que lo necesitan: la barra de
+   * guardar —que aparece solo si hay algo— y guardar() —que manda exactamente
+   * esto—. Calcularlo dos veces por separado es como se llega a una barra que
+   * dice "tienes cambios" sobre un botón que responde "no hay nada que guardar".
+   */
+  const patch = useMemo(() => {
+    if (!form) return {};
+    const completo = construirPatch(form, horario, pagos, preguntas, pideEmpleado);
+    return Object.fromEntries(
+      Object.entries(completo).filter(([k, v]) => !original || v !== original[k]),
+    );
+  }, [form, horario, pagos, preguntas, pideEmpleado, original]);
+
+  const hayCambios = Object.keys(patch).length > 0;
+
+  /**
+   * Aviso del navegador al cerrar la pestaña con cambios sin guardar.
+   *
+   * No cubre la navegación interna del panel —Next no dispara beforeunload al
+   * cambiar de ruta— pero sí el caso que más duele: cerrar la pestaña o
+   * recargar después de veinte minutos rellenando el horario.
+   */
+  useEffect(() => {
+    if (!hayCambios) return;
+    const avisarSalida = (e: BeforeUnloadEvent) => e.preventDefault();
+    window.addEventListener('beforeunload', avisarSalida);
+    return () => window.removeEventListener('beforeunload', avisarSalida);
+  }, [hayCambios]);
+
+  /**
+   * Volver a como estaba al abrir la pantalla.
+   *
+   * Se pide confirmación porque es destructivo y no tiene deshacer: puede tirar
+   * media hora de horarios. La confirmación dice CUÁNTOS campos se pierden, que
+   * es la única forma de que quien la lea sepa lo que está aceptando.
+   */
+  function descartar() {
+    const e = datos?.empresa;
+    if (!e) return;
+    const n = Object.keys(patch).length;
+    if (!window.confirm(`Se van a descartar ${n} ${n === 1 ? 'cambio' : 'cambios'} sin guardar. ¿Seguro?`)) return;
+    // Vaciar `form` basta: el efecto de carga se dispara solo al verlo en null
+    // y vuelve a rellenar horario, pagos, preguntas y la foto original desde
+    // `datos.empresa`. Resetear cada uno a mano aquí sería otra lista que
+    // mantener sincronizada con la de arriba.
+    setForm(null);
+  }
+
   async function guardar() {
     if (!form) return;
 
@@ -302,11 +353,11 @@ export default function Configuracion() {
      * SOLO lo que cambió. Ver la nota 2 de la cabecera: mandarlo todo hace que
      * el bot devuelva el formulario entero en `ignored` y que esta pantalla
      * denuncie un fallo que no ha ocurrido.
+     *
+     * `patch` viene del useMemo de arriba, el mismo que decide si se enseña la
+     * barra de guardar. Deliberadamente no se recalcula aquí.
      */
     const completo = construirPatch(form, horario, pagos, preguntas, pideEmpleado);
-    const patch = Object.fromEntries(
-      Object.entries(completo).filter(([k, v]) => !original || v !== original[k]),
-    );
 
     if (Object.keys(patch).length === 0) {
       avisar('No hay nada que guardar: no cambiaste ningún campo.');
@@ -347,7 +398,9 @@ export default function Configuracion() {
 
   return (
     <main className="main">
-      <div className="cfg-wrap">
+      {/* El padding extra evita que la barra fija tape el último control de la
+          pantalla, que en el paso 4 es un botón de borrar pregunta. */}
+      <div className={`cfg-wrap ${hayCambios ? 'cfg-wrap--barra' : ''}`}>
         <Topbar titulo="Configuración del bot" sub={`Personaliza a ${form.bot_name || 'Mia'}`} />
 
         <div className="stepper-card">
@@ -902,21 +955,46 @@ export default function Configuracion() {
             </div>
           )}
 
+          {/*
+            Aquí estaba el ÚNICO botón de guardar de toda la pantalla, al final
+            del paso 4. Para guardar un cambio del paso 1 había que pasar por
+            tres pantallas más, o adivinar que los números del stepper se pueden
+            pulsar. Y si te ibas antes, se perdía sin decir nada.
+
+            Ahora guarda la barra de abajo, que aparece en cuanto hay algo que
+            guardar y está en los cuatro pasos. Aquí solo queda navegación.
+          */}
           <div className="nav-btns">
             <button className="btn btn-ghost" onClick={() => setPaso(3)}>
               <ArrowLeft size={16} /> Atrás
             </button>
-            <button
-              className="btn btn-primary"
-              style={{ height: 52, padding: '0 26px' }}
-              onClick={() => void guardar()}
-              disabled={guardando}
-            >
+          </div>
+        </div>
+      </div>
+
+      {/*
+        ⚠️ Solo aparece si hay cambios. Una barra fija permanente roba 68px de
+        alto en todas las visitas, incluidas las que solo vienen a mirar, y
+        además enseña a ignorarla: si siempre está, deja de significar nada.
+        Apareciendo solo cuando toca, su presencia YA es el aviso de que hay
+        algo sin guardar.
+      */}
+      {hayCambios && (
+        <div className="guardar-barra" role="status">
+          <div className="guardar-barra__in">
+            <span className="guardar-barra__txt">
+              <b>{Object.keys(patch).length}</b>{' '}
+              {Object.keys(patch).length === 1 ? 'cambio sin guardar' : 'cambios sin guardar'}
+            </span>
+            <button className="btn btn-ghost btn-sm" onClick={descartar} disabled={guardando}>
+              Descartar
+            </button>
+            <button className="btn btn-primary" onClick={() => void guardar()} disabled={guardando}>
               <Check size={16} /> {guardando ? 'Guardando…' : 'Guardar cambios'}
             </button>
           </div>
         </div>
-      </div>
+      )}
     </main>
   );
 }
