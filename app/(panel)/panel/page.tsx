@@ -176,7 +176,17 @@ export default function Dashboard() {
                   <ChevronRight size={15} />
                 </Link>
               </div>
-              <div className="big">Solo cuentan los pedidos pagados</div>
+              {/*
+                ⚠️ Esta línea explica una cifra, así que tiene que decir
+                exactamente lo que la cifra cuenta. Decía "Solo cuentan los
+                pedidos pagados", y desde la migración 0019 también entran los
+                entregados: una etiqueta que explica mal un número es peor que
+                no tener ninguna, porque el dueño deja de contrastarla.
+
+                Lo que hay que comunicar es lo que NO entra: un pedido abierto
+                no es dinero, por muy avanzada que esté la conversación.
+              */}
+              <div className="big">Pedidos cobrados · no cuentan los pendientes</div>
               <div className="num">{soles(ingresosHoy)}</div>
               <div className="bars-legend">
                 <span>
