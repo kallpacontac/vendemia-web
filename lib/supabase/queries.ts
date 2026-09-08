@@ -33,6 +33,7 @@ import type {
   ProductoIngreso,
   PuntoDia,
   PuntoIntencion,
+  PuntoIngreso,
   PuntoPedidos,
   Rol,
 } from './types';
@@ -427,6 +428,29 @@ export async function getLeadsPorDia(companyId: string, desde: string): Promise<
     .order('date');
   if (error) throw error;
   return (data ?? []) as PuntoDia[];
+}
+
+/**
+ * Ingresos por día de las DOS fuentes: pedidos cobrados y citas con servicios.
+ *
+ * ⚠️ Esto y `getPedidosPorDia` NO son lo mismo, y usar el segundo para pintar
+ * "ingresos" fue el fallo que dejaba la tarjeta del dashboard en S/0 para
+ * cualquier negocio de citas. Una barbería no crea pedidos: crea citas, y su
+ * dinero está en `appointment_services`. Comprobado contra la base real —
+ * barberia-01 tiene CERO pedidos y 447 citas por S/9205.
+ *
+ * Para "cuántos pedidos hubo" sigue valiendo `getPedidosPorDia`. Para dinero,
+ * esta.
+ */
+export async function getIngresosPorDia(companyId: string, desde: string): Promise<PuntoIngreso[]> {
+  const { data, error } = await supabase()
+    .from('v_revenue_by_day')
+    .select('*')
+    .eq('company_id', companyId)
+    .gte('date', desde)
+    .order('date');
+  if (error) throw error;
+  return (data ?? []) as PuntoIngreso[];
 }
 
 export async function getPedidosPorDia(companyId: string, desde: string): Promise<PuntoPedidos[]> {

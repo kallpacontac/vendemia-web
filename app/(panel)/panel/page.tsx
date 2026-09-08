@@ -37,7 +37,7 @@ import {
   getIngresosPorProducto,
   getLeads,
   getMetricasDiarias,
-  getPedidosPorDia,
+  getIngresosPorDia,
 } from '@/lib/supabase/queries';
 
 const DIAS_CORTOS = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
@@ -63,7 +63,7 @@ export default function Dashboard() {
     // pantalla haría dos consultas que pueden contradecirse entre sí.
     const [metricas, pedidosDia, citas, leads, productos, empresa] = await Promise.all([
       getMetricasDiarias(companyId, desde, hasta),
-      getPedidosPorDia(companyId, desde),
+      getIngresosPorDia(companyId, desde),
       getCitas(companyId),
       getLeads(companyId, 200),
       getIngresosPorProducto(companyId, desde, hasta).catch(() => []),
@@ -74,7 +74,14 @@ export default function Dashboard() {
 
   const hoy = isoLocal(new Date());
 
-  /** Los últimos 7 días SIEMPRE, con ceros incluidos: una vista solo trae los días que tuvieron algo. */
+  /**
+   * Los últimos 7 días SIEMPRE, con ceros incluidos: una vista solo trae los
+   * días que tuvieron algo.
+   *
+   * ⚠️ Sale de `v_revenue_by_day`, NO de `v_orders_by_day`. Un negocio de citas
+   * no tiene pedidos: con la vista de pedidos, la barbería veía siete barras a
+   * cero teniendo la agenda llena. Ver getIngresosPorDia().
+   */
   const semana = useMemo(() => {
     const porFecha = new Map((datos?.pedidosDia ?? []).map((p) => [p.date, p.revenue]));
     return Array.from({ length: 7 }, (_, i) => {
@@ -186,7 +193,16 @@ export default function Dashboard() {
                 Lo que hay que comunicar es lo que NO entra: un pedido abierto
                 no es dinero, por muy avanzada que esté la conversación.
               */}
-              <div className="big">Pedidos cobrados · no cuentan los pendientes</div>
+              {/*
+                ⚠️ Esta línea explica una cifra, así que tiene que decir
+                exactamente lo que cuenta. Decía "Solo cuentan los pedidos
+                pagados", que era falso por partida doble: ni son solo pedidos
+                —las citas con servicio también—, ni solo los pagados.
+
+                Lo que hay que comunicar es lo que NO entra: un pedido abierto
+                no es dinero, por muy avanzada que esté la conversación.
+              */}
+              <div className="big">Pedidos cobrados y citas · no cuentan los pendientes</div>
               <div className="num">{soles(ingresosHoy)}</div>
               <div className="bars-legend">
                 <span>

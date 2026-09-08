@@ -370,6 +370,19 @@ export interface PuntoDia {
   count: number;
 }
 
+/**
+ * Una fila de `v_revenue_by_day`: dinero del día, venga de un pedido cobrado o
+ * de una cita con servicios.
+ *
+ * Sin `count` a propósito. La vista suma dos fuentes distintas y un contador que
+ * mezclara pedidos con citas no significaría nada: para "cuántos pedidos hubo"
+ * está `PuntoPedidos`, que sale de una vista que solo mira pedidos.
+ */
+export interface PuntoIngreso {
+  date: string;
+  revenue: number;
+}
+
 export interface PuntoPedidos {
   date: string;
   count: number;
