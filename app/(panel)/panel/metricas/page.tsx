@@ -21,6 +21,7 @@ import { CalendarCheck, Send, Target, Users, Wallet, ShoppingBag } from 'lucide-
 import Topbar from '@/components/panel/Topbar';
 import { useSesion } from '@/components/panel/Sesion';
 import { useCargar } from '@/components/panel/useCargar';
+import { conversionDeHoy } from '@/lib/panel/conversion';
 import { areaPath, seriesPts, smoothPath } from '@/lib/panel/charts';
 import { construirSemana } from '@/lib/panel/agenda';
 import { hace, INTENT, intent, isoLocal, soles } from '@/lib/panel/format';
@@ -33,7 +34,8 @@ import {
   getLeads,
   getLeadsPorDia,
   getMetricasDiarias,
-  getPedidosPorDia,
+  getIngresosPorDia,
+  getPedidos,
   getTrabajadores,
 } from '@/lib/supabase/queries';
 import type { LeadIntent } from '@/lib/supabase/types';
@@ -50,11 +52,13 @@ export default function Metricas() {
     if (!companyId) return null;
     const desde = isoLocal(hace(29));
     const hasta = isoLocal(new Date());
-    const [metricas, leadsDia, pedidosDia, intencion, productos, actividad, empresa, citas, leads, trabajadores] =
+    const [metricas, leadsDia, pedidosDia, intencion, productos, actividad, empresa, citas, leads, trabajadores, pedidos] =
       await Promise.all([
         getMetricasDiarias(companyId, desde, hasta),
         getLeadsPorDia(companyId, desde),
-        getPedidosPorDia(companyId, desde),
+        // ⚠️ getIngresosPorDia, NO getPedidosPorDia: un negocio de citas no
+        // crea pedidos y esta gráfica se quedaba plana. Ver la migración 0019.
+        getIngresosPorDia(companyId, desde),
         getIntencionPorDia(companyId, desde),
         getIngresosPorProducto(companyId, desde, hasta).catch(() => []),
         getActividad(companyId, 7),
@@ -62,15 +66,27 @@ export default function Metricas() {
         getCitas(companyId),
         getLeads(companyId),
         getTrabajadores(companyId),
+        getPedidos(companyId),
       ]);
-    return { metricas, leadsDia, pedidosDia, intencion, productos, actividad, empresa, citas, leads, trabajadores };
+    return { metricas, leadsDia, pedidosDia, intencion, productos, actividad, empresa, citas, leads, trabajadores, pedidos };
   }, [companyId]);
 
   const hoy = isoLocal(new Date());
   const metricaHoy = datos?.metricas.find((m) => m.date === hoy);
   const leadsHoy = metricaHoy?.leads ?? 0;
-  const pagadosHoy = metricaHoy?.paid_orders ?? 0;
-  const conversion = leadsHoy ? Math.round((pagadosHoy / leadsHoy) * 1000) / 10 : 0;
+  /** Pedidos cobrados + citas en pie. Ver el azulejo "Cerrados hoy". */
+  const cerradosHoy = (metricaHoy?.paid_orders ?? 0) + (metricaHoy?.appointments ?? 0);
+
+  /**
+   * ⚠️ El MISMO cálculo que el dashboard, importado y no copiado. Estaba
+   * duplicado aquí con `paid_orders ÷ leads`, que daba 0 % en negocios de citas
+   * y hasta 2787 % en barberia-01. Dos pantallas del mismo panel enseñando
+   * conversiones distintas es peor que cualquiera de las dos cifras.
+   */
+  const conversion = useMemo(
+    () => conversionDeHoy(datos?.leads ?? [], datos?.citas ?? [], datos?.pedidos ?? []),
+    [datos],
+  );
 
   const puntosLeads = useMemo(
     () => seriesPts((datos?.leadsDia ?? []).map((p) => p.count), 700, 200, 14),
@@ -135,7 +151,7 @@ export default function Metricas() {
   function resumenWhatsApp() {
     const texto =
       `📊 Resumen Vendemia — ${compania?.nombre ?? ''}\n` +
-      `${leadsHoy} leads · ${metricaHoy?.appointments ?? 0} citas · ${conversion}% conversión · ${soles(metricaHoy?.revenue)} hoy\n` +
+      `${leadsHoy} leads · ${metricaHoy?.appointments ?? 0} citas · ${conversion.pct}% conversión · ${soles(metricaHoy?.revenue)} hoy\n` +
       `Servicio top: ${servicioTop} · Mejor día: ${mejorDia}`;
     // 'noopener' o la pestaña de WhatsApp recibe window.opener y puede
     // redirigir esta desde fuera; 'noreferrer' evita además mandarle la URL
@@ -176,15 +192,23 @@ export default function Metricas() {
             icono={<Target size={18} />}
             fondo="#FEF6E7"
             color="#FFA502"
-            valor={`${conversion}%`}
-            etiqueta="Conversión"
+            valor={`${conversion.pct}%`}
+            etiqueta={
+              conversion.total > 0
+                ? `Conversión · ${conversion.cerrados}/${conversion.total} de hoy`
+                : 'Conversión'
+            }
           />
           <Kpi
             icono={<ShoppingBag size={18} />}
             fondo="#EAF3FF"
             color="#3B82F6"
-            valor={pagadosHoy}
-            etiqueta="Pedidos pagados"
+            // ⚠️ NO "Pedidos pagados". Un negocio de citas no tiene pedidos: era
+            // un tercer azulejo estructuralmente clavado en 0, igual que lo
+            // estaban los ingresos. "Cerrados" significa lo mismo en los tres
+            // modos — un pedido cobrado o una cita en pie.
+            valor={cerradosHoy}
+            etiqueta="Cerrados hoy"
           />
           <Kpi
             icono={<Wallet size={18} />}

@@ -30,6 +30,7 @@ import Topbar from '@/components/panel/Topbar';
 import { useSesion } from '@/components/panel/Sesion';
 import { useCargar } from '@/components/panel/useCargar';
 import { areaPath, seriesPts, smoothPath } from '@/lib/panel/charts';
+import { conversionDeHoy } from '@/lib/panel/conversion';
 import { cuando, hora, intent, isoLocal, hace, soles } from '@/lib/panel/format';
 import {
   getCitas,
@@ -37,6 +38,7 @@ import {
   getIngresosPorProducto,
   getLeads,
   getMetricasDiarias,
+  getPedidos,
   getIngresosPorDia,
 } from '@/lib/supabase/queries';
 
@@ -61,15 +63,18 @@ export default function Dashboard() {
     // El estado del bot NO se pide aquí: lo sirve <ProveedorSalud> para todo el
     // panel, y se refresca cada 60 s por su cuenta. Pedirlo también en esta
     // pantalla haría dos consultas que pueden contradecirse entre sí.
-    const [metricas, pedidosDia, citas, leads, productos, empresa] = await Promise.all([
+    const [metricas, pedidosDia, citas, leads, pedidos, productos, empresa] = await Promise.all([
       getMetricasDiarias(companyId, desde, hasta),
       getIngresosPorDia(companyId, desde),
       getCitas(companyId),
-      getLeads(companyId, 200),
+      // 500 y no 200: el denominador de la conversión sale de estas filas, así
+      // que un límite corto no "pierde leads viejos", falsea el porcentaje de hoy.
+      getLeads(companyId, 500),
+      getPedidos(companyId),
       getIngresosPorProducto(companyId, desde, hasta).catch(() => []),
       getCompania(companyId),
     ]);
-    return { metricas, pedidosDia, citas, leads, productos, empresa };
+    return { metricas, pedidosDia, citas, leads, pedidos, productos, empresa };
   }, [companyId]);
 
   const hoy = isoLocal(new Date());
@@ -94,9 +99,17 @@ export default function Dashboard() {
   const metricaHoy = datos?.metricas.find((m) => m.date === hoy);
   const leadsHoy = metricaHoy?.leads ?? 0;
   const citasHoy = metricaHoy?.appointments ?? 0;
-  const pagadosHoy = metricaHoy?.paid_orders ?? 0;
   const ingresosHoy = metricaHoy?.revenue ?? 0;
-  const conversion = leadsHoy ? Math.round((pagadosHoy / leadsHoy) * 1000) / 10 : 0;
+
+  /**
+   * ⚠️ NO es `paid_orders ÷ leads`. Eso daba 0 % en negocios de citas y, con
+   * datos reales de barberia-01, llegó a dar 2787,5 % — las citas de hoy venían
+   * de leads de otros días. Ver lib/panel/conversion.ts.
+   */
+  const conversion = useMemo(
+    () => conversionDeHoy(datos?.leads ?? [], datos?.citas ?? [], datos?.pedidos ?? []),
+    [datos],
+  );
 
   /** Sparkline de leads: los 30 días de v_daily_metrics, tal cual. */
   const chispa = useMemo(() => {
@@ -260,8 +273,13 @@ export default function Dashboard() {
                   <div className="ic" style={{ background: '#FFE9EE', color: '#FF5B79' }}>
                     <TrendingUp size={16} />
                   </div>
-                  <b>{conversion}%</b>
-                  <small>Conv.</small>
+                  {/* El "x de y" no es adorno: un 50 % de dos leads y un 50 %
+                      de doscientos son cosas distintas, y sin el crudo al lado
+                      el porcentaje invita a leerlos igual. */}
+                  <b>{conversion.pct}%</b>
+                  <small title={`${conversion.cerrados} de ${conversion.total} leads de hoy`}>
+                    Conv. {conversion.total > 0 ? `${conversion.cerrados}/${conversion.total}` : ''}
+                  </small>
                 </div>
               </div>
             </div>
