@@ -85,3 +85,28 @@ order by tablename, policyname;
 -- código nuevo corre y algo falla, deja escrito «[sesion] es_admin_plataforma()
 -- falló:» con el motivo.
 -- ═══════════════════════════════════════════════════════════════════════════════
+
+
+-- ═══════════════════════════════════════════════════════════════════════════════
+-- 6 · LA PRUEBA DECISIVA: llamar a la función HACIÉNDOSE PASAR POR TU USUARIO
+--
+-- Los pasos 1-5 miran las tablas por separado. Esto ejecuta lo mismo que ejecuta
+-- el panel, con tu identidad puesta, y parte el problema en dos mitades sin
+-- ambigüedad:
+--
+--   devuelve true   → la base está bien. El fallo está en el navegador: build
+--                     viejo, dev server sin reiniciar, o rama equivocada.
+--   devuelve false  → el fallo está aquí, y no en el panel.
+--   da error        → el mensaje dice cuál es.
+--
+-- Cambia el `sub` por tu UID si no es el de abajo.
+-- ═══════════════════════════════════════════════════════════════════════════════
+
+begin;
+    set local role authenticated;
+    set local request.jwt.claims = '{"sub":"4a47acf0-1b8e-46a6-90d8-904d0aac1900","role":"authenticated"}';
+
+    select
+        auth.uid()                    as quien_cree_que_soy,
+        public.es_admin_plataforma()  as soy_admin;
+commit;
