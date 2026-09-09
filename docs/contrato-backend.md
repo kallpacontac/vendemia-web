@@ -534,6 +534,7 @@ guardar.
 | `delete_catalog_item` | `{ id }` | `{ id }` | miembro |
 | `upsert_employee` | `{ employee: { id?, name, schedule?, is_active? } }` | `{ id }` | miembro |
 | `delete_employee` | `{ id }` | `{ id }` | miembro |
+| `marcar_seguimiento` | `{ lead_id, motivo, resultado?, nota? }` | `{ lead_id, motivo, enviado_at }` | miembro · **o admin de plataforma** |
 | `send_message` | `{ text, phone }` o `{ text, lead_id }` | `{ phone }` | miembro |
 | `toggle_bot` | `{ lead_id, active: boolean }` | `{ lead_id, bot_active }` | miembro |
 | `handoff` | `{ lead_id }` | `{ lead_id }` | miembro |
@@ -542,6 +543,29 @@ guardar.
 
 Un `type` desconocido queda en `error` con `tipo desconocido: X`. Un comando que falla se
 reintenta hasta 3 veces antes de quedarse en `error`.
+
+### `marcar_seguimiento` — el único que no usa la compañía activa
+
+Lo manda la pantalla de Retargeting, que es **global**: la lista trae clientes de todos los
+negocios a la vez. Así que se encola con el `company_id` **de la fila**, no con el de la
+sesión. Si mandas el de la compañía activa, el bot rechaza el comando con
+`lead X no existe en Y` y el error no se parece en nada a la causa. Por eso esa pantalla
+llama a `encolar()` directamente y **no** a `useComando()`, que siempre usa la activa.
+
+`motivo` es obligatorio. `seguimientos` guarda la pareja (lead, motivo) porque lo que se
+silencia es **un aviso concreto, no una persona**: si el mismo cliente vuelve a dejarse el
+carrito mañana, reaparece — y eso es lo correcto, es una gestión nueva. Un `marcar` sin
+motivo silenciaría al cliente entero.
+
+Escribe en `seguimientos` (que **no** está espejada: es solo de SQLite) y de paso adelanta
+`retargeting.contactado_at`, que sí lo está. Ese adelanto no es un caché: sin él, el botón no
+cambiaría nada en pantalla hasta el siguiente refresco completo —cada 15 minutos—, que se lee
+igual que «el botón no funciona» y acaba en un segundo mensaje al mismo cliente.
+
+**Permiso:** la migración `0022` amplía las políticas de `commands` para que el admin de la
+plataforma pueda insertarlo y leerlo **solo para este `type`**. Sin ese filtro por tipo, un
+`or es_admin_plataforma()` a secas le daría capacidad de mandar `send_message` desde el número
+de cualquier cliente. Ver el encabezado de la migración.
 
 ### Cómo leer la respuesta del comando `update_company`
 

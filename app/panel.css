@@ -906,3 +906,24 @@ a{color:inherit;text-decoration:none}
   background:var(--bg-soft);border:1px solid var(--line);border-radius:var(--r-sm);padding:14px 16px}
 .cfg-enlace b{display:block;font-size:13.5px;color:var(--ink)}
 .cfg-enlace small{display:block;font-size:12px;color:var(--ink-soft);margin-top:2px}
+
+/* ── Retargeting ─────────────────────────────────────────────────────────
+   La nota de "los envías tú" NO es decoración: es lo único que separa esta
+   pantalla de una herramienta de envío masivo en la cabeza de quien la usa.
+   Por eso va en el flujo, con fondo propio, y no como texto gris al pie.      */
+.nota-envio{display:flex;align-items:center;gap:8px;background:var(--brand-soft);color:var(--brand-txt);
+  border-radius:var(--r-md);padding:10px 14px;font-size:12.5px;font-weight:600;margin-bottom:16px}
+.nota-envio svg{flex-shrink:0}
+.nota-envio b{font-weight:800}
+
+.check-inline{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;color:var(--ink-soft);
+  background:#fff;border:1.5px solid var(--line-2);border-radius:var(--r-full);padding:9px 15px;cursor:pointer;user-select:none}
+.check-inline input{accent-color:var(--brand);cursor:pointer;margin:0}
+
+.pie-lista{text-align:center;color:var(--ink-mute);font-size:12px;margin-top:14px}
+
+/* Las dos acciones de una fila de retargeting, apiladas y alineadas a la derecha.
+   «Escribir» abre WhatsApp; «Ya le escribí» lo apunta. Van separadas porque abrir
+   la conversación no es haberla mandado. */
+.acciones-fila{display:flex;flex-direction:column;align-items:flex-end;gap:6px}
+.acciones-fila .btn{white-space:nowrap}

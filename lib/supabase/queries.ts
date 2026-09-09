@@ -35,6 +35,7 @@ import type {
   PuntoIntencion,
   PuntoIngreso,
   PuntoPedidos,
+  RetargetingRow,
   Rol,
 } from './types';
 
@@ -532,4 +533,43 @@ export async function getActividad(companyId: string, dias = 7): Promise<number[
     rejilla[dia][d.getHours()] += 1;
   }
   return rejilla;
+}
+
+/* ── Retargeting ────────────────────────────────────────────────────────── */
+
+/**
+ * ══════════════════════════════════════════════════════════════════════════
+ * A QUIÉN HAY QUE ESCRIBIRLE, DE TODOS LOS NEGOCIOS A LA VEZ
+ * ══════════════════════════════════════════════════════════════════════════
+ *
+ * ⚠️ SIN `.eq('company_id', …)`, y no es un olvido.
+ *
+ * Esta pantalla es GLOBAL: una sola lista ordenada por urgencia con los
+ * clientes de todas las cuentas. Quien la usa lleva varias y lo que pregunta
+ * es «¿a quién le escribo ahora?», no «¿cómo va la barbería?».
+ *
+ * El recorte lo hace el RLS de la migración 0020: un dueño ve su negocio
+ * (`is_member`), y el admin de la plataforma los ve todos
+ * (`es_admin_plataforma()`). Filtrar por compañía aquí solo serviría para
+ * romper la vista global.
+ *
+ * ⚠️ SI FALTA UN NEGOCIO ENTERO, casi seguro falta la fila de
+ * `platform_admins` que la 0020 deja escrita al final y que hay que insertar
+ * A MANO con el UID de Supabase Auth. El RLS recorta EN SILENCIO: no hay
+ * error, solo filas de menos. Es el primer sitio donde mirar antes de buscar
+ * el fallo en el panel.
+ *
+ * El orden es el de la tabla, no uno inventado aquí: `prioridad` la calcula el
+ * bot con el ranking de motivos (0 = voucher sin verificar … 99 = sin motivo).
+ * A igualdad de urgencia manda el dinero, y luego lo reciente.
+ */
+export async function getRetargeting(): Promise<RetargetingRow[]> {
+  const { data, error } = await supabase()
+    .from('retargeting')
+    .select('*')
+    .order('prioridad')
+    .order('monto', { ascending: false })
+    .order('ultima_actividad', { ascending: false });
+  if (error) throw error;
+  return (data ?? []) as RetargetingRow[];
 }

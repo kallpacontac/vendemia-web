@@ -37,7 +37,16 @@ export type TipoComando =
   | 'toggle_bot'
   | 'handoff'
   | 'resolve_escalation'
-  | 'add_member';
+  | 'add_member'
+  /**
+   * Retargeting: «ya le escribí a este cliente».
+   *
+   * ⚠️ Es el único comando que NO se manda con la compañía activa de la sesión.
+   * La pantalla de Retargeting es global, así que se encola con el `company_id`
+   * de LA FILA — si no, el bot rechaza el lead por no ser de esa empresa. Por
+   * eso esa pantalla llama a `encolar()` directamente y no a `useComando()`.
+   */
+  | 'marcar_seguimiento';
 
 /**
  * ⚠️ `ignored` NO significa "rechazado". Significa "esto no cambió".

@@ -445,3 +445,51 @@ export interface CommandRow {
   result: unknown;
   error: string | null;
 }
+
+/**
+ * ══════════════════════════════════════════════════════════════════════════
+ * `retargeting` — una fila por lead, la escribe SOLO el bot
+ * ══════════════════════════════════════════════════════════════════════════
+ *
+ * La refresca `refrescarRetargeting()` cada 15 minutos. El panel la LEE y no
+ * la toca nunca: no hay comando que mandarle porque no hay nada que pedirle.
+ *
+ * ⚠️ NO hay columna `dias_inactivo`, y es deliberado: entre dos refrescos un
+ * número calculado contra el reloj miente. La tabla guarda `ultima_actividad`,
+ * que es un hecho, y los días los deriva quien pinta. Ver `dias()` en
+ * lib/panel/retargeting.ts.
+ */
+export interface RetargetingRow {
+  lead_id: string;
+  company_id: string;
+  /** Nombre comercial. La pantalla es multi-negocio: se enseña SIEMPRE. */
+  negocio: string;
+  nombre: string;
+  telefono: string;
+  /** new · exploring · evaluating · ready · customer · dormant · lost */
+  estado: string;
+  intent: string;
+  /** El más urgente de los 8. `''` = hoy no hay nada que hacer con este lead. */
+  motivo: string;
+  /** JSON con TODOS los abiertos: un lead puede tener el carrito Y la cita a medias. */
+  motivos: string;
+  detalle: string;
+  /** S/ que hay sobre la mesa AHORA (lo que dejó sin cerrar), NO lo que ha gastado. */
+  monto: number;
+  n_compras: number;
+  total_gastado: number;
+  ultimo_item: string;
+  /** unix ts. Lo más reciente entre hablar y venir. */
+  ultima_actividad: number;
+  /** Días típicos entre dos compras suyas. `0` = no hay historial para saberlo. */
+  cadencia_dias: number;
+  /** El texto ya redactado por `recuperar.service.ts`. No se reescribe en el front. */
+  mensaje: string;
+  /** `https://wa.me/…?text=…`. Vacío cuando no hay motivo. */
+  wa_link: string;
+  /** Cuándo se le escribió por última vez. `0` = nunca. */
+  contactado_at: number;
+  /** `0` = lo más urgente … `99` = sin motivo. Es el orden natural de la lista. */
+  prioridad: number;
+  actualizado_at: number;
+}
