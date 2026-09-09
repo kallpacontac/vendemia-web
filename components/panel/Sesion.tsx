@@ -17,7 +17,7 @@ import { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import type { Session } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase/client';
-import { misCompanias, type CompaniaAccesible } from '@/lib/supabase/queries';
+import { misCompanias, soyAdminPlataforma, type CompaniaAccesible } from '@/lib/supabase/queries';
 
 interface Estado {
   session: Session | null;
@@ -25,6 +25,15 @@ interface Estado {
   companyId: string | null;
   compania: CompaniaAccesible | null;
   esDueno: boolean;
+  /**
+   * Admin de la plataforma (tabla `platform_admins`, migración 0020).
+   *
+   * ⚠️ NO es «dueño de todo»: es una condición ORTOGONAL a las membresías. Lo
+   * normal es que esta cuenta no sea miembro de ninguna empresa, así que
+   * `companias` viene VACÍA y `companyId` en null. Lo único que le abre son las
+   * pantallas globales — hoy, Retargeting.
+   */
+  esAdminPlataforma: boolean;
   cargando: boolean;
   /**
    * Hay una sesión guardada pero ahora mismo no hay una viva: el token caducó
@@ -72,6 +81,7 @@ export function ProveedorSesion({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [companias, setCompanias] = useState<CompaniaAccesible[]>([]);
   const [companyId, setCompanyId] = useState<string | null>(null);
+  const [esAdminPlataforma, setEsAdminPlataforma] = useState(false);
   const [cargando, setCargando] = useState(true);
   const [reconectando, setReconectando] = useState(false);
 
@@ -133,6 +143,7 @@ export function ProveedorSesion({ children }: { children: React.ReactNode }) {
       if (relojReconexion) clearTimeout(relojReconexion);
       setCompanias([]);
       setCompanyId(null);
+      setEsAdminPlataforma(false);
     });
 
     return () => {
@@ -167,10 +178,19 @@ export function ProveedorSesion({ children }: { children: React.ReactNode }) {
     // pantalla: ya hay datos buenos puestos.
     setCargando((c) => (companias.length ? c : true));
 
-    void misCompanias()
-      .then((lista) => {
+    /**
+     * Las DOS cosas en la misma espera, no una detrás de otra.
+     *
+     * La guardia decide con las dos a la vez —sin membresías Y sin ser admin es
+     * «cuenta sin negocio»—, así que si `cargando` bajara con solo una resuelta,
+     * un admin de plataforma vería parpadear ese mensaje antes de entrar. Y ese
+     * mensaje le dice que escriba a soporte: peor que un parpadeo cualquiera.
+     */
+    void Promise.all([misCompanias(), soyAdminPlataforma()])
+      .then(([lista, admin]) => {
         if (!vivo) return;
         setCompanias(lista);
+        setEsAdminPlataforma(admin);
         const guardada = localStorage.getItem(CLAVE_COMPANIA);
         const valida = lista.find((c) => c.id === guardada)?.id ?? lista[0]?.id ?? null;
         setCompanyId(valida);
@@ -197,6 +217,7 @@ export function ProveedorSesion({ children }: { children: React.ReactNode }) {
       companyId,
       compania,
       esDueno: compania?.rol === 'owner',
+      esAdminPlataforma,
       cargando,
       reconectando,
       /**
@@ -229,10 +250,11 @@ export function ProveedorSesion({ children }: { children: React.ReactNode }) {
         localStorage.removeItem(CLAVE_COMPANIA);
         setCompanias([]);
         setCompanyId(null);
+        setEsAdminPlataforma(false);
         router.replace('/login');
       },
     };
-  }, [session, companias, companyId, cargando, reconectando, router]);
+  }, [session, companias, companyId, esAdminPlataforma, cargando, reconectando, router]);
 
   return <Ctx.Provider value={valor}>{children}</Ctx.Provider>;
 }

@@ -2,12 +2,13 @@
 
 import '../panel.css';
 import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { ProveedorSesion, useSesion } from '@/components/panel/Sesion';
 import { ProveedorAvisos } from '@/components/panel/Avisos';
 import Sidebar from '@/components/panel/Sidebar';
 import { ProveedorSalud } from '@/components/panel/Salud';
+import { RUTA_GLOBAL_POR_DEFECTO, esRutaGlobal } from '@/lib/panel/rutas';
 
 /**
  * ══════════════════════════════════════════════════════════════════════════
@@ -27,7 +28,17 @@ import { ProveedorSalud } from '@/components/panel/Salud';
  */
 function Guardia({ children }: { children: React.ReactNode }) {
   const router = useRouter();
-  const { session, cargando, reconectando, companias, companyId } = useSesion();
+  const ruta = usePathname();
+  const { session, cargando, reconectando, companias, companyId, esAdminPlataforma } = useSesion();
+
+  /** Sin compañía activa: o es una cuenta recién creada, o es el admin de plataforma. */
+  const sinCompania = !companias.length || !companyId;
+  /**
+   * Admin de la plataforma sin membresías. Entra, pero SOLO a lo global: el
+   * resto de pantallas empiezan por `if (!companyId) return null` y se quedarían
+   * en blanco o cargando para siempre. Ver lib/panel/rutas.ts.
+   */
+  const soloGlobal = sinCompania && esAdminPlataforma;
 
   /**
    * ⚠️ `reconectando` es la diferencia entre "no has entrado" y "ahora mismo no
@@ -38,6 +49,14 @@ function Guardia({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!cargando && !reconectando && !session) router.replace('/login');
   }, [cargando, reconectando, session, router]);
+
+  /**
+   * El admin que abre `/panel` a pelo —o que tiene el dashboard en marcadores—
+   * acaba en la única pantalla que puede usar, en vez de en una en blanco.
+   */
+  useEffect(() => {
+    if (!cargando && soloGlobal && !esRutaGlobal(ruta)) router.replace(RUTA_GLOBAL_POR_DEFECTO);
+  }, [cargando, soloGlobal, ruta, router]);
 
   if (cargando || reconectando || !session) {
     return (
@@ -59,7 +78,7 @@ function Guardia({ children }: { children: React.ReactNode }) {
    * blanco sin explicación — y las consultas devolverían cero filas, que es
    * exactamente lo que el RLS tiene que hacer.
    */
-  if (!companias.length || !companyId) {
+  if (sinCompania && !esAdminPlataforma) {
     return (
       <div className="cargando">
         <div className="vacio">
@@ -89,9 +108,20 @@ function Guardia({ children }: { children: React.ReactNode }) {
     caído y el dueño no se ha enterado—, que sea uno que se pueda cerrar y que
     diga algo que no esté ya en pantalla.
   */
+  /* El `router.replace` de arriba está en camino: no se pinta una pantalla que
+     va a desaparecer, ni la de "sin negocio" que aquí sería mentira. */
+  if (soloGlobal && !esRutaGlobal(ruta)) {
+    return (
+      <div className="cargando">
+        <div className="spin" />
+        Abriendo Retargeting…
+      </div>
+    );
+  }
+
   return (
     <>
-      <Sidebar />
+      <Sidebar soloGlobal={soloGlobal} />
       {children}
     </>
   );

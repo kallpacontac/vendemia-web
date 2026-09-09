@@ -63,6 +63,27 @@ export async function misCompanias(): Promise<CompaniaAccesible[]> {
   });
 }
 
+/**
+ * ¿Esta cuenta es admin de la plataforma?
+ *
+ * Es una condición ORTOGONAL a las membresías, no un rol por encima de ellas: el
+ * admin de la plataforma normalmente NO es miembro de ninguna empresa —ver el
+ * razonamiento de la migración 0020— y por eso `misCompanias()` le devuelve una
+ * lista vacía. Sin esta consulta, la guardia del panel lo lee como «cuenta sin
+ * negocio asignado» y no le deja pasar a la pantalla global, que es justo la
+ * única que existe para él.
+ *
+ * `es_admin_plataforma()` es SECURITY DEFINER: la tabla `platform_admins` no es
+ * legible desde el panel, solo esta función lo es. Un fallo se trata como `false`
+ * —no como error— porque lo correcto ante la duda es enseñar menos, no romper el
+ * panel de quien sí tiene membresías.
+ */
+export async function soyAdminPlataforma(): Promise<boolean> {
+  const { data, error } = await supabase().rpc('es_admin_plataforma');
+  if (error) return false;
+  return data === true;
+}
+
 /* ── La compañía ────────────────────────────────────────────────────────── */
 
 export interface Compania extends CompanyRow {

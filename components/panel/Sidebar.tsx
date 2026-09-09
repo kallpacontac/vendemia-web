@@ -20,6 +20,7 @@ import {
   Users,
 } from 'lucide-react';
 import { useSesion } from './Sesion';
+import { esRutaGlobal } from '@/lib/panel/rutas';
 
 const NAV = [
   { href: '/panel', icon: LayoutDashboard, label: 'Dashboard' },
@@ -32,9 +33,22 @@ const NAV = [
   { href: '/panel/configuracion', icon: Settings, label: 'Ajustes' },
 ];
 
-export default function Sidebar({ pendientes = 0 }: { pendientes?: number }) {
+/**
+ * @param soloGlobal admin de plataforma sin membresías: solo puede abrir las
+ *        pantallas que no dependen de una compañía. Enseñarle las otras siete
+ *        sería ofrecerle siete pantallas en blanco. Ver lib/panel/rutas.ts.
+ */
+export default function Sidebar({
+  pendientes = 0,
+  soloGlobal = false,
+}: {
+  pendientes?: number;
+  soloGlobal?: boolean;
+}) {
   const ruta = usePathname();
   const { salir } = useSesion();
+
+  const nav = soloGlobal ? NAV.filter((n) => esRutaGlobal(n.href)) : NAV;
 
   return (
     <aside className="sidebar">
@@ -44,7 +58,7 @@ export default function Sidebar({ pendientes = 0 }: { pendientes?: number }) {
       </div>
 
       <nav className="sidebar__nav">
-        {NAV.map(({ href, icon: Icono, label }) => {
+        {nav.map(({ href, icon: Icono, label }) => {
           // El dashboard es prefijo de todo lo demás: solo coincide exacto.
           const activo = href === '/panel' ? ruta === '/panel' : ruta.startsWith(href);
           return (
@@ -62,17 +76,22 @@ export default function Sidebar({ pendientes = 0 }: { pendientes?: number }) {
       </nav>
 
       <div className="sidebar__foot">
-        <div className="sidebar__promo">
-          <div className="ic">
-            <Sparkles size={22} />
+        {/* El anuncio lleva a /panel/metricas, que el admin de plataforma no
+            puede abrir: sería un botón que devuelve a esta misma pantalla. Y de
+            todas formas el reclamo comercial no es para él. */}
+        {!soloGlobal && (
+          <div className="sidebar__promo">
+            <div className="ic">
+              <Sparkles size={22} />
+            </div>
+            <p>
+              Desbloquea reportes y automatizaciones con <b>Vendemia Pro</b>
+            </p>
+            <Link href="/panel/metricas">
+              <button type="button">Descubrir Pro</button>
+            </Link>
           </div>
-          <p>
-            Desbloquea reportes y automatizaciones con <b>Vendemia Pro</b>
-          </p>
-          <Link href="/panel/metricas">
-            <button type="button">Descubrir Pro</button>
-          </Link>
-        </div>
+        )}
         <div className="sidebar__logout" onClick={() => void salir()}>
           <LogOut size={18} /> Cerrar sesión
         </div>

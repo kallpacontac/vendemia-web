@@ -68,8 +68,11 @@ export default function Topbar({
   sub?: string;
   children?: React.ReactNode;
 }) {
-  const { session, compania } = useSesion();
+  const { session, compania, esAdminPlataforma } = useSesion();
   const email = session?.user.email ?? '';
+  /* El admin de plataforma no tiene compañía activa, y un guion ahí se lee como
+     "algo no cargó". Lo que mira son todos los negocios a la vez: que lo diga. */
+  const pie = compania?.nombre ?? (esAdminPlataforma ? 'Todos los negocios' : '—');
 
   return (
     <div className="topbar">
@@ -91,7 +94,7 @@ export default function Topbar({
           </div>
           <div>
             <b>{email.split('@')[0] || 'Cuenta'}</b>
-            <small>{compania?.nombre ?? '—'}</small>
+            <small>{pie}</small>
           </div>
         </div>
       </div>
