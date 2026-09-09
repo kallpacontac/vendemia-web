@@ -186,18 +186,34 @@ export function ProveedorSesion({ children }: { children: React.ReactNode }) {
      * un admin de plataforma vería parpadear ese mensaje antes de entrar. Y ese
      * mensaje le dice que escriba a soporte: peor que un parpadeo cualquiera.
      */
-    void Promise.all([misCompanias(), soyAdminPlataforma()])
-      .then(([lista, admin]) => {
+    /**
+     * ⚠️ `allSettled`, NO `all`, y esto era un fallo de verdad.
+     *
+     * Con `Promise.all`, un fallo en `misCompanias()` tiraba la promesa entera y
+     * el `.catch` solo vaciaba las compañías: `esAdminPlataforma` se quedaba en
+     * false sin haberse llegado a preguntar. O sea que el admin de la plataforma
+     * —el único a quien le importa— acababa viendo «tu cuenta no tiene un
+     * negocio asignado» por un error que no era el suyo, y sin rastro de cuál.
+     *
+     * Son dos preguntas independientes: que una falle no dice nada de la otra.
+     */
+    void Promise.allSettled([misCompanias(), soyAdminPlataforma()])
+      .then(([resCompanias, resAdmin]) => {
         if (!vivo) return;
-        setCompanias(lista);
-        setEsAdminPlataforma(admin);
-        const guardada = localStorage.getItem(CLAVE_COMPANIA);
-        const valida = lista.find((c) => c.id === guardada)?.id ?? lista[0]?.id ?? null;
-        setCompanyId(valida);
-        if (valida) localStorage.setItem(CLAVE_COMPANIA, valida);
-      })
-      .catch(() => {
-        if (vivo) setCompanias([]);
+
+        if (resCompanias.status === 'fulfilled') {
+          const lista = resCompanias.value;
+          setCompanias(lista);
+          const guardada = localStorage.getItem(CLAVE_COMPANIA);
+          const valida = lista.find((c) => c.id === guardada)?.id ?? lista[0]?.id ?? null;
+          setCompanyId(valida);
+          if (valida) localStorage.setItem(CLAVE_COMPANIA, valida);
+        } else {
+          console.error('[sesion] no se pudieron leer las membresías:', resCompanias.reason);
+          setCompanias([]);
+        }
+
+        setEsAdminPlataforma(resAdmin.status === 'fulfilled' && resAdmin.value);
       })
       .finally(() => {
         if (vivo) setCargando(false);

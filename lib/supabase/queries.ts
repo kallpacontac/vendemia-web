@@ -80,7 +80,24 @@ export async function misCompanias(): Promise<CompaniaAccesible[]> {
  */
 export async function soyAdminPlataforma(): Promise<boolean> {
   const { data, error } = await supabase().rpc('es_admin_plataforma');
-  if (error) return false;
+  if (error) {
+    /**
+     * Se sigue devolviendo `false` —ante la duda, enseñar menos— pero NO en
+     * silencio, que es como estaba y no había forma de distinguir «no eres
+     * admin» de «la llamada ni siquiera llegó».
+     *
+     * Los dos errores que salen de verdad aquí:
+     *
+     *   · PGRST202 «Could not find the function public.es_admin_plataforma…»
+     *     → la función existe en la base pero PostgREST no la ha visto todavía.
+     *       Se arregla recargando su caché de esquema:
+     *       `notify pgrst, 'reload schema';`
+     *   · 42501 permission denied → falta el `grant execute … to authenticated`
+     *     de la migración 0020.
+     */
+    console.error('[sesion] es_admin_plataforma() falló:', error);
+    return false;
+  }
   return data === true;
 }
 
