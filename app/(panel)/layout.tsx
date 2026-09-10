@@ -8,6 +8,7 @@ import { ProveedorSesion, useSesion } from '@/components/panel/Sesion';
 import { ProveedorAvisos } from '@/components/panel/Avisos';
 import Sidebar from '@/components/panel/Sidebar';
 import { ProveedorSalud } from '@/components/panel/Salud';
+import { BandaDemo } from '@/components/panel/Demo';
 import { RUTA_GLOBAL_POR_DEFECTO, esRutaGlobal } from '@/lib/panel/rutas';
 
 /**
@@ -121,6 +122,7 @@ function Guardia({ children }: { children: React.ReactNode }) {
 
   return (
     <>
+      <BandaDemo />
       <Sidebar soloGlobal={soloGlobal} />
       {children}
     </>

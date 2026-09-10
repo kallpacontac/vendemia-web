@@ -12,6 +12,38 @@
  */
 import { supabase } from './client';
 import { bool, json, fecha } from './parse';
+/**
+ * ⚠️ MODO DEMO. Cada `if (demoActivo()) return …` de este fichero corta la
+ * consulta ANTES de llegar a Supabase y devuelve datos inventados.
+ *
+ * Está aquí, en la capa de lectura, y no en cada pantalla, porque es el único
+ * sitio por el que pasan todas: una pantalla que se olvidara de mirar el
+ * interruptor enseñaría cifras reales mezcladas con las de mentira, que es el
+ * fallo que no te puedes permitir delante de un cliente.
+ *
+ * No hay riesgo de escribir nada: `useComando()` rechaza todos los comandos
+ * mientras el modo está activo. Ver lib/panel/demo.ts.
+ */
+import {
+  actividadDemo,
+  bloqueosDemo,
+  catalogoDemo,
+  citasDemo,
+  demoActivo,
+  horarioDemo,
+  ingresosPorDiaDemo,
+  intencionPorDiaDemo,
+  leadsDemo,
+  leadsPorDiaDemo,
+  mediosDemo,
+  mensajesDemo,
+  metricasDemo,
+  pedidosDemo,
+  pedidosPorDiaDemo,
+  productosDemo,
+  retargetingDemo,
+  trabajadoresDemo,
+} from '@/lib/panel/demo';
 import type {
   AppointmentRow,
   CatalogMediaRow,
@@ -124,7 +156,19 @@ export async function getCompania(companyId: string): Promise<Compania | null> {
   const row = data as CompanyRow;
   return {
     ...row,
-    horario: json<Horario>(row.schedule, {}),
+    /**
+     * ⚠️ En demo se impone un horario, y el resto de la compañía se deja REAL.
+     *
+     * El nombre y el `business_mode` tienen que ser los suyos: la demo es de su
+     * negocio, no de uno inventado. Pero el horario sí se sustituye —siempre, no
+     * solo si está vacío— porque la rejilla de la agenda se construye a partir de
+     * él, y una demo con la rejilla vacía porque el negocio real cierra los
+     * martes no enseña nada.
+     *
+     * Es seguro precisamente porque en demo no se puede guardar: si alguien abre
+     * Ajustes y le da a Guardar, `useComando()` lo rechaza.
+     */
+    horario: demoActivo() ? horarioDemo() : json<Horario>(row.schedule, {}),
     pagos: json<MetodoPago[]>(row.payment_methods, []),
     /**
      * Si el texto viene corrupto, json() devuelve []. Es lo correcto aquí: una
@@ -154,6 +198,7 @@ export interface Lead extends LeadRow {
 }
 
 export async function getLeads(companyId: string, limite = 500): Promise<Lead[]> {
+  if (demoActivo()) return leadsDemo(companyId).slice(0, limite);
   const { data, error } = await supabase()
     .from('leads')
     .select('*')
@@ -193,6 +238,7 @@ export interface Mensaje extends MessageRow {
  * directamente — hay que ir siempre por el lead.
  */
 export async function getMensajes(leadId: string): Promise<Mensaje[]> {
+  if (demoActivo()) return mensajesDemo(leadId);
   const { data, error } = await supabase()
     .from('messages')
     .select('id, lead_id, role, content, created_at, created_ts')
@@ -231,6 +277,7 @@ export interface ItemCatalogo extends CatalogRow {
 }
 
 export async function getCatalogo(companyId: string): Promise<ItemCatalogo[]> {
+  if (demoActivo()) return catalogoDemo(companyId);
   const { data, error } = await supabase()
     .from('catalog')
     .select('*')
@@ -278,6 +325,7 @@ export async function getMediosCatalogo(catalogId: string): Promise<CatalogMedia
 export async function getMediosDeVarios(
   catalogIds: string[],
 ): Promise<Record<string, CatalogMediaRow[]>> {
+  if (demoActivo()) return mediosDemo();
   if (!catalogIds.length) return {};
   const { data, error } = await supabase()
     .from('catalog_media')
@@ -317,6 +365,7 @@ export function parseSlot(slot: string | null | undefined): Date | null {
 }
 
 export async function getCitas(companyId: string, limite = 500): Promise<Cita[]> {
+  if (demoActivo()) return citasDemo(companyId).slice(0, limite);
   const { data, error } = await supabase()
     .from('appointments')
     .select('*')
@@ -340,6 +389,7 @@ export interface Pedido extends OrderRow {
 }
 
 export async function getPedidos(companyId: string, limite = 500): Promise<Pedido[]> {
+  if (demoActivo()) return pedidosDemo(companyId).slice(0, limite);
   const { data, error } = await supabase()
     .from('orders')
     .select('*')
@@ -385,6 +435,7 @@ export interface Trabajador extends EmployeeRow {
 }
 
 export async function getTrabajadores(companyId: string): Promise<Trabajador[]> {
+  if (demoActivo()) return trabajadoresDemo(companyId);
   const { data, error } = await supabase()
     .from('employees')
     .select('*')
@@ -400,6 +451,7 @@ export async function getTrabajadores(companyId: string): Promise<Trabajador[]> 
 }
 
 export async function getBloqueos(companyId: string): Promise<EmployeeBlockRow[]> {
+  if (demoActivo()) return bloqueosDemo();
   const { data, error } = await supabase()
     .from('employee_blocks')
     .select('*')
@@ -447,6 +499,7 @@ export async function getMetricasDiarias(
   desde: string,
   hasta: string,
 ): Promise<DailyMetricRow[]> {
+  if (demoActivo()) return metricasDemo(companyId, desde, hasta);
   const { data, error } = await supabase()
     .from('v_daily_metrics')
     .select('*')
@@ -459,6 +512,7 @@ export async function getMetricasDiarias(
 }
 
 export async function getLeadsPorDia(companyId: string, desde: string): Promise<PuntoDia[]> {
+  if (demoActivo()) return leadsPorDiaDemo(companyId, desde);
   const { data, error } = await supabase()
     .from('v_leads_by_day')
     .select('*')
@@ -482,6 +536,7 @@ export async function getLeadsPorDia(companyId: string, desde: string): Promise<
  * esta.
  */
 export async function getIngresosPorDia(companyId: string, desde: string): Promise<PuntoIngreso[]> {
+  if (demoActivo()) return ingresosPorDiaDemo(companyId, desde);
   const { data, error } = await supabase()
     .from('v_revenue_by_day')
     .select('*')
@@ -493,6 +548,7 @@ export async function getIngresosPorDia(companyId: string, desde: string): Promi
 }
 
 export async function getPedidosPorDia(companyId: string, desde: string): Promise<PuntoPedidos[]> {
+  if (demoActivo()) return pedidosPorDiaDemo(companyId, desde);
   const { data, error } = await supabase()
     .from('v_orders_by_day')
     .select('*')
@@ -504,6 +560,7 @@ export async function getPedidosPorDia(companyId: string, desde: string): Promis
 }
 
 export async function getIntencionPorDia(companyId: string, desde: string): Promise<PuntoIntencion[]> {
+  if (demoActivo()) return intencionPorDiaDemo(companyId, desde);
   const { data, error } = await supabase()
     .from('v_intent_by_day')
     .select('*')
@@ -519,6 +576,7 @@ export async function getIngresosPorProducto(
   desde: string,
   hasta: string,
 ): Promise<ProductoIngreso[]> {
+  if (demoActivo()) return productosDemo(companyId);
   const { data, error } = await supabase().rpc('analytics_products', {
     p_company: companyId,
     p_from: desde,
@@ -540,6 +598,7 @@ export async function getIngresosPorProducto(
  * descargar megas para nada.
  */
 export async function getActividad(companyId: string, dias = 7): Promise<number[][]> {
+  if (demoActivo()) return actividadDemo();
   const rejilla: number[][] = Array.from({ length: 7 }, () => Array.from({ length: 24 }, () => 0));
 
   const { data: leads, error: e1 } = await supabase()
@@ -602,6 +661,7 @@ export async function getActividad(companyId: string, dias = 7): Promise<number[
  * A igualdad de urgencia manda el dinero, y luego lo reciente.
  */
 export async function getRetargeting(): Promise<RetargetingRow[]> {
+  if (demoActivo()) return retargetingDemo("demo", "Barbería Demo");
   const { data, error } = await supabase()
     .from('retargeting')
     .select('*')

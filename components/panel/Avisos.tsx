@@ -17,6 +17,7 @@ import { AlertTriangle, CheckCircle, Info } from 'lucide-react';
 import { BotNoResponde, encolar, type TipoComando } from '@/lib/supabase/commands';
 import { useSesion } from './Sesion';
 import { useSalud } from './Salud';
+import { demoActivo } from '@/lib/panel/demo';
 
 type Tono = 'ok' | 'error' | 'espera';
 
@@ -117,6 +118,25 @@ export function useComando() {
       refrescar?: () => void,
     ): Promise<T | undefined> => {
       if (!companyId) return undefined;
+      /**
+       * ══════════════════════════════════════════════════════════════════════
+       * ⚠️ EN MODO DEMO NO SE ESCRIBE NADA. Este es el único portón.
+       * ══════════════════════════════════════════════════════════════════════
+       *
+       * Todo lo que el panel puede cambiar pasa por aquí, así que basta con
+       * cerrarlo en un sitio. Y hay que cerrarlo: en demo las pantallas enseñan
+       * ids inventados (`demo-cita-3`, `demo-ped-12`) que el bot rechazaría, y
+       * los que NO son inventados son peores — Ajustes lee la compañía real, y
+       * un Guardar durante una presentación escribiría el horario de mentira en
+       * el negocio de verdad.
+       *
+       * Se avisa en vez de fallar en silencio: quien esté enseñando el panel
+       * tiene que entender por qué el botón no hizo nada.
+       */
+      if (demoActivo()) {
+        avisar('Estás en modo demo: no se guarda nada. Sal del modo demo para cambiar algo de verdad.', 'espera');
+        return undefined;
+      }
       try {
         /**
          * Con el bot apagado, el comando SE ENCOLA IGUAL —es lo correcto, se

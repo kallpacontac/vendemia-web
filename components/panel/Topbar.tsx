@@ -17,6 +17,7 @@
 import { Bell } from 'lucide-react';
 import { useSesion } from './Sesion';
 import { necesitaEmparejar, useSalud } from './Salud';
+import { BotonDemo } from './Demo';
 
 /**
  * Silencio mientras todo va bien: devuelve `null` en todos los casos menos
@@ -82,6 +83,7 @@ export default function Topbar({
       </div>
       <div className="topbar__actions">
         {children}
+        <BotonDemo />
         <SelectorCompania />
         <AvisoWhatsApp />
         <div className="icon-btn">
