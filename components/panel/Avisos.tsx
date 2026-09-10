@@ -64,9 +64,34 @@ export function useAvisar() {
  * Manda un comando y traduce el resultado a un aviso.
  *
  * Devuelve el `result` del bot cuando llega, o `undefined` si el bot no
- * contestó a tiempo (el comando sigue encolado) o si falló. Quien llama decide
- * si refresca la pantalla; lo normal es no tocar nada y esperar a que el cambio
- * vuelva por el espejo en 1-2 segundos, que es cuando existe de verdad.
+ * contestó a tiempo (el comando sigue encolado) o si falló.
+ *
+ * ══════════════════════════════════════════════════════════════════════════
+ * ⚠️ `undefined` NO SIGNIFICA «NO PASÓ NADA». Usa `refrescar`.
+ * ══════════════════════════════════════════════════════════════════════════
+ *
+ * Ese `undefined` tapa DOS casos que no se parecen en nada:
+ *
+ *   · el comando falló           → no cambió nada, y está bien no refrescar;
+ *   · el bot no contestó a tiempo → el comando SIGUE ENCOLADO y se aplicará.
+ *
+ * El segundo es común: 15 s de espera, o 3 s si ya sabemos que el bot está
+ * apagado. Y el patrón `const r = await comando(...); if (r) refrescar()` —que
+ * es el que había en toda la pantalla de Catálogo— trata ese caso como si no
+ * hubiera pasado nada: el cambio SÍ ocurre, el espejo lo publica, y la pantalla
+ * se queda con lo viejo hasta que alguien recarga a mano. Se ve exactamente
+ * como «subí la foto y no aparece» o «cambié el precio y no se guardó», y lleva
+ * a repetir la acción, que encola el comando dos veces.
+ *
+ * Por eso el refresco va AQUÍ y no en el `if` de quien llama: `refrescar()` se
+ * invoca cuando el cambio va a existir —confirmado o encolado— y solo se salta
+ * cuando de verdad falló. Quien llama no tiene que acordarse de distinguirlo.
+ *
+ * Sigue sin haber pintado optimista: `refrescar` normalmente es el `recargar()`
+ * de useCargar, que vuelve a preguntar y trae lo que el bot tiene DE VERDAD.
+ *
+ * @param refrescar se llama cuando el cambio se aplicó o está encolado. Pásalo
+ *        siempre que la pantalla tenga que reflejar el cambio.
  */
 /** Cuánto esperar al bot cuando la salud dice que está apagado. */
 const ESPERA_CORTA_MS = 3000;
@@ -89,6 +114,7 @@ export function useComando() {
       type: TipoComando,
       payload: Record<string, unknown>,
       exito?: string,
+      refrescar?: () => void,
     ): Promise<T | undefined> => {
       if (!companyId) return undefined;
       try {
@@ -100,6 +126,7 @@ export function useComando() {
          */
         const r = await encolar<T>(companyId, type, payload, botCaido ? ESPERA_CORTA_MS : undefined);
         if (exito) avisar(exito, 'ok');
+        refrescar?.();
         return r;
       } catch (e) {
         if (e instanceof BotNoResponde) {
@@ -109,7 +136,15 @@ export function useComando() {
               : 'Guardado. Se está aplicando y puede tardar un momento en aparecer en la pantalla.',
             'espera',
           );
+          /**
+           * ⚠️ SÍ se refresca. El comando está encolado y el bot lo aplicará;
+           * lo único que se agotó es nuestra paciencia esperándolo. La ráfaga
+           * de reintentos de useCargar es justo lo que recoge el cambio cuando
+           * llegue, sin que nadie tenga que recargar la página.
+           */
+          refrescar?.();
         } else {
+          // Aquí NO: el comando falló de verdad y no hay nada nuevo que leer.
           avisar(e instanceof Error ? e.message : 'No se pudo aplicar el cambio', 'error');
         }
         return undefined;

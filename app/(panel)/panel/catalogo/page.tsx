@@ -203,16 +203,20 @@ export default function Catalogo() {
       avisar('Ya tienes un producto con ese nombre. Mia los pide por nombre: dos iguales la confunden.', 'error');
       return;
     }
-    const r = await comando(
+    /* Cerrar el formulario va en el mismo callback que el refresco, no en un
+       `if (r)`: si el producto se va a crear, dejar el nombre escrito y el
+       formulario abierto invita a darle otra vez y crear un duplicado — y Mia
+       pide los productos por nombre, así que dos iguales la confunden. */
+    await comando(
       'upsert_catalog_item',
       { item: { name: nombre, price: 0, is_active: 1, currency: 'PEN' } },
       'Producto añadido',
+      () => {
+        setCreando(false);
+        setNombreNuevo('');
+        recargar();
+      },
     );
-    if (r) {
-      setCreando(false);
-      setNombreNuevo('');
-      recargar();
-    }
   }
 
   return (
@@ -418,9 +422,9 @@ function Ficha({
         },
       },
       'Producto guardado',
+      alCambiar,
     );
     setGuardando(false);
-    if (r) alCambiar();
   }
 
   async function alternarVisible() {
@@ -429,14 +433,16 @@ function Ficha({
      * volver a mostrarlo se usa el upsert con is_active 1 — no hay comando de
      * "restaurar".
      */
-    const r = item.activo
-      ? await comando('delete_catalog_item', { id: item.id }, 'Producto oculto para Mia')
-      : await comando(
-          'upsert_catalog_item',
-          { item: { id: item.id, name: item.name, is_active: 1 } },
-          'Producto visible otra vez',
-        );
-    if (r) alCambiar();
+    if (item.activo) {
+      await comando('delete_catalog_item', { id: item.id }, 'Producto oculto para Mia', alCambiar);
+    } else {
+      await comando(
+        'upsert_catalog_item',
+        { item: { id: item.id, name: item.name, is_active: 1 } },
+        'Producto visible otra vez',
+        alCambiar,
+      );
+    }
   }
 
   const precio = item.price == null ? '—' : `${item.currency || 'PEN'} ${item.price}`;
@@ -788,7 +794,7 @@ function Medios({
          * la mandaría al final, y con el tope de dos adjuntos podría dejar de
          * enviarse sin que nadie relacione una cosa con la otra.
          */
-        const r = await comando<ResultadoCatalogMedia>(
+        await comando<ResultadoCatalogMedia>(
           'upsert_catalog_media',
           {
             catalog_id: item.id,
@@ -797,8 +803,8 @@ function Medios({
             ...(idExistente ? { id: idExistente } : {}),
           },
           idExistente ? 'Foto sustituida' : 'Foto añadida',
+          alCambiar,
         );
-        if (r) alCambiar();
       } catch (e) {
         avisar(e instanceof Error ? e.message : 'No se pudo subir el fichero', 'error');
       } finally {
@@ -811,8 +817,7 @@ function Medios({
   );
 
   async function borrar(m: CatalogMediaRow) {
-    const r = await comando('delete_catalog_media', { id: m.id }, 'Foto eliminada');
-    if (r) alCambiar();
+    await comando('delete_catalog_media', { id: m.id }, 'Foto eliminada', alCambiar);
   }
 
   /**
@@ -827,12 +832,12 @@ function Medios({
    * se queda donde estaba, que es la verdad.
    */
   async function marcar(m: CatalogMediaRow) {
-    const r = await comando<ResultadoSetPrimary>(
+    await comando<ResultadoSetPrimary>(
       'set_primary_media',
       { id: m.id },
       m.media_type === 'video' ? 'Vídeo principal cambiado' : 'Ya es la que se envía',
+      alCambiar,
     );
-    if (r) alCambiar();
   }
 
   /* Se derivan de `medios` en cada render a propósito: así se recalculan

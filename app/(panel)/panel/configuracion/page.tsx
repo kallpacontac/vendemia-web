@@ -365,23 +365,38 @@ export default function Configuracion() {
     }
 
     setGuardando(true);
-    const r = await comando<ResultadoUpdateCompany>('update_company', { patch }, 'Configuración guardada');
+    /**
+     * La foto se rehace con lo que se acaba de mandar para que un segundo
+     * Guardar seguido no vuelva a mandar lo mismo. `recargar()` trae el espejo,
+     * pero tarda 1-2 s y el usuario puede pulsar antes.
+     *
+     * ⚠️ Va en el callback y NO en un `if (r)`: cuando el bot tarda más de la
+     * cuenta, `comando()` devuelve undefined pero el patch SIGUE ENCOLADO y se
+     * aplicará. Con el `if`, la barra de guardar se quedaba puesta con los
+     * mismos cambios y la pantalla con los valores viejos — o sea, «no se
+     * guardó nada», cuando sí se había guardado. Ver useComando().
+     */
+    const r = await comando<ResultadoUpdateCompany>(
+      'update_company',
+      { patch },
+      'Configuración guardada',
+      () => {
+        setOriginal(completo);
+        recargar();
+      },
+    );
     setGuardando(false);
 
     /**
      * Ahora sí es una alarma de verdad: todo lo que iba en el patch llevaba un
      * valor distinto del que había, así que si vuelve en `ignored` es porque el
      * bot no lo acepta — normalmente un campo fuera de EDITABLE_COMPANY_FIELDS.
+     *
+     * Sigue colgando de `r`: sin respuesta del bot no hay lista que mirar, y
+     * eso NO es lo mismo que una lista vacía.
      */
     if (r?.ignored?.length) {
       avisar(`El bot no aceptó estos campos: ${r.ignored.join(', ')}`, 'error');
-    }
-    // La foto se rehace con lo que se acaba de mandar para que un segundo
-    // Guardar seguido no vuelva a mandar lo mismo. recargar() trae el espejo,
-    // pero tarda 1-2s y el usuario puede pulsar antes.
-    if (r) {
-      setOriginal(completo);
-      recargar();
     }
   }
 
@@ -1221,6 +1236,16 @@ function Usuarios({ cuantos }: { cuantos: number }) {
     setEnviando(true);
     const r = await comando<ResultadoAddMember>('add_member', { email: email.trim(), role: 'member' });
     setEnviando(false);
+    /**
+     * Este `if (r)` SÍ es correcto, al revés que los que había en Catálogo: aquí
+     * no se refresca una pantalla, se enseña la CONTRASEÑA TEMPORAL que viene
+     * dentro de `r`. Sin respuesta del bot no hay nada que enseñar.
+     *
+     * ⚠️ Consecuencia conocida: si el bot tarda más de la cuenta, el usuario se
+     * crea igual —el comando está encolado— pero su contraseña temporal se
+     * pierde, porque solo viaja en el `result` de esa fila de `commands`. El
+     * arreglo no es refrescar aquí; sería leer la fila del comando después.
+     */
     if (r) {
       setTemporal(r);
       setEmail('');
