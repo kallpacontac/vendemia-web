@@ -46,7 +46,18 @@ export type TipoComando =
    * de LA FILA — si no, el bot rechaza el lead por no ser de esa empresa. Por
    * eso esa pantalla llama a `encolar()` directamente y no a `useComando()`.
    */
-  | 'marcar_seguimiento';
+  | 'marcar_seguimiento'
+  /**
+   * «Ya cobré esto», dicho por una persona. Ver ResultadoMarcarPagado.
+   *
+   * ⚠️ El estado al que lleva NO es el mismo en pedidos que en citas: un pedido
+   * se cobra pasando a `paid`; una cita, pasando de `pending_payment` a
+   * `confirmed`, que es lo que libera el cupo. No se puede unificar, y por eso
+   * el payload lleva `tipo`.
+   */
+  | 'marcar_pagado'
+  /** «Vino» o «no vino», dicho por una persona. Ver ResultadoMarcarCumplido. */
+  | 'marcar_cumplido';
 
 /**
  * ⚠️ `ignored` NO significa "rechazado". Significa "esto no cambió".
@@ -114,6 +125,34 @@ export interface ResultadoCatalogMedia {
 export interface ResultadoSetPrimary {
   id: string;
   catalog_id: string;
+}
+
+/**
+ * Lo que devuelve `marcar_pagado`.
+ *
+ * ⚠️ `cambio` es la parte que hay que mirar. El comando es idempotente: marcar
+ * pagado algo que ya estaba cobrado NO falla, devuelve `cambio: false`. Si el
+ * panel anuncia «cobrado» sin mirarlo, el dueño cree que acaba de cobrar algo
+ * que ya estaba cobrado — y eso, en una pantalla de dinero, es lo peor que
+ * puede pasar.
+ */
+export interface ResultadoMarcarPagado {
+  id: string;
+  tipo: 'order' | 'appointment';
+  /** false = ya estaba cobrado y no se tocó nada. */
+  cambio: boolean;
+  /** El estado del que venía, para poder decir «de pendiente a cobrado». */
+  antes: string;
+  pagado_por: 'panel';
+}
+
+/** Lo que devuelve `marcar_cumplido`. */
+export interface ResultadoMarcarCumplido {
+  id: string;
+  tipo: 'order' | 'appointment';
+  vino: boolean;
+  antes: string;
+  cumplido_por: 'panel';
 }
 
 export interface ResultadoAddMember {

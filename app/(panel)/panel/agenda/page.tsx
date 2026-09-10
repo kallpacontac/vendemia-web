@@ -19,12 +19,32 @@
  * no una hora concreta, así que se enseñan como grupos con su ocupación.
  */
 import { useMemo, useState } from 'react';
-import { Briefcase, CalendarCheck, CheckCircle, ChevronLeft, ChevronRight, Flame, User } from 'lucide-react';
+import {
+  Briefcase,
+  CalendarCheck,
+  Check,
+  CheckCircle,
+  ChevronLeft,
+  ChevronRight,
+  Flame,
+  User,
+  Wallet,
+  X,
+} from 'lucide-react';
 import Topbar from '@/components/panel/Topbar';
 import { useSesion } from '@/components/panel/Sesion';
+import { useAvisar, useComando } from '@/components/panel/Avisos';
 import { useCargar } from '@/components/panel/useCargar';
 import { construirSemana, lunesDe } from '@/lib/panel/agenda';
-import { diaMes } from '@/lib/panel/format';
+import { diaMes, hora as horaDe } from '@/lib/panel/format';
+import {
+  faltaCobrar,
+  pideRevision,
+  repartoCumplido,
+  selloCumplido,
+  selloPagado,
+  textoReparto,
+} from '@/lib/panel/confirmacion';
 import {
   getBloqueos,
   getCatalogo,
@@ -32,8 +52,10 @@ import {
   getCompania,
   getLeads,
   getTrabajadores,
+  type Cita,
 } from '@/lib/supabase/queries';
 import { json } from '@/lib/supabase/parse';
+import type { ResultadoMarcarPagado } from '@/lib/supabase/commands';
 import type { FranjaRecurrente } from '@/lib/supabase/types';
 
 export default function Agenda() {
@@ -41,7 +63,7 @@ export default function Agenda() {
   const [offset, setOffset] = useState(0);
   const [vista, setVista] = useState<'negocio' | 'cliente'>('negocio');
 
-  const { datos, cargando } = useCargar(async () => {
+  const { datos, cargando, recargar } = useCargar(async () => {
     if (!companyId) return null;
     const [empresa, citas, leads, trabajadores, bloqueos, catalogo] = await Promise.all([
       getCompania(companyId),
@@ -117,6 +139,14 @@ export default function Agenda() {
             </div>
           </div>
         </div>
+
+        <PorConfirmar
+          citas={datos?.citas ?? []}
+          nombrePorLead={
+            new Map((datos?.leads ?? []).map((l) => [l.id, l.name || l.phone]))
+          }
+          alCambiar={recargar}
+        />
 
         {esRecurrente ? (
           <Recurrentes catalogo={datos?.catalogo ?? []} citas={datos?.citas ?? []} />
@@ -327,6 +357,222 @@ function Recurrentes({
           </div>
         );
       })}
+    </div>
+  );
+}
+
+/**
+ * ══════════════════════════════════════════════════════════════════════════
+ * LO QUE YA PASÓ Y NADIE HA MIRADO
+ * ══════════════════════════════════════════════════════════════════════════
+ *
+ * Aquí es donde `cumplido_por` deja de ser una columna y se convierte en algo
+ * útil. Un cron cierra las citas 2 h después de la hora como `completed`, lo
+ * cual significa «pasó la hora y nadie dijo lo contrario» — no «vino».
+ *
+ * ⚠️ LA REGLA DE DISEÑO: una fila `cron` tiene que INVITAR a corregirse. Es la
+ * única razón por la que existe esta sección. Si una presunción se pintara
+ * igual que un hecho, nadie corregiría nada y la columna entera no serviría
+ * para nada — solo habríamos añadido un campo a la base de datos.
+ *
+ * Por eso la lista NO son todas las citas pasadas: son solo las que piden algo.
+ * Una cita que ya confirmó una persona desaparece de aquí, que es la
+ * recompensa de haberla mirado.
+ */
+function PorConfirmar({
+  citas,
+  nombrePorLead,
+  alCambiar,
+}: {
+  citas: Cita[];
+  nombrePorLead: Map<string, string>;
+  alCambiar: () => void;
+}) {
+  const comando = useComando();
+  const avisar = useAvisar();
+  const [enVuelo, setEnVuelo] = useState<string | null>(null);
+
+  /**
+   * Solo citas puntuales YA PASADAS. Las recurrentes se quedan fuera: su
+   * `slot_start` es "sched:<franja>" y no tienen una hora que haya pasado, así
+   * que `inicio` viene null y preguntar «¿vino?» de un grupo no significa nada.
+   */
+  const pasadas = useMemo(() => {
+    const ahora = Date.now();
+    return citas
+      .filter((c) => !c.recurrente && c.inicio && c.inicio.getTime() < ahora && c.status !== 'cancelled')
+      .sort((a, b) => (b.inicio?.getTime() ?? 0) - (a.inicio?.getTime() ?? 0));
+  }, [citas]);
+
+  /** El recuento honesto de la cabecera: nunca «N atendidas» a secas. */
+  const reparto = useMemo(() => repartoCumplido(pasadas, 'appointment'), [pasadas]);
+
+  /** Las que piden algo: sin resolver, presuntas, sin dato, o sin cobrar. */
+  const pendientes = useMemo(
+    () =>
+      pasadas.filter((c) => {
+        const cumplido = selloCumplido('appointment', c.status, c.cumplido_por);
+        return (
+          cumplido.grado === 'pendiente' ||
+          pideRevision(cumplido) ||
+          faltaCobrar('appointment', c.status)
+        );
+      }),
+    [pasadas],
+  );
+
+  if (pasadas.length === 0) return null;
+
+  async function resolver(c: Cita, vino: boolean) {
+    setEnVuelo(c.id);
+    await comando(
+      'marcar_cumplido',
+      { tipo: 'appointment', id: c.id, vino },
+      vino ? 'Anotado: vino' : 'Anotado: no vino',
+      alCambiar,
+    );
+    setEnVuelo(null);
+  }
+
+  async function cobrar(c: Cita) {
+    setEnVuelo(c.id);
+    /**
+     * ⚠️ El `result` trae `cambio`. Si ya estaba cobrada no se anuncia nada:
+     * decirle «cobrado» a alguien por algo que ya estaba cobrado le hace creer
+     * que acaba de entrar dinero. Por eso el mensaje de éxito va vacío y se
+     * decide aquí, con la respuesta delante.
+     */
+    const r = await comando<ResultadoMarcarPagado>(
+      'marcar_pagado',
+      { tipo: 'appointment', id: c.id },
+      undefined,
+      alCambiar,
+    );
+    if (r) {
+      avisar(
+        r.cambio
+          ? 'Cobrada. El cupo queda confirmado.'
+          : 'Esta cita ya constaba como cobrada: no se ha cambiado nada.',
+        r.cambio ? 'ok' : 'espera',
+      );
+    }
+    setEnVuelo(null);
+  }
+
+  return (
+    <div className="card" style={{ marginBottom: 18 }}>
+      <div className="card-head">
+        <h3>Citas que ya pasaron</h3>
+        {/*
+          El desglose NO es un adorno: «12 atendidas» a secas mezcla lo que
+          confirmó una persona con lo que supuso un reloj, y quien lea esa cifra
+          creerá que las doce las miró alguien.
+        */}
+        <small className="muted">
+          {reparto.total} resueltas{textoReparto(reparto) && ` — ${textoReparto(reparto)}`}
+        </small>
+      </div>
+
+      {pendientes.length === 0 ? (
+        <p className="vacio" style={{ padding: '18px 20px' }}>
+          Todas confirmadas a mano. Nada que revisar.
+        </p>
+      ) : (
+        <div className="confirmar-lista">
+          {pendientes.map((c) => (
+            <FilaPorConfirmar
+              key={c.id}
+              cita={c}
+              cliente={nombrePorLead.get(c.lead_id) ?? 'Cliente'}
+              ocupado={enVuelo === c.id}
+              alResolver={(vino) => void resolver(c, vino)}
+              alCobrar={() => void cobrar(c)}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+
+function FilaPorConfirmar({
+  cita,
+  cliente,
+  ocupado,
+  alResolver,
+  alCobrar,
+}: {
+  cita: Cita;
+  cliente: string;
+  ocupado: boolean;
+  alResolver: (vino: boolean) => void;
+  alCobrar: () => void;
+}) {
+  const cumplido = selloCumplido('appointment', cita.status, cita.cumplido_por);
+  const pagado = selloPagado('appointment', cita.status, cita.pagado_por);
+  const revisar = pideRevision(cumplido);
+
+  return (
+    <div className={`confirmar-fila ${revisar ? 'revisar' : ''}`}>
+      <div className="confirmar-quien">
+        <b>{cliente}</b>
+        <small className="muted">
+          {cita.inicio ? `${diaMes(cita.inicio)} · ${horaDe(cita.inicio)}` : '—'}
+          {cita.service ? ` · ${cita.service}` : ''}
+        </small>
+      </div>
+
+      <div className="confirmar-sellos">
+        <span
+          className="badge-pill"
+          style={{ color: cumplido.color, background: `${cumplido.color}18` }}
+          title={cumplido.ayuda}
+        >
+          {cumplido.label}
+        </span>
+        <span
+          className="badge-pill"
+          style={{ color: pagado.color, background: `${pagado.color}18` }}
+          title={pagado.ayuda}
+        >
+          {pagado.label}
+        </span>
+      </div>
+
+      <div className="confirmar-acciones">
+        {/*
+          DOS OPCIONES, no un check.
+
+          Un check sin marcar es ambiguo entre «no vino» y «todavía no lo he
+          mirado», y esa ambigüedad es exactamente la que esta pantalla viene a
+          quitar. Con dos botones, no marcar nada significa lo que significa: que
+          aún no lo has mirado.
+        */}
+        <button
+          className="btn btn-ghost btn-sm"
+          disabled={ocupado}
+          onClick={() => alResolver(true)}
+          title="Confirmar que sí vino"
+        >
+          <Check size={14} /> Vino
+        </button>
+        <button
+          className="btn btn-ghost btn-sm confirmar-no"
+          disabled={ocupado}
+          onClick={() => alResolver(false)}
+          title="Marcar que no se presentó"
+        >
+          <X size={14} /> No vino
+        </button>
+        {/* Solo si falta cobrarla: su caso es `pending_payment`, donde cobrar
+            además LIBERA EL CUPO al pasar a `confirmed`. */}
+        {faltaCobrar('appointment', cita.status) && (
+          <button className="btn btn-primary btn-sm" disabled={ocupado} onClick={alCobrar}>
+            <Wallet size={14} /> Cobrada
+          </button>
+        )}
+      </div>
     </div>
   );
 }

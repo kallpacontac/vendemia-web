@@ -927,3 +927,27 @@ a{color:inherit;text-decoration:none}
    la conversación no es haberla mandado. */
 .acciones-fila{display:flex;flex-direction:column;align-items:flex-end;gap:6px}
 .acciones-fila .btn{white-space:nowrap}
+
+/* ── Confirmar lo que ya pasó (agenda) y pedidos ───────────────────────────
+   La regla de diseño: una fila PRESUNTA —la que cerró el cron— tiene que
+   invitar a corregirse. Si se pintara igual que una confirmada por una persona,
+   nadie corregiría nada y las columnas pagado_por/cumplido_por no servirían
+   para nada. De ahí el borde izquierdo ámbar. */
+.confirmar-lista{display:flex;flex-direction:column}
+.confirmar-fila{display:grid;grid-template-columns:1fr auto auto;gap:14px;align-items:center;
+  padding:12px 4px;border-bottom:1px solid var(--line)}
+.confirmar-fila:last-child{border-bottom:none}
+.confirmar-fila.revisar{border-left:3px solid #B26B00;padding-left:12px;background:#FEF6E708}
+.confirmar-quien b{display:block;font-size:13.5px;font-weight:700}
+.confirmar-quien small{display:block;font-size:12px}
+.confirmar-sellos{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.confirmar-acciones{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.confirmar-acciones .btn{white-space:nowrap}
+/* «No vino» se distingue de «Vino» sin gritar: son dos opciones legítimas, no
+   un error y un acierto. */
+.confirmar-no:hover{color:#E5484D;border-color:#E5484D}
+.fila-revisar{box-shadow:inset 3px 0 0 #B26B00}
+@media(max-width:720px){
+  .confirmar-fila{grid-template-columns:1fr;gap:8px}
+  .confirmar-sellos,.confirmar-acciones{justify-content:flex-start}
+}

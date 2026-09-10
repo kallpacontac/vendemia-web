@@ -281,6 +281,17 @@ export interface AppointmentRow {
   service: string | null;
   created_at: number | null;
   created_ts: string | null;
+  /**
+   * Quién dio por bueno el cobro: `''` · `'voucher'` (el bot verificó la
+   * captura) · `'panel'` (lo afirmó una persona, sin verificar nada).
+   * ⚠️ `''` puede ser "no cobrado" O una fila anterior a la 0024.
+   */
+  pagado_por: string | null;
+  /**
+   * Quién dio por cumplido: `''` · `'cron'` (presunción del reloj) · `'panel'`
+   * (hecho confirmado por una persona). Ver lib/panel/confirmacion.ts.
+   */
+  cumplido_por: string | null;
 }
 
 export interface AppointmentServiceRow {
@@ -307,6 +318,17 @@ export interface OrderRow {
   delivery_time: string | null;
   created_at: number | null;
   created_ts: string | null;
+  /**
+   * Quién dio por bueno el cobro: `''` · `'voucher'` (el bot verificó la
+   * captura) · `'panel'` (lo afirmó una persona, sin verificar nada).
+   * ⚠️ `''` puede ser "no cobrado" O una fila anterior a la 0024.
+   */
+  pagado_por: string | null;
+  /**
+   * Quién dio por cumplido: `''` · `'cron'` (presunción del reloj) · `'panel'`
+   * (hecho confirmado por una persona). Ver lib/panel/confirmacion.ts.
+   */
+  cumplido_por: string | null;
 }
 
 export interface ItemPedido {
