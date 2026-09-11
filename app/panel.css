@@ -999,3 +999,15 @@ body:has(.demo-banda) .sidebar{padding-top:44px}
 .grupo-alumnos li{display:flex;flex-wrap:wrap;gap:4px 10px;align-items:baseline;
   padding:7px 2px;border-bottom:1px solid var(--line);font-size:12.5px}
 .grupo-alumnos li b{font-weight:700}
+
+/* Equipo: las ausencias y las citas que dejan colgadas. Ámbar y no rojo: no es
+   un fallo, es trabajo pendiente para el dueño. */
+.ausencia{display:flex;align-items:center;gap:10px;padding:9px 2px;border-bottom:1px solid var(--line);font-size:13px}
+.ausencia .cuando{flex:1;min-width:0}
+.aviso-citas{background:#FEF6E7;border:1px solid #F5D9A8;color:#6B4400;border-radius:var(--r-md);
+  padding:12px 14px;margin:10px 0 12px;font-size:12.5px;line-height:1.5}
+.aviso-citas b svg{vertical-align:-2px}
+.aviso-citas ul{list-style:none;margin:8px 0 10px;padding:0}
+.aviso-citas li{display:flex;flex-wrap:wrap;align-items:center;gap:4px 12px;padding:6px 0;border-top:1px solid #F5D9A8}
+.form-ausencia{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-top:10px}
+.form-ausencia .full{grid-column:1/-1}

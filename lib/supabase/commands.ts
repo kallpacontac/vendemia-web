@@ -31,8 +31,17 @@ export type TipoComando =
   | 'upsert_catalog_media'
   | 'delete_catalog_media'
   | 'set_primary_media'
+  /**
+   * Alta o edición de un trabajador. Es un PATCH: lo que no se manda se
+   * conserva, y `schedule: null` significa «que herede el del negocio». El bot
+   * VALIDA el horario y falla con `horario inválido: <motivo>` — un motivo
+   * escrito para el dueño, que se enseña tal cual.
+   */
   | 'upsert_employee'
   | 'delete_employee'
+  /** Una ausencia: «Marco no está esta semana». Ver ResultadoBloqueo. */
+  | 'upsert_employee_block'
+  | 'delete_employee_block'
   | 'send_message'
   | 'toggle_bot'
   | 'handoff'
@@ -153,6 +162,19 @@ export interface ResultadoMarcarCumplido {
   vino: boolean;
   antes: string;
   cumplido_por: 'panel';
+}
+
+/**
+ * Lo que devuelve `upsert_employee_block`.
+ *
+ * ⚠️ `citas_afectadas` ES OBLIGATORIO ENSEÑARLO. El bloqueo hace que Mia deje
+ * de ofrecer a ese trabajador en ese intervalo, pero NO mueve ni avisa las
+ * citas que ya tenía. Si el panel dice «guardado» y ya está, el cliente llega
+ * a una cita con alguien que no va a estar.
+ */
+export interface ResultadoBloqueo {
+  id: string;
+  citas_afectadas: { id: string; slot_start: string; service: string | null; lead_id: string }[];
 }
 
 export interface ResultadoAddMember {

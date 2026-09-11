@@ -18,6 +18,7 @@ import {
   Send,
   Settings,
   Sparkles,
+  UserCog,
   Users,
 } from 'lucide-react';
 import { useSesion } from './Sesion';
@@ -29,6 +30,7 @@ const NAV = [
   { href: '/panel/leads', icon: Users, label: 'Leads' },
   { href: '/panel/retargeting', icon: Send, label: 'Retargeting' },
   { href: '/panel/agenda', icon: CalendarDays, label: 'Agenda' },
+  { href: '/panel/equipo', icon: UserCog, label: 'Equipo' },
   { href: '/panel/pedidos', icon: Receipt, label: 'Pedidos' },
   { href: '/panel/catalogo', icon: Package, label: 'Catálogo' },
   { href: '/panel/metricas', icon: BarChart2, label: 'Métricas' },
