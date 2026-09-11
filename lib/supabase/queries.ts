@@ -671,3 +671,67 @@ export async function getRetargeting(): Promise<RetargetingRow[]> {
   if (error) throw error;
   return (data ?? []) as RetargetingRow[];
 }
+
+/* ── Cambios de catálogo que siguen en la cola ──────────────────────────── */
+
+/**
+ * Una fila de `commands` de las que tocan el catálogo.
+ *
+ * Se leen para PINTARLAS ENCIMA de lo que hay en la base (ver
+ * lib/panel/pendientes.ts): el catálogo se guarda sin esperar al bot, y sin
+ * esto un cambio encolado desaparecería de la pantalla al recargar la página
+ * hasta que el bot lo aplicase. La cola vive en Supabase, así que sobrevive a
+ * recargas, y se retira sola en cuanto el cambio llega de verdad.
+ */
+export interface ComandoCatalogo {
+  id: string;
+  type: string;
+  payload: Record<string, unknown>;
+  status: 'pending' | 'processing' | 'done' | 'error';
+  error: string | null;
+  created_at: string;
+  done_at: string | null;
+}
+
+const TIPOS_CATALOGO = [
+  'upsert_catalog_item',
+  'delete_catalog_item',
+  'upsert_catalog_media',
+  'delete_catalog_media',
+  'set_primary_media',
+];
+
+/**
+ * Cuánto se sigue pintando encima un comando que el bot YA aplicó.
+ *
+ * Parece que sobra y no sobra: entre que el bot marca el comando `done` y el
+ * espejo publica la fila de `catalog` pasan de 0,2 a 2,4 s (medido), a veces
+ * más. Si el comando dejara de pintarse al pasar a `done`, en ese hueco la
+ * pantalla volvería al valor viejo — el cambio "se deshace" delante del dueño
+ * y reaparece al rato. Aplicar un comando ya aplicado es inofensivo: los
+ * valores coinciden.
+ */
+export const VENTANA_ESPEJO_MS = 3 * 60 * 1000;
+
+export async function getComandosCatalogo(companyId: string): Promise<ComandoCatalogo[]> {
+  if (demoActivo()) return [];
+  const desde = new Date(Date.now() - VENTANA_ESPEJO_MS).toISOString();
+  const { data, error } = await supabase()
+    .from('commands')
+    .select('id, type, payload, status, error, created_at, done_at')
+    .eq('company_id', companyId)
+    .in('type', TIPOS_CATALOGO)
+    // Lo que sigue en cola, y lo que terminó hace poco — bien o mal.
+    .or(
+      `status.in.(pending,processing),and(status.in.(done,error),done_at.gte."${desde}")`,
+    )
+    .order('created_at', { ascending: true })
+    .limit(200);
+  // Ante la duda, no pintar nada encima: se ve lo que hay en la base, que es
+  // lo mismo que se veía antes de existir esto.
+  if (error) {
+    console.error('[catalogo] no se pudo leer la cola de comandos:', error);
+    return [];
+  }
+  return (data ?? []) as ComandoCatalogo[];
+}

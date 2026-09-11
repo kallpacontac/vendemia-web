@@ -206,6 +206,36 @@ const SONDEO_MS = 1200;
  * @param timeoutMs cuánto esperar antes de rendirse. El bot vive en un portátil
  *        que puede estar apagado; la UI no puede quedarse colgada.
  */
+/**
+ * Encola y NO espera al bot. Vuelve en cuanto la fila está en `commands`.
+ *
+ * Existe porque el bot vive en un portátil: esperar su confirmación dejaba el
+ * botón de Guardar girando 15 s —o para siempre, con el bot apagado— y la
+ * pantalla con lo viejo. Pero el comando ya está a salvo en cuanto entra en la
+ * cola: el bot lo recoge al arrancar aunque haya estado horas caído.
+ *
+ * Así que lo que se confirma aquí es exactamente eso, «guardado en la cola», y
+ * es verdad. Lo que NO se sabe todavía es si el bot lo aceptará: si lo rechaza,
+ * la fila acaba en `error` y la pantalla lo cuenta después (ver
+ * getComandosCatalogo y lib/panel/pendientes.ts).
+ *
+ * Para lo que necesita el `result` del bot —la contraseña de add_member, el
+ * `cambio` de marcar_pagado— sigue siendo `encolar()`.
+ */
+export async function encolarSinEsperar(
+  companyId: string,
+  type: TipoComando,
+  payload: Record<string, unknown>,
+): Promise<string> {
+  const { data, error } = await supabase()
+    .from('commands')
+    .insert({ company_id: companyId, type, payload })
+    .select('id')
+    .single();
+  if (error || !data) throw error ?? new Error('No se pudo guardar el cambio');
+  return (data as { id: string }).id;
+}
+
 export function encolar<T = unknown>(
   companyId: string,
   type: TipoComando,

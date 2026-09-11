@@ -14,7 +14,7 @@
  */
 import { createContext, useCallback, useContext, useState } from 'react';
 import { AlertTriangle, CheckCircle, Info } from 'lucide-react';
-import { BotNoResponde, encolar, type TipoComando } from '@/lib/supabase/commands';
+import { BotNoResponde, encolar, encolarSinEsperar, type TipoComando } from '@/lib/supabase/commands';
 import { useSesion } from './Sesion';
 import { useSalud } from './Salud';
 import { demoActivo } from '@/lib/panel/demo';
@@ -171,5 +171,71 @@ export function useComando() {
       }
     },
     [companyId, avisar, botCaido],
+  );
+}
+
+/**
+ * ══════════════════════════════════════════════════════════════════════════
+ * GUARDAR SIN ESPERAR AL BOT
+ * ══════════════════════════════════════════════════════════════════════════
+ *
+ * `useComando()` espera a que el bot confirme. Con el bot en un portátil eso
+ * significaba un botón girando hasta 15 s —o un «se está aplicando» naranja si
+ * estaba apagado— y la pantalla con lo viejo mientras tanto. Para editar un
+ * catálogo, que es cambiar un precio o subir una foto, esa espera no aporta
+ * nada: el cambio ya está a salvo en cuanto entra en la cola.
+ *
+ * Así que aquí se confirma lo que es verdad en ese instante —guardado— y se
+ * sigue. La pantalla pinta el cambio encima desde la propia cola (ver
+ * lib/panel/pendientes.ts), así que se ve al momento y sobrevive a recargas.
+ *
+ * ── Los 15 minutos ───────────────────────────────────────────────────────
+ *
+ * Es una promesa PRUDENTE al cliente, decidida así a propósito, no la latencia
+ * real. Con el bot encendido el comando se recoge al instante por websocket, y
+ * como mucho en 30 s por el sondeo de respaldo (POLL_MS del bot). Con el bot
+ * apagado, en cuanto arranca. Prometer el techo y cumplir en segundos es mejor
+ * que prometer segundos y fallar el día que el portátil está cerrado.
+ *
+ * ⚠️ Lo que se pierde a cambio: si el bot RECHAZA el cambio, no se sabe en el
+ * momento del clic. La fila acaba en `error` y el catálogo lo enseña después,
+ * al volver a mirar la cola.
+ *
+ * @returns true si el cambio quedó guardado en la cola.
+ */
+const PLAZO = 'Se verá reflejado en el bot en un máximo de 15 minutos.';
+
+export function useGuardar() {
+  const { companyId } = useSesion();
+  const avisar = useAvisar();
+
+  return useCallback(
+    async (
+      type: TipoComando,
+      payload: Record<string, unknown>,
+      que = 'Guardado',
+      refrescar?: () => void,
+    ): Promise<boolean> => {
+      if (!companyId) return false;
+      // Mismo portón que useComando: en demo no se escribe nada.
+      if (demoActivo()) {
+        avisar('Estás en modo demo: no se guarda nada. Sal del modo demo para cambiar algo de verdad.', 'espera');
+        return false;
+      }
+      try {
+        await encolarSinEsperar(companyId, type, payload);
+      } catch (e) {
+        // Aquí SÍ es un fallo de verdad: el cambio no llegó ni a la cola.
+        avisar(
+          `No se pudo guardar${e instanceof Error && e.message ? `: ${e.message}` : ''}. Revisa tu conexión y vuelve a intentarlo.`,
+          'error',
+        );
+        return false;
+      }
+      avisar(`${que}. ${PLAZO}`, 'ok');
+      refrescar?.();
+      return true;
+    },
+    [companyId, avisar],
   );
 }

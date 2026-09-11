@@ -974,3 +974,16 @@ body:has(.demo-banda) .sidebar{padding-top:44px}
   .demo-banda{font-size:11.5px;padding:6px 10px;gap:7px}
   .demo-banda span{line-height:1.3}
 }
+
+/* ── Catálogo: lo guardado que el bot aún no ha aplicado ─────────────────────
+   Se ve guardado, que es lo que es: está en la cola y el bot lo aplicará. El
+   matiz existe para que nadie se extrañe si Mia sigue diciendo el precio viejo
+   durante un rato — no para que parezca que falta algo. */
+.badge-pill.aplicandose{color:#3B82F6;background:#EAF3FF}
+.medio.pendiente{opacity:.72}
+.medio.pendiente::after{content:"Guardando…";position:absolute;left:6px;bottom:6px;
+  font:700 10.5px 'Plus Jakarta Sans';color:#fff;background:rgba(10,10,10,.55);
+  padding:2px 7px;border-radius:var(--r-full)}
+/* Un cambio que el bot RECHAZÓ. No se puede pintar como guardado. */
+.aviso-fallo{display:flex;align-items:flex-start;gap:8px;background:#FFECEC;color:#B4232A;
+  border-radius:var(--r-md);padding:10px 14px;font-size:12.5px;font-weight:600;margin-bottom:14px}

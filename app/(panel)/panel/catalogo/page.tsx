@@ -34,6 +34,13 @@
  *     precio de la fila. Si la pantalla no lo dijera, el dueño subiría cinco
  *     fotos y creería que salen las cinco. Ver <Medios>.
  *
+ * 4 · SE GUARDA SIN ESPERAR AL BOT, Y SE VE AL MOMENTO. El bot vive en un
+ *     portátil: esperar su confirmación dejaba el botón girando y la pantalla
+ *     con lo viejo. Ahora el cambio entra en la cola (useGuardar) y se pinta
+ *     encima leyendo la propia cola (lib/panel/pendientes.ts), así que
+ *     sobrevive a recargas y se retira solo cuando llega de verdad. Al cliente
+ *     se le promete un máximo de 15 min; con el bot encendido son segundos.
+ *
  * NO se ofrece `image_url`: es un campo muerto que el bot no envía nunca. Las
  * fotos viven en `catalog_media`.
  *
@@ -58,21 +65,23 @@ import {
   Star,
   Trash2,
   Video,
+  Clock,
 } from 'lucide-react';
 import Topbar from '@/components/panel/Topbar';
 import { useSesion } from '@/components/panel/Sesion';
-import { useAvisar, useComando } from '@/components/panel/Avisos';
+import { useAvisar, useGuardar } from '@/components/panel/Avisos';
 import { useCargar } from '@/components/panel/useCargar';
 import { supabase } from '@/lib/supabase/client';
 import {
   getCatalogo,
   getCompania,
+  getComandosCatalogo,
   getMediosDeVarios,
   type ItemCatalogo,
 } from '@/lib/supabase/queries';
+import { esPendiente, superponer } from '@/lib/panel/pendientes';
 import { b01, bool } from '@/lib/supabase/parse';
 import type { BusinessMode, CatalogMediaRow } from '@/lib/supabase/types';
-import type { ResultadoCatalogMedia, ResultadoSetPrimary } from '@/lib/supabase/commands';
 
 /** El bot manda como mucho dos adjuntos por mensaje. No es configurable. */
 const TOPE_ADJUNTOS = 2;
@@ -155,7 +164,7 @@ function borradorDe(it: ItemCatalogo): Borrador {
 
 export default function Catalogo() {
   const { companyId } = useSesion();
-  const comando = useComando();
+  const guardar = useGuardar();
   const avisar = useAvisar();
 
   const [busqueda, setBusqueda] = useState('');
@@ -172,14 +181,47 @@ export default function Catalogo() {
   const [creando, setCreando] = useState(false);
   const [nombreNuevo, setNombreNuevo] = useState('');
 
-  const { datos, cargando, recargar } = useCargar(async () => {
+  const { datos, cargando, releer } = useCargar(async () => {
     if (!companyId) return null;
-    const [empresa, items] = await Promise.all([getCompania(companyId), getCatalogo(companyId)]);
-    const medios = await getMediosDeVarios(items.map((i) => i.id));
-    return { modo: (empresa?.business_mode ?? 'appointment') as BusinessMode, items, medios };
+    const [empresa, itemsBase, comandos] = await Promise.all([
+      getCompania(companyId),
+      getCatalogo(companyId),
+      getComandosCatalogo(companyId),
+    ]);
+    const mediosBase = await getMediosDeVarios(itemsBase.map((i) => i.id));
+    return {
+      modo: (empresa?.business_mode ?? 'appointment') as BusinessMode,
+      itemsBase,
+      mediosBase,
+      comandos,
+    };
   }, [companyId]);
 
-  const items = useMemo(() => datos?.items ?? [], [datos]);
+  /**
+   * Lo que hay en la base, CON lo guardado encima aunque el bot no lo haya
+   * aplicado todavía. Ver lib/panel/pendientes.ts: sin esto, un cambio en cola
+   * desaparecería al recargar la página hasta que el bot lo recogiese.
+   */
+  const vista = useMemo(
+    () => superponer(datos?.itemsBase ?? [], datos?.mediosBase ?? {}, datos?.comandos ?? []),
+    [datos],
+  );
+
+  /**
+   * Mientras quede algo en la cola, se vuelve a mirar cada 20 s: para enterarse
+   * de cuándo llega de verdad, y para contar si el bot lo rechazó.
+   *
+   * `releer` y no `recargar`: una consulta por vuelta y no una ráfaga de ocho.
+   * Con el bot apagado horas y la pestaña abierta, la diferencia importa. Y se
+   * para sola en cuanto no queda nada en vuelo.
+   */
+  useEffect(() => {
+    if (!vista.enVuelo) return;
+    const reloj = setInterval(releer, 20000);
+    return () => clearInterval(reloj);
+  }, [vista.enVuelo, releer]);
+
+  const items = vista.items;
   const modo = datos?.modo ?? 'appointment';
 
   const ocultos = items.filter((i) => !i.activo).length;
@@ -194,7 +236,7 @@ export default function Catalogo() {
   }, [items, busqueda, verOcultos]);
 
   const activos = items.filter((i) => i.activo).length;
-  const sinFoto = items.filter((i) => i.activo && !(datos?.medios[i.id]?.length)).length;
+  const sinFoto = items.filter((i) => i.activo && !(vista.medios[i.id]?.length)).length;
 
   async function crear() {
     const nombre = nombreNuevo.trim();
@@ -207,14 +249,14 @@ export default function Catalogo() {
        `if (r)`: si el producto se va a crear, dejar el nombre escrito y el
        formulario abierto invita a darle otra vez y crear un duplicado — y Mia
        pide los productos por nombre, así que dos iguales la confunden. */
-    await comando(
+    await guardar(
       'upsert_catalog_item',
       { item: { name: nombre, price: 0, is_active: 1, currency: 'PEN' } },
       'Producto añadido',
       () => {
         setCreando(false);
         setNombreNuevo('');
-        recargar();
+        releer();
       },
     );
   }
@@ -331,17 +373,35 @@ export default function Catalogo() {
           </p>
         )}
 
+        {/*
+          Un cambio que el bot RECHAZÓ. Como se guarda sin esperarle, el rechazo
+          llega después del clic, y no se puede dejar pintado como guardado.
+        */}
+        {vista.fallidos.length > 0 && (
+          <p className="aviso-fallo">
+            No se pudo aplicar{' '}
+            {vista.fallidos.length === 1 ? 'un cambio' : vista.fallidos.length + ' cambios'}
+            {vista.fallidos[0].error ? ': ' + vista.fallidos[0].error : ''}. Revisa el producto y
+            vuelve a guardarlo.
+          </p>
+        )}
+
         {visibles.map((it) => (
           <Ficha
             key={it.id}
             item={it}
             modo={modo}
             todos={items}
-            medios={datos?.medios[it.id] ?? []}
+            medios={vista.medios[it.id] ?? []}
             companyId={companyId}
             abierta={abierto === it.id}
-            alAbrir={() => setAbierto((a) => (a === it.id ? null : it.id))}
-            alCambiar={recargar}
+            // Un producto recién creado aún no tiene id real: no se abre hasta
+            // que llegue, o sus cambios irían contra un id que la base no conoce.
+            alAbrir={() => {
+              if (!esPendiente(it.id)) setAbierto((a) => (a === it.id ? null : it.id));
+            }}
+            aplicandose={vista.aplicandose.has(it.id)}
+            alCambiar={releer}
           />
         ))}
       </div>
@@ -360,6 +420,7 @@ function Ficha({
   abierta,
   alAbrir,
   alCambiar,
+  aplicandose,
 }: {
   item: ItemCatalogo;
   modo: BusinessMode;
@@ -369,8 +430,10 @@ function Ficha({
   abierta: boolean;
   alAbrir: () => void;
   alCambiar: () => void;
+  /** Tiene cambios guardados en la cola que el bot aún no ha aplicado. */
+  aplicandose: boolean;
 }) {
-  const comando = useComando();
+  const enviar = useGuardar();
   const avisar = useAvisar();
   const [f, setF] = useState<Borrador>(() => borradorDe(item));
   const [guardando, setGuardando] = useState(false);
@@ -403,7 +466,7 @@ function Ficha({
      * está agotado.
      */
     const num = (v: string) => (v.trim() === '' ? null : Number(v));
-    const r = await comando(
+    await enviar(
       'upsert_catalog_item',
       {
         item: {
@@ -434,9 +497,9 @@ function Ficha({
      * "restaurar".
      */
     if (item.activo) {
-      await comando('delete_catalog_item', { id: item.id }, 'Producto oculto para Mia', alCambiar);
+      await enviar('delete_catalog_item', { id: item.id }, 'Producto oculto para Mia', alCambiar);
     } else {
-      await comando(
+      await enviar(
         'upsert_catalog_item',
         { item: { id: item.id, name: item.name, is_active: 1 } },
         'Producto visible otra vez',
@@ -460,6 +523,19 @@ function Ficha({
             {item.paquete.length ? ` · pack de ${item.paquete.length}` : ''}
           </small>
         </div>
+
+        {/*
+          Guardado, y dice que lo está: el matiz es para que nadie se extrañe si
+          Mia sigue usando el valor viejo un rato, no para que parezca pendiente.
+        */}
+        {aplicandose && (
+          <span
+            className="badge-pill aplicandose"
+            title="Guardado en la cola. Mia lo verá en un máximo de 15 minutos; si el bot está apagado, se aplica en cuanto vuelva."
+          >
+            <Clock size={12} /> Guardado · aplicándose
+          </span>
+        )}
 
         {!esCita && item.stock != null && item.stock <= STOCK_URGENTE && (
           <span className="badge-pill" style={{ color: 'var(--warm)', background: '#FEF6E7' }}>
@@ -739,7 +815,7 @@ function Medios({
   companyId: string | null;
   alCambiar: () => void;
 }) {
-  const comando = useComando();
+  const guardar = useGuardar();
   const avisar = useAvisar();
   const [subiendo, setSubiendo] = useState(false);
   const entrada = useRef<HTMLInputElement>(null);
@@ -794,7 +870,7 @@ function Medios({
          * la mandaría al final, y con el tope de dos adjuntos podría dejar de
          * enviarse sin que nadie relacione una cosa con la otra.
          */
-        await comando<ResultadoCatalogMedia>(
+        await guardar(
           'upsert_catalog_media',
           {
             catalog_id: item.id,
@@ -813,26 +889,24 @@ function Medios({
         if (entrada.current) entrada.current.value = '';
       }
     },
-    [companyId, item.id, comando, avisar, alCambiar],
+    [companyId, item.id, guardar, avisar, alCambiar],
   );
 
   async function borrar(m: CatalogMediaRow) {
-    await comando('delete_catalog_media', { id: m.id }, 'Foto eliminada', alCambiar);
+    await guardar('delete_catalog_media', { id: m.id }, 'Foto eliminada', alCambiar);
   }
 
   /**
    * Marcar la que se envía. El bot desmarca las demás en la misma operación,
    * así que NO se encola un segundo comando para desmarcar.
    *
-   * Tampoco se mueve la estrella en local antes de tiempo: este componente no
-   * hace update optimista en ninguna de sus acciones (ver la cabecera), y aquí
-   * pintar la marca por adelantado sería peor que en otros sitios — dejaría dos
-   * ★ a la vista hasta el refresco, que es exactamente la confusión que esta
-   * pantalla viene a quitar. Con el bot fuera, `comando()` avisa y la estrella
-   * se queda donde estaba, que es la verdad.
+   * La estrella se mueve al momento: el cambio se pinta encima desde la cola
+   * (ver lib/panel/pendientes.ts), que desmarca las demás igual que hace el
+   * bot, así que nunca hay dos ★ a la vista. Si el bot rechazara el cambio,
+   * la estrella vuelve a su sitio y la pantalla lo cuenta.
    */
   async function marcar(m: CatalogMediaRow) {
-    await comando<ResultadoSetPrimary>(
+    await guardar(
       'set_primary_media',
       { id: m.id },
       m.media_type === 'video' ? 'Vídeo principal cambiado' : 'Ya es la que se envía',
@@ -882,7 +956,7 @@ function Medios({
           const esVideo = m.media_type === 'video';
 
           return (
-            <div key={m.id} className={`medio ${principal || pordefecto ? 'sale' : salen.has(m.id) ? 'sale' : ''}`}>
+            <div key={m.id} className={`medio ${principal || pordefecto ? 'sale' : salen.has(m.id) ? 'sale' : ''}${esPendiente(m.id) ? ' pendiente' : ''}`}>
               {esVideo ? (
                 <div className="medio__video">
                   <Video size={22} />
@@ -927,7 +1001,7 @@ function Medios({
                 <button
                   type="button"
                   className="medio__estrella"
-                  disabled={subiendo}
+                  disabled={subiendo || esPendiente(m.id)}
                   onClick={() => void marcar(m)}
                   title={
                     esVideo
@@ -946,11 +1020,11 @@ function Medios({
                     setSustituyendo(m.id);
                     entrada.current?.click();
                   }}
-                  disabled={subiendo}
+                  disabled={subiendo || esPendiente(m.id)}
                 >
                   Cambiar
                 </button>
-                <button type="button" className="del" onClick={() => void borrar(m)} disabled={subiendo}>
+                <button type="button" className="del" onClick={() => void borrar(m)} disabled={subiendo || esPendiente(m.id)}>
                   <Trash2 size={13} />
                 </button>
               </div>

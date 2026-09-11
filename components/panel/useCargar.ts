@@ -58,7 +58,13 @@ const firma = (d: unknown): string => {
 export function useCargar<T>(
   cargar: () => Promise<T>,
   deps: unknown[],
-): { datos: T | null; cargando: boolean; error: string | null; recargar: () => void } {
+): {
+  datos: T | null;
+  cargando: boolean;
+  error: string | null;
+  recargar: () => void;
+  releer: () => void;
+} {
   const [datos, setDatos] = useState<T | null>(null);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -143,5 +149,15 @@ export function useCargar<T>(
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [...deps, ronda]);
 
-  return { datos, cargando, error, recargar };
+  /**
+   * Una sola lectura, SIN la ráfaga de reintentos de recargar().
+   *
+   * Para cuando lo que se espera ya está en Supabase y no hay espejo por medio:
+   * un comando recién encolado, por ejemplo, se lee de la propia tabla commands.
+   * Y para volver a mirar con calma mientras algo sigue en cola: encadenar
+   * ráfagas de ocho consultas cada pocos segundos sería gastar a lo tonto.
+   */
+  const releer = useCallback(() => setRonda((r) => r + 1), []);
+
+  return { datos, cargando, error, recargar, releer };
 }
