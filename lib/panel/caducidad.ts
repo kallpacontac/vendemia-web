@@ -129,9 +129,8 @@ export function olvidarActividad(): void {
  * la primera vez que este navegador vio la sesión: así el tope de 7 días no se
  * reinicia por abrir el panel en otra pestaña o borrar el registro a mano.
  */
-function registroDe(s: Session): Registro | null {
+function registroDe(s: Session, ahora: number): Registro | null {
   const c = claimsDe(s);
-  const ahora = Date.now();
   const autenticado = (c?.amr ?? []).map((a) => a.timestamp ?? 0).filter((t) => t > 0);
   const inicio = autenticado.length ? Math.min(...autenticado) * 1000 : ahora;
   const sid = c?.session_id ?? (s.user?.id ? `u:${s.user.id}:${inicio}` : null);
@@ -154,7 +153,7 @@ function registroDe(s: Session): Registro | null {
  */
 export function motivoDeCaducidad(s: Session | null, ahora = Date.now()): MotivoCaducidad | null {
   if (!s) return null;
-  const r = registroDe(s);
+  const r = registroDe(s, ahora);
   if (!r) return null;
   if (ahora - r.inicio > TOPE_SESION_MS) return 'tope';
   if (ahora - r.t > TOPE_INACTIVIDAD_MS) return 'inactividad';
@@ -164,7 +163,7 @@ export function motivoDeCaducidad(s: Session | null, ahora = Date.now()): Motivo
 /** Una persona ha tocado el panel. Solo llamar tras comprobar que no ha caducado. */
 export function apuntarActividad(s: Session | null, ahora = Date.now()): void {
   if (!s) return;
-  const r = registroDe(s);
+  const r = registroDe(s, ahora);
   if (!r || ahora - r.t < APUNTAR_CADA_MS) return;
   escribir({ ...r, t: ahora });
 }
