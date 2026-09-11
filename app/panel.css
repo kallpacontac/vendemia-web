@@ -992,3 +992,10 @@ body:has(.demo-banda) .sidebar{padding-top:44px}
    error del usuario ni del sistema: por eso ámbar y no el rojo de .acceso__error. */
 .acceso__aviso{background:#FEF6E7;color:#8A5300;border-radius:12px;padding:11px 14px;
   font-size:13px;font-weight:600;margin-top:16px;line-height:1.5}
+
+/* Agenda recurrente: lo que va debajo de la barra de cada grupo. */
+.grupo-extra{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:7px}
+.grupo-alumnos{list-style:none;margin:8px 0 4px;padding:0;border-top:1px solid var(--line)}
+.grupo-alumnos li{display:flex;flex-wrap:wrap;gap:4px 10px;align-items:baseline;
+  padding:7px 2px;border-bottom:1px solid var(--line);font-size:12.5px}
+.grupo-alumnos li b{font-weight:700}

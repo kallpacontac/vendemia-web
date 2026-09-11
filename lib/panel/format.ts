@@ -6,6 +6,7 @@
  * mueve a un sitio donde TypeScript lo puede comprobar.
  */
 import type { LeadIntent, LeadStatus, AppointmentStatus } from '@/lib/supabase/types';
+import { ESTADO, ESTADOS } from './retargeting';
 
 export const INTENT: Record<LeadIntent, { label: string; cls: string; color: string; short: string }> = {
   purchase_ready: { label: 'Listo p/ comprar', cls: 'b-hot', color: '#FF4757', short: 'Caliente' },
@@ -15,12 +16,18 @@ export const INTENT: Record<LeadIntent, { label: string; cls: string; color: str
   other: { label: 'Otro', cls: 'b-mute', color: '#A0AEC0', short: 'Otro' },
 };
 
-export const STATUS: Record<LeadStatus, { label: string; color: string }> = {
-  new: { label: 'Nuevo', color: '#3B82F6' },
-  contacted: { label: 'Contactado', color: '#FFA502' },
-  paid: { label: 'Pagado', color: '#2ED573' },
-  closed: { label: 'Cerrado', color: '#A0AEC0' },
-};
+/**
+ * El embudo del lead. Los rótulos son LOS MISMOS que los de la pantalla de
+ * Retargeting, importados y no copiados: el mismo lead no puede llamarse
+ * «Comparando» en una pantalla y otra cosa en la de al lado.
+ */
+export const STATUS = Object.fromEntries(ESTADOS.map((k) => [k, ESTADO[k]])) as Record<
+  LeadStatus,
+  { label: string; color: string }
+>;
+
+/** Lo que el bot ya no escribe (`contacted`, `paid`, `closed`) o no conocemos. */
+const SIN_CLASIFICAR = { label: 'Sin clasificar', color: '#A0AEC0' };
 
 export const ESTADO_CITA: Record<AppointmentStatus, { label: string; color: string }> = {
   pending_payment: { label: 'Esperando pago', color: '#FFA502' },
@@ -32,7 +39,13 @@ export const ESTADO_CITA: Record<AppointmentStatus, { label: string; color: stri
 
 /** Intención segura: el espejo puede traer null o algo que no está en el enum. */
 export const intent = (v: string | null | undefined) => INTENT[(v as LeadIntent) ?? 'other'] ?? INTENT.other;
-export const status = (v: string | null | undefined) => STATUS[(v as LeadStatus) ?? 'new'] ?? STATUS.new;
+/**
+ * ⚠️ Un valor desconocido NO cae en «Escribió». Antes caía en «Nuevo», y un
+ * lead viejo con `paid` —un cliente que pagó— se pintaba como si acabara de
+ * escribir. `null` sí es `new`: es lo que el bot pone al crear el lead.
+ */
+export const status = (v: string | null | undefined) =>
+  v == null ? STATUS.new : (STATUS[v as LeadStatus] ?? SIN_CLASIFICAR);
 
 export const soles = (n: number | null | undefined) =>
   'S/ ' + Number(n || 0).toLocaleString('es-PE', { maximumFractionDigits: 0 });

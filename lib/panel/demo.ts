@@ -225,8 +225,13 @@ export function leadsDemo(companyId: string): Lead[] {
       const fecha = dia(-d);
       fecha.setHours(entre(9, 20), entre(0, 59), 0, 0);
       const intent = de(INTENCIONES);
+      // Una sola tirada por rama, como antes: añadir tiradas movería todas las
+      // cifras siguientes de la demo.
+      const r = rnd();
       const status: LeadStatus =
-        intent === 'purchase_ready' ? (rnd() < 0.72 ? 'paid' : 'contacted') : rnd() < 0.3 ? 'contacted' : 'new';
+        intent === 'purchase_ready'
+          ? r < 0.72 ? 'customer' : 'ready'
+          : r < 0.3 ? 'evaluating' : r < 0.6 ? 'exploring' : 'new';
       out.push({
         id: `demo-lead-${n}`,
         company_id: companyId,

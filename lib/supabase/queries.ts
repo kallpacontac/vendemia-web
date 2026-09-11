@@ -364,17 +364,47 @@ export function parseSlot(slot: string | null | undefined): Date | null {
   return new Date(+m[1], +m[2] - 1, +m[3], +m[4], +m[5]);
 }
 
+/**
+ * Las citas puntuales y las inscripciones recurrentes, en DOS consultas.
+ *
+ * ⚠️ En una sola, con `order('slot_start')` y un tope, las inscripciones se
+ * perdían enteras: "sched:…" ordena DESPUÉS de "2026-…" por orden ASCII, así
+ * que en un negocio con más citas puntuales que el tope no llegaba ni una. Y
+ * las puntuales se cortaban por el lado equivocado — con orden ascendente, el
+ * tope se quedaba con las MÁS VIEJAS y dejaba fuera las de esta semana.
+ *
+ * Por eso: las puntuales, las más recientes (descendente) hasta el tope; las
+ * recurrentes aparte, con su propio tope. Luego se devuelven en el orden de
+ * siempre —puntuales de antigua a nueva, recurrentes al final—, que es del que
+ * dependen las pantallas (el dashboard coge las 4 primeras futuras).
+ */
 export async function getCitas(companyId: string, limite = 500): Promise<Cita[]> {
   if (demoActivo()) return citasDemo(companyId).slice(0, limite);
-  const { data, error } = await supabase()
-    .from('appointments')
-    .select('*')
-    .eq('company_id', companyId)
-    .order('slot_start', { ascending: true })
-    .limit(limite);
-  if (error) throw error;
+  const sb = supabase();
+  const [puntuales, recurrentes] = await Promise.all([
+    sb
+      .from('appointments')
+      .select('*')
+      .eq('company_id', companyId)
+      .not('slot_start', 'like', 'sched:%')
+      .order('slot_start', { ascending: false })
+      .limit(limite),
+    sb
+      .from('appointments')
+      .select('*')
+      .eq('company_id', companyId)
+      .like('slot_start', 'sched:%')
+      .order('created_at', { ascending: false })
+      .limit(limite),
+  ]);
+  if (puntuales.error) throw puntuales.error;
+  if (recurrentes.error) throw recurrentes.error;
 
-  return ((data ?? []) as AppointmentRow[]).map((a) => ({
+  const filas = [
+    ...((puntuales.data ?? []) as AppointmentRow[]).reverse(),
+    ...((recurrentes.data ?? []) as AppointmentRow[]),
+  ];
+  return filas.map((a) => ({
     ...a,
     inicio: parseSlot(a.slot_start),
     recurrente: Boolean(a.slot_start?.startsWith('sched:')),

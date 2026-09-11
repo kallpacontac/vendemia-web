@@ -21,7 +21,22 @@
 export type Bool01 = number;
 
 export type BusinessMode = 'appointment' | 'recurring_appointment' | 'ecommerce';
-export type LeadStatus = 'new' | 'contacted' | 'paid' | 'closed';
+/**
+ * El embudo, deducido por el bot en CADA turno a partir de las tools que usó.
+ * Nadie lo edita a mano. Ver ESTADO en lib/panel/retargeting.ts.
+ *
+ * ⚠️ Los de antes (`contacted` · `paid` · `closed`) ya no los escribe nadie.
+ * Una fila vieja puede traerlos todavía: `status()` en format.ts la pinta como
+ * «sin clasificar» en vez de fingir que es un lead nuevo.
+ */
+export type LeadStatus =
+  | 'new'
+  | 'exploring'
+  | 'evaluating'
+  | 'ready'
+  | 'customer'
+  | 'dormant'
+  | 'lost';
 export type LeadIntent = 'purchase_ready' | 'quote' | 'inquiry' | 'support' | 'other';
 export type AppointmentStatus =
   | 'pending_payment'
@@ -217,6 +232,12 @@ export interface CatalogRow {
   /** JSON en text: solo en negocios `recurring_appointment`. */
   schedule_slots: string | null;
   /**
+   * Cuántos MESES CALENDARIO cubre lo que se compra (1–24, por defecto 1). Solo
+   * significa algo en negocios recurrentes: 1 para un nivel mensual, 3 para una
+   * promo trimestral. Decide cuánto tiempo ocupa el alumno su plaza. (0027)
+   */
+  vigencia_meses: number | null;
+  /**
    * ⚠️ CAMPO MUERTO. El bot NO lo envía nunca. Las fotos viven en
    * `catalog_media`. No lo ofrezcas en ningún formulario: quien lo rellene
    * creerá que sirve y la foto no saldrá jamás.
@@ -292,6 +313,16 @@ export interface AppointmentRow {
    * (hecho confirmado por una persona). Ver lib/panel/confirmacion.ts.
    */
   cumplido_por: string | null;
+  /**
+   * Solo inscripciones recurrentes (migración 0027): el primer y el último día
+   * del periodo pagado, 'YYYY-MM-DD'. Cubren MESES CALENDARIO completos.
+   *
+   * ⚠️ `''` en las citas puntuales —tienen hora, no periodo— y en inscripciones
+   * anteriores a la columna. Una inscripción sin periodo cuenta SIEMPRE como
+   * ocupando plaza: es lo que hace el bot, y ante la duda, lleno.
+   */
+  periodo_desde: string | null;
+  periodo_hasta: string | null;
 }
 
 export interface AppointmentServiceRow {

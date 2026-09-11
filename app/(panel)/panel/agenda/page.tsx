@@ -15,8 +15,9 @@
  * cliente se queda —enseña lo mismo que ve el cliente cuando le pregunta a
  * Mia— pero sin botón que prometa algo que no ocurre.
  *
- * Los negocios recurrentes no tienen rejilla: sus citas son "sched:<franja>",
- * no una hora concreta, así que se enseñan como grupos con su ocupación.
+ * Los negocios recurrentes no tienen rejilla: sus citas son
+ * "sched:<producto>:<grupo>", no una hora concreta, así que se enseñan como
+ * grupos con su ocupación del mes.
  */
 import { useMemo, useState } from 'react';
 import {
@@ -37,6 +38,15 @@ import { useAvisar, useComando } from '@/components/panel/Avisos';
 import { useCargar } from '@/components/panel/useCargar';
 import { construirSemana, lunesDe } from '@/lib/panel/agenda';
 import { diaMes, hora as horaDe } from '@/lib/panel/format';
+import {
+  adelantada,
+  claveGrupo,
+  hoyLima,
+  mesDe,
+  ocupa,
+  periodoLegible,
+  reservando,
+} from '@/lib/panel/inscripciones';
 import {
   faltaCobrar,
   pideRevision,
@@ -149,7 +159,11 @@ export default function Agenda() {
         />
 
         {esRecurrente ? (
-          <Recurrentes catalogo={datos?.catalogo ?? []} citas={datos?.citas ?? []} />
+          <Recurrentes
+            catalogo={datos?.catalogo ?? []}
+            citas={datos?.citas ?? []}
+            nombrePorLead={new Map((datos?.leads ?? []).map((l) => [l.id, l.name || l.phone]))}
+          />
         ) : (
           <>
             <div className="agenda-head">
@@ -303,18 +317,32 @@ function Celda({
 
 /**
  * Negocios recurrentes: las plazas son de un grupo semanal, no de una hora.
- * `slot_start` vale "sched:<id>" y la franja vive en catalog.schedule_slots.
+ *
+ * `slot_start` vale "sched:<id del producto>:<id del grupo>" y el grupo vive en
+ * catalog.schedule_slots. Quién ocupa plaza lo decide lib/panel/inscripciones.ts,
+ * que es la regla del bot copiada: confirmada y con el periodo cubriendo hoy.
  */
 function Recurrentes({
   catalogo,
   citas,
+  nombrePorLead,
 }: {
   catalogo: { id: string; name: string; schedule_slots: string | null }[];
-  citas: { slot_start: string; status: string | null }[];
+  citas: Cita[];
+  nombrePorLead: Map<string, string>;
 }) {
   const DIAS = ['D', 'L', 'M', 'M', 'J', 'V', 'S'];
+  const [abierto, setAbierto] = useState<string | null>(null);
+  const hoy = hoyLima();
+
+  /* El id del producto se conserva: sin él no hay clave, y el grupo `manana-lmv`
+     de un nivel se confundiría con el del nivel de al lado. */
   const franjas = catalogo.flatMap((c) =>
-    json<FranjaRecurrente[]>(c.schedule_slots, []).map((f) => ({ ...f, servicio: c.name })),
+    json<FranjaRecurrente[]>(c.schedule_slots, []).map((f) => ({
+      ...f,
+      servicio: c.name,
+      clave: claveGrupo(c.id, f.id),
+    })),
   );
 
   if (!franjas.length) {
@@ -329,21 +357,33 @@ function Recurrentes({
   return (
     <div className="card">
       <div className="card-head">
-        <h3>Grupos de la semana</h3>
+        <h3>Grupos · plazas de {mesDe(hoy)}</h3>
+        <small className="muted">Cuentan los inscritos con {mesDe(hoy)} pagado</small>
       </div>
       {franjas.map((f) => {
-        const inscritos = citas.filter(
-          (c) => c.slot_start === `sched:${f.id}` && c.status !== 'cancelled',
-        ).length;
+        const inscritos = citas.filter((c) => ocupa(c, f.clave, hoy));
+        const apartando = citas.filter((c) => reservando(c, f.clave, hoy));
+        const siguientes = citas.filter((c) => adelantada(c, f.clave, hoy));
+        const n = inscritos.length;
         const sinLimite = f.capacity === -1;
-        const pct = sinLimite ? 0 : Math.min(100, Math.round((inscritos / (f.capacity || 1)) * 100));
+        const pct = sinLimite ? 0 : Math.min(100, Math.round((n / (f.capacity || 1)) * 100));
+
+        /* «para octubre: 3». Casi siempre es un solo mes; si hubiera renovaciones
+           a dos meses vista, cada mes va por separado y no sumado. */
+        const porMes = new Map<string, number>();
+        for (const c of siguientes) {
+          const mes = mesDe(c.periodo_desde ?? '');
+          porMes.set(mes, (porMes.get(mes) ?? 0) + 1);
+        }
+        const detalle = [...inscritos, ...siguientes, ...apartando];
+
         return (
-          <div className="slotbar" key={f.id}>
+          <div className="slotbar" key={f.clave}>
             <div className="lab">
               <b>
-                {f.label} · {f.days.map((d) => DIAS[d]).join('-')} {f.time}
+                {f.servicio} · {f.label} · {f.days.map((d) => DIAS[d]).join('-')} {f.time}
               </b>
-              <span>{sinLimite ? `${inscritos} inscritos` : `${inscritos}/${f.capacity}`}</span>
+              <span>{sinLimite ? `${n} inscritos` : `${n}/${f.capacity}`}</span>
             </div>
             <div className="track">
               <div
@@ -354,6 +394,50 @@ function Recurrentes({
                 }}
               />
             </div>
+            {(apartando.length > 0 || porMes.size > 0 || detalle.length > 0) && (
+              <div className="grupo-extra">
+                {/* Aparte, NUNCA sumado a los inscritos: el bot no les guarda
+                    la plaza hasta que pagan. */}
+                {apartando.length > 0 && (
+                  <span className="badge-pill" style={{ color: '#B26B00', background: '#FEF6E7' }}>
+                    {apartando.length} reservando sin pagar
+                  </span>
+                )}
+                {[...porMes].map(([mes, k]) => (
+                  <span key={mes} className="badge-pill" style={{ color: '#3D5AF1', background: '#EEF1FE' }}>
+                    para {mes}: {k}
+                  </span>
+                ))}
+                {detalle.length > 0 && (
+                  <button
+                    type="button"
+                    className="btn btn-ghost btn-sm"
+                    onClick={() => setAbierto((a) => (a === f.clave ? null : f.clave))}
+                  >
+                    {abierto === f.clave ? 'Ocultar alumnos' : `Ver alumnos (${detalle.length})`}
+                  </button>
+                )}
+              </div>
+            )}
+            {abierto === f.clave && (
+              <ul className="grupo-alumnos">
+                {detalle.map((c) => (
+                  <li key={c.id}>
+                    <b>{nombrePorLead.get(c.lead_id) ?? 'Alumno'}</b>
+                    {/* `service` ya dice el pack Y el nivel donde ocupa plaza:
+                        «Pack Promo Cyber — 10 Clases (Nivel Básico / Pollito)». */}
+                    {c.service && c.service !== f.servicio && <small className="muted">{c.service}</small>}
+                    <small className="muted">
+                      {c.status === 'pending_payment'
+                        ? 'sin pagar'
+                        : c.periodo_desde
+                          ? `cubre ${periodoLegible(c.periodo_desde, c.periodo_hasta)}`
+                          : 'sin periodo · anterior a los periodos, cuenta siempre'}
+                    </small>
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
         );
       })}
@@ -394,7 +478,7 @@ function PorConfirmar({
 
   /**
    * Solo citas puntuales YA PASADAS. Las recurrentes se quedan fuera: su
-   * `slot_start` es "sched:<franja>" y no tienen una hora que haya pasado, así
+   * `slot_start` es "sched:<producto>:<grupo>" y no tienen una hora que haya pasado, así
    * que `inicio` viene null y preguntar «¿vino?» de un grupo no significa nada.
    */
   const pasadas = useMemo(() => {

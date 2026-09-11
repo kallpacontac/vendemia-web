@@ -26,7 +26,8 @@ import Topbar from '@/components/panel/Topbar';
 import { useSesion } from '@/components/panel/Sesion';
 import { useCargar } from '@/components/panel/useCargar';
 import { getLeads } from '@/lib/supabase/queries';
-import { colorDe, cuando, iniciales, intent, status, telefono } from '@/lib/panel/format';
+import { colorDe, cuando, iniciales, intent, status, STATUS, telefono } from '@/lib/panel/format';
+import { ESTADOS } from '@/lib/panel/retargeting';
 import type { LeadIntent, LeadStatus } from '@/lib/supabase/types';
 
 const POR_PAGINA = 8;
@@ -57,7 +58,9 @@ export default function Leads() {
   const visibles = filtrados.slice((actual - 1) * POR_PAGINA, actual * POR_PAGINA);
 
   const calientes = leads.filter((l) => l.intent === 'purchase_ready').length;
-  const convertidos = leads.filter((l) => l.status === 'paid').length;
+  // `customer` = cerró al menos una vez. Antes miraba `paid`, que ya no escribe
+  // nadie: la tarjeta se había quedado en 0 para siempre.
+  const convertidos = leads.filter((l) => l.status === 'customer').length;
 
   function exportarCsv() {
     /*
@@ -118,7 +121,7 @@ export default function Leads() {
             </div>
             <div>
               <b>{convertidos}</b>
-              <small>Convertidos ✓</small>
+              <small>Clientes ✓</small>
             </div>
           </div>
         </div>
@@ -135,8 +138,12 @@ export default function Leads() {
               }}
             />
           </div>
+          {/* La intención la rellena el bot desde el 9-sep-2026, y solo hacia
+              adelante: los leads anteriores no tienen, y ningún filtro de
+              intención los va a sacar. */}
           <select
             className="select"
+            title="Mia clasifica la intención desde el 9 de septiembre de 2026. Los leads anteriores no la tienen."
             value={fIntent}
             onChange={(e) => {
               setFIntent(e.target.value);
@@ -159,10 +166,12 @@ export default function Leads() {
             }}
           >
             <option value="">Todo estado</option>
-            <option value="new">Nuevo</option>
-            <option value="contacted">Contactado</option>
-            <option value="paid">Pagado</option>
-            <option value="closed">Cerrado</option>
+            {/* En el orden del embudo, y con los rótulos de Retargeting. */}
+            {ESTADOS.map((k) => (
+              <option key={k} value={k}>
+                {STATUS[k].label}
+              </option>
+            ))}
           </select>
           <div className="spacer" />
           <button className="btn btn-ghost" onClick={exportarCsv} disabled={!filtrados.length}>
