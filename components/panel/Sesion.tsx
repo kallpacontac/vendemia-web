@@ -13,11 +13,17 @@
  * hacer —dar de alta usuarios—, no para impedirlo: el bot revalida cada
  * comando de todas formas. El front oculta por comodidad, no por seguridad.
  */
-import { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import type { Session } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase/client';
 import { misCompanias, soyAdminPlataforma, type CompaniaAccesible } from '@/lib/supabase/queries';
+import {
+  apuntarActividad,
+  motivoDeCaducidad,
+  olvidarActividad,
+  type MotivoCaducidad,
+} from '@/lib/panel/caducidad';
 
 interface Estado {
   session: Session | null;
@@ -84,6 +90,55 @@ export function ProveedorSesion({ children }: { children: React.ReactNode }) {
   const [esAdminPlataforma, setEsAdminPlataforma] = useState(false);
   const [cargando, setCargando] = useState(true);
   const [reconectando, setReconectando] = useState(false);
+
+  /**
+   * La sesión de ahora, para los manejadores de eventos y el reloj de la
+   * caducidad. Se cuelgan UNA vez por usuario y tienen que leer siempre la
+   * sesión vigente —el token cambia en cada refresco—, no la del render en
+   * el que se registraron.
+   */
+  const sesionRef = useRef<Session | null>(session);
+  sesionRef.current = session;
+
+  /** Que el reloj y un clic a la vez no cierren la sesión dos veces. */
+  const cerrando = useRef(false);
+
+  /**
+   * La sesión caducó por la política del panel. Ver lib/panel/caducidad.ts.
+   *
+   * `scope: 'local'` REVOCA ESTA SESIÓN en el servidor: su refresh token deja
+   * de valer aunque alguien lo hubiera copiado. Y solo esta: el dueño no pierde
+   * la de su móvil porque caducara la del ordenador de recepción.
+   *
+   * ⚠️ Si la red falla, supabase-js devuelve el error SIN borrar la sesión
+   * local (comprobado en GoTrueClient._signOut, auth-js 2.112.3). Por eso se
+   * borra a mano: una caducidad que no caduca porque no había wifi no sirve de
+   * nada. En ese caso el token no se revoca en el servidor, pero en este
+   * navegador ya no queda.
+   */
+  async function caducar(motivo: MotivoCaducidad) {
+    if (cerrando.current) return;
+    cerrando.current = true;
+    setReconectando(false);
+    let fallo = false;
+    try {
+      const { error } = await supabase().auth.signOut({ scope: 'local' });
+      fallo = Boolean(error);
+    } catch {
+      fallo = true;
+    }
+    try {
+      if (fallo) localStorage.removeItem(CLAVE_SESION);
+      localStorage.removeItem(CLAVE_COMPANIA);
+    } catch {
+      /* sin almacenamiento no hay nada que quitar */
+    }
+    olvidarActividad();
+    setCompanias([]);
+    setCompanyId(null);
+    setEsAdminPlataforma(false);
+    router.replace(`/login?caducada=${motivo}`);
+  }
 
   useEffect(() => {
     const sb = supabase();
@@ -173,6 +228,17 @@ export function ProveedorSesion({ children }: { children: React.ReactNode }) {
       setCargando(false);
       return;
     }
+    /**
+     * ANTES de pedir nada: si la sesión ya caducó —el portátil que se abre
+     * después de un fin de semana—, no se carga ni una fila del negocio.
+     * `cargando` se queda en true, la guardia enseña la rueda y caducar()
+     * lleva al login.
+     */
+    const motivo = motivoDeCaducidad(sesionRef.current);
+    if (motivo) {
+      void caducar(motivo);
+      return;
+    }
     let vivo = true;
     // Solo bloquea la primera vez. Al recargar por otro motivo no se vacía la
     // pantalla: ya hay datos buenos puestos.
@@ -225,6 +291,50 @@ export function ProveedorSesion({ children }: { children: React.ReactNode }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [usuarioId]);
 
+  /**
+   * La caducidad mientras el panel está abierto. Se mira:
+   *
+   *   · cada minuto, para la pestaña que se queda abierta toda la noche
+   *     renovando el token sola — el caso que motivó todo esto;
+   *   · al volver a la pestaña o a la ventana, para el portátil que se abre
+   *     por la mañana (con la tapa cerrada, los relojes del navegador se paran);
+   *   · en cada gesto de la persona, que es además lo ÚNICO que cuenta como
+   *     actividad. El refresco del token no cuenta: ocurre sin nadie delante.
+   *
+   * ⚠️ SIEMPRE se comprueba antes de apuntar. Si el primer clic de la mañana
+   * contara como actividad antes de mirar, reiniciaría el reloj y ninguna
+   * sesión caducaría nunca.
+   */
+  useEffect(() => {
+    if (!usuarioId) return;
+
+    const revisar = (esGesto: boolean) => {
+      const s = sesionRef.current;
+      const motivo = motivoDeCaducidad(s);
+      if (motivo) void caducar(motivo);
+      else if (esGesto) apuntarActividad(s);
+    };
+    const gesto = () => revisar(true);
+    const mirar = () => revisar(false);
+    const alVolver = () => {
+      if (document.visibilityState === 'visible') mirar();
+    };
+
+    const GESTOS = ['pointerdown', 'keydown', 'wheel', 'touchstart'] as const;
+    for (const e of GESTOS) window.addEventListener(e, gesto, { passive: true });
+    document.addEventListener('visibilitychange', alVolver);
+    window.addEventListener('focus', mirar);
+    const reloj = setInterval(mirar, 60 * 1000);
+
+    return () => {
+      for (const e of GESTOS) window.removeEventListener(e, gesto);
+      document.removeEventListener('visibilitychange', alVolver);
+      window.removeEventListener('focus', mirar);
+      clearInterval(reloj);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [usuarioId]);
+
   const valor = useMemo<Estado>(() => {
     const compania = companias.find((c) => c.id === companyId) ?? null;
     return {
@@ -262,7 +372,17 @@ export function ProveedorSesion({ children }: { children: React.ReactNode }) {
         // el margen de reconexión podría estar activo y la guardia se quedaría
         // enseñando "Reconectando…" en vez de irse al login.
         setReconectando(false);
-        await supabase().auth.signOut();
+        /**
+         * `scope: 'local'`, y no el `'global'` que usa supabase-js por defecto:
+         * con global, salir en el ordenador de recepción echaba también al
+         * dueño de su móvil y de cualquier otro dispositivo. Para cerrar todas
+         * las sesiones a la vez está el cambio de contraseña, que usa 'others'
+         * a propósito (ver /nueva-clave).
+         */
+        const { error } = await supabase().auth.signOut({ scope: 'local' });
+        // Sin red, supabase-js NO borra la sesión local: salir tiene que salir igual.
+        if (error) localStorage.removeItem(CLAVE_SESION);
+        olvidarActividad();
         localStorage.removeItem(CLAVE_COMPANIA);
         setCompanias([]);
         setCompanyId(null);

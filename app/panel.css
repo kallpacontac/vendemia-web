@@ -987,3 +987,8 @@ body:has(.demo-banda) .sidebar{padding-top:44px}
 /* Un cambio que el bot RECHAZÓ. No se puede pintar como guardado. */
 .aviso-fallo{display:flex;align-items:flex-start;gap:8px;background:#FFECEC;color:#B4232A;
   border-radius:var(--r-md);padding:10px 14px;font-size:12.5px;font-weight:600;margin-bottom:14px}
+
+/* El panel cerró la sesión por su cuenta (lib/panel/caducidad.ts). No es un
+   error del usuario ni del sistema: por eso ámbar y no el rojo de .acceso__error. */
+.acceso__aviso{background:#FEF6E7;color:#8A5300;border-radius:12px;padding:11px 14px;
+  font-size:13px;font-weight:600;margin-top:16px;line-height:1.5}

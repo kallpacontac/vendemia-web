@@ -31,6 +31,7 @@ import Link from 'next/link';
 import { ArrowRight, Eye, EyeOff } from 'lucide-react';
 import { FALTAN_CLAVES, supabase } from '@/lib/supabase/client';
 import BotonGoogle from '@/components/panel/BotonGoogle';
+import { MENSAJE_CADUCIDAD } from '@/lib/panel/caducidad';
 
 type Modo = 'entrar' | 'crear' | 'recuperar';
 
@@ -43,6 +44,22 @@ export default function Login() {
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [ok, setOk] = useState<string | null>(null);
+  /** Por qué se cerró la sesión, si la cerró el panel. No es un error: no va en rojo. */
+  const [aviso, setAviso] = useState<string | null>(null);
+
+  /**
+   * El panel manda aquí con `?caducada=inactividad|tope` cuando cierra la
+   * sesión por su cuenta (lib/panel/caducidad.ts). Sin decirlo, parecería que
+   * el panel te echó sin motivo, o que algo se rompió.
+   *
+   * Se lee de `window.location` y no con useSearchParams: ese obliga a
+   * envolver la página en <Suspense> para poder prerenderizarla, y /login es
+   * estática.
+   */
+  useEffect(() => {
+    const motivo = new URLSearchParams(window.location.search).get('caducada');
+    if (motivo === 'inactividad' || motivo === 'tope') setAviso(MENSAJE_CADUCIDAD[motivo]);
+  }, []);
 
   // Si ya hay sesión, no tiene sentido enseñar el formulario.
   useEffect(() => {
@@ -58,6 +75,7 @@ export default function Login() {
     e.preventDefault();
     setError(null);
     setOk(null);
+    setAviso(null);
     setEnviando(true);
 
     try {
@@ -239,6 +257,7 @@ export default function Login() {
 
         {error && <div className="acceso__error">{error}</div>}
         {ok && <div className="acceso__ok">{ok}</div>}
+        {aviso && <div className="acceso__aviso">{aviso}</div>}
 
         <button className="btn btn-primary" type="submit" disabled={enviando}>
           {enviando
