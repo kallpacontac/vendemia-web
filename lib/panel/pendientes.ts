@@ -65,6 +65,7 @@ const CAMPOS_ITEM = [
   'duration_minutes',
   'capacity',
   'package_services',
+  'vigencia_meses',
 ] as const;
 
 export function superponer(

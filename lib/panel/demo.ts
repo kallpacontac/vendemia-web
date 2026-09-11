@@ -174,6 +174,7 @@ export function catalogoDemo(companyId: string): ItemCatalogo[] {
     is_active: 1,
     package_services: '[]',
     schedule_slots: null,
+    vigencia_meses: 1,
     created_at: ts(dia(-120)),
     created_ts: dia(-120).toISOString(),
     activo: true,

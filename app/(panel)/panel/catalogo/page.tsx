@@ -80,6 +80,7 @@ import {
   type ItemCatalogo,
 } from '@/lib/supabase/queries';
 import { esPendiente, superponer } from '@/lib/panel/pendientes';
+import { textoVigencia } from '@/lib/panel/inscripciones';
 import { b01, bool } from '@/lib/supabase/parse';
 import type { BusinessMode, CatalogMediaRow } from '@/lib/supabase/types';
 
@@ -146,7 +147,12 @@ interface Borrador {
   duration_minutes: string;
   capacity: string;
   package_services: string[];
+  /** Solo negocios recurrentes. Ver CatalogRow.vigencia_meses. */
+  vigencia_meses: string;
 }
+
+/** Lo que admite el bot para `vigencia_meses`: meses enteros, de 1 a 24. */
+const VIGENCIA_MAX = 24;
 
 function borradorDe(it: ItemCatalogo): Borrador {
   return {
@@ -159,6 +165,7 @@ function borradorDe(it: ItemCatalogo): Borrador {
     duration_minutes: it.duration_minutes == null ? '' : String(it.duration_minutes),
     capacity: it.capacity == null ? '' : String(it.capacity),
     package_services: it.paquete,
+    vigencia_meses: String(it.vigencia_meses ?? 1),
   };
 }
 
@@ -447,6 +454,9 @@ function Ficha({
 
   const salen = useMemo(() => losQueSalen(medios), [medios]);
   const esCita = modo === 'appointment';
+  const esRecurrente = modo === 'recurring_appointment';
+  const vigencia = Number(f.vigencia_meses);
+  const vigenciaValida = Number.isInteger(vigencia) && vigencia >= 1 && vigencia <= VIGENCIA_MAX;
 
   const set = <K extends keyof Borrador>(k: K, v: Borrador[K]) => setF((x) => ({ ...x, [k]: v }));
 
@@ -455,11 +465,20 @@ function Ficha({
       avisar('El producto necesita un nombre: es como Mia lo pide.', 'error');
       return;
     }
+    if (esRecurrente && !vigenciaValida) {
+      avisar(`La duración va en meses enteros, de 1 a ${VIGENCIA_MAX}.`, 'error');
+      return;
+    }
     setGuardando(true);
     /**
-     * Se manda el ítem entero y no solo lo cambiado, al revés que en Ajustes:
-     * `upsert_catalog_item` es un upsert de la fila, no un patch de campos, y
-     * omitir un campo puede leerse como "ponlo a null".
+     * Desde el 11-sep-2026 `upsert_catalog_item` es un PATCH: lo que se manda
+     * manda —también un `null` explícito—, y lo que NO se manda se conserva.
+     * Antes reemplazaba la fila entera, y como este formulario no manda
+     * `schedule_slots` ni `start_date`, guardar un nivel de un negocio
+     * recurrente le habría borrado todos sus grupos. Ya no puede pasar.
+     *
+     * Por eso se siguen mandando todos los campos del formulario, y SOLO esos:
+     * los que la pantalla no enseña los conserva el bot.
      *
      * Los números vacíos van como `null` a propósito: null en `stock` significa
      * "sin control de stock", que no es lo mismo que 0 — con 0 el bot diría que
@@ -482,6 +501,8 @@ function Ficha({
           capacity: esCita ? num(f.capacity) : null,
           // ⚠️ text, no jsonb. Y son ids, no nombres.
           package_services: JSON.stringify(f.package_services),
+          // Solo donde el formulario la enseña: en otros modos no significa nada.
+          ...(esRecurrente ? { vigencia_meses: vigencia } : {}),
         },
       },
       'Producto guardado',
@@ -521,6 +542,7 @@ function Ficha({
             {esCita && item.duration_minutes ? ` · ${item.duration_minutes} min` : ''}
             {!esCita && item.stock != null ? ` · ${item.stock} en stock` : ''}
             {item.paquete.length ? ` · pack de ${item.paquete.length}` : ''}
+            {esRecurrente && (item.vigencia_meses ?? 1) > 1 ? ` · ${item.vigencia_meses} meses` : ''}
           </small>
         </div>
 
@@ -603,6 +625,36 @@ function Ficha({
               <label className="field-label">Moneda</label>
               <input className="input" value={f.currency} onChange={(e) => set('currency', e.target.value)} />
             </div>
+
+            {/*
+              Solo en recurrentes —niveles y packs—. Decide cuánto tiempo ocupa
+              el alumno su plaza, así que se explica en la propia ficha: un
+              «3» suelto no dice si son meses, clases o semanas.
+            */}
+            {esRecurrente && (
+              <div className="full">
+                <label className="field-label">Duración (meses)</label>
+                <input
+                  className="input"
+                  type="number"
+                  min={1}
+                  max={VIGENCIA_MAX}
+                  step={1}
+                  style={{ maxWidth: 140 }}
+                  value={f.vigencia_meses}
+                  onChange={(e) => set('vigencia_meses', e.target.value)}
+                />
+                <small className="muted" style={{ fontSize: 11.5 }}>
+                  {vigenciaValida ? (
+                    <>
+                      <b>Duración:</b> {textoVigencia(vigencia)}
+                    </>
+                  ) : (
+                    `Meses enteros, de 1 a ${VIGENCIA_MAX}. 1 para un nivel mensual, 3 para una promo trimestral.`
+                  )}
+                </small>
+              </div>
+            )}
 
             {esCita ? (
               <>
