@@ -14,7 +14,8 @@
  * puede arreglar: hay que re-emparejar el WhatsApp y eso se hace con su
  * teléfono delante.
  */
-import { Bell } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { Bell, ChevronDown, LogOut } from 'lucide-react';
 import { useSesion } from './Sesion';
 import { necesitaEmparejar, useSalud } from './Salud';
 import { BotonDemo } from './Demo';
@@ -60,6 +61,86 @@ function SelectorCompania() {
   );
 }
 
+/**
+ * ══════════════════════════════════════════════════════════════════════════
+ * EL MENÚ DE LA CUENTA · colgado del icono de Mia
+ * ══════════════════════════════════════════════════════════════════════════
+ *
+ * ⚠️ EN MÓVIL ES LA ÚNICA FORMA DE CERRAR SESIÓN. Por debajo de 820px la
+ * navegación se va a una barra inferior y su pie —donde vive «Cerrar sesión»—
+ * se oculta entero: hasta ahora, desde un teléfono no se podía salir.
+ *
+ * El icono ya parecía pulsable (tiene `cursor:pointer` desde el primer día) y
+ * no hacía nada, que es peor que no parecerlo.
+ */
+function MenuCuenta({ email, pie }: { email: string; pie: string }) {
+  const { salir } = useSesion();
+  const [abierto, setAbierto] = useState(false);
+  const caja = useRef<HTMLDivElement>(null);
+
+  /* Se cierra al pulsar fuera o con Escape: un menú que solo se cierra con su
+     propio botón se queda abierto encima de lo que quieras mirar después. */
+  useEffect(() => {
+    if (!abierto) return;
+    const fuera = (e: PointerEvent) => {
+      if (caja.current && !caja.current.contains(e.target as Node)) setAbierto(false);
+    };
+    const tecla = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setAbierto(false);
+    };
+    document.addEventListener('pointerdown', fuera);
+    document.addEventListener('keydown', tecla);
+    return () => {
+      document.removeEventListener('pointerdown', fuera);
+      document.removeEventListener('keydown', tecla);
+    };
+  }, [abierto]);
+
+  return (
+    <div className="profile-wrap" ref={caja}>
+      <button
+        type="button"
+        className="profile"
+        aria-haspopup="menu"
+        aria-expanded={abierto}
+        onClick={() => setAbierto((v) => !v)}
+      >
+        <div className="avatar">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/assets/logos/logo-mia.webp" alt="" />
+        </div>
+        <div>
+          <b>{email.split('@')[0] || 'Cuenta'}</b>
+          <small>{pie}</small>
+        </div>
+        <ChevronDown size={15} className="profile__flecha" />
+      </button>
+
+      {abierto && (
+        <div className="menu-cuenta" role="menu">
+          {/* El correo entero, que es lo que resuelve la duda de «¿con qué
+              cuenta estoy?» cuando alguien lleva varias. */}
+          <div className="menu-cuenta__quien">
+            <b>{email || 'Cuenta'}</b>
+            <small>{pie}</small>
+          </div>
+          <button
+            type="button"
+            role="menuitem"
+            className="menu-cuenta__salir"
+            onClick={() => {
+              setAbierto(false);
+              void salir();
+            }}
+          >
+            <LogOut size={16} /> Cerrar sesión
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function Topbar({
   titulo,
   sub,
@@ -89,16 +170,7 @@ export default function Topbar({
         <div className="icon-btn">
           <Bell size={18} />
         </div>
-        <div className="profile">
-          <div className="avatar">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/assets/logos/logo-mia.webp" alt="perfil" />
-          </div>
-          <div>
-            <b>{email.split('@')[0] || 'Cuenta'}</b>
-            <small>{pie}</small>
-          </div>
-        </div>
+        <MenuCuenta email={email} pie={pie} />
       </div>
     </div>
   );

@@ -98,36 +98,36 @@ a{color:inherit;text-decoration:none}
 .sidebar__logout svg{width:18px;height:18px}
 
 /* ═══ QUE EL PIE NO SE SALGA DE LA CAJA ═══════════════════════════════════
-   La barra es de altura fija (top:16 / bottom:16) y su contenido mide unos
-   743px: logo 105 + seis ítems 366 + promo 228 + relleno 44. O sea que por
-   debajo de ~775px de ventana el "Cerrar sesión" se salía por abajo del
-   rectángulo blanco — invisible en cualquier portátil de 768px, que son casi
-   todos.
+   La barra tiene altura fija (top:16 / bottom:16) y el menú CRECE. Con nueve
+   entradas, «Cerrar sesión» quedaba por debajo del rectángulo blanco y no había
+   forma de llegar: la barra no tenía scroll a propósito, porque la rayita del
+   ítem activo es un ::before en `left:-18px` —fuera de la caja— y cualquier
+   `overflow` la recorta. Se iba quitando altura por escalones, y eso se acaba.
 
-   No se arregla con scroll: la rayita azul del ítem activo es un ::before en
-   `left:-18px`, fuera de la caja, y cualquier `overflow` la recorta. Así que
-   se quita altura en dos escalones, empezando por lo que menos falta.
+   Ahora hace scroll SOLO el menú y el pie se queda clavado abajo. Así el
+   logout está siempre a la vista, por muchas entradas que haya y por baja que
+   sea la ventana — que era el problema real, no el adorno.
 
-   Si algún día se añade un séptimo ítem al menú, hay que bajar los dos
-   umbrales unos 56px. */
+   Dos detalles que sostienen esto:
 
-/* 1 · Fuera la promo. Son 228px y es lo único que no es navegación. */
+   · `min-height:0` es lo que permite que un hijo flex encoja por debajo de su
+     contenido. Sin él, `overflow-y:auto` no hace absolutamente nada.
+   · `padding-left:18px` + `margin-left:-18px` le dan sitio a la rayita DENTRO
+     de la caja que recorta, sin mover un píxel el resto. */
+.sidebar__nav{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;
+  padding-left:18px;margin-left:-18px;padding-right:2px;scrollbar-width:thin}
+.sidebar__foot{flex:none;padding-top:10px}
+
+/* La promo son 228px y es lo único que ahí no es navegación: en cuanto la
+   ventana aprieta, fuera — antes que empezar a recortar el menú. */
 @media(max-height:800px){
   .sidebar__promo{display:none}
 }
 
-/* 2 · Y si aún así no cabe, el logo a la mitad. */
+/* Y si aún así va justo, el logo a la mitad. */
 @media(max-height:620px){
   .sidebar__brand{padding-bottom:8px;margin-bottom:8px}
   .sidebar__brand img{height:44px}
-}
-
-/* 3 · Último recurso, ventanas diminutas: que la barra entera haga scroll.
-       Aquí sí se pierde la rayita del ítem activo, pero un menú que no se
-       puede alcanzar es peor que un menú sin adorno. */
-@media(max-height:545px){
-  .sidebar{overflow-y:auto}
-  .nav-item.active::before{display:none}
 }
 
 /* ═══ CONTENEDOR ═══ */
@@ -169,6 +169,20 @@ a{color:inherit;text-decoration:none}
   box-shadow:var(--sh-sm);background:var(--brand-soft);display:grid;place-items:center}
 .avatar img{width:100%;height:100%;object-fit:contain;padding:3px}
 .profile b{font-size:13.5px;font-weight:700}.profile small{font-size:11.5px;color:var(--ink-soft);display:block}
+
+/* ⚠️ El menú de la cuenta es, EN MÓVIL, la única forma de cerrar sesión: ahí la
+   barra de navegación pasa abajo y su pie —donde vive el logout— se oculta. */
+.profile{background:none;border:none;font:inherit;color:inherit;text-align:left;padding:0}
+.profile-wrap{position:relative}
+.profile__flecha{color:var(--ink-mute);flex:none}
+.menu-cuenta{position:absolute;right:0;top:calc(100% + 8px);z-index:200;min-width:230px;
+  background:#fff;border:1px solid var(--line);border-radius:14px;box-shadow:var(--sh-card);padding:6px}
+.menu-cuenta__quien{padding:10px 12px;border-bottom:1px solid var(--line);margin-bottom:4px}
+.menu-cuenta__quien b{display:block;font-size:13px;font-weight:700;word-break:break-all}
+.menu-cuenta__quien small{font-size:11.5px;color:var(--ink-soft)}
+.menu-cuenta__salir{display:flex;align-items:center;gap:10px;width:100%;background:none;border:none;
+  cursor:pointer;padding:11px 12px;border-radius:11px;font:700 13.5px 'Plus Jakarta Sans';color:var(--hot)}
+.menu-cuenta__salir:hover{background:rgba(255,91,121,.08)}
 
 /* ═══ CARDS ═══ */
 .card{background:var(--bg-card);border-radius:var(--r-lg);box-shadow:var(--sh-card);padding:22px}
@@ -285,7 +299,11 @@ a{color:inherit;text-decoration:none}
   :root{--content-x:16px}
   .sidebar{left:0;right:0;top:auto;bottom:0;width:auto;flex-direction:row;border-radius:22px 22px 0 0;padding:8px 12px;align-items:center}
   .sidebar__brand,.sidebar__label,.sidebar__foot{display:none}
-  .sidebar__nav{flex-direction:row;gap:2px;flex:1;justify-content:space-around}
+  /* En horizontal el scroll es el otro: con nueve entradas no caben en un
+     móvil, y sin esto las últimas quedaban inalcanzables. El padding de la
+     rayita no hace falta aquí: en la barra inferior está desactivada. */
+  .sidebar__nav{flex-direction:row;gap:2px;flex:1;justify-content:space-around;
+    overflow-x:auto;overflow-y:hidden;padding-left:0;margin-left:0}
   .nav-item{flex-direction:column;gap:3px;font-size:9px;font-weight:700;padding:3px 2px}
   .nav-item span{white-space:nowrap}
   .nav-item .ico{width:28px;height:28px}
