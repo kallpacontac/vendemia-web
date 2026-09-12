@@ -74,7 +74,12 @@ export type TipoComando =
    * está acotada a `marcar_seguimiento` a propósito (migración 0023), así que
    * desde la pantalla global de Retargeting esto no se puede encolar.
    */
-  | 'modificar_cita';
+  | 'modificar_cita'
+  /**
+   * Agendar desde el mostrador: la cita que se pide por teléfono o entrando por
+   * la puerta, y que por tanto NO pasa por Mia. Ver ResultadoCrearCita.
+   */
+  | 'crear_cita';
 
 /**
  * ⚠️ `ignored` NO significa "rechazado". Significa "esto no cambió".
@@ -196,6 +201,43 @@ export type ResultadoModificarCita =
       mensaje: string;
       wa_link: string;
     };
+
+/**
+ * Lo que devuelve `crear_cita`.
+ *
+ * El payload es `{ lead_id | (telefono + nombre), slot_start, catalog_item_id,
+ * employee_id? }`. **La duración, el precio y el nombre del servicio salen del
+ * catálogo**: el panel no los manda, porque quien agenda en el mostrador no
+ * teclea importes y un importe tecleado a mano no cuadra con nada.
+ *
+ * ⚠️ `duplicada` es la parte que hay que mirar. Reenviar el comando es seguro:
+ * si ese cliente YA tenía esa cita, el bot devuelve la suya con `duplicada:
+ * true` en vez de crear una segunda. Anunciar «cita creada» ahí haría creer que
+ * ahora hay dos, y alguien iría a cancelar una que no existe.
+ *
+ * ⚠️ `mensaje` y `wa_link` importan más aquí que en `modificar_cita`: esta cita
+ * no pasa por Mia, así que **si nadie abre ese enlace, el cliente no se entera
+ * de que tiene hora**.
+ */
+export interface ResultadoCrearCita {
+  id: string;
+  lead_id: string;
+  /** El teléfono no estaba y se creó el lead (con `source: 'panel'`). */
+  cliente_nuevo: boolean;
+  /** Ya tenía esta misma cita: no se ha creado otra. */
+  duplicada: boolean;
+  slot_start: string;
+  slot_minutes: number;
+  employee_id: string;
+  service: string;
+  precio: number;
+  /** Nace `confirmed` aunque el negocio exija pago: en `pending_payment` no
+   *  ocuparía plaza y Mia podría vender ese mismo hueco por WhatsApp. El cobro
+   *  se marca después con `marcar_pagado`. */
+  estado: 'confirmed';
+  mensaje: string;
+  wa_link: string;
+}
 
 /** Lo que devuelve `marcar_cumplido`. */
 export interface ResultadoMarcarCumplido {

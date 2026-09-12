@@ -24,6 +24,7 @@ import {
   Briefcase,
   CalendarCheck,
   CalendarOff,
+  CalendarPlus,
   Check,
   CheckCircle,
   ChevronLeft,
@@ -37,6 +38,7 @@ import {
 } from 'lucide-react';
 import Topbar from '@/components/panel/Topbar';
 import AvisarCliente from '@/components/panel/AvisarCliente';
+import NuevaCita from '@/components/panel/NuevaCita';
 import Paginacion, { usePaginacion } from '@/components/panel/Paginacion';
 import { useSesion } from '@/components/panel/Sesion';
 import { useAvisar, useComando } from '@/components/panel/Avisos';
@@ -132,6 +134,8 @@ export default function Agenda() {
   const [tab, setTab] = useState<'semana' | 'proximas' | 'pasadas'>('semana');
   /** Ver la agenda de una sola persona. '' = todo el equipo. */
   const [fEmpleado, setFEmpleado] = useState('');
+  /** El formulario de alta: la cita que se pide por teléfono o en el mostrador. */
+  const [creando, setCreando] = useState(false);
 
   const { datos, cargando, recargar } = useCargar(async () => {
     if (!companyId) return null;
@@ -260,28 +264,49 @@ export default function Agenda() {
           ausencias sí cierran la franja. Con «todo el equipo», lo que cabe a la
           vez es lo menor entre las sillas y la gente que hay para atender.
         */}
-        {(datos?.trabajadores.length ?? 0) > 0 && (
+        {(!esRecurrente || (datos?.trabajadores.length ?? 0) > 0) && (
           <div className="filtro-fila">
-            <select
-              className="select"
-              style={{ maxWidth: 220 }}
-              value={fEmpleado}
-              onChange={(e) => setFEmpleado(e.target.value)}
-            >
-              <option value="">Todo el equipo</option>
-              {(datos?.trabajadores ?? []).map((t) => (
-                <option key={t.id} value={t.id}>
-                  {t.name}
-                  {t.activo ? '' : ' · dado de baja'}
-                </option>
-              ))}
-            </select>
-            {fEmpleado && (
-              <span className="muted" style={{ fontSize: 12 }}>
-                Su agenda: una cita a la vez, y sus ausencias cierran la franja.
-              </span>
+            {/* En un negocio recurrente no se agenda por hora: se inscribe en un
+                grupo, y de eso se encarga el bot al vender. */}
+            {!esRecurrente && (
+              <button className="btn btn-primary btn-sm" onClick={() => setCreando((v) => !v)}>
+                <CalendarPlus size={15} /> Nueva cita
+              </button>
+            )}
+            {(datos?.trabajadores.length ?? 0) > 0 && (
+              <>
+                <select
+                  className="select"
+                  style={{ maxWidth: 220 }}
+                  value={fEmpleado}
+                  onChange={(e) => setFEmpleado(e.target.value)}
+                >
+                  <option value="">Todo el equipo</option>
+                  {(datos?.trabajadores ?? []).map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {t.name}
+                      {t.activo ? '' : ' · dado de baja'}
+                    </option>
+                  ))}
+                </select>
+                {fEmpleado && (
+                  <span className="muted" style={{ fontSize: 12 }}>
+                    Su agenda: una cita a la vez, y sus ausencias cierran la franja.
+                  </span>
+                )}
+              </>
             )}
           </div>
+        )}
+
+        {creando && !esRecurrente && (
+          <NuevaCita
+            leads={datos?.leads ?? []}
+            catalogo={datos?.catalogo ?? []}
+            trabajadores={datos?.trabajadores ?? []}
+            alCerrar={() => setCreando(false)}
+            alCambiar={recargar}
+          />
         )}
 
         {tab === 'pasadas' && (
