@@ -1096,3 +1096,64 @@ body:has(.demo-banda) .sidebar{padding-top:44px}
 .bk[draggable='true']{cursor:grab}
 .bk[draggable='true']:active{cursor:grabbing}
 .cell.sobre{outline:2px dashed var(--brand);outline-offset:-2px;background:var(--brand-soft)}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   MÓVIL · lo que no cabía o no se alcanzaba
+   ══════════════════════════════════════════════════════════════════════════
+   Revisión del 12-sep-2026 sobre los cuatro trabajos que se hacen desde el
+   teléfono: mirar gráficos, cambiar datos, subir fotos y tocar la agenda.
+
+   ⚠️ ARRASTRAR CITAS NO FUNCIONA EN TÁCTIL. El arrastre del navegador es de
+   ratón; en un teléfono el camino es la pestaña «Próximas» → Editar, que hace
+   exactamente lo mismo. Por eso el botón nunca se esconde en móvil. */
+
+@media(max-width:720px){
+  /* ── Tablas: llegar a los botones sin recorrer toda la fila ──────────────
+     Pedidos y Leads scrollean en horizontal, y la columna de acciones —
+     «Cobrado», «Entregado»— era justo la última: había que arrastrar hasta el
+     final para tocar el único botón de la fila. Ahora se queda pegada. */
+  .table th,.table td{padding:10px;font-size:12.5px}
+  .table-card{-webkit-overflow-scrolling:touch}
+  .table th:last-child,.table td:last-child{position:sticky;right:0;background:#fff;
+    box-shadow:-8px 0 10px -8px rgba(0,0,0,.18)}
+
+  /* ── Gráficos ───────────────────────────────────────────────────────────
+     Las etiquetas del eje se pisaban unas a otras: con treinta cubos en 330px
+     tocan a once píxeles cada una. Se deja una de cada cinco, que es lo que
+     hace legible el eje sin perder la forma de la serie. */
+  .serie{height:140px}
+  .serie-x span:not(:nth-child(5n+1)){visibility:hidden}
+  .line-wrap{height:160px}
+  .rango .select{flex:1;min-width:130px}
+
+  /* La rejilla sigue scrollando, pero con columnas más estrechas se ve media
+     semana de un vistazo en vez de dos días. */
+  .cal-grid{grid-template-columns:52px repeat(7,minmax(96px,1fr));min-width:740px;gap:4px}
+  .cal-scroll{padding:10px}
+
+  /* Un select a media pantalla no se puede leer antes de abrirlo. */
+  .toolbar .search{width:100%}
+  .filtro-fila .select{flex:1}
+}
+
+@media(max-width:560px){
+  /* Tres columnas de resumen en 330px son tres números ilegibles. */
+  .sum-grid{grid-template-columns:1fr 1fr}
+  .donut-wrap{flex-wrap:wrap;justify-content:center}
+  .donut{width:132px;height:132px}
+
+  /* Subir fotos: tres por fila en vez de dos deja ver el producto entero sin
+     scroll, y el botón de añadir queda a la vista. */
+  .medios-grid{grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:8px}
+
+  /* En la barra de arriba manda el icono: el nombre y el negocio ya están
+     dentro del menú que abre, y ahí sí caben enteros. */
+  .profile > div:not(.avatar){display:none}
+  .topbar__actions{gap:8px}
+
+  /* Botones de confirmar a lo ancho: es donde se decide cancelarle la cita a
+     alguien, y con el pulgar hay que poder acertar. */
+  .modal__pie{flex-direction:column-reverse}
+  .modal__pie .btn{width:100%;justify-content:center}
+  .avisar__acciones .btn,.avisar__acciones a.btn{flex:1;justify-content:center}
+}
