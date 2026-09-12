@@ -37,6 +37,7 @@ import {
 } from 'lucide-react';
 import Topbar from '@/components/panel/Topbar';
 import AvisarCliente from '@/components/panel/AvisarCliente';
+import Paginacion, { usePaginacion } from '@/components/panel/Paginacion';
 import { useSesion } from '@/components/panel/Sesion';
 import { useAvisar, useComando } from '@/components/panel/Avisos';
 import { useCargar } from '@/components/panel/useCargar';
@@ -73,10 +74,62 @@ import { json } from '@/lib/supabase/parse';
 import type { ResultadoMarcarPagado, ResultadoModificarCita } from '@/lib/supabase/commands';
 import type { FranjaRecurrente } from '@/lib/supabase/types';
 
+/* ── Qué citas van en cada pestaña ──────────────────────────────────────── */
+
+/**
+ * Las tres listas salen de aquí y no de dentro de cada componente, porque la
+ * cabecera necesita CONTARLAS antes de pintar ninguna.
+ */
+
+/** Puntuales por venir y todavía vivas. Ordenadas de la más cercana en adelante. */
+function porVenir(citas: Cita[]): Cita[] {
+  const ahora = Date.now();
+  return citas
+    .filter(
+      (c) =>
+        !c.recurrente &&
+        c.inicio &&
+        c.inicio.getTime() >= ahora &&
+        (c.status === 'confirmed' || c.status === 'pending_payment'),
+    )
+    .sort((a, b) => (a.inicio?.getTime() ?? 0) - (b.inicio?.getTime() ?? 0));
+}
+
+/**
+ * Puntuales YA PASADAS, de la más reciente hacia atrás.
+ *
+ * Las recurrentes se quedan fuera: su `slot_start` es "sched:<producto>:<grupo>"
+ * y no tienen una hora que haya pasado, así que preguntar «¿vino?» de un grupo
+ * no significa nada.
+ */
+function yaPasaron(citas: Cita[]): Cita[] {
+  const ahora = Date.now();
+  return citas
+    .filter((c) => !c.recurrente && c.inicio && c.inicio.getTime() < ahora && c.status !== 'cancelled')
+    .sort((a, b) => (b.inicio?.getTime() ?? 0) - (a.inicio?.getTime() ?? 0));
+}
+
+/** De las pasadas, las que piden algo: sin resolver, presuntas, o sin cobrar. */
+function pidenAlgo(pasadas: Cita[]): Cita[] {
+  return pasadas.filter((c) => {
+    const cumplido = selloCumplido('appointment', c.status, c.cumplido_por);
+    return (
+      cumplido.grado === 'pendiente' || pideRevision(cumplido) || faltaCobrar('appointment', c.status)
+    );
+  });
+}
+
 export default function Agenda() {
   const { companyId } = useSesion();
   const [offset, setOffset] = useState(0);
   const [vista, setVista] = useState<'negocio' | 'cliente'>('negocio');
+  /**
+   * ⚠️ Las dos listas de citas van en PESTAÑAS, no apiladas encima de la
+   * rejilla. «Citas que ya pasaron» crece con cada cita atendida —en un año son
+   * miles—, y colgada arriba empujaba hacia abajo justo aquello a lo que se
+   * entra a mirar. Ver components/panel/Paginacion.tsx.
+   */
+  const [tab, setTab] = useState<'semana' | 'proximas' | 'pasadas'>('semana');
 
   const { datos, cargando, recargar } = useCargar(async () => {
     if (!companyId) return null;
@@ -104,6 +157,10 @@ export default function Agenda() {
   }, [datos, offset]);
 
   const esRecurrente = datos?.empresa?.business_mode === 'recurring_appointment';
+
+  /** Solo para los números de las pestañas: cada lista se filtra luego dentro. */
+  const nProximas = useMemo(() => porVenir(datos?.citas ?? []).length, [datos]);
+  const nPendientes = useMemo(() => pidenAlgo(yaPasaron(datos?.citas ?? [])).length, [datos]);
 
   if (cargando && !datos) {
     return (
@@ -155,22 +212,45 @@ export default function Agenda() {
           </div>
         </div>
 
-        <PorConfirmar
-          citas={datos?.citas ?? []}
-          nombrePorLead={
-            new Map((datos?.leads ?? []).map((l) => [l.id, l.name || l.phone]))
-          }
-          alCambiar={recargar}
-        />
+        {/*
+          El número va en la pestaña a propósito: lo que no se ve, se olvida.
+          «Ya pasaron» enseña las que PIDEN algo, no todas — el resto es
+          historial y no hay nada que hacer con él.
+        */}
+        <div className="view-toggle tabs-agenda">
+          <button className={tab === 'semana' ? 'active' : ''} onClick={() => setTab('semana')}>
+            <CalendarCheck size={15} /> {esRecurrente ? 'Grupos' : 'Semana'}
+          </button>
+          <button className={tab === 'proximas' ? 'active' : ''} onClick={() => setTab('proximas')}>
+            <Clock size={15} /> Próximas{nProximas > 0 ? ` (${nProximas})` : ''}
+          </button>
+          <button
+            className={tab === 'pasadas' ? 'active' : ''}
+            onClick={() => setTab('pasadas')}
+            title="Citas que ya pasaron y siguen sin confirmar o sin cobrar"
+          >
+            <CheckCircle size={15} /> Ya pasaron{nPendientes > 0 ? ` (${nPendientes})` : ''}
+          </button>
+        </div>
 
-        <Proximas
-          citas={datos?.citas ?? []}
-          nombrePorLead={new Map((datos?.leads ?? []).map((l) => [l.id, l.name || l.phone]))}
-          trabajadores={datos?.trabajadores ?? []}
-          alCambiar={recargar}
-        />
+        {tab === 'pasadas' && (
+          <PorConfirmar
+            citas={datos?.citas ?? []}
+            nombrePorLead={new Map((datos?.leads ?? []).map((l) => [l.id, l.name || l.phone]))}
+            alCambiar={recargar}
+          />
+        )}
 
-        {esRecurrente ? (
+        {tab === 'proximas' && (
+          <Proximas
+            citas={datos?.citas ?? []}
+            nombrePorLead={new Map((datos?.leads ?? []).map((l) => [l.id, l.name || l.phone]))}
+            trabajadores={datos?.trabajadores ?? []}
+            alCambiar={recargar}
+          />
+        )}
+
+        {tab === 'semana' && (esRecurrente ? (
           <Recurrentes
             catalogo={datos?.catalogo ?? []}
             citas={datos?.citas ?? []}
@@ -263,7 +343,7 @@ export default function Agenda() {
               </div>
             )}
           </>
-        )}
+        ))}
       </div>
     </main>
   );
@@ -529,8 +609,8 @@ interface Aviso {
   nota?: string;
 }
 
-/** Cuántas citas por delante se listan. Más es una lista que nadie recorre. */
-const TOPE_PROXIMAS = 20;
+/** Filas por página en las dos listas de citas. */
+const POR_PAGINA = 10;
 
 /**
  * ══════════════════════════════════════════════════════════════════════════
@@ -577,26 +657,9 @@ function Proximas({
   );
   const activos = useMemo(() => trabajadores.filter((t) => t.activo), [trabajadores]);
 
-  /**
-   * Solo citas puntuales POR VENIR y todavía vivas. Las recurrentes no tienen
-   * hora que mover y se gestionan en su grupo; las pasadas son historial y el
-   * bot las rechaza («esa cita ya pasó»).
-   */
-  const todas = useMemo(() => {
-    const ahora = Date.now();
-    return citas
-      .filter(
-        (c) =>
-          !c.recurrente &&
-          c.inicio &&
-          c.inicio.getTime() >= ahora &&
-          (c.status === 'confirmed' || c.status === 'pending_payment'),
-      )
-      .sort((a, b) => (a.inicio?.getTime() ?? 0) - (b.inicio?.getTime() ?? 0));
-  }, [citas]);
-
-  const proximas = todas.slice(0, TOPE_PROXIMAS);
-  if (todas.length === 0) return null;
+  const todas = useMemo(() => porVenir(citas), [citas]);
+  // Antes de cualquier return: es un hook. Ver usePaginacion().
+  const pag = usePaginacion(todas, POR_PAGINA);
 
   function abrir(c: Cita, modo: 'mover' | 'reasignar') {
     setFecha(c.slot_start.slice(0, 10));
@@ -642,12 +705,15 @@ function Proximas({
     <div className="card" style={{ marginBottom: 18 }}>
       <div className="card-head">
         <h3>Próximas citas</h3>
-        <small className="muted">
-          {todas.length > TOPE_PROXIMAS
-            ? `las ${TOPE_PROXIMAS} más cercanas de ${todas.length}`
-            : `${todas.length} por delante`}
-        </small>
+        <small className="muted">{todas.length} por delante</small>
       </div>
+
+      {todas.length === 0 && (
+        <p className="vacio" style={{ padding: '18px 20px' }}>
+          <b>Sin citas por delante</b>
+          Cuando Mia cierre una, aparecerá aquí para poder moverla o cancelarla.
+        </p>
+      )}
 
       {aviso && (
         <div style={{ padding: '0 16px' }}>
@@ -656,7 +722,7 @@ function Proximas({
       )}
 
       <div className="confirmar-lista">
-        {proximas.map((c) => {
+        {pag.visibles.map((c) => {
           const quien = nombrePorLead.get(c.lead_id) ?? 'Cliente';
           const estado = ESTADO_CITA[c.status ?? 'confirmed'];
           const ocupado = enVuelo === c.id;
@@ -791,6 +857,8 @@ function Proximas({
           );
         })}
       </div>
+
+      <Paginacion pagina={pag.pagina} paginas={pag.paginas} irA={pag.irA} />
     </div>
   );
 }
@@ -826,36 +894,19 @@ function PorConfirmar({
   const avisar = useAvisar();
   const [enVuelo, setEnVuelo] = useState<string | null>(null);
 
-  /**
-   * Solo citas puntuales YA PASADAS. Las recurrentes se quedan fuera: su
-   * `slot_start` es "sched:<producto>:<grupo>" y no tienen una hora que haya pasado, así
-   * que `inicio` viene null y preguntar «¿vino?» de un grupo no significa nada.
-   */
-  const pasadas = useMemo(() => {
-    const ahora = Date.now();
-    return citas
-      .filter((c) => !c.recurrente && c.inicio && c.inicio.getTime() < ahora && c.status !== 'cancelled')
-      .sort((a, b) => (b.inicio?.getTime() ?? 0) - (a.inicio?.getTime() ?? 0));
-  }, [citas]);
+  const pasadas = useMemo(() => yaPasaron(citas), [citas]);
 
   /** El recuento honesto de la cabecera: nunca «N atendidas» a secas. */
   const reparto = useMemo(() => repartoCumplido(pasadas, 'appointment'), [pasadas]);
 
   /** Las que piden algo: sin resolver, presuntas, sin dato, o sin cobrar. */
-  const pendientes = useMemo(
-    () =>
-      pasadas.filter((c) => {
-        const cumplido = selloCumplido('appointment', c.status, c.cumplido_por);
-        return (
-          cumplido.grado === 'pendiente' ||
-          pideRevision(cumplido) ||
-          faltaCobrar('appointment', c.status)
-        );
-      }),
-    [pasadas],
-  );
+  const pendientes = useMemo(() => pidenAlgo(pasadas), [pasadas]);
 
-  if (pasadas.length === 0) return null;
+  /**
+   * Paginada, y esto no es opcional: la lista crece con cada cita atendida. Va
+   * antes de cualquier return, que para eso es un hook.
+   */
+  const pag = usePaginacion(pendientes, POR_PAGINA);
 
   async function resolver(c: Cita, vino: boolean) {
     setEnVuelo(c.id);
@@ -909,11 +960,14 @@ function PorConfirmar({
 
       {pendientes.length === 0 ? (
         <p className="vacio" style={{ padding: '18px 20px' }}>
-          Todas confirmadas a mano. Nada que revisar.
+          <b>{pasadas.length === 0 ? 'Todavía no hay citas pasadas' : 'Nada que revisar'}</b>
+          {pasadas.length === 0
+            ? 'Cuando pase la hora de una cita, aparecerá aquí para confirmar si vino y si se cobró.'
+            : 'Todas las que ya pasaron están confirmadas a mano y cobradas.'}
         </p>
       ) : (
         <div className="confirmar-lista">
-          {pendientes.map((c) => (
+          {pag.visibles.map((c) => (
             <FilaPorConfirmar
               key={c.id}
               cita={c}
@@ -923,6 +977,7 @@ function PorConfirmar({
               alCobrar={() => void cobrar(c)}
             />
           ))}
+          <Paginacion pagina={pag.pagina} paginas={pag.paginas} irA={pag.irA} />
         </div>
       )}
     </div>
