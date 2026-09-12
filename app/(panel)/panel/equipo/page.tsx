@@ -41,9 +41,11 @@ import {
   Plus,
   Trash2,
   UserCheck,
+  UserCog,
   UserX,
 } from 'lucide-react';
 import Topbar from '@/components/panel/Topbar';
+import AvisarCliente from '@/components/panel/AvisarCliente';
 import { useSesion } from '@/components/panel/Sesion';
 import { useAvisar, useComando } from '@/components/panel/Avisos';
 import { useCargar } from '@/components/panel/useCargar';
@@ -59,7 +61,7 @@ import {
   type Cita,
   type Trabajador,
 } from '@/lib/supabase/queries';
-import type { ResultadoBloqueo } from '@/lib/supabase/commands';
+import type { ResultadoBloqueo, ResultadoModificarCita } from '@/lib/supabase/commands';
 import type { ClaveDia, EmployeeBlockRow, Horario } from '@/lib/supabase/types';
 
 const DIAS: { clave: ClaveDia; nombre: string; corto: string }[] = [
@@ -279,6 +281,7 @@ export default function Equipo() {
           <Ficha
             key={t.id}
             t={t}
+            equipo={todos}
             horarioNegocio={empresa?.horario ?? {}}
             bloqueos={(datos?.bloqueos ?? []).filter((b) => b.employee_id === t.id)}
             citas={datos?.citas ?? []}
@@ -297,6 +300,7 @@ export default function Equipo() {
 
 function Ficha({
   t,
+  equipo,
   horarioNegocio,
   bloqueos,
   citas,
@@ -306,6 +310,8 @@ function Ficha({
   alCambiar,
 }: {
   t: Trabajador;
+  /** El equipo entero: hace falta para poder pasarle a otro las citas huérfanas. */
+  equipo: Trabajador[];
   horarioNegocio: Horario;
   bloqueos: EmployeeBlockRow[];
   citas: Cita[];
@@ -497,6 +503,7 @@ function Ficha({
 
           <Ausencias
             t={t}
+            equipo={equipo}
             vigentes={vigentes}
             citas={citas}
             nombrePorLead={nombrePorLead}
@@ -536,12 +543,14 @@ interface Colgadas {
 
 function Ausencias({
   t,
+  equipo,
   vigentes,
   citas,
   nombrePorLead,
   alCambiar,
 }: {
   t: Trabajador;
+  equipo: Trabajador[];
   vigentes: EmployeeBlockRow[];
   citas: Cita[];
   nombrePorLead: Map<string, string>;
@@ -631,7 +640,13 @@ function Ausencias({
             cliente.
             {!colgadas.delBot && ' (El bot aún no ha confirmado la ausencia; la lista sale de la agenda del panel.)'}
           </p>
-          <ListaCitas citas={colgadas.citas} nombrePorLead={nombrePorLead} />
+          <ListaCitas
+            citas={colgadas.citas}
+            nombrePorLead={nombrePorLead}
+            equipo={equipo}
+            excluir={t.id}
+            alCambiar={alCambiar}
+          />
           <button className="btn btn-ghost btn-sm" onClick={() => setColgadas(null)}>
             Entendido
           </button>
@@ -720,7 +735,13 @@ function Ausencias({
               <p style={{ margin: '4px 0 0' }}>
                 Guardar la ausencia no las mueve ni avisa a nadie: tendrás que reasignarlas tú.
               </p>
-              <ListaCitas citas={previa} nombrePorLead={nombrePorLead} />
+              <ListaCitas
+                citas={previa}
+                nombrePorLead={nombrePorLead}
+                equipo={equipo}
+                excluir={t.id}
+                alCambiar={alCambiar}
+              />
             </div>
           )}
 
@@ -742,30 +763,93 @@ function Ausencias({
   );
 }
 
+/**
+ * Las citas que se quedan huérfanas, con la salida a mano: pasárselas a otro.
+ *
+ * Es donde «reasignar» vale más. La alternativa es que alguien las apunte en un
+ * papel y las mueva una por una desde la agenda — o que no las mueva nadie.
+ */
 function ListaCitas({
   citas,
   nombrePorLead,
+  equipo,
+  excluir,
+  alCambiar,
 }: {
   citas: { id: string; slot_start: string; service: string | null; lead_id: string }[];
   nombrePorLead: Map<string, string>;
+  equipo: Trabajador[];
+  /** El trabajador que se ausenta: pasarle a él sus propias citas no arregla nada. */
+  excluir: string;
+  alCambiar: () => void;
 }) {
+  const comando = useComando();
+  const [destino, setDestino] = useState<Record<string, string>>({});
+  const [enVuelo, setEnVuelo] = useState<string | null>(null);
+  const [aviso, setAviso] = useState<{ titulo: string; mensaje: string; waLink: string } | null>(null);
+
+  const otros = equipo.filter((t) => t.activo && t.id !== excluir);
+
+  async function pasar(id: string, quien: string) {
+    setEnVuelo(id);
+    const r = await comando<ResultadoModificarCita>(
+      'modificar_cita',
+      { id, accion: 'reasignar', employee_id: destino[id] },
+      undefined,
+      alCambiar,
+    );
+    setEnVuelo(null);
+    // Si no cabe —ocupado, bloqueado, fuera de su horario— useComando ya ha
+    // enseñado el motivo del bot y la cita sigue como estaba.
+    if (r) setAviso({ titulo: `Cita de ${quien} reasignada`, mensaje: r.mensaje, waLink: r.wa_link });
+  }
+
   return (
-    <ul>
-      {[...citas]
-        .sort((a, b) => a.slot_start.localeCompare(b.slot_start))
-        .map((c) => {
-          const d = parseSlot(c.slot_start);
-          return (
-            <li key={c.id}>
-              <b>{nombrePorLead.get(c.lead_id) ?? 'Cliente'}</b>
-              <span>{d ? `${diaMes(d)} · ${hora(d)}` : c.slot_start}</span>
-              {c.service && <span className="muted">{c.service}</span>}
-              <Link className="btn btn-ghost btn-sm" href={`/panel/mensajes?lead=${c.lead_id}`}>
-                <MessageCircle size={13} /> Escribirle
-              </Link>
-            </li>
-          );
-        })}
-    </ul>
+    <>
+      {aviso && <AvisarCliente {...aviso} alCerrar={() => setAviso(null)} />}
+      <ul>
+        {[...citas]
+          .sort((a, b) => a.slot_start.localeCompare(b.slot_start))
+          .map((c) => {
+            const d = parseSlot(c.slot_start);
+            const quien = nombrePorLead.get(c.lead_id) ?? 'Cliente';
+            return (
+              <li key={c.id}>
+                <b>{quien}</b>
+                <span>{d ? `${diaMes(d)} · ${hora(d)}` : c.slot_start}</span>
+                {c.service && <span className="muted">{c.service}</span>}
+                {otros.length > 0 && (
+                  <>
+                    <select
+                      className="select"
+                      style={{ maxWidth: 150 }}
+                      value={destino[c.id] ?? ''}
+                      onChange={(e) => setDestino((x) => ({ ...x, [c.id]: e.target.value }))}
+                    >
+                      <option value="">Pasar a…</option>
+                      {otros.map((o) => (
+                        <option key={o.id} value={o.id}>
+                          {o.name}
+                        </option>
+                      ))}
+                    </select>
+                    <button
+                      type="button"
+                      className="btn btn-ghost btn-sm"
+                      disabled={!destino[c.id] || enVuelo === c.id}
+                      onClick={() => void pasar(c.id, quien)}
+                    >
+                      <UserCog size={13} /> {enVuelo === c.id ? 'Pasando…' : 'Pasar'}
+                    </button>
+                  </>
+                )}
+                <Link className="btn btn-ghost btn-sm" href={`/panel/mensajes?lead=${c.lead_id}`}>
+                  <MessageCircle size={13} /> Escribirle
+                </Link>
+              </li>
+            );
+          })}
+      </ul>
+    </>
   );
 }

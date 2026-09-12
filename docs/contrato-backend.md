@@ -536,6 +536,7 @@ guardar.
 | `delete_employee` | `{ id }` | `{ id }` | miembro |
 | `upsert_employee_block` | `{ block: { id?, employee_id, start, end, reason? } }` — `'YYYY-MM-DD HH:MM'` hora de Lima | `{ id, citas_afectadas: [{ id, slot_start, service, lead_id }] }` — **enseñarlo siempre**: el bloqueo no mueve ni avisa esas citas | miembro |
 | `delete_employee_block` | `{ id }` | `{ id }` | miembro |
+| `modificar_cita` | `{ id, accion: 'cancelar' \| 'mover' \| 'reasignar', slot_start?, employee_id? }` — `slot_start` como `'YYYY-MM-DD HH:MM'`; mover y reasignar se combinan | `{ id, accion, antes, ahora, mensaje, wa_link }` + `libera` al cancelar. ⚠️ `antes`/`ahora` son **cadenas** al cancelar y **objetos** `{slot_start, employee_id}` al mover/reasignar. **No escribe al cliente**: el mensaje lo manda una persona | miembro (el admin de plataforma **no** puede) |
 | `marcar_seguimiento` | `{ lead_id, motivo, resultado?, nota? }` | `{ lead_id, motivo, enviado_at }` | miembro · **o admin de plataforma** |
 | `send_message` | `{ text, phone }` o `{ text, lead_id }` | `{ phone }` | miembro |
 | `toggle_bot` | `{ lead_id, active: boolean }` | `{ lead_id, bot_active }` | miembro |

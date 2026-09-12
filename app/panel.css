@@ -1029,3 +1029,16 @@ body:has(.demo-banda) .sidebar{padding-top:44px}
 .delta{font-weight:700;font-size:11.5px}
 .delta.sube{color:#0FA968}.delta.baja{color:#E5484D}.delta.igual{color:var(--ink-soft)}
 .sum small.pie{display:block;color:var(--ink-soft);font-size:11px;font-weight:500;margin-top:2px}
+
+/* El mensaje para el cliente tras tocar una cita. Verde: lo de la base ya se
+   hizo; lo que queda es avisar a una persona. */
+.avisar{background:#E8FBF2;border:1px solid #B7E8CF;border-radius:var(--r-md);
+  padding:12px 14px;margin:10px 0;font-size:12.5px;color:#0B5434;line-height:1.5}
+.avisar__cab{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:4px}
+.avisar__cab b svg{vertical-align:-2px}
+.avisar__nota{margin:0 0 8px}
+.avisar .textarea{background:#fff}
+.avisar__acciones{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:8px}
+/* Mover o reasignar: el formulario que se abre dentro de la fila de una cita. */
+.form-cita{display:flex;flex-wrap:wrap;align-items:flex-end;gap:10px;padding:10px 0 2px;width:100%}
+.form-cita .input,.form-cita .select{max-width:190px}

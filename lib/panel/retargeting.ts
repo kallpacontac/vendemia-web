@@ -23,6 +23,15 @@ export const MOTIVOS = [
   'voucher-sin-verificar',
   'pedido-sin-pagar',
   'cupo-sin-pagar',
+  /**
+   * Pidió un grupo que estaba LLENO (evento `SLOT_FULL`) y esa plaza ha vuelto
+   * a quedar libre: alguien canceló, o entró el mes nuevo y no todos renovaron.
+   *
+   * ⚠️ La demanda se guarda solo DESDE que el bot lo publica (11-sep-2026), no
+   * hacia atrás: hasta que un grupo se llene y se vacíe, aquí no habrá ni una
+   * fila. Vacío no es que esté roto.
+   */
+  'cupo-liberado',
   'carrito',
   'cupo-elegido',
   'cita-a-medias',
@@ -44,6 +53,7 @@ export const MOTIVO: Record<string, Rotulo> = {
   'voucher-sin-verificar': { label: 'Pagó y nadie lo revisó', color: '#0FA968' },
   'pedido-sin-pagar': { label: 'Pedido apartado sin pagar', color: '#E5484D' },
   'cupo-sin-pagar': { label: 'Cupo apartado sin pagar', color: '#E5484D' },
+  'cupo-liberado': { label: 'Se liberó el cupo que quería', color: '#B23A00' },
   'carrito': { label: 'Carrito sin cerrar', color: '#CC3A00' },
   'cupo-elegido': { label: 'Eligió horario, no confirmó', color: '#B26B00' },
   'cita-a-medias': { label: 'Cita a medio negociar', color: '#B26B00' },

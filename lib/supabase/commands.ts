@@ -66,7 +66,15 @@ export type TipoComando =
    */
   | 'marcar_pagado'
   /** «Vino» o «no vino», dicho por una persona. Ver ResultadoMarcarCumplido. */
-  | 'marcar_cumplido';
+  | 'marcar_cumplido'
+  /**
+   * Cancelar, mover de hora o pasar a otro profesional una cita.
+   *
+   * ⚠️ Exige `is_member(company_id)`. Ser admin de plataforma NO basta: esa vía
+   * está acotada a `marcar_seguimiento` a propósito (migración 0023), así que
+   * desde la pantalla global de Retargeting esto no se puede encolar.
+   */
+  | 'modificar_cita';
 
 /**
  * ⚠️ `ignored` NO significa "rechazado". Significa "esto no cambió".
@@ -154,6 +162,40 @@ export interface ResultadoMarcarPagado {
   antes: string;
   pagado_por: 'panel';
 }
+
+/**
+ * Lo que devuelve `modificar_cita`.
+ *
+ * ⚠️ `antes` y `ahora` NO tienen la misma forma en las tres acciones, y esto no
+ * es un capricho del tipo: comprobado en el handler del bot, al CANCELAR son
+ * cadenas con el estado (`'confirmed'` → `'cancelled'`), y al mover o reasignar
+ * son objetos con el hueco. Leer `antes.slot_start` de una cancelación daría
+ * `undefined` sin error, así que la unión obliga a mirar `accion` primero.
+ *
+ * ⚠️ EL COMANDO NO LE ESCRIBE AL CLIENTE. Devuelve el `mensaje` redactado y el
+ * `wa_link` para que lo mande una PERSONA, igual que en el retargeting. Si el
+ * panel no lo enseña, el cliente se queda sin enterarse de que su cita cambió.
+ */
+export type ResultadoModificarCita =
+  | {
+      id: string;
+      accion: 'cancelar';
+      /** El estado del que venía. */
+      antes: string;
+      ahora: 'cancelled';
+      /** Qué queda libre: `'el horario'` o `'una plaza del grupo'`. */
+      libera: string;
+      mensaje: string;
+      wa_link: string;
+    }
+  | {
+      id: string;
+      accion: 'mover' | 'reasignar';
+      antes: { slot_start: string; employee_id: string };
+      ahora: { slot_start: string; employee_id: string };
+      mensaje: string;
+      wa_link: string;
+    };
 
 /** Lo que devuelve `marcar_cumplido`. */
 export interface ResultadoMarcarCumplido {

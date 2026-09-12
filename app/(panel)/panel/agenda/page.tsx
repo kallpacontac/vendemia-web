@@ -23,21 +23,25 @@ import { useMemo, useState } from 'react';
 import {
   Briefcase,
   CalendarCheck,
+  CalendarOff,
   Check,
   CheckCircle,
   ChevronLeft,
   ChevronRight,
+  Clock,
   Flame,
   User,
+  UserCog,
   Wallet,
   X,
 } from 'lucide-react';
 import Topbar from '@/components/panel/Topbar';
+import AvisarCliente from '@/components/panel/AvisarCliente';
 import { useSesion } from '@/components/panel/Sesion';
 import { useAvisar, useComando } from '@/components/panel/Avisos';
 import { useCargar } from '@/components/panel/useCargar';
 import { construirSemana, lunesDe } from '@/lib/panel/agenda';
-import { diaMes, hora as horaDe } from '@/lib/panel/format';
+import { diaMes, ESTADO_CITA, hora as horaDe } from '@/lib/panel/format';
 import {
   adelantada,
   claveGrupo,
@@ -63,9 +67,10 @@ import {
   getLeads,
   getTrabajadores,
   type Cita,
+  type Trabajador,
 } from '@/lib/supabase/queries';
 import { json } from '@/lib/supabase/parse';
-import type { ResultadoMarcarPagado } from '@/lib/supabase/commands';
+import type { ResultadoMarcarPagado, ResultadoModificarCita } from '@/lib/supabase/commands';
 import type { FranjaRecurrente } from '@/lib/supabase/types';
 
 export default function Agenda() {
@@ -158,11 +163,19 @@ export default function Agenda() {
           alCambiar={recargar}
         />
 
+        <Proximas
+          citas={datos?.citas ?? []}
+          nombrePorLead={new Map((datos?.leads ?? []).map((l) => [l.id, l.name || l.phone]))}
+          trabajadores={datos?.trabajadores ?? []}
+          alCambiar={recargar}
+        />
+
         {esRecurrente ? (
           <Recurrentes
             catalogo={datos?.catalogo ?? []}
             citas={datos?.citas ?? []}
             nombrePorLead={new Map((datos?.leads ?? []).map((l) => [l.id, l.name || l.phone]))}
+            alCambiar={recargar}
           />
         ) : (
           <>
@@ -326,14 +339,51 @@ function Recurrentes({
   catalogo,
   citas,
   nombrePorLead,
+  alCambiar,
 }: {
   catalogo: { id: string; name: string; schedule_slots: string | null }[];
   citas: Cita[];
   nombrePorLead: Map<string, string>;
+  alCambiar: () => void;
 }) {
   const DIAS = ['D', 'L', 'M', 'M', 'J', 'V', 'S'];
   const [abierto, setAbierto] = useState<string | null>(null);
   const hoy = hoyLima();
+  const comando = useComando();
+  const [enVuelo, setEnVuelo] = useState<string | null>(null);
+  const [aviso, setAviso] = useState<Aviso | null>(null);
+
+  /**
+   * Dar de baja a un alumno. Es `cancelar`: lo ÚNICO que se puede hacer con una
+   * inscripción desde aquí — moverla o reasignarla no significa nada, porque su
+   * hueco es un grupo y no una hora, y cambiar de grupo es otra operación (ocupa
+   * una plaza y libera otra) que hace el bot al inscribir.
+   */
+  async function darDeBaja(c: Cita, quien: string) {
+    if (
+      !window.confirm(
+        `¿Dar de baja a ${quien}? Se libera su plaza del grupo. El cliente no se entera solo: al terminar te doy el mensaje para avisarle.`,
+      )
+    ) {
+      return;
+    }
+    setEnVuelo(c.id);
+    const r = await comando<ResultadoModificarCita>(
+      'modificar_cita',
+      { id: c.id, accion: 'cancelar' },
+      undefined,
+      alCambiar,
+    );
+    setEnVuelo(null);
+    if (r) {
+      setAviso({
+        titulo: `${quien} ya no está en el grupo`,
+        mensaje: r.mensaje,
+        waLink: r.wa_link,
+        nota: r.accion === 'cancelar' ? `Queda libre ${r.libera}.` : undefined,
+      });
+    }
+  }
 
   /* El id del producto se conserva: sin él no hay clave, y el grupo `manana-lmv`
      de un nivel se confundiría con el del nivel de al lado. */
@@ -360,6 +410,12 @@ function Recurrentes({
         <h3>Grupos · plazas de {mesDe(hoy)}</h3>
         <small className="muted">Cuentan los inscritos con {mesDe(hoy)} pagado</small>
       </div>
+
+      {aviso && (
+        <div style={{ padding: '0 16px' }}>
+          <AvisarCliente {...aviso} alCerrar={() => setAviso(null)} />
+        </div>
+      )}
       {franjas.map((f) => {
         const inscritos = citas.filter((c) => ocupa(c, f.clave, hoy));
         const apartando = citas.filter((c) => reservando(c, f.clave, hoy));
@@ -421,26 +477,320 @@ function Recurrentes({
             )}
             {abierto === f.clave && (
               <ul className="grupo-alumnos">
-                {detalle.map((c) => (
-                  <li key={c.id}>
-                    <b>{nombrePorLead.get(c.lead_id) ?? 'Alumno'}</b>
-                    {/* `service` ya dice el pack Y el nivel donde ocupa plaza:
-                        «Pack Promo Cyber — 10 Clases (Nivel Básico / Pollito)». */}
-                    {c.service && c.service !== f.servicio && <small className="muted">{c.service}</small>}
-                    <small className="muted">
-                      {c.status === 'pending_payment'
-                        ? 'sin pagar'
-                        : c.periodo_desde
-                          ? `cubre ${periodoLegible(c.periodo_desde, c.periodo_hasta)}`
-                          : 'sin periodo · anterior a los periodos, cuenta siempre'}
-                    </small>
-                  </li>
-                ))}
+                {detalle.map((c) => {
+                  const quien = nombrePorLead.get(c.lead_id) ?? 'Alumno';
+                  return (
+                    <li key={c.id}>
+                      <b>{quien}</b>
+                      {/* `service` ya dice el pack Y el nivel donde ocupa plaza:
+                          «Pack Promo Cyber — 10 Clases (Nivel Básico / Pollito)». */}
+                      {c.service && c.service !== f.servicio && <small className="muted">{c.service}</small>}
+                      <small className="muted">
+                        {c.status === 'pending_payment'
+                          ? 'sin pagar'
+                          : c.periodo_desde
+                            ? `cubre ${periodoLegible(c.periodo_desde, c.periodo_hasta)}`
+                            : 'sin periodo · anterior a los periodos, cuenta siempre'}
+                      </small>
+                      <button
+                        type="button"
+                        className="btn btn-ghost btn-sm confirmar-no"
+                        style={{ marginLeft: 'auto' }}
+                        disabled={enVuelo === c.id}
+                        onClick={() => void darDeBaja(c, quien)}
+                        title="Cancelar su inscripción y liberar la plaza"
+                      >
+                        <X size={13} /> Dar de baja
+                      </button>
+                    </li>
+                  );
+                })}
               </ul>
             )}
           </div>
         );
       })}
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════════════════ */
+
+/**
+ * Lo que hay que enseñar después de tocar una cita. Ver AvisarCliente.
+ *
+ * `waLink` en camelCase y no `wa_link`: lo de abajo es una prop de React, no la
+ * fila del bot. La traducción se hace al construirlo, en un solo sitio.
+ */
+interface Aviso {
+  titulo: string;
+  mensaje: string;
+  waLink: string;
+  nota?: string;
+}
+
+/** Cuántas citas por delante se listan. Más es una lista que nadie recorre. */
+const TOPE_PROXIMAS = 20;
+
+/**
+ * ══════════════════════════════════════════════════════════════════════════
+ * LAS CITAS QUE ESTÁN POR VENIR · cancelar, mover, cambiar de profesional
+ * ══════════════════════════════════════════════════════════════════════════
+ *
+ * Hasta ahora el panel no podía tocar una cita. Y el bot, cuando hay un pago de
+ * por medio, se niega y lo deriva «a una persona del equipo»… que no tenía con
+ * qué: `resolve_escalation` solo marcaba el aviso como resuelto y la cita seguía
+ * intacta.
+ *
+ * ⚠️ AQUÍ NO SE CALCULA QUIÉN ESTÁ LIBRE, Y NO ES PEREZA. El panel no tiene el
+ * horario de cada trabajador, ni sus bloqueos, ni quién está de turno. Se ofrece
+ * la lista entera de activos, se intenta, y si no cabe se enseña el motivo que
+ * devuelve el bot —escrito para el dueño— tal cual. Esa cuenta la hace él con la
+ * misma función con la que vende; duplicarla aquí es como se acaba con dos
+ * clientes a la misma hora.
+ *
+ * ⚠️ Y NO SE LE ESCRIBE AL CLIENTE: el comando devuelve el mensaje redactado y
+ * el enlace, y lo manda una persona. Ver components/panel/AvisarCliente.tsx.
+ */
+function Proximas({
+  citas,
+  nombrePorLead,
+  trabajadores,
+  alCambiar,
+}: {
+  citas: Cita[];
+  nombrePorLead: Map<string, string>;
+  trabajadores: Trabajador[];
+  alCambiar: () => void;
+}) {
+  const comando = useComando();
+  const [enVuelo, setEnVuelo] = useState<string | null>(null);
+  const [abierto, setAbierto] = useState<{ id: string; modo: 'mover' | 'reasignar' } | null>(null);
+  const [fecha, setFecha] = useState('');
+  const [hora, setHora] = useState('');
+  const [destino, setDestino] = useState('');
+  const [aviso, setAviso] = useState<Aviso | null>(null);
+
+  const nombrePorTrabajador = useMemo(
+    () => new Map(trabajadores.map((t) => [t.id, t.name])),
+    [trabajadores],
+  );
+  const activos = useMemo(() => trabajadores.filter((t) => t.activo), [trabajadores]);
+
+  /**
+   * Solo citas puntuales POR VENIR y todavía vivas. Las recurrentes no tienen
+   * hora que mover y se gestionan en su grupo; las pasadas son historial y el
+   * bot las rechaza («esa cita ya pasó»).
+   */
+  const todas = useMemo(() => {
+    const ahora = Date.now();
+    return citas
+      .filter(
+        (c) =>
+          !c.recurrente &&
+          c.inicio &&
+          c.inicio.getTime() >= ahora &&
+          (c.status === 'confirmed' || c.status === 'pending_payment'),
+      )
+      .sort((a, b) => (a.inicio?.getTime() ?? 0) - (b.inicio?.getTime() ?? 0));
+  }, [citas]);
+
+  const proximas = todas.slice(0, TOPE_PROXIMAS);
+  if (todas.length === 0) return null;
+
+  function abrir(c: Cita, modo: 'mover' | 'reasignar') {
+    setFecha(c.slot_start.slice(0, 10));
+    setHora(c.slot_start.slice(11, 16));
+    setDestino('');
+    setAbierto({ id: c.id, modo });
+  }
+
+  async function ejecutar(c: Cita, payload: Record<string, unknown>, titulo: string) {
+    setEnVuelo(c.id);
+    const r = await comando<ResultadoModificarCita>(
+      'modificar_cita',
+      { id: c.id, ...payload },
+      undefined,
+      alCambiar,
+    );
+    setEnVuelo(null);
+    // Si el bot lo rechazó, useComando ya ha enseñado su motivo y no hay nada
+    // que avisar: la cita no se tocó.
+    if (!r) return;
+    setAbierto(null);
+    setAviso({
+      titulo,
+      mensaje: r.mensaje,
+      waLink: r.wa_link,
+      nota: r.accion === 'cancelar' ? `Queda libre ${r.libera}.` : undefined,
+    });
+  }
+
+  async function cancelar(c: Cita, quien: string) {
+    const cuando = c.inicio ? `${diaMes(c.inicio)} a las ${horaDe(c.inicio)}` : '';
+    if (
+      !window.confirm(
+        `¿Cancelar la cita de ${quien} del ${cuando}? Queda libre el horario. El cliente no se entera solo: al terminar te doy el mensaje para avisarle.`,
+      )
+    ) {
+      return;
+    }
+    await ejecutar(c, { accion: 'cancelar' }, 'Cita cancelada');
+  }
+
+  return (
+    <div className="card" style={{ marginBottom: 18 }}>
+      <div className="card-head">
+        <h3>Próximas citas</h3>
+        <small className="muted">
+          {todas.length > TOPE_PROXIMAS
+            ? `las ${TOPE_PROXIMAS} más cercanas de ${todas.length}`
+            : `${todas.length} por delante`}
+        </small>
+      </div>
+
+      {aviso && (
+        <div style={{ padding: '0 16px' }}>
+          <AvisarCliente {...aviso} alCerrar={() => setAviso(null)} />
+        </div>
+      )}
+
+      <div className="confirmar-lista">
+        {proximas.map((c) => {
+          const quien = nombrePorLead.get(c.lead_id) ?? 'Cliente';
+          const estado = ESTADO_CITA[c.status ?? 'confirmed'];
+          const ocupado = enVuelo === c.id;
+          return (
+            <div key={c.id}>
+              <div className="confirmar-fila">
+                <div className="confirmar-quien">
+                  <b>{quien}</b>
+                  <small className="muted">
+                    {c.inicio ? `${diaMes(c.inicio)} · ${horaDe(c.inicio)}` : '—'}
+                    {c.service ? ` · ${c.service}` : ''}
+                    {c.employee_id ? ` · ${nombrePorTrabajador.get(c.employee_id) ?? 'sin asignar'}` : ''}
+                  </small>
+                </div>
+
+                <div className="confirmar-sellos">
+                  {estado && (
+                    <span
+                      className="badge-pill"
+                      style={{ color: estado.color, background: `${estado.color}18` }}
+                    >
+                      {estado.label}
+                    </span>
+                  )}
+                </div>
+
+                <div className="confirmar-acciones">
+                  <button
+                    className="btn btn-ghost btn-sm"
+                    disabled={ocupado}
+                    onClick={() => abrir(c, 'mover')}
+                  >
+                    <Clock size={14} /> Cambiar hora
+                  </button>
+                  {activos.length > 0 && (
+                    <button
+                      className="btn btn-ghost btn-sm"
+                      disabled={ocupado}
+                      onClick={() => abrir(c, 'reasignar')}
+                    >
+                      <UserCog size={14} /> Cambiar profesional
+                    </button>
+                  )}
+                  <button
+                    className="btn btn-ghost btn-sm confirmar-no"
+                    disabled={ocupado}
+                    onClick={() => void cancelar(c, quien)}
+                  >
+                    <CalendarOff size={14} /> Cancelar
+                  </button>
+                </div>
+              </div>
+
+              {abierto?.id === c.id && (
+                <div className="form-cita">
+                  {abierto.modo === 'mover' ? (
+                    <>
+                      <div>
+                        <label className="field-label">Nueva fecha</label>
+                        <input
+                          className="input"
+                          type="date"
+                          min={hoyLima()}
+                          value={fecha}
+                          onChange={(e) => setFecha(e.target.value)}
+                        />
+                      </div>
+                      <div>
+                        <label className="field-label">Nueva hora</label>
+                        <input
+                          className="input"
+                          type="time"
+                          value={hora}
+                          onChange={(e) => setHora(e.target.value)}
+                        />
+                      </div>
+                      <button
+                        className="btn btn-primary btn-sm"
+                        disabled={ocupado || !fecha || !hora}
+                        onClick={() =>
+                          void ejecutar(c, { accion: 'mover', slot_start: `${fecha} ${hora}` }, 'Cita movida')
+                        }
+                      >
+                        <Check size={14} /> {ocupado ? 'Moviendo…' : 'Mover'}
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <div>
+                        <label className="field-label">Pasar a</label>
+                        <select
+                          className="select"
+                          value={destino}
+                          onChange={(e) => setDestino(e.target.value)}
+                        >
+                          <option value="">Elige a quién</option>
+                          {activos
+                            .filter((t) => t.id !== c.employee_id)
+                            .map((t) => (
+                              <option key={t.id} value={t.id}>
+                                {t.name}
+                              </option>
+                            ))}
+                        </select>
+                      </div>
+                      <button
+                        className="btn btn-primary btn-sm"
+                        disabled={ocupado || !destino}
+                        onClick={() =>
+                          void ejecutar(
+                            c,
+                            { accion: 'reasignar', employee_id: destino },
+                            'Cita reasignada',
+                          )
+                        }
+                      >
+                        <Check size={14} /> {ocupado ? 'Cambiando…' : 'Cambiar'}
+                      </button>
+                    </>
+                  )}
+                  <button className="btn btn-ghost btn-sm" onClick={() => setAbierto(null)}>
+                    Dejarlo
+                  </button>
+                  {/* Se ofrecen todos: quién puede de verdad lo sabe el bot. */}
+                  <small className="muted" style={{ flexBasis: '100%', fontSize: 11.5 }}>
+                    Si no se puede —está ocupado, de vacaciones o fuera de su horario— Mia te dirá
+                    exactamente por qué y la cita se queda como está.
+                  </small>
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }

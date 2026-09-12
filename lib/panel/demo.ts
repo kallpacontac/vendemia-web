@@ -704,6 +704,7 @@ export function actividadDemo(): number[][] {
 const MOTIVOS_DEMO = [
   { motivo: 'voucher-sin-verificar', detalle: 'Mandó el Yape de S/ 120 y nadie lo revisó', monto: 120, prioridad: 0 },
   { motivo: 'pedido-sin-pagar', detalle: 'Pack novio apartado, sin pagar', monto: 180, prioridad: 1 },
+  { motivo: 'cupo-liberado', detalle: 'Quería el jueves 19:00, que estaba lleno: se liberó una plaza', monto: 55, prioridad: 2 },
   { motivo: 'carrito', detalle: 'Corte + barba en el carrito', monto: 55, prioridad: 3 },
   { motivo: 'cupo-elegido', detalle: 'Eligió el jueves 19:00 y no confirmó', monto: 35, prioridad: 4 },
   { motivo: 'cita-a-medias', detalle: 'Preguntó por coloración, no cerró', monto: 120, prioridad: 5 },
