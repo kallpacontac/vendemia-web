@@ -1157,3 +1157,47 @@ body:has(.demo-banda) .sidebar{padding-top:44px}
   .modal__pie .btn{width:100%;justify-content:center}
   .avisar__acciones .btn,.avisar__acciones a.btn{flex:1;justify-content:center}
 }
+
+/* ══════════════════════════════════════════════════════════════════════════
+   MÓVIL · las tablas dejan de ser tablas
+   ══════════════════════════════════════════════════════════════════════════
+   Una tabla de siete columnas en un teléfono es scroll lateral y nada más: para
+   cobrar un pedido había que arrastrar la fila entera hasta el final. Aquí cada
+   fila pasa a ser una tarjeta —cliente arriba, sus datos debajo con su etiqueta,
+   y el botón a lo ancho—, que es como se usa esto de pie en el local.
+
+   El rótulo de cada dato sale de `data-label` en el <td>: la cabecera de la
+   tabla se esconde, así que sin eso quedarían valores sueltos sin decir de qué.
+   ⚠️ Si añades una columna, ponle su `data-label` o saldrá sin nombre. */
+@media(max-width:720px){
+  .table-card{background:transparent;box-shadow:none;overflow:visible}
+  .table,.table tbody,.table tr,.table td{display:block;width:100%}
+  .table thead{display:none}
+
+  .table tr{background:#fff;border-radius:var(--r-md);box-shadow:var(--sh-card);
+    padding:12px 14px;margin-bottom:10px}
+  .table tbody tr:hover{background:#fff}
+
+  .table td{border:none;padding:5px 0;font-size:13px;display:flex;gap:12px;
+    align-items:flex-start;justify-content:space-between;
+    /* Los recortes con puntos suspensivos son de la tabla: en una tarjeta hay
+       sitio para el texto entero. */
+    max-width:none!important;white-space:normal!important;overflow:visible!important;
+    text-overflow:clip!important;text-align:right!important}
+  .table td::before{content:attr(data-label);flex:none;padding-top:2px;text-align:left;
+    color:var(--ink-mute);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em}
+
+  /* La acción, a lo ancho y al final: es lo que se viene a tocar. */
+  .table td:last-child{position:static;box-shadow:none;padding-top:10px}
+  .table td:last-child::before{display:none}
+  .table td:last-child .acciones-fila{width:100%}
+  .table td:last-child .btn{flex:1;justify-content:center}
+
+  /* «Sin pedidos», «Cargando…»: ocupan la tarjeta entera y no llevan rótulo. */
+  .table td[colspan]{text-align:center!important;display:block}
+  .table td[colspan]::before{display:none}
+
+  /* El aviso de «esto pide revisión» seguía siendo una raya lateral que en
+     tarjeta no se veía: se mantiene junto a la sombra de la tarjeta. */
+  .fila-revisar{box-shadow:inset 3px 0 0 #B26B00,var(--sh-card)}
+}

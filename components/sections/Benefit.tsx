@@ -276,7 +276,12 @@ export default function Benefit() {
           activa tiene fondo. El contenedor con borde y blur que yo tenía
           tapaba justamente el gesto que se quería ver — el punto negro solo,
           en el centro, antes de que exista nada más. */}
-      <div className="sticky top-[76px] z-30 flex justify-center pt-6">
+      {/* ⚠️ NO es `sticky`. Lo era, con `top-[76px]`, y eso hacía que las
+          píldoras viajaran con el scroll hasta el final de la sección: en el
+          móvil acababan montadas encima del titular, tapándolo. Se quedan
+          donde están —su animación de entrada sigue igual— y el scroll pasa
+          por delante en vez de arrastrarlas. */}
+      <div className="relative z-30 flex justify-center pt-6">
         <nav className="flex items-center gap-3" aria-label="Secciones">
           {BENEFIT.anchors.map((a, i) => {
             const isActive = active === i;

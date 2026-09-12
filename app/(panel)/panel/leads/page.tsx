@@ -218,7 +218,7 @@ export default function Leads() {
                 const st = status(l.status as LeadStatus);
                 return (
                   <tr key={l.id}>
-                    <td>
+                    <td data-label="Lead">
                       <div className="cell-user">
                         <div className="ava-ini" style={{ background: colorDe(l.id) }}>
                           {iniciales(l.name, l.phone)}
@@ -229,16 +229,17 @@ export default function Leads() {
                         </div>
                       </div>
                     </td>
-                    <td>{telefono(l.phone)}</td>
-                    <td>
+                    <td data-label="Teléfono">{telefono(l.phone)}</td>
+                    <td data-label="Intención">
                       <span className={`badge-pill ${it.cls}`}>{it.label}</span>
                     </td>
-                    <td>
+                    <td data-label="Estado">
                       <span className="badge-pill" style={{ color: st.color, background: `${st.color}18` }}>
                         {st.label}
                       </span>
                     </td>
                     <td
+                      data-label="Último mensaje"
                       className="muted"
                       style={{
                         maxWidth: 220,
@@ -254,7 +255,7 @@ export default function Leads() {
                       `field_key`. Se enseña con la clave delante porque la
                       elige el dueño: sin ella, un "3" suelto no dice nada.
                     */}
-                    <td>
+                    <td data-label="Datos">
                       {Object.keys(l.datos).length === 0 ? (
                         <span className="muted">—</span>
                       ) : (
@@ -268,8 +269,8 @@ export default function Leads() {
                         </div>
                       )}
                     </td>
-                    <td className="muted">{cuando(l.creado)}</td>
-                    <td style={{ textAlign: 'right' }}>
+                    <td data-label="Alta" className="muted">{cuando(l.creado)}</td>
+                    <td data-label="" style={{ textAlign: 'right' }}>
                       <Link className="btn btn-ghost btn-sm" href={`/panel/mensajes?lead=${l.id}`}>
                         <MessageCircle size={14} /> Ver chat
                       </Link>

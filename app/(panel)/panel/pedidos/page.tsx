@@ -260,17 +260,18 @@ function FilaPedido({
 
   return (
     <tr className={pideRevision(cobro) || pideRevision(entrega) ? 'fila-revisar' : ''}>
-      <td>
+      <td data-label="Cliente">
         <b>{cliente}</b>
       </td>
       <td
+        data-label="Qué pidió"
         className="muted"
         style={{ maxWidth: 240, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
         title={articulos}
       >
         {articulos || '—'}
       </td>
-      <td>
+      <td data-label="Cobro">
         <span
           className="badge-pill"
           style={{ color: cobro.color, background: `${cobro.color}18` }}
@@ -279,7 +280,7 @@ function FilaPedido({
           {cobro.label}
         </span>
       </td>
-      <td>
+      <td data-label="Entrega">
         <span
           className="badge-pill"
           style={{ color: entrega.color, background: `${entrega.color}18` }}
@@ -288,9 +289,9 @@ function FilaPedido({
           {entrega.label}
         </span>
       </td>
-      <td className="muted">{cuando(pedido.creado)}</td>
-      <td style={{ textAlign: 'right', fontWeight: 700 }}>{soles(pedido.total)}</td>
-      <td style={{ textAlign: 'right' }}>
+      <td data-label="Fecha" className="muted">{cuando(pedido.creado)}</td>
+      <td data-label="Total" style={{ textAlign: 'right', fontWeight: 700 }}>{soles(pedido.total)}</td>
+      <td data-label="" style={{ textAlign: 'right' }}>
         <div className="acciones-fila">
           {faltaCobrar('order', pedido.status) && (
             <button className="btn btn-primary btn-sm" disabled={ocupado} onClick={() => void cobrar()}>
