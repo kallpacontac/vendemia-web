@@ -65,8 +65,8 @@ await encolar('crear_cita', {
 
 ## Lo que el panel ya hace con lo que hay
 
-- **Aforo real**: cuántas caben a la vez es lo menor entre las sillas (`schedule[dia].capacity`) y
-  los trabajadores activos no bloqueados a esa hora.
+- **Aforo**: la regla del bot, copiada (`capAt`). Con equipo registrado, caben las personas EN
+  TURNO a esa hora y sin bloqueo —las sillas no se miran—; sin equipo, `capacity` del día.
 - **Un bloqueo es de una persona, no del local**: una ausencia solo cierra la franja si no queda
   nadie. Antes, las vacaciones de uno pintaban «Bloqueado» toda la semana.
 - **Filtro por profesional**: con uno elegido, la rejilla es SU agenda —una cita a la vez, y sus

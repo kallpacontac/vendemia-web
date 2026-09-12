@@ -155,8 +155,13 @@ export default function Agenda() {
       bloqueos: datos.bloqueos,
       horario: datos.empresa.horario,
       slotMinutos: datos.empresa.slot_minutes ?? 30,
-      // El aforo real sale de cruzar sillas y gente: ver construirSemana().
-      empleados: datos.trabajadores.map((t) => ({ id: t.id, activo: t.activo })),
+      // Con equipo, el aforo SON ellos (su horario y sus bloqueos), no las
+      // sillas. Es la regla del bot: ver construirSemana().
+      empleados: datos.trabajadores.map((t) => ({
+        id: t.id,
+        activo: t.activo,
+        horario: t.horario,
+      })),
       empleadoId: fEmpleado || undefined,
     });
   }, [datos, offset, fEmpleado]);
@@ -429,10 +434,12 @@ function Celda({
         </div>
       );
     }
-    if (hueco.bloqueo !== null) {
+    /* Por qué no se puede reservar ahí: «Bloqueado», «Sin nadie» o «No
+       trabaja». Antes decía "Libre" en franjas donde no había nadie en turno. */
+    if (hueco.cierre) {
       return (
         <div className="cell closed" title={hueco.bloqueo ?? ''}>
-          Bloqueado
+          {hueco.cierre}
         </div>
       );
     }
@@ -441,7 +448,7 @@ function Celda({
   }
 
   if (hueco.pasado) return <div className="cell past" />;
-  if (hueco.libres > 0 && hueco.bloqueo === null) {
+  if (hueco.libres > 0 && !hueco.cierre) {
     return (
       <div className="cell avail" style={{ cursor: 'default' }}>
         Disponible

@@ -46,7 +46,10 @@ export interface Hueco {
   capacidad: number;
   reservas: Reserva[];
   libres: number;
+  /** El motivo largo: para el tooltip. */
   bloqueo: string | null;
+  /** Texto corto de por qué no se puede reservar ahí. `null` = abierta. */
+  cierre: string | null;
 }
 
 export interface DiaAgenda {
@@ -78,10 +81,10 @@ interface Entrada {
   horario: Horario;
   slotMinutos: number;
   /**
-   * El equipo. Decide cuántas citas caben A LA VEZ junto con las sillas: con
-   * tres sillas y dos barberos caben dos, no tres.
+   * El equipo, con su horario propio ya parseado ({} = hereda el del negocio).
+   * Con equipo, ES el aforo: ver capAt más abajo.
    */
-  empleados?: { id: string; activo: boolean }[];
+  empleados?: { id: string; activo: boolean; horario: Horario }[];
   /** Si se pide un profesional concreto, la rejilla pasa a ser SU agenda. */
   empleadoId?: string;
 }
@@ -92,6 +95,28 @@ const solapa = (b: { start: string; end: string }, inicio: Date, fin: Date): boo
   const bf = new Date(b.end.replace(' ', 'T'));
   return !Number.isNaN(bi.getTime()) && bi < fin && bf > inicio;
 };
+
+/**
+ * ¿Este trabajador está en turno a esa hora? Copia de `workingCountAt` +
+ * `effectiveEmployeeSchedule` del bot: su horario efectivo es el SUYO ∩ el del
+ * negocio, y sin horario propio hereda el del negocio entero.
+ */
+function enTurnoA(
+  emp: { horario: Horario },
+  negocio: Horario,
+  clave: ClaveDia,
+  hora: string,
+): boolean {
+  const c = negocio[clave];
+  if (!c || c.closed || !c.open || !c.close) return false;
+  // Sin horario propio: el del negocio, tal cual.
+  if (Object.keys(emp.horario).length === 0) return c.open <= hora && hora < c.close;
+  const p = emp.horario[clave];
+  if (!p || p.closed || !p.open || !p.close) return false;
+  const abre = c.open > p.open ? c.open : p.open;
+  const cierra = c.close < p.close ? c.close : p.close;
+  return cierra > abre && abre <= hora && hora < cierra;
+}
 
 const aMinutos = (hhmm: string): number => {
   const [h, m] = hhmm.split(':').map(Number);
@@ -117,8 +142,8 @@ export function construirSemana(offset: number, e: Entrada): Semana {
   const paso = e.slotMinutos > 0 ? e.slotMinutos : 30;
   const ahora = Date.now();
 
-  /** Quién puede atender. Un trabajador de baja no cuenta para el aforo. */
-  const activos = (e.empleados ?? []).filter((x) => x.activo).map((x) => x.id);
+  /** Quién puede atender. Un trabajador de baja no cuenta: el bot tampoco lo trae. */
+  const activos = (e.empleados ?? []).filter((x) => x.activo);
   const soloUno = e.empleadoId || null;
   const citas = soloUno ? e.citas.filter((c) => c.employee_id === soloUno) : e.citas;
 
@@ -152,7 +177,8 @@ export function construirSemana(offset: number, e: Entrada): Semana {
   const totales = { reservado: 0, libre: 0, capacidad: 0 };
 
   const agenda: DiaAgenda[] = dias.map((fecha) => {
-    const conf = e.horario[CLAVES[fecha.getDay()]];
+    const clave = CLAVES[fecha.getDay()];
+    const conf = e.horario[clave];
     const abierto = Boolean(conf && !conf.closed && conf.open && conf.close);
     const desde = abierto ? aMinutos(conf!.open!) : 0;
     const hasta = abierto ? aMinutos(conf!.close!) : 0;
@@ -197,27 +223,61 @@ export function construirSemana(offset: number, e: Entrada): Semana {
         'No disponible';
 
       /**
-       * Cuántas citas caben a la vez. Son DOS límites y manda el menor: las
-       * sillas (`capacity` del horario) y la gente que hay para atenderlas.
+       * ⚠️ CUÁNTAS CABEN A LA VEZ LO DECIDE EL BOT. Esto es su regla, copiada.
+       *
+       * `capAt` en su availability.calendar.ts:
+       *
+       *   · CON equipo registrado → los trabajadores EN TURNO a esa hora y sin
+       *     bloqueo. **Las sillas no se miran.**
+       *   · SIN equipo → `capacity` del día del horario, que son las sillas.
+       *
+       * Y la consecuencia, que no es evidente: en un negocio con equipo, el
+       * número de sillas no pinta nada en lo que Mia ofrece. Si hubiera más
+       * barberos que sillas, el bot vendería de más — y eso se arregla en el
+       * bot, no con una cuenta distinta aquí. Un panel que dijera «copado»
+       * mientras Mia sigue vendiendo ese hueco es peor que el fallo original.
        */
+      const enTurno = activos.filter(
+        (t) => !bloqueados.has(t.id) && enTurnoA(t, e.horario, clave, hora),
+      );
+
       let capacidad: number;
+      /** El motivo largo, para el tooltip. */
       let bloqueo: string | null = null;
+      /** El texto corto de la celda. `null` = la franja está abierta. */
+      let cierre: string | null = null;
+
       if (soloUno) {
         // La rejilla es la agenda de esa persona: atiende de una en una.
-        bloqueo = bloqueados.has(soloUno) ? motivoDe(soloUno) : null;
-        capacidad = bloqueo ? 0 : 1;
+        capacidad = 1;
+        if (bloqueados.has(soloUno)) {
+          bloqueo = motivoDe(soloUno);
+          cierre = 'Bloqueado';
+          capacidad = 0;
+        } else if (!enTurno.some((t) => t.id === soloUno)) {
+          bloqueo = 'Fuera de su horario';
+          cierre = 'No trabaja';
+          capacidad = 0;
+        }
       } else if (activos.length > 0) {
-        const enPie = activos.filter((id) => !bloqueados.has(id));
-        capacidad = Math.min(sillas, enPie.length);
-        // La franja solo se cierra si NO queda nadie. Que falte uno no cierra el local.
-        bloqueo = enPie.length === 0 ? motivoDe(activos[0]) : null;
+        capacidad = enTurno.length;
+        // La franja solo se cierra si NO queda nadie: que falte uno no cierra el local.
+        if (capacidad === 0) {
+          const hayBloqueo = bloqueados.size > 0;
+          bloqueo = hayBloqueo ? motivoDe([...bloqueados][0]) : 'Nadie en turno a esta hora';
+          cierre = hayBloqueo ? 'Bloqueado' : 'Sin nadie';
+        }
       } else {
-        // Negocio sin equipo: no hay a quién repartir, manda la silla.
+        // Sin equipo, manda la silla.
         capacidad = sillas;
-        bloqueo = bloqueados.size > 0 ? motivoDe([...bloqueados][0]) : null;
+        if (bloqueados.size > 0) {
+          bloqueo = motivoDe([...bloqueados][0]);
+          cierre = 'Bloqueado';
+        }
       }
 
       const libres = Math.max(0, capacidad - reservas.length);
+
 
       if (!cerrado) {
         totales.reservado += reservas.length;
@@ -234,6 +294,7 @@ export function construirSemana(offset: number, e: Entrada): Semana {
         reservas,
         libres,
         bloqueo,
+        cierre,
       };
     });
 
