@@ -12,7 +12,7 @@
  * ⚠️ Ojo con `'solo-conversó'`: lleva tilde en el bot. Copiada tal cual.
  */
 
-/* ── Los 8 motivos, EN ORDEN DE URGENCIA ────────────────────────────────── */
+/* ── Los 10 motivos, EN ORDEN DE URGENCIA ────────────────────────────────── */
 
 /**
  * Mismo orden que `MOTIVOS` en recuperar.service.ts, que es de donde sale
@@ -32,6 +32,16 @@ export const MOTIVOS = [
    * fila. Vacío no es que esté roto.
    */
   'cupo-liberado',
+  /**
+   * El gemelo del anterior, del lado de la tienda: pidió unidades que no había
+   * (evento `STOCK_OUT`, con el producto y cuántas quería) y ya han vuelto a
+   * entrar.
+   *
+   * Hacía falta guardarlo porque un pedido rechazado NO deja fila en `orders`:
+   * sin el evento, de esa persona no quedaba rastro en ninguna tabla y la
+   * reposición llegaba sin nadie a quien avisar.
+   */
+  'stock-repuesto',
   'carrito',
   'cupo-elegido',
   'cita-a-medias',
@@ -54,6 +64,7 @@ export const MOTIVO: Record<string, Rotulo> = {
   'pedido-sin-pagar': { label: 'Pedido apartado sin pagar', color: '#E5484D' },
   'cupo-sin-pagar': { label: 'Cupo apartado sin pagar', color: '#E5484D' },
   'cupo-liberado': { label: 'Se liberó el cupo que quería', color: '#B23A00' },
+  'stock-repuesto': { label: 'Volvió lo que quería', color: '#B23A00' },
   'carrito': { label: 'Carrito sin cerrar', color: '#CC3A00' },
   'cupo-elegido': { label: 'Eligió horario, no confirmó', color: '#B26B00' },
   'cita-a-medias': { label: 'Cita a medio negociar', color: '#B26B00' },
