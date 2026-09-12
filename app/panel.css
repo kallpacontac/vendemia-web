@@ -1077,3 +1077,22 @@ body:has(.demo-banda) .sidebar{padding-top:44px}
   background:#fff;border:1px solid var(--line);border-radius:12px;padding:9px 12px;cursor:pointer;
   font:600 13px 'Plus Jakarta Sans';color:var(--ink)}
 .buscador-res:hover{background:var(--bg-soft)}
+
+/* ── Confirmar antes de tocar la cita de alguien ─────────────────────────── */
+.modal-fondo{position:fixed;inset:0;z-index:300;background:rgba(20,20,18,.45);
+  display:flex;align-items:center;justify-content:center;padding:20px}
+.modal{background:#fff;border-radius:var(--r-lg);box-shadow:0 20px 50px rgba(0,0,0,.22);
+  width:min(440px,100%);overflow:hidden}
+.modal__cab{display:flex;align-items:center;gap:9px;padding:16px 18px 0;font-size:15px}
+.modal__cab svg{color:var(--warm);flex:none}
+.modal__cuerpo{padding:10px 18px 4px;font-size:13.5px;line-height:1.55}
+.modal__cuerpo p{margin:0 0 6px}
+.modal__cuerpo .muted{font-size:12.5px}
+.modal__pie{display:flex;justify-content:flex-end;gap:10px;padding:14px 18px 18px}
+.btn-peligro{background:var(--hot);color:#fff;border:none}
+.btn-peligro:hover{filter:brightness(.95)}
+
+/* Arrastrar una cita a otro hueco. */
+.bk[draggable='true']{cursor:grab}
+.bk[draggable='true']:active{cursor:grabbing}
+.cell.sobre{outline:2px dashed var(--brand);outline-offset:-2px;background:var(--brand-soft)}

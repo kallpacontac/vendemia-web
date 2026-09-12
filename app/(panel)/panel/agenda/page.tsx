@@ -39,6 +39,7 @@ import {
 import Topbar from '@/components/panel/Topbar';
 import AvisarCliente from '@/components/panel/AvisarCliente';
 import NuevaCita from '@/components/panel/NuevaCita';
+import Confirmar from '@/components/panel/Confirmar';
 import Paginacion, { usePaginacion } from '@/components/panel/Paginacion';
 import { useSesion } from '@/components/panel/Sesion';
 import { useAvisar, useComando } from '@/components/panel/Avisos';
@@ -69,6 +70,7 @@ import {
   getCompania,
   getLeads,
   getTrabajadores,
+  parseSlot,
   type Cita,
   type Trabajador,
 } from '@/lib/supabase/queries';
@@ -137,6 +139,14 @@ export default function Agenda() {
   /** El formulario de alta: la cita que se pide por teléfono o en el mostrador. */
   const [creando, setCreando] = useState(false);
 
+  const comando = useComando();
+  /** La cita que va por el aire ahora mismo, y el hueco sobre el que está. */
+  const [arrastrada, setArrastrada] = useState<string | null>(null);
+  const [sobre, setSobre] = useState<string | null>(null);
+  const [porConfirmar, setPorConfirmar] = useState<Pendiente | null>(null);
+  const [aplicando, setAplicando] = useState(false);
+  const [aviso, setAviso] = useState<Aviso | null>(null);
+
   const { datos, cargando, recargar } = useCargar(async () => {
     if (!companyId) return null;
     const [empresa, citas, leads, trabajadores, bloqueos, catalogo] = await Promise.all([
@@ -182,6 +192,64 @@ export default function Agenda() {
     const todas = datos?.citas ?? [];
     return fEmpleado ? todas.filter((c) => c.employee_id === fEmpleado) : todas;
   }, [datos, fEmpleado]);
+
+  /**
+   * Soltar una cita en otro hueco.
+   *
+   * ⚠️ NO se aplica aquí. Se pide confirmación con el antes y el después: un
+   * arrastre se hace sin querer con una facilidad que un botón no tiene, y esto
+   * le cambia el día a un cliente de verdad.
+   */
+  function soltar(slotStart: string) {
+    const cita = (datos?.citas ?? []).find((c) => c.id === arrastrada);
+    setArrastrada(null);
+    setSobre(null);
+    // Soltarla donde ya estaba no es un cambio.
+    if (!cita || cita.slot_start.slice(0, 16) === slotStart) return;
+
+    const lead = (datos?.leads ?? []).find((l) => l.id === cita.lead_id);
+    setPorConfirmar({
+      titulo: '¿Cambiar la hora de esta cita?',
+      textoConfirmar: 'Sí, moverla',
+      detalle: (
+        <>
+          <p>
+            <b>{lead?.name || lead?.phone || 'Cliente'}</b>
+            {cita.service ? ` · ${cita.service}` : ''}
+          </p>
+          <p>
+            {textoSlot(cita.slot_start)} → <b>{textoSlot(slotStart)}</b>
+          </p>
+          <p className="muted">
+            Si no cabe, Mia te dirá por qué y la cita se queda como está. Al cliente no le llega
+            nada solo: al terminar te doy el mensaje para avisarle.
+          </p>
+        </>
+      ),
+      hacer: async () => {
+        const a = await mandarCambio(
+          comando,
+          cita.id,
+          { accion: 'mover', slot_start: slotStart },
+          'Cita movida',
+          recargar,
+        );
+        if (a) setAviso(a);
+      },
+    });
+  }
+
+  const dnd: Arrastre = {
+    activo: arrastrada !== null,
+    sobre,
+    empezar: setArrastrada,
+    terminar: () => {
+      setArrastrada(null);
+      setSobre(null);
+    },
+    entrar: setSobre,
+    soltar,
+  };
 
   /** Solo para los números de las pestañas: cada lista se filtra luego dentro. */
   const nProximas = useMemo(() => porVenir(citasVista).length, [citasVista]);
@@ -309,6 +377,28 @@ export default function Agenda() {
           />
         )}
 
+        {/* El mensaje para el cliente de lo que se acaba de mover arrastrando. */}
+        {aviso && <AvisarCliente {...aviso} alCerrar={() => setAviso(null)} />}
+
+        {porConfirmar && (
+          <Confirmar
+            titulo={porConfirmar.titulo}
+            detalle={porConfirmar.detalle}
+            textoConfirmar={porConfirmar.textoConfirmar}
+            peligro={porConfirmar.peligro}
+            ocupado={aplicando}
+            alCerrar={() => setPorConfirmar(null)}
+            alConfirmar={() => {
+              void (async () => {
+                setAplicando(true);
+                await porConfirmar.hacer();
+                setAplicando(false);
+                setPorConfirmar(null);
+              })();
+            }}
+          />
+        )}
+
         {tab === 'pasadas' && (
           <PorConfirmar
             citas={citasVista}
@@ -405,7 +495,7 @@ export default function Agenda() {
                 {semana?.horas.map((hora, i) => (
                   <FilaDeHoras key={hora} hora={hora}>
                     {semana.dias.map((d) => (
-                      <Celda key={d.iso + hora} hueco={d.huecos[i]} vista={vista} />
+                      <Celda key={d.iso + hora} hueco={d.huecos[i]} vista={vista} dnd={dnd} />
                     ))}
                   </FilaDeHoras>
                 ))}
@@ -435,55 +525,118 @@ function FilaDeHoras({ hora, children }: { hora: string; children: React.ReactNo
   );
 }
 
+/**
+ * ⚠️ UNA SOLA CAJA, y no un `return` por cada caso como antes.
+ *
+ * Los manejadores de arrastre tienen que estar en TODAS las celdas que puedan
+ * recibir una cita: con un return distinto por rama, soltar solo habría
+ * funcionado en la de «Libre», y arrastrar a una celda que ya tiene una reserva
+ * —que es legítimo mientras quede aforo— no habría hecho nada.
+ */
 function Celda({
   hueco,
   vista,
+  dnd,
 }: {
   hueco: ReturnType<typeof construirSemana>['dias'][number]['huecos'][number];
   vista: 'negocio' | 'cliente';
+  dnd?: Arrastre;
 }) {
-  if (hueco.cerrado) return <div className="cell closed">—</div>;
+  /* En el pasado no se suelta: el bot rechaza mover una cita a una hora que ya
+     pasó, y ofrecer el gesto para que falle después es peor que no ofrecerlo. */
+  const puedeRecibir = Boolean(dnd?.activo) && !hueco.cerrado && !hueco.pasado;
+  const sobre = puedeRecibir && dnd?.sobre === hueco.slotStart;
 
-  if (vista === 'negocio') {
+  let clase = '';
+  let titulo: string | undefined;
+  let contenido: React.ReactNode = null;
+
+  if (hueco.cerrado) {
+    clase = 'closed';
+    contenido = '—';
+  } else if (vista === 'negocio') {
     if (hueco.reservas.length > 0) {
-      return (
-        <div className="cell" style={{ gap: 4 }}>
+      contenido = (
+        <>
           {hueco.reservas.slice(0, 2).map((r) => (
-            <div className="bk" key={r.id}>
+            <div
+              className="bk"
+              key={r.id}
+              /* Solo las de por venir: las pasadas son historial. */
+              draggable={Boolean(dnd) && !hueco.pasado}
+              onDragStart={(e) => {
+                e.dataTransfer.setData('text/plain', r.id);
+                e.dataTransfer.effectAllowed = 'move';
+                dnd?.empezar(r.id);
+              }}
+              onDragEnd={() => dnd?.terminar()}
+              title={dnd && !hueco.pasado ? 'Arrástrala a otro hueco para cambiarle la hora' : undefined}
+            >
               <b>{r.cliente}</b>
               <span className="sv">{r.servicio}</span>
               {r.trabajador && <span className="bb">{r.trabajador}</span>}
             </div>
           ))}
           {hueco.reservas.length > 2 && <div className="more">+{hueco.reservas.length - 2} más</div>}
-        </div>
+        </>
       );
+    } else if (hueco.cierre) {
+      /* Por qué no se puede reservar ahí: «Bloqueado», «Sin nadie» o «No
+         trabaja». Antes decía "Libre" en franjas sin nadie en turno. */
+      clase = 'closed';
+      titulo = hueco.bloqueo ?? '';
+      contenido = hueco.cierre;
+    } else if (hueco.pasado) {
+      clase = 'past';
+    } else {
+      clase = 'free';
+      contenido = 'Libre';
     }
-    /* Por qué no se puede reservar ahí: «Bloqueado», «Sin nadie» o «No
-       trabaja». Antes decía "Libre" en franjas donde no había nadie en turno. */
-    if (hueco.cierre) {
-      return (
-        <div className="cell closed" title={hueco.bloqueo ?? ''}>
-          {hueco.cierre}
-        </div>
-      );
-    }
-    if (hueco.pasado) return <div className="cell past" />;
-    return <div className="cell free">Libre</div>;
-  }
-
-  if (hueco.pasado) return <div className="cell past" />;
-  if (hueco.libres > 0 && !hueco.cierre) {
-    return (
-      <div className="cell avail" style={{ cursor: 'default' }}>
+  } else if (hueco.pasado) {
+    clase = 'past';
+  } else if (hueco.libres > 0 && !hueco.cierre) {
+    clase = 'avail';
+    contenido = (
+      <>
         Disponible
         <span className="sl">
           {hueco.libres} cupo{hueco.libres > 1 ? 's' : ''}
         </span>
-      </div>
+      </>
     );
+  } else {
+    clase = 'full';
+    contenido = 'Copado';
   }
-  return <div className="cell full">Copado</div>;
+
+  return (
+    <div
+      className={`cell ${clase} ${sobre ? 'sobre' : ''}`}
+      style={hueco.reservas.length > 0 && vista === 'negocio' ? { gap: 4 } : undefined}
+      title={titulo}
+      // `preventDefault` en dragOver es lo ÚNICO que hace que un sitio acepte
+      // lo que se suelta. Sin él, el navegador lo rechaza en silencio.
+      onDragOver={
+        puedeRecibir
+          ? (e) => {
+              e.preventDefault();
+              e.dataTransfer.dropEffect = 'move';
+            }
+          : undefined
+      }
+      onDragEnter={puedeRecibir ? () => dnd?.entrar(hueco.slotStart) : undefined}
+      onDrop={
+        puedeRecibir
+          ? (e) => {
+              e.preventDefault();
+              dnd?.soltar(hueco.slotStart);
+            }
+          : undefined
+      }
+    >
+      {contenido}
+    </div>
+  );
 }
 
 /**
@@ -687,6 +840,70 @@ interface Aviso {
   nota?: string;
 }
 
+/**
+ * Un cambio pedido y todavía sin confirmar.
+ *
+ * ⚠️ NADA que toque la cita de un cliente se aplica en el clic: primero el
+ * cuadro de confirmación, con el antes y el después escritos. Importa el doble
+ * desde que se puede arrastrar en la rejilla — soltar es un gesto fácil de
+ * hacer sin querer.
+ */
+interface Pendiente {
+  titulo: string;
+  detalle: React.ReactNode;
+  textoConfirmar: string;
+  peligro?: boolean;
+  hacer: () => Promise<void>;
+}
+
+/** "2026-09-18 16:00" → "18 sep · 16:00". */
+function textoSlot(slot: string): string {
+  const d = parseSlot(slot);
+  return d ? `${diaMes(d)} · ${horaDe(d)}` : slot;
+}
+
+/**
+ * Manda el cambio y devuelve lo que hay que enseñar después, o `null` si no se
+ * aplicó (ahí useComando ya ha enseñado el motivo del bot).
+ *
+ * Vive fuera de los componentes porque lo usan los dos caminos —el formulario y
+ * el arrastre en la rejilla— y son el mismo comando: duplicarlo sería tener dos
+ * sitios donde el mensaje al cliente puede quedarse sin enseñar.
+ */
+async function mandarCambio(
+  comando: ReturnType<typeof useComando>,
+  id: string,
+  payload: Record<string, unknown>,
+  titulo: string,
+  alCambiar: () => void,
+): Promise<Aviso | null> {
+  const r = await comando<ResultadoModificarCita>(
+    'modificar_cita',
+    { id, ...payload },
+    undefined,
+    alCambiar,
+  );
+  if (!r) return null;
+  return {
+    titulo,
+    mensaje: r.mensaje,
+    waLink: r.wa_link,
+    nota: r.accion === 'cancelar' ? `Queda libre ${r.libera}.` : undefined,
+  };
+}
+
+/** Lo que la rejilla necesita para poder arrastrar citas de un hueco a otro. */
+interface Arrastre {
+  /** Hay una cita en el aire ahora mismo. */
+  activo: boolean;
+  /** El hueco sobre el que está, para pintarlo. */
+  sobre: string | null;
+  empezar: (citaId: string) => void;
+  terminar: () => void;
+  entrar: (slotStart: string) => void;
+  soltar: (slotStart: string) => void;
+}
+
 /** Filas por página en las dos listas de citas. */
 const POR_PAGINA = 10;
 
@@ -729,6 +946,8 @@ function Proximas({
   const [hora, setHora] = useState('');
   const [destino, setDestino] = useState('');
   const [aviso, setAviso] = useState<Aviso | null>(null);
+  /** Nada se aplica en el clic: primero el cuadro con el antes y el después. */
+  const [porConfirmar, setPorConfirmar] = useState<Pendiente | null>(null);
 
   const nombrePorTrabajador = useMemo(
     () => new Map(trabajadores.map((t) => [t.id, t.name])),
@@ -779,48 +998,79 @@ function Proximas({
         }
       : { accion: 'mover', slot_start: slot };
 
-    await ejecutar(
-      c,
-      payload,
+    const titulo =
       cambiaHora && cambiaQuien
         ? 'Cita movida y reasignada'
         : cambiaQuien
           ? 'Cita reasignada'
-          : 'Cita movida',
-    );
+          : 'Cita movida';
+
+    setPorConfirmar({
+      titulo: '¿Cambiar esta cita?',
+      textoConfirmar: 'Sí, cambiarla',
+      detalle: (
+        <>
+          <p>
+            <b>{nombrePorLead.get(c.lead_id) ?? 'Cliente'}</b>
+            {c.service ? ` · ${c.service}` : ''}
+          </p>
+          {cambiaHora && (
+            <p>
+              Hora: {textoSlot(c.slot_start)} → <b>{textoSlot(slot)}</b>
+            </p>
+          )}
+          {cambiaQuien && (
+            <p>
+              Profesional:{' '}
+              {c.employee_id ? (nombrePorTrabajador.get(c.employee_id) ?? '—') : 'sin asignar'} →{' '}
+              <b>{nombrePorTrabajador.get(destino) ?? '—'}</b>
+            </p>
+          )}
+          <p className="muted">
+            Si no cabe, Mia te dirá por qué y la cita se queda como está. Al cliente no le llega
+            nada solo: al terminar te doy el mensaje para avisarle.
+          </p>
+        </>
+      ),
+      hacer: () => ejecutar(c, payload, titulo),
+    });
   }
 
   async function ejecutar(c: Cita, payload: Record<string, unknown>, titulo: string) {
     setEnVuelo(c.id);
-    const r = await comando<ResultadoModificarCita>(
-      'modificar_cita',
-      { id: c.id, ...payload },
-      undefined,
-      alCambiar,
-    );
+    // El mismo camino que usa el arrastre en la rejilla. Ver mandarCambio().
+    const a = await mandarCambio(comando, c.id, payload, titulo, alCambiar);
     setEnVuelo(null);
-    // Si el bot lo rechazó, useComando ya ha enseñado su motivo y no hay nada
-    // que avisar: la cita no se tocó.
-    if (!r) return;
+    // Si el bot lo rechazó, useComando ya ha enseñado su motivo: no hay nada
+    // que avisar porque la cita no se tocó.
+    if (!a) return;
     setAbierto(null);
-    setAviso({
-      titulo,
-      mensaje: r.mensaje,
-      waLink: r.wa_link,
-      nota: r.accion === 'cancelar' ? `Queda libre ${r.libera}.` : undefined,
-    });
+    setAviso(a);
   }
 
-  async function cancelar(c: Cita, quien: string) {
-    const cuando = c.inicio ? `${diaMes(c.inicio)} a las ${horaDe(c.inicio)}` : '';
-    if (
-      !window.confirm(
-        `¿Cancelar la cita de ${quien} del ${cuando}? Queda libre el horario. El cliente no se entera solo: al terminar te doy el mensaje para avisarle.`,
-      )
-    ) {
-      return;
-    }
-    await ejecutar(c, { accion: 'cancelar' }, 'Cita cancelada');
+  /* El mismo cuadro que para mover, y no `window.confirm`: ahí no cabe decir de
+     quién es la cita ni qué día era, que es justo lo que hay que mirar antes de
+     cancelarle el turno a alguien. */
+  function cancelar(c: Cita, quien: string) {
+    setPorConfirmar({
+      titulo: '¿Cancelar esta cita?',
+      textoConfirmar: 'Sí, cancelarla',
+      peligro: true,
+      detalle: (
+        <>
+          <p>
+            <b>{quien}</b>
+            {c.service ? ` · ${c.service}` : ''}
+          </p>
+          <p>{textoSlot(c.slot_start)}</p>
+          <p className="muted">
+            Queda libre el horario y Mia podrá venderlo. El cliente no se entera solo: al terminar
+            te doy el mensaje para avisarle.
+          </p>
+        </>
+      ),
+      hacer: () => ejecutar(c, { accion: 'cancelar' }, 'Cita cancelada'),
+    });
   }
 
   return (
@@ -972,6 +1222,23 @@ function Proximas({
       </div>
 
       <Paginacion pagina={pag.pagina} paginas={pag.paginas} irA={pag.irA} />
+
+      {porConfirmar && (
+        <Confirmar
+          titulo={porConfirmar.titulo}
+          detalle={porConfirmar.detalle}
+          textoConfirmar={porConfirmar.textoConfirmar}
+          peligro={porConfirmar.peligro}
+          ocupado={enVuelo !== null}
+          alCerrar={() => setPorConfirmar(null)}
+          alConfirmar={() => {
+            void (async () => {
+              await porConfirmar.hacer();
+              setPorConfirmar(null);
+            })();
+          }}
+        />
+      )}
     </div>
   );
 }
