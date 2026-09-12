@@ -30,8 +30,8 @@ import {
   ChevronRight,
   Clock,
   Flame,
+  Pencil,
   User,
-  UserCog,
   Wallet,
   X,
 } from 'lucide-react';
@@ -644,8 +644,9 @@ function Proximas({
   alCambiar: () => void;
 }) {
   const comando = useComando();
+  const avisar = useAvisar();
   const [enVuelo, setEnVuelo] = useState<string | null>(null);
-  const [abierto, setAbierto] = useState<{ id: string; modo: 'mover' | 'reasignar' } | null>(null);
+  const [abierto, setAbierto] = useState<string | null>(null);
   const [fecha, setFecha] = useState('');
   const [hora, setHora] = useState('');
   const [destino, setDestino] = useState('');
@@ -661,11 +662,54 @@ function Proximas({
   // Antes de cualquier return: es un hook. Ver usePaginacion().
   const pag = usePaginacion(todas, POR_PAGINA);
 
-  function abrir(c: Cita, modo: 'mover' | 'reasignar') {
+  /** Abre el editor con lo que la cita tiene AHORA, no en blanco. */
+  function abrir(c: Cita) {
     setFecha(c.slot_start.slice(0, 10));
     setHora(c.slot_start.slice(11, 16));
-    setDestino('');
-    setAbierto({ id: c.id, modo });
+    setDestino(c.employee_id ?? '');
+    setAbierto(c.id);
+  }
+
+  /**
+   * Hora y profesional se mandan JUNTOS cuando cambian los dos.
+   *
+   * ⚠️ El bot los acepta en la misma orden (`reasignar` admite `slot_start`), y
+   * hacerlo en dos pasos es peor que feo: el primer comando dejaría la cita con
+   * el profesional nuevo a la hora vieja —donde puede no caber— y el segundo
+   * fallaría por un choque que en realidad no existe.
+   *
+   * Se manda solo lo que cambió: `accion` la decide el campo que se tocó.
+   */
+  async function guardar(c: Cita) {
+    const slot = `${fecha} ${hora}`;
+    const cambiaHora = Boolean(fecha && hora) && slot !== c.slot_start.slice(0, 16);
+    /* Vaciar el profesional no es reasignar: el bot exige `employee_id` para
+       eso. Quitarle el profesional a una cita no tiene comando, así que no se
+       ofrece. */
+    const cambiaQuien = Boolean(destino) && destino !== (c.employee_id ?? '');
+
+    if (!cambiaHora && !cambiaQuien) {
+      avisar('No has cambiado nada.', 'espera');
+      return;
+    }
+
+    const payload = cambiaQuien
+      ? {
+          accion: 'reasignar',
+          employee_id: destino,
+          ...(cambiaHora ? { slot_start: slot } : {}),
+        }
+      : { accion: 'mover', slot_start: slot };
+
+    await ejecutar(
+      c,
+      payload,
+      cambiaHora && cambiaQuien
+        ? 'Cita movida y reasignada'
+        : cambiaQuien
+          ? 'Cita reasignada'
+          : 'Cita movida',
+    );
   }
 
   async function ejecutar(c: Cita, payload: Record<string, unknown>, titulo: string) {
@@ -726,6 +770,10 @@ function Proximas({
           const quien = nombrePorLead.get(c.lead_id) ?? 'Cliente';
           const estado = ESTADO_CITA[c.status ?? 'confirmed'];
           const ocupado = enVuelo === c.id;
+          /* El asignado entra en la lista aunque esté dado de baja: si no,
+             el desplegable enseñaría a otra persona como si fuera la suya. */
+          const asignado = trabajadores.find((t) => t.id === c.employee_id);
+          const opciones = asignado && !asignado.activo ? [asignado, ...activos] : activos;
           return (
             <div key={c.id}>
               <div className="confirmar-fila">
@@ -750,22 +798,9 @@ function Proximas({
                 </div>
 
                 <div className="confirmar-acciones">
-                  <button
-                    className="btn btn-ghost btn-sm"
-                    disabled={ocupado}
-                    onClick={() => abrir(c, 'mover')}
-                  >
-                    <Clock size={14} /> Cambiar hora
+                  <button className="btn btn-ghost btn-sm" disabled={ocupado} onClick={() => abrir(c)}>
+                    <Pencil size={14} /> Editar
                   </button>
-                  {activos.length > 0 && (
-                    <button
-                      className="btn btn-ghost btn-sm"
-                      disabled={ocupado}
-                      onClick={() => abrir(c, 'reasignar')}
-                    >
-                      <UserCog size={14} /> Cambiar profesional
-                    </button>
-                  )}
                   <button
                     className="btn btn-ghost btn-sm confirmar-no"
                     disabled={ocupado}
@@ -776,80 +811,80 @@ function Proximas({
                 </div>
               </div>
 
-              {abierto?.id === c.id && (
+              {abierto === c.id && (
                 <div className="form-cita">
-                  {abierto.modo === 'mover' ? (
-                    <>
-                      <div>
-                        <label className="field-label">Nueva fecha</label>
-                        <input
-                          className="input"
-                          type="date"
-                          min={hoyLima()}
-                          value={fecha}
-                          onChange={(e) => setFecha(e.target.value)}
-                        />
-                      </div>
-                      <div>
-                        <label className="field-label">Nueva hora</label>
-                        <input
-                          className="input"
-                          type="time"
-                          value={hora}
-                          onChange={(e) => setHora(e.target.value)}
-                        />
-                      </div>
-                      <button
-                        className="btn btn-primary btn-sm"
-                        disabled={ocupado || !fecha || !hora}
-                        onClick={() =>
-                          void ejecutar(c, { accion: 'mover', slot_start: `${fecha} ${hora}` }, 'Cita movida')
-                        }
+                  <div>
+                    <label className="field-label">Fecha</label>
+                    <input
+                      className="input"
+                      type="date"
+                      min={hoyLima()}
+                      value={fecha}
+                      onChange={(e) => setFecha(e.target.value)}
+                    />
+                  </div>
+                  <div>
+                    <label className="field-label">Hora</label>
+                    <input
+                      className="input"
+                      type="time"
+                      value={hora}
+                      onChange={(e) => setHora(e.target.value)}
+                    />
+                  </div>
+
+                  {/*
+                    El profesional solo si el negocio tiene equipo. Y el asignado
+                    aparece AUNQUE esté dado de baja: si no, el desplegable
+                    enseñaría a otra persona como si fuera la suya y bastaría
+                    tocar cualquier otra cosa para reasignarla sin querer.
+                  */}
+                  {opciones.length > 0 && (
+                    <div>
+                      <label className="field-label">Profesional</label>
+                      <select
+                        className="select"
+                        value={destino}
+                        onChange={(e) => setDestino(e.target.value)}
                       >
-                        <Check size={14} /> {ocupado ? 'Moviendo…' : 'Mover'}
-                      </button>
-                    </>
-                  ) : (
-                    <>
-                      <div>
-                        <label className="field-label">Pasar a</label>
-                        <select
-                          className="select"
-                          value={destino}
-                          onChange={(e) => setDestino(e.target.value)}
-                        >
-                          <option value="">Elige a quién</option>
-                          {activos
-                            .filter((t) => t.id !== c.employee_id)
-                            .map((t) => (
-                              <option key={t.id} value={t.id}>
-                                {t.name}
-                              </option>
-                            ))}
-                        </select>
-                      </div>
-                      <button
-                        className="btn btn-primary btn-sm"
-                        disabled={ocupado || !destino}
-                        onClick={() =>
-                          void ejecutar(
-                            c,
-                            { accion: 'reasignar', employee_id: destino },
-                            'Cita reasignada',
-                          )
-                        }
-                      >
-                        <Check size={14} /> {ocupado ? 'Cambiando…' : 'Cambiar'}
-                      </button>
-                    </>
+                        {!c.employee_id && <option value="">Sin asignar</option>}
+                        {opciones.map((t) => (
+                          <option key={t.id} value={t.id}>
+                            {t.name}
+                            {t.activo ? '' : ' · dado de baja'}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
                   )}
+
+                  <button
+                    className="btn btn-primary btn-sm"
+                    disabled={ocupado || !fecha || !hora}
+                    onClick={() => void guardar(c)}
+                  >
+                    <Check size={14} /> {ocupado ? 'Guardando…' : 'Guardar cambios'}
+                  </button>
                   <button className="btn btn-ghost btn-sm" onClick={() => setAbierto(null)}>
                     Dejarlo
                   </button>
-                  {/* Se ofrecen todos: quién puede de verdad lo sabe el bot. */}
+
                   <small className="muted" style={{ flexBasis: '100%', fontSize: 11.5 }}>
+                    {/*
+                      Se ofrece a todos: quién puede de verdad lo sabe el bot, que
+                      lo calcula con la misma función con la que vende.
+                    */}
                     Si no se puede —está ocupado, de vacaciones o fuera de su horario— Mia te dirá
-                    exactamente por qué y la cita se queda como está.
+                    exactamente por qué y la cita se queda como está.{' '}
+                    {/*
+                      Y se dice lo que NO se puede tocar, en vez de callarlo: el
+                      bot conserva la duración y el servicio, así que un campo
+                      aquí prometería un cambio que nunca ocurre.
+                    */}
+                    <b>
+                      La duración ({c.slot_minutes ?? '—'} min) y el servicio ({c.service || '—'}) todavía
+                      no se editan desde el panel.
+                    </b>
                   </small>
                 </div>
               )}
