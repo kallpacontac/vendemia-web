@@ -130,6 +130,8 @@ export default function Agenda() {
    * entra a mirar. Ver components/panel/Paginacion.tsx.
    */
   const [tab, setTab] = useState<'semana' | 'proximas' | 'pasadas'>('semana');
+  /** Ver la agenda de una sola persona. '' = todo el equipo. */
+  const [fEmpleado, setFEmpleado] = useState('');
 
   const { datos, cargando, recargar } = useCargar(async () => {
     if (!companyId) return null;
@@ -153,14 +155,28 @@ export default function Agenda() {
       bloqueos: datos.bloqueos,
       horario: datos.empresa.horario,
       slotMinutos: datos.empresa.slot_minutes ?? 30,
+      // El aforo real sale de cruzar sillas y gente: ver construirSemana().
+      empleados: datos.trabajadores.map((t) => ({ id: t.id, activo: t.activo })),
+      empleadoId: fEmpleado || undefined,
     });
-  }, [datos, offset]);
+  }, [datos, offset, fEmpleado]);
 
   const esRecurrente = datos?.empresa?.business_mode === 'recurring_appointment';
 
+  /**
+   * Las citas que se enseñan, ya filtradas por profesional.
+   *
+   * ⚠️ Las inscripciones a grupos NO se filtran aquí (no tienen `employee_id`):
+   * su pestaña usa la lista completa, o elegir a alguien vaciaría los grupos.
+   */
+  const citasVista = useMemo(() => {
+    const todas = datos?.citas ?? [];
+    return fEmpleado ? todas.filter((c) => c.employee_id === fEmpleado) : todas;
+  }, [datos, fEmpleado]);
+
   /** Solo para los números de las pestañas: cada lista se filtra luego dentro. */
-  const nProximas = useMemo(() => porVenir(datos?.citas ?? []).length, [datos]);
-  const nPendientes = useMemo(() => pidenAlgo(yaPasaron(datos?.citas ?? [])).length, [datos]);
+  const nProximas = useMemo(() => porVenir(citasVista).length, [citasVista]);
+  const nPendientes = useMemo(() => pidenAlgo(yaPasaron(citasVista)).length, [citasVista]);
 
   if (cargando && !datos) {
     return (
@@ -233,9 +249,39 @@ export default function Agenda() {
           </button>
         </div>
 
+        {/*
+          ⚠️ El filtro cambia lo que SIGNIFICA la rejilla, no solo lo que enseña.
+          Con un profesional elegido es SU agenda: cabe una cita a la vez y sus
+          ausencias sí cierran la franja. Con «todo el equipo», lo que cabe a la
+          vez es lo menor entre las sillas y la gente que hay para atender.
+        */}
+        {(datos?.trabajadores.length ?? 0) > 0 && (
+          <div className="filtro-fila">
+            <select
+              className="select"
+              style={{ maxWidth: 220 }}
+              value={fEmpleado}
+              onChange={(e) => setFEmpleado(e.target.value)}
+            >
+              <option value="">Todo el equipo</option>
+              {(datos?.trabajadores ?? []).map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.name}
+                  {t.activo ? '' : ' · dado de baja'}
+                </option>
+              ))}
+            </select>
+            {fEmpleado && (
+              <span className="muted" style={{ fontSize: 12 }}>
+                Su agenda: una cita a la vez, y sus ausencias cierran la franja.
+              </span>
+            )}
+          </div>
+        )}
+
         {tab === 'pasadas' && (
           <PorConfirmar
-            citas={datos?.citas ?? []}
+            citas={citasVista}
             nombrePorLead={new Map((datos?.leads ?? []).map((l) => [l.id, l.name || l.phone]))}
             alCambiar={recargar}
           />
@@ -243,7 +289,7 @@ export default function Agenda() {
 
         {tab === 'proximas' && (
           <Proximas
-            citas={datos?.citas ?? []}
+            citas={citasVista}
             nombrePorLead={new Map((datos?.leads ?? []).map((l) => [l.id, l.name || l.phone]))}
             trabajadores={datos?.trabajadores ?? []}
             alCambiar={recargar}

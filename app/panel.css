@@ -1066,3 +1066,6 @@ body:has(.demo-banda) .sidebar{padding-top:44px}
 /* Las pestañas de la Agenda. Mismo control que .view-toggle: son hermanas y
    tienen que leerse igual. */
 .tabs-agenda{margin-bottom:16px;flex-wrap:wrap}
+
+/* Filtro por profesional de la Agenda. */
+.filtro-fila{display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap}
