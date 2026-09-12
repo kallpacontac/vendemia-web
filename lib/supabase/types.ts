@@ -448,6 +448,61 @@ export interface PuntoIntencion {
   count: number;
 }
 
+/* ── La serie temporal (`analytics_serie`, migración 0026) ──────────────── */
+
+/** La semana empieza en LUNES y el mes es natural. Todo en hora de Lima. */
+export type GranoSerie = 'day' | 'week' | 'month';
+
+/**
+ * Con qué fecha se agrupa un movimiento.
+ *
+ * ⚠️ `creacion` (por defecto) es cuándo se RESERVÓ; `servicio`, cuándo se
+ * atiende o se entrega. Cuál de las dos es «los ingresos de la semana pasada»
+ * es una decisión del negocio que nadie ha tomado — el panel las ofrece, no
+ * elige. Y con `servicio`, los pedidos sin entrega concretada se caen de la
+ * serie (no tienen esa fecha).
+ */
+export type TipoFechaSerie = 'creacion' | 'servicio';
+
+export interface PuntoSerie {
+  /** Primer día del cubo, 'YYYY-MM-DD'. */
+  periodo: string;
+  /** Último día del cubo. */
+  fin: string;
+  /**
+   * El cubo NO está completo: sigue en curso, o lo recorta el rango pedido.
+   * ⚠️ Hay que pintarlo distinto: si no, la semana en curso parece una caída
+   * que solo es «todavía no ha terminado».
+   */
+  parcial: boolean;
+  leads: number;
+  /** Lo que Mia concertó: todo menos lo cancelado. NO es dinero. */
+  cerrados: number;
+  /** Solo lo que ya cuenta como ingreso. Puede ser 0 con `cerrados` > 0. */
+  ingresos: number;
+  citas: number;
+  pedidos: number;
+}
+
+/**
+ * Una fila de `seguimientos` (migración 0025): un «ya le escribí» del
+ * retargeting, y si esa persona compró en los 7 días siguientes.
+ */
+export interface SeguimientoRow {
+  id: string;
+  company_id: string;
+  lead_id: string;
+  /** El mismo vocabulario que `retargeting.motivo`. */
+  motivo: string;
+  enviado_at: number;
+  /** Texto libre de una PERSONA. El sistema no lo escribe nunca. */
+  resultado: string;
+  nota: string;
+  /** Lo deduce el bot: primera venta del lead tras el mensaje. `0` = ninguna. */
+  venta_at: number;
+  venta_ref: string;
+}
+
 export interface ProductoIngreso {
   name: string;
   revenue: number;

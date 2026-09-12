@@ -1011,3 +1011,21 @@ body:has(.demo-banda) .sidebar{padding-top:44px}
 .aviso-citas li{display:flex;flex-wrap:wrap;align-items:center;gap:4px 12px;padding:6px 0;border-top:1px solid #F5D9A8}
 .form-ausencia{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-top:10px}
 .form-ausencia .full{grid-column:1/-1}
+
+/* Métricas: el selector de rango y las barras de la serie. */
+.rango{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:14px}
+.rango .etq{font-size:12px;color:var(--ink-soft);font-weight:600}
+.serie{display:flex;align-items:flex-end;gap:3px;height:180px}
+.serie .cubo{flex:1;min-width:2px;display:flex;align-items:flex-end;height:100%}
+.serie .cubo i{display:block;width:100%;border-radius:4px 4px 0 0;background:var(--brand);min-height:2px}
+/* El cubo en curso (o recortado por el rango) va rayado: no es una caída, es
+   que todavía no ha terminado. */
+.serie .cubo.parcial i{background:repeating-linear-gradient(45deg,#FFB08A,#FFB08A 3px,#FFE0CE 3px,#FFE0CE 6px)}
+.serie--dinero .cubo i{background:#0FA968}
+.serie--dinero .cubo.parcial i{background:repeating-linear-gradient(45deg,#7FD3AC,#7FD3AC 3px,#D8F3E6 3px,#D8F3E6 6px)}
+.serie-x{display:flex;gap:3px;margin-top:6px}
+.serie-x span{flex:1;min-width:0;text-align:center;font-size:10px;color:var(--ink-soft);
+  white-space:nowrap;overflow:hidden}
+.delta{font-weight:700;font-size:11.5px}
+.delta.sube{color:#0FA968}.delta.baja{color:#E5484D}.delta.igual{color:var(--ink-soft)}
+.sum small.pie{display:block;color:var(--ink-soft);font-size:11px;font-weight:500;margin-top:2px}

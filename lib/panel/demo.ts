@@ -37,6 +37,7 @@ import type {
   CatalogMediaRow,
   DailyMetricRow,
   EmployeeBlockRow,
+  GranoSerie,
   Horario,
   LeadIntent,
   LeadStatus,
@@ -46,7 +47,9 @@ import type {
   PuntoIngreso,
   PuntoIntencion,
   PuntoPedidos,
+  PuntoSerie,
   RetargetingRow,
+  SeguimientoRow,
 } from '@/lib/supabase/types';
 import type {
   Cita,
@@ -547,6 +550,141 @@ export function productosDemo(companyId: string): ProductoIngreso[] {
   return [...m.entries()]
     .map(([name, v]) => ({ name, ...v }))
     .sort((a, b) => b.revenue - a.revenue);
+}
+
+/* ── La serie temporal ──────────────────────────────────────────────────── */
+
+/**
+ * Lo que devolvería `analytics_serie`, calculado sobre los mismos leads, citas
+ * y pedidos que el resto de la demo. Se reproducen sus dos reglas: la semana
+ * empieza en LUNES y un cubo es `parcial` si sigue en curso o lo recorta el
+ * rango pedido.
+ */
+/**
+ * ⚠️ 'YYYY-MM-DD' A MEDIODÍA, SIEMPRE.
+ *
+ * `new Date('2026-09-11')` se lee como UTC, que en Lima es el día ANTERIOR a
+ * las 19:00. Con eso la serie diaria salía corrida un día y se dejaba fuera el
+ * de hoy, así que el mismo periodo daba distinto agrupado por día que por
+ * semana. Lo cazó scratchpad/probar-serie.mts.
+ */
+const delDia = (iso: string): Date => new Date(`${iso}T12:00:00`);
+
+function inicioCubo(d: Date, grano: GranoSerie): Date {
+  if (grano === 'month') return new Date(d.getFullYear(), d.getMonth(), 1, 12);
+  if (grano === 'week') {
+    const x = new Date(d);
+    x.setDate(x.getDate() - ((x.getDay() + 6) % 7));
+    return x;
+  }
+  return new Date(d);
+}
+
+function finCubo(ini: Date, grano: GranoSerie): Date {
+  if (grano === 'month') return new Date(ini.getFullYear(), ini.getMonth() + 1, 0, 12);
+  if (grano === 'week') return new Date(ini.getTime() + 6 * 864e5);
+  return new Date(ini);
+}
+
+function siguienteCubo(ini: Date, grano: GranoSerie): Date {
+  const x = new Date(ini);
+  if (grano === 'month') x.setMonth(x.getMonth() + 1);
+  else x.setDate(x.getDate() + (grano === 'week' ? 7 : 1));
+  return x;
+}
+
+export function serieDemo(
+  companyId: string,
+  desde: string,
+  hasta: string,
+  grano: GranoSerie,
+): PuntoSerie[] {
+  type Dia = { leads: number; cerrados: number; ingresos: number; citas: number; pedidos: number };
+  const porDia = new Map<string, Dia>();
+  const en = (k: string): Dia => {
+    const v = porDia.get(k) ?? { leads: 0, cerrados: 0, ingresos: 0, citas: 0, pedidos: 0 };
+    porDia.set(k, v);
+    return v;
+  };
+
+  for (const l of leadsDemo(companyId)) if (l.creado) en(iso(l.creado)).leads++;
+
+  for (const c of citasDemo(companyId)) {
+    if (!c.inicio || c.status === 'cancelled') continue;
+    const d = en(iso(c.inicio));
+    d.cerrados++;
+    if (c.status === 'confirmed' || c.status === 'completed') {
+      d.citas++;
+      d.ingresos += SERVICIOS.find((x) => x.name === c.service)?.price ?? 40;
+    }
+  }
+
+  for (const p of pedidosDemo(companyId)) {
+    if (!p.creado || p.status === 'cancelled') continue;
+    const d = en(iso(p.creado));
+    d.cerrados++;
+    if (p.status === 'paid' || p.status === 'delivered') {
+      d.pedidos++;
+      d.ingresos += p.total ?? 0;
+    }
+  }
+
+  const hoy = iso(HOY);
+  const out: PuntoSerie[] = [];
+  for (let ini = inicioCubo(delDia(desde), grano); iso(ini) <= hasta; ini = siguienteCubo(ini, grano)) {
+    const cierre = finCubo(ini, grano);
+    const acc: Dia = { leads: 0, cerrados: 0, ingresos: 0, citas: 0, pedidos: 0 };
+    for (let d = new Date(ini); iso(d) <= iso(cierre); d.setDate(d.getDate() + 1)) {
+      const k = iso(d);
+      if (k < desde || k > hasta) continue;
+      const v = porDia.get(k);
+      if (!v) continue;
+      acc.leads += v.leads;
+      acc.cerrados += v.cerrados;
+      acc.ingresos += v.ingresos;
+      acc.citas += v.citas;
+      acc.pedidos += v.pedidos;
+    }
+    out.push({
+      periodo: iso(ini),
+      fin: iso(cierre),
+      parcial: iso(cierre) > hoy || iso(ini) < desde || iso(cierre) > hasta,
+      ...acc,
+    });
+  }
+  return out;
+}
+
+/* ── Seguimientos ───────────────────────────────────────────────────────── */
+
+/**
+ * Mensajes de recuperación repartidos por el mes, unos cuantos con venta.
+ *
+ * ⚠️ A propósito hay algunos de los últimos días SIN venta: son los que
+ * todavía tienen la ventana abierta, y sirven para enseñar que la pantalla no
+ * los cuenta como fallos.
+ */
+export function seguimientosDemo(companyId: string): SeguimientoRow[] {
+  const leads = leadsDemo(companyId);
+  return Array.from({ length: 16 }, (_, i) => {
+    const hace = i < 3 ? entre(0, 5) : entre(8, 29);
+    const enviado = dia(-hace);
+    enviado.setHours(entre(9, 19), entre(0, 59), 0, 0);
+    const cerrada = hace >= 8;
+    const vendio = cerrada && rnd() < 0.34;
+    const l = leads[(i * 7) % leads.length];
+    return {
+      id: `demo-seg-${i}`,
+      company_id: companyId,
+      lead_id: l.id,
+      motivo: de(MOTIVOS_DEMO).motivo,
+      enviado_at: ts(enviado),
+      resultado: vendio ? 'compró' : '',
+      nota: '',
+      venta_at: vendio ? ts(dia(-hace + entre(1, 4))) : 0,
+      venta_ref: vendio ? `demo-ped-${i}` : '',
+    } satisfies SeguimientoRow;
+  });
 }
 
 /** Mapa de calor: horas punta a media mañana y a la salida del trabajo. */

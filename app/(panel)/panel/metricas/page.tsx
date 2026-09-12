@@ -16,15 +16,31 @@
  *   · Los ingresos SOLO cuentan pedidos `paid`. Un pedido `delivered` que nunca
  *     pasó por `paid` no aparece en `revenue`.
  */
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { CalendarCheck, Send, Target, Users, Wallet, ShoppingBag } from 'lucide-react';
 import Topbar from '@/components/panel/Topbar';
 import { useSesion } from '@/components/panel/Sesion';
 import { useCargar } from '@/components/panel/useCargar';
 import { conversionDeHoy } from '@/lib/panel/conversion';
-import { areaPath, seriesPts, smoothPath } from '@/lib/panel/charts';
 import { construirSemana } from '@/lib/panel/agenda';
-import { hace, INTENT, intent, isoLocal, soles } from '@/lib/panel/format';
+import { INTENT, intent, isoLocal, soles } from '@/lib/panel/format';
+import { motivoDe } from '@/lib/panel/retargeting';
+import {
+  anterior,
+  delta,
+  etiquetaCubo,
+  GRANOS,
+  PRESETS,
+  rangoCubo,
+  rangoDe,
+  total,
+} from '@/lib/panel/serie';
+import {
+  porMotivo,
+  recuperacion,
+  textoRecuperacion,
+  VENTANA_DIAS,
+} from '@/lib/panel/seguimientos';
 import {
   getActividad,
   getCitas,
@@ -32,13 +48,13 @@ import {
   getIngresosPorProducto,
   getIntencionPorDia,
   getLeads,
-  getLeadsPorDia,
   getMetricasDiarias,
-  getIngresosPorDia,
   getPedidos,
+  getSeguimientos,
+  getSerie,
   getTrabajadores,
 } from '@/lib/supabase/queries';
-import type { LeadIntent } from '@/lib/supabase/types';
+import type { GranoSerie, LeadIntent, PuntoSerie, TipoFechaSerie } from '@/lib/supabase/types';
 
 const DIAS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
 /** El heatmap tiene 12 columnas en el CSS: de 9:00 a 20:00. */
@@ -48,17 +64,29 @@ const COLORES = ['#FF4900', '#0E7C86', '#FBB040', '#0FA968', '#7C5CFF'];
 export default function Metricas() {
   const { companyId, compania } = useSesion();
 
+  /**
+   * El periodo lo elige quien mira, y el grano por defecto lo trae el propio
+   * periodo (90 días en barras diarias no se lee). Cambiar el grano a mano lo
+   * fija hasta que se cambie de periodo.
+   */
+  const [presetClave, setPresetClave] = useState('30d');
+  const [granoFijado, setGranoFijado] = useState<GranoSerie | null>(null);
+  const [fecha, setFecha] = useState<TipoFechaSerie>('creacion');
+  const preset = PRESETS.find((p) => p.clave === presetClave) ?? PRESETS[1];
+  const grano = granoFijado ?? preset.grano;
+
   const { datos, cargando } = useCargar(async () => {
     if (!companyId) return null;
-    const desde = isoLocal(hace(29));
-    const hasta = isoLocal(new Date());
-    const [metricas, leadsDia, pedidosDia, intencion, productos, actividad, empresa, citas, leads, trabajadores, pedidos] =
+    const { desde, hasta } = rangoDe(preset.dias);
+    const previo = anterior(preset.dias);
+    const [serie, serieAnterior, metricas, intencion, productos, actividad, empresa, citas, leads, trabajadores, pedidos, seguimientos] =
       await Promise.all([
+        // Una sola definición de "esto es dinero" para toda la serie, con los
+        // cubos vacíos ya incluidos. Ver la migración 0026.
+        getSerie(companyId, desde, hasta, grano, fecha),
+        // La línea base: el mismo número de días, justo antes.
+        getSerie(companyId, previo.desde, previo.hasta, grano, fecha),
         getMetricasDiarias(companyId, desde, hasta),
-        getLeadsPorDia(companyId, desde),
-        // ⚠️ getIngresosPorDia, NO getPedidosPorDia: un negocio de citas no
-        // crea pedidos y esta gráfica se quedaba plana. Ver la migración 0019.
-        getIngresosPorDia(companyId, desde),
         getIntencionPorDia(companyId, desde),
         getIngresosPorProducto(companyId, desde, hasta).catch(() => []),
         getActividad(companyId, 7),
@@ -67,9 +95,29 @@ export default function Metricas() {
         getLeads(companyId),
         getTrabajadores(companyId),
         getPedidos(companyId),
+        // Una tabla nueva: si el espejo aún no la trae, la pantalla sigue.
+        getSeguimientos(companyId).catch(() => []),
       ]);
-    return { metricas, leadsDia, pedidosDia, intencion, productos, actividad, empresa, citas, leads, trabajadores, pedidos };
-  }, [companyId]);
+    return { serie, serieAnterior, metricas, intencion, productos, actividad, empresa, citas, leads, trabajadores, pedidos, seguimientos };
+  }, [companyId, preset.dias, grano, fecha]);
+
+  const serie = useMemo(() => datos?.serie ?? [], [datos]);
+  const serieAnterior = useMemo(() => datos?.serieAnterior ?? [], [datos]);
+
+  /** Lo que se compara con el periodo anterior. Ver lib/panel/serie.ts. */
+  const comparado = useMemo(
+    () =>
+      (['leads', 'cerrados', 'ingresos'] as const).map((campo) => ({
+        campo,
+        valor: total(serie, campo),
+        previo: total(serieAnterior, campo),
+      })),
+    [serie, serieAnterior],
+  );
+
+  /** La tasa de recuperación, de todos los mensajes, no solo los del periodo. */
+  const recupera = useMemo(() => recuperacion(datos?.seguimientos ?? []), [datos]);
+  const recuperaMotivos = useMemo(() => porMotivo(datos?.seguimientos ?? []), [datos]);
 
   const hoy = isoLocal(new Date());
   const metricaHoy = datos?.metricas.find((m) => m.date === hoy);
@@ -88,15 +136,7 @@ export default function Metricas() {
     [datos],
   );
 
-  const puntosLeads = useMemo(
-    () => seriesPts((datos?.leadsDia ?? []).map((p) => p.count), 700, 200, 14),
-    [datos],
-  );
-  const puntosIngresos = useMemo(
-    () => seriesPts((datos?.pedidosDia ?? []).map((p) => p.revenue), 700, 200, 14),
-    [datos],
-  );
-  const ingresosMes = (datos?.pedidosDia ?? []).reduce((s, p) => s + p.revenue, 0);
+  const ingresosPeriodo = total(serie, 'ingresos');
 
   /** v_intent_by_day viene por día: para el donut se suma el mes entero. */
   const distribucion = useMemo(() => {
@@ -179,6 +219,88 @@ export default function Metricas() {
           </button>
         </Topbar>
 
+        {/*
+          El periodo, el grano y con qué fecha se agrupa.
+
+          ⚠️ «Fecha» NO tiene una respuesta correcta y el panel no la elige: de
+          reserva es cuándo se cerró la venta, de atención cuándo se presta. Para
+          una barbería, «lo que facturé la semana pasada» es la segunda; para
+          medir cómo vende Mia, la primera.
+        */}
+        <div className="rango">
+          <span className="etq">Periodo</span>
+          <select
+            className="select"
+            value={presetClave}
+            onChange={(e) => {
+              setPresetClave(e.target.value);
+              setGranoFijado(null);
+            }}
+          >
+            {PRESETS.map((p) => (
+              <option key={p.clave} value={p.clave}>
+                {p.label}
+              </option>
+            ))}
+          </select>
+
+          <span className="etq">Agrupar por</span>
+          <div className="view-toggle">
+            {GRANOS.map((g) => (
+              <button
+                key={g.valor}
+                className={grano === g.valor ? 'active' : ''}
+                onClick={() => setGranoFijado(g.valor)}
+              >
+                {g.label}
+              </button>
+            ))}
+          </div>
+
+          <span className="etq">Fecha</span>
+          <select
+            className="select"
+            value={fecha}
+            onChange={(e) => setFecha(e.target.value as TipoFechaSerie)}
+          >
+            <option value="creacion">de reserva</option>
+            <option value="servicio">de atención</option>
+          </select>
+        </div>
+
+        {fecha === 'servicio' && (
+          <div className="desfase" style={{ marginBottom: 14 }}>
+            Agrupando por <b>fecha de atención</b>: cada venta cuenta el día que se presta, no el
+            día que se cerró. Los pedidos <b>sin fecha de entrega concretada</b> no tienen esa fecha
+            y se caen de la serie.
+          </div>
+        )}
+
+        {/*
+          El periodo comparado con el anterior. Un número sin línea base no es un
+          KPI: «S/ 4.200» no dice nada hasta saber si antes fueron 3.000 o 6.000.
+        */}
+        <div className="sum-grid">
+          {comparado.map((c) => (
+            <Comparado
+              key={c.campo}
+              etiqueta={
+                c.campo === 'leads' ? 'Leads' : c.campo === 'cerrados' ? 'Cerrados' : 'Ingresos'
+              }
+              texto={c.campo === 'ingresos' ? soles(c.valor) : String(c.valor)}
+              valor={c.valor}
+              previo={c.previo}
+              pie={
+                c.campo === 'cerrados'
+                  ? 'lo que Mia concertó, se haya cobrado o no'
+                  : c.campo === 'ingresos'
+                    ? 'solo lo que ya cuenta como dinero'
+                    : `frente a ${c.previo} en los ${preset.dias} días anteriores`
+              }
+            />
+          ))}
+        </div>
+
         <div className="kpi5">
           <Kpi icono={<Users size={18} />} fondo="#FFF1E6" color="#F58220" valor={leadsHoy} etiqueta="Leads hoy" />
           <Kpi
@@ -222,24 +344,14 @@ export default function Metricas() {
         <div className="row-2">
           <div className="card">
             <div className="card-head">
-              <h3>Leads por día (30 días)</h3>
+              <h3>Leads por {GRANOS.find((g) => g.valor === grano)?.cubo}</h3>
+              <span className="badge-pill b-mute">{preset.label.toLowerCase()}</span>
             </div>
-            <div className="line-wrap">
-              {puntosLeads.length > 1 ? (
-                <svg viewBox="0 0 700 200" preserveAspectRatio="none">
-                  <defs>
-                    <linearGradient id="gL" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0" stopColor="#FF4900" stopOpacity=".2" />
-                      <stop offset="1" stopColor="#FF4900" stopOpacity="0" />
-                    </linearGradient>
-                  </defs>
-                  <path d={areaPath(puntosLeads, 700, 200)} fill="url(#gL)" />
-                  <path d={smoothPath(puntosLeads)} fill="none" stroke="#FF4900" strokeWidth="2.5" />
-                </svg>
-              ) : (
-                <p className="vacio">Todavía no hay suficientes días con datos.</p>
-              )}
-            </div>
+            {serie.length ? (
+              <SerieBarras serie={serie} campo="leads" grano={grano} />
+            ) : (
+              <p className="vacio">Sin datos en el periodo.</p>
+            )}
           </div>
 
           <div className="card">
@@ -301,25 +413,14 @@ export default function Metricas() {
         <div className="row-2">
           <div className="card">
             <div className="card-head">
-              <h3>Ingresos por día (30 días)</h3>
-              <span className="badge-pill b-new">Total {soles(ingresosMes)}</span>
+              <h3>Ingresos por {GRANOS.find((g) => g.valor === grano)?.cubo}</h3>
+              <span className="badge-pill b-new">Total {soles(ingresosPeriodo)}</span>
             </div>
-            <div className="line-wrap">
-              {puntosIngresos.length > 1 ? (
-                <svg viewBox="0 0 700 200" preserveAspectRatio="none">
-                  <defs>
-                    <linearGradient id="gR" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0" stopColor="#3ED598" stopOpacity=".24" />
-                      <stop offset="1" stopColor="#3ED598" stopOpacity="0" />
-                    </linearGradient>
-                  </defs>
-                  <path d={areaPath(puntosIngresos, 700, 200)} fill="url(#gR)" />
-                  <path d={smoothPath(puntosIngresos)} fill="none" stroke="#0FA968" strokeWidth="2.5" />
-                </svg>
-              ) : (
-                <p className="vacio">Sin pedidos pagados en el periodo.</p>
-              )}
-            </div>
+            {serie.length ? (
+              <SerieBarras serie={serie} campo="ingresos" grano={grano} dinero />
+            ) : (
+              <p className="vacio">Sin ingresos en el periodo.</p>
+            )}
           </div>
 
           <div className="card">
@@ -401,6 +502,54 @@ export default function Metricas() {
           </div>
         </div>
 
+        {/*
+          ⚠️ Solo cuentan los mensajes con la ventana de 7 días ya cerrada. Los de
+          esta semana todavía pueden convertir: contarlos como fallos hunde la
+          tasa sin motivo, y eso es un error de medición, no un matiz.
+        */}
+        <div className="card">
+          <div className="card-head">
+            <h3>Mensajes de recuperación</h3>
+            <small className="muted">
+              se cuenta la venta si llega en {VENTANA_DIAS} días
+            </small>
+          </div>
+          {recupera.intentos === 0 ? (
+            <p className="vacio">
+              <b>Aún sin medir</b>
+              {recupera.enCurso > 0
+                ? `Hay ${recupera.enCurso} mensaje(s) enviados esta semana. Todavía pueden acabar en venta, así que no cuentan ni a favor ni en contra.`
+                : 'Cuando escribas a alguien desde Retargeting, aquí se verá en qué acabó.'}
+            </p>
+          ) : (
+            <>
+              <div className="big">{textoRecuperacion(recupera)}</div>
+              <p className="muted" style={{ fontSize: 12.5, marginTop: 2 }}>
+                {recupera.pct}% de los que ya cerraron su ventana.
+                {recupera.enCurso > 0 &&
+                  ` Otros ${recupera.enCurso} se enviaron en los últimos ${VENTANA_DIAS} días y todavía no cuentan.`}
+              </p>
+              {recuperaMotivos.length > 1 &&
+                recuperaMotivos.map(({ motivo, r }) => (
+                  <div className="slotbar" key={motivo}>
+                    <div className="lab">
+                      <b>{motivoDe(motivo).label}</b>
+                      <span>
+                        {r.ventas} de {r.intentos}
+                      </span>
+                    </div>
+                    <div className="track">
+                      <div
+                        className="fill"
+                        style={{ width: `${r.pct ?? 0}%`, background: motivoDe(motivo).color }}
+                      />
+                    </div>
+                  </div>
+                ))}
+            </>
+          )}
+        </div>
+
         <div className="card">
           <div className="card-head">
             <h3>Resumen de la semana</h3>
@@ -425,6 +574,77 @@ export default function Metricas() {
         </div>
       </div>
     </main>
+  );
+}
+
+/**
+ * Las barras de la serie.
+ *
+ * ⚠️ El cubo `parcial` va rayado, y no es decoración: la semana en curso tiene
+ * menos días que las de al lado, y pintada igual se lee como una caída del
+ * negocio. Lo mismo con el primer cubo cuando el rango lo corta por la mitad.
+ */
+function SerieBarras({
+  serie,
+  campo,
+  grano,
+  dinero = false,
+}: {
+  serie: PuntoSerie[];
+  campo: 'leads' | 'ingresos' | 'cerrados';
+  grano: GranoSerie;
+  dinero?: boolean;
+}) {
+  const max = Math.max(...serie.map((p) => p[campo]), 1);
+  // Con 90 barras no caben 90 etiquetas: se pone una de cada tantas.
+  const paso = Math.max(1, Math.ceil(serie.length / 8));
+
+  return (
+    <>
+      <div className={`serie ${dinero ? 'serie--dinero' : ''}`}>
+        {serie.map((p) => (
+          <div
+            key={p.periodo}
+            className={`cubo ${p.parcial ? 'parcial' : ''}`}
+            title={`${rangoCubo(p)} · ${dinero ? soles(p[campo]) : p[campo]}${
+              p.parcial ? ' · todavía no ha terminado' : ''
+            }`}
+          >
+            <i style={{ height: `${(p[campo] / max) * 100}%` }} />
+          </div>
+        ))}
+      </div>
+      <div className="serie-x">
+        {serie.map((p, i) => (
+          <span key={p.periodo}>{i % paso === 0 ? etiquetaCubo(p, grano) : ''}</span>
+        ))}
+      </div>
+    </>
+  );
+}
+
+/** Una cifra del periodo con su variación respecto al periodo anterior. */
+function Comparado({
+  etiqueta,
+  texto,
+  valor,
+  previo,
+  pie,
+}: {
+  etiqueta: string;
+  texto: string;
+  valor: number;
+  previo: number;
+  pie: string;
+}) {
+  const d = delta(valor, previo);
+  return (
+    <div className="sum">
+      <small>{etiqueta}</small>
+      <b>{texto}</b>
+      <span className={`delta ${d.clase}`}>{d.texto}</span>
+      <small className="pie">{pie}</small>
+    </div>
   );
 }
 

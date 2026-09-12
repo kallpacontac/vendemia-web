@@ -39,8 +39,9 @@ import {
   getLeads,
   getMetricasDiarias,
   getPedidos,
-  getIngresosPorDia,
+  getSerie,
 } from '@/lib/supabase/queries';
+import { delta, rangoDe, total } from '@/lib/panel/serie';
 
 const DIAS_CORTOS = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
 const COLORES_SERVICIO = ['#FF4900', '#0E7C86', '#FBB040', '#0FA968', '#7C5CFF'];
@@ -60,12 +61,19 @@ export default function Dashboard() {
     if (!companyId) return null;
     const desde = isoLocal(hace(29));
     const hasta = isoLocal(new Date());
+    /**
+     * 60 días en una sola llamada: los 30 últimos son lo que se pinta y los 30
+     * anteriores son la línea base del «frente a los 30 días anteriores». Sale
+     * de `analytics_serie`, la misma fuente que Métricas — las dos pantallas
+     * tienen que contar la misma historia.
+     */
+    const largo = rangoDe(60);
     // El estado del bot NO se pide aquí: lo sirve <ProveedorSalud> para todo el
     // panel, y se refresca cada 60 s por su cuenta. Pedirlo también en esta
     // pantalla haría dos consultas que pueden contradecirse entre sí.
-    const [metricas, pedidosDia, citas, leads, pedidos, productos, empresa] = await Promise.all([
+    const [metricas, serie, citas, leads, pedidos, productos, empresa] = await Promise.all([
       getMetricasDiarias(companyId, desde, hasta),
-      getIngresosPorDia(companyId, desde),
+      getSerie(companyId, largo.desde, largo.hasta, 'day'),
       getCitas(companyId),
       // 500 y no 200: el denominador de la conversión sale de estas filas, así
       // que un límite corto no "pierde leads viejos", falsea el porcentaje de hoy.
@@ -74,8 +82,16 @@ export default function Dashboard() {
       getIngresosPorProducto(companyId, desde, hasta).catch(() => []),
       getCompania(companyId),
     ]);
-    return { metricas, pedidosDia, citas, leads, pedidos, productos, empresa };
+    return { metricas, serie, citas, leads, pedidos, productos, empresa };
   }, [companyId]);
+
+  /** Los 30 días que se pintan, y los 30 de antes con los que se comparan. */
+  const ultimos30 = useMemo(() => (datos?.serie ?? []).slice(-30), [datos]);
+  const previos30 = useMemo(() => (datos?.serie ?? []).slice(0, -30), [datos]);
+  const deltaLeads = useMemo(
+    () => delta(total(ultimos30, 'leads'), total(previos30, 'leads')),
+    [ultimos30, previos30],
+  );
 
   const hoy = isoLocal(new Date());
 
@@ -87,14 +103,17 @@ export default function Dashboard() {
    * no tiene pedidos: con la vista de pedidos, la barbería veía siete barras a
    * cero teniendo la agenda llena. Ver getIngresosPorDia().
    */
-  const semana = useMemo(() => {
-    const porFecha = new Map((datos?.pedidosDia ?? []).map((p) => [p.date, p.revenue]));
-    return Array.from({ length: 7 }, (_, i) => {
-      const d = hace(6 - i);
-      const iso = isoLocal(d);
-      return { iso, dia: DIAS_CORTOS[d.getDay()], ingresos: porFecha.get(iso) ?? 0 };
-    });
-  }, [datos]);
+  const semana = useMemo(
+    () =>
+      ultimos30.slice(-7).map((p) => ({
+        iso: p.periodo,
+        // 'YYYY-MM-DD' a mediodía: a medianoche, un desfase de zona horaria
+        // cambia el día de la semana.
+        dia: DIAS_CORTOS[new Date(`${p.periodo}T12:00:00`).getDay()],
+        ingresos: p.ingresos,
+      })),
+    [ultimos30],
+  );
 
   const metricaHoy = datos?.metricas.find((m) => m.date === hoy);
   const leadsHoy = metricaHoy?.leads ?? 0;
@@ -111,11 +130,11 @@ export default function Dashboard() {
     [datos],
   );
 
-  /** Sparkline de leads: los 30 días de v_daily_metrics, tal cual. */
-  const chispa = useMemo(() => {
-    const vals = (datos?.metricas ?? []).map((m) => m.leads);
-    return vals.length > 1 ? seriesPts(vals, 300, 52, 6) : [];
-  }, [datos]);
+  /** Sparkline de leads: los 30 días de la serie, con los vacíos incluidos. */
+  const chispa = useMemo(
+    () => (ultimos30.length > 1 ? seriesPts(ultimos30.map((p) => p.leads), 300, 52, 6) : []),
+    [ultimos30],
+  );
 
   /** Citas del mes en curso, y cuántas acabaron bien. Es el anillo. */
   const anillo = useMemo(() => {
@@ -308,7 +327,11 @@ export default function Dashboard() {
             <div className="card">
               <div className="card-mini-head">
                 <h3>Leads</h3>
-                <span className="badge-pill b-mute">30 días</span>
+                {/* El total no dice nada solo: al lado va cómo fueron los 30
+                    días anteriores. Ver lib/panel/serie.ts. */}
+                <span className={`delta ${deltaLeads.clase}`} title="Frente a los 30 días anteriores">
+                  {deltaLeads.texto}
+                </span>
               </div>
               <div className="spark">
                 {chispa.length > 0 && (

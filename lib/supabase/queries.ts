@@ -42,6 +42,8 @@ import {
   pedidosPorDiaDemo,
   productosDemo,
   retargetingDemo,
+  seguimientosDemo,
+  serieDemo,
   trabajadoresDemo,
 } from '@/lib/panel/demo';
 import type {
@@ -53,6 +55,7 @@ import type {
   EmployeeBlockRow,
   EmployeeRow,
   EscalationRow,
+  GranoSerie,
   Horario,
   InstanceHealthRow,
   ItemPedido,
@@ -67,8 +70,11 @@ import type {
   PuntoIntencion,
   PuntoIngreso,
   PuntoPedidos,
+  PuntoSerie,
   RetargetingRow,
   Rol,
+  SeguimientoRow,
+  TipoFechaSerie,
 } from './types';
 
 /* ── Compañías del usuario ──────────────────────────────────────────────── */
@@ -614,6 +620,71 @@ export async function getIngresosPorProducto(
   });
   if (error) throw error;
   return (data ?? []) as ProductoIngreso[];
+}
+
+/* ── La serie temporal, con el grano que pida la pantalla ───────────────── */
+
+/**
+ * Leads, cerrados e ingresos por día, semana o mes — con los cubos VACÍOS ya
+ * incluidos (`analytics_serie`, migración 0026).
+ *
+ * ⚠️ Es la única forma correcta de pedir una serie. Las vistas por día solo
+ * traen los días con actividad y obligaban a rellenar los huecos en cada
+ * pantalla; de ahí salieron dos pantallas del mismo panel con cifras distintas
+ * para el mismo día.
+ *
+ * `cerrados` ≠ `ingresos`, y la diferencia es real: una inscripción sin pagar
+ * es algo que Mia cerró y todavía no es dinero.
+ */
+export async function getSerie(
+  companyId: string,
+  desde: string,
+  hasta: string,
+  grano: GranoSerie,
+  fecha: TipoFechaSerie = 'creacion',
+): Promise<PuntoSerie[]> {
+  if (demoActivo()) return serieDemo(companyId, desde, hasta, grano);
+  const { data, error } = await supabase().rpc('analytics_serie', {
+    p_company: companyId,
+    p_from: desde,
+    p_to: hasta,
+    p_grain: grano,
+    p_fecha: fecha,
+  });
+  if (error) throw error;
+  // Los bigint/numeric de Postgres pueden llegar como texto según el driver.
+  return ((data ?? []) as Record<string, unknown>[]).map((f) => ({
+    periodo: String(f.periodo),
+    fin: String(f.fin),
+    parcial: Boolean(f.parcial),
+    leads: Number(f.leads ?? 0),
+    cerrados: Number(f.cerrados ?? 0),
+    ingresos: Number(f.ingresos ?? 0),
+    citas: Number(f.citas ?? 0),
+    pedidos: Number(f.pedidos ?? 0),
+  }));
+}
+
+/* ── Seguimientos: a quién se le escribió y en qué acabó ────────────────── */
+
+/**
+ * Los «ya le escribí» del retargeting (migración 0025).
+ *
+ * ⚠️ Para medir la tasa NO valen todos: solo los que ya tienen la ventana de 7
+ * días cerrada. Contar los de esta semana —que todavía pueden convertir— como
+ * fallos hunde la cifra sin motivo. Eso lo resuelve lib/panel/seguimientos.ts,
+ * que es quien hace las cuentas.
+ */
+export async function getSeguimientos(companyId: string, limite = 500): Promise<SeguimientoRow[]> {
+  if (demoActivo()) return seguimientosDemo(companyId);
+  const { data, error } = await supabase()
+    .from('seguimientos')
+    .select('*')
+    .eq('company_id', companyId)
+    .order('enviado_at', { ascending: false })
+    .limit(limite);
+  if (error) throw error;
+  return (data ?? []) as SeguimientoRow[];
 }
 
 /* ── Actividad por hora y día ───────────────────────────────────────────── */
