@@ -1,4 +1,5 @@
 import { BRAND, FAQ, FOOTER, PRICING, WHATSAPP, whatsappUrl } from '@/lib/content';
+import { EMPRESA } from '@/lib/legal';
 import { FAQ_PRECIOS, GUIAS_ACTUALIZADAS_ISO } from '@/lib/guias';
 
 /**
@@ -46,12 +47,60 @@ export function jsonLdLanding() {
     '@context': 'https://schema.org',
     '@graph': [
       {
+        /**
+         * ⚠️ ESTE BLOQUE NO ES DECORATIVO: ES QUIÉN ERES PARA GOOGLE.
+         *
+         * "Vendemia" choca con "vendimia" —la cosecha de la uva— y se parece a
+         * marcas que ya existen. Buscando la propia marca, Google devolvía
+         * cualquier cosa menos este sitio, y no es un problema de contenido:
+         * es que no había forma de saber que aquí detrás hay una empresa
+         * concreta, con un RUC, una dirección y un nombre legal.
+         *
+         * Eso es lo que arreglan legalName, taxID y address. Son los datos que
+         * Google cruza con fuentes de fuera —registros, directorios, la ficha
+         * de Google Business— para decidir que esto es UNA ENTIDAD y no una
+         * palabra suelta. Sin esto no hay panel de marca ni enlaces de sitio,
+         * por bien escrita que esté la página.
+         *
+         * Salen de lib/legal.ts, que es donde ya estaban por obligación legal:
+         * a un solo sitio que mantener.
+         */
         '@type': 'Organization',
         '@id': `${SITIO}/#organization`,
         name: BRAND.name,
+        legalName: EMPRESA.razonSocial,
+        /** El RUC. Para una empresa peruana es el identificador que la hace única. */
+        taxID: EMPRESA.ruc,
         url: SITIO,
         logo: `${SITIO}/brand/mia.svg`,
+        image: `${SITIO}/opengraph-image.png`,
         description: FOOTER.description,
+        email: EMPRESA.email,
+        telephone: `+${WHATSAPP.phone}`,
+        address: {
+          '@type': 'PostalAddress',
+          streetAddress: EMPRESA.domicilio,
+          addressLocality: 'Jesús María',
+          addressRegion: 'Lima',
+          addressCountry: 'PE',
+        },
+        /**
+         * ⚠️ VACÍO, Y ES LO QUE MÁS FALTA DE TODO ESTE FICHERO.
+         *
+         * `sameAs` es la lista de perfiles que son la misma entidad: Instagram,
+         * Facebook, LinkedIn, la ficha de Google Business. Es la señal más
+         * fuerte que existe para desambiguar una marca, justo el problema que
+         * tenemos.
+         *
+         * Está vacío porque FOOTER.social no tiene ni una URL todavía (ver la
+         * nota de ahí: se pintan como texto porque un icono sin perfil es una
+         * promesa incumplida). En cuanto haya perfiles reales, se les pone la
+         * `url` allí y aparecen aquí solos.
+         *
+         * NO se inventan. Un `sameAs` que apunta a un perfil que no es tuyo o
+         * que no existe es peor que no tener ninguno.
+         */
+        sameAs: FOOTER.social.flatMap((r) => ('url' in r && r.url ? [r.url as string] : [])),
         areaServed: { '@type': 'Country', name: 'Perú' },
         contactPoint: {
           '@type': 'ContactPoint',
@@ -62,6 +111,21 @@ export function jsonLdLanding() {
           url: whatsappUrl(),
           availableLanguage: 'es',
         },
+      },
+      {
+        /**
+         * El sitio como cosa distinta de la empresa. Sirve para dos cosas:
+         * decir en qué idioma está —es-PE, no "español" a secas, que es lo que
+         * separa este resultado de las webs mexicanas y españolas del mismo
+         * rubro— y dar el `alternateName` por el que también se nos escribe.
+         */
+        '@type': 'WebSite',
+        '@id': `${SITIO}/#website`,
+        url: SITIO,
+        name: BRAND.name,
+        alternateName: 'Vendemia',
+        inLanguage: 'es-PE',
+        publisher: { '@id': `${SITIO}/#organization` },
       },
       {
         '@type': 'SoftwareApplication',
