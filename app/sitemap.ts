@@ -1,6 +1,7 @@
 import type { MetadataRoute } from 'next';
 import { ACTUALIZADO_ISO } from '@/lib/legal';
 import { GUIAS_ACTUALIZADAS_ISO } from '@/lib/guias';
+import { RUBROS } from '@/lib/rubros';
 
 /**
  * /sitemap.xml — el mapa que se le entrega a Google Search Console.
@@ -58,7 +59,18 @@ const LEGALES = ['/terminos', '/privacidad', '/garantia', '/reclamaciones'];
  * es como mucho un par de veces al año, pero decirle a Google que las mire de
  * vez en cuando es barato y es lo que queremos.
  */
-const GUIAS = ['/precios-chatbot-whatsapp-peru'];
+const GUIAS = [
+  '/precios-chatbot-whatsapp-peru',
+  '/responder-whatsapp-automatico-peru',
+  '/whatsapp-business-api-peru',
+  /**
+   * Las de rubro salen de RUBROS y no escritas a mano: añadir un rubro nuevo
+   * en lib/rubros.ts crea la página Y la mete en el sitemap. Una página que
+   * existe y no está en el sitemap es una página que Google tarda semanas en
+   * encontrar, y es el olvido más fácil de cometer.
+   */
+  ...RUBROS.map((r) => `/${r.slug}`),
+];
 
 export default function sitemap(): MetadataRoute.Sitemap {
   return [

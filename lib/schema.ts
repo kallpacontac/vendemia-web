@@ -1,6 +1,7 @@
 import { BRAND, FAQ, FOOTER, PRICING, WHATSAPP, whatsappUrl } from '@/lib/content';
 import { EMPRESA } from '@/lib/legal';
 import { FAQ_PRECIOS, GUIAS_ACTUALIZADAS_ISO } from '@/lib/guias';
+import type { Rubro } from '@/lib/rubros';
 
 /**
  * ══════════════════════════════════════════════════════════════════════════
@@ -206,6 +207,91 @@ export function jsonLdPrecios() {
         '@type': 'FAQPage',
         '@id': `${url}#faq`,
         mainEntity: FAQ_PRECIOS.map((item) => ({
+          '@type': 'Question',
+          name: item.q,
+          acceptedAnswer: { '@type': 'Answer', text: item.a },
+        })),
+      },
+    ],
+  };
+}
+
+/**
+ * El JSON-LD de una página de rubro.
+ *
+ * Mismo par que la guía de precios —Article con fecha + FAQPage— y por los
+ * mismos motivos. La diferencia es `about`: le dice a Google de qué tipo de
+ * negocio va esta página, que es justo lo que separa /barberias de /gimnasios
+ * cuando el texto de las dos habla de "agendar citas por WhatsApp".
+ */
+export function jsonLdRubro(r: Rubro) {
+  const url = `${SITIO}/${r.slug}`;
+  return {
+    '@context': 'https://schema.org',
+    '@graph': [
+      {
+        '@type': 'Article',
+        '@id': `${url}#article`,
+        headline: r.h1,
+        description: r.metaDescripcion,
+        inLanguage: 'es-PE',
+        datePublished: GUIAS_ACTUALIZADAS_ISO,
+        dateModified: GUIAS_ACTUALIZADAS_ISO,
+        mainEntityOfPage: url,
+        author: { '@id': `${SITIO}/#organization` },
+        publisher: { '@id': `${SITIO}/#organization` },
+        about: { '@type': 'Thing', name: r.h1 },
+        isPartOf: { '@id': `${SITIO}/#website` },
+      },
+      {
+        '@type': 'FAQPage',
+        '@id': `${url}#faq`,
+        mainEntity: r.faq.map((item) => ({
+          '@type': 'Question',
+          name: item.q,
+          acceptedAnswer: { '@type': 'Answer', text: item.a },
+        })),
+      },
+    ],
+  };
+}
+
+/**
+ * El JSON-LD de una guía sencilla: Article con fecha + FAQPage.
+ *
+ * Es el mismo par de jsonLdRubro() sin el `about`, porque estas guías no van
+ * de un tipo de negocio sino de un tema. Se dejaron dos funciones en vez de
+ * una con parámetros opcionales: la diferencia entre ellas es conceptual —de
+ * qué habla cada página— y esconderla detrás de un `if` haría que la próxima
+ * página nueva se enganchara a la que no le toca.
+ */
+export function jsonLdGuia(g: {
+  slug: string;
+  titulo: string;
+  descripcion: string;
+  faq: readonly { q: string; a: string }[];
+}) {
+  const url = `${SITIO}/${g.slug}`;
+  return {
+    '@context': 'https://schema.org',
+    '@graph': [
+      {
+        '@type': 'Article',
+        '@id': `${url}#article`,
+        headline: g.titulo,
+        description: g.descripcion,
+        inLanguage: 'es-PE',
+        datePublished: GUIAS_ACTUALIZADAS_ISO,
+        dateModified: GUIAS_ACTUALIZADAS_ISO,
+        mainEntityOfPage: url,
+        author: { '@id': `${SITIO}/#organization` },
+        publisher: { '@id': `${SITIO}/#organization` },
+        isPartOf: { '@id': `${SITIO}/#website` },
+      },
+      {
+        '@type': 'FAQPage',
+        '@id': `${url}#faq`,
+        mainEntity: g.faq.map((item) => ({
           '@type': 'Question',
           name: item.q,
           acceptedAnswer: { '@type': 'Answer', text: item.a },

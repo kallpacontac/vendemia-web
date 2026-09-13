@@ -1309,9 +1309,29 @@ export const FOOTER = {
          * no dejarla suelta.
          */
         { label: '¿Cuánto cuesta un chatbot?', href: '/precios-chatbot-whatsapp-peru' },
+        { label: 'Responder WhatsApp automático', href: '/responder-whatsapp-automatico-peru' },
+        { label: 'WhatsApp Business API', href: '/whatsapp-business-api-peru' },
         { label: 'Casos de uso', href: '#use-cases' },
         // "Novedades" se queda sin enlace: no hay changelog ni blog todavía.
         { label: 'Novedades' },
+      ],
+    },
+    {
+      /**
+       * ⚠️ ESTA COLUMNA ES EL ÚNICO CAMINO INTERNO A LAS PÁGINAS DE RUBRO.
+       *
+       * Existen para que Google traiga a quien busca "agendar citas barbería
+       * whatsapp", pero una página a la que no apunta nadie desde dentro es
+       * huérfana: el rastreador llega solo por el sitemap, vuelve tarde y no
+       * le reparte nada de la autoridad de la portada. Si se quitan de aquí,
+       * hay que enlazarlas desde otro sitio.
+       */
+      title: 'Para tu negocio',
+      links: [
+        { label: 'Barberías', href: '/barberias' },
+        { label: 'Clínicas dentales', href: '/clinicas-dentales' },
+        { label: 'Tiendas online', href: '/tiendas-online' },
+        { label: 'Gimnasios', href: '/gimnasios' },
       ],
     },
     {
