@@ -1297,6 +1297,18 @@ export const FOOTER = {
         { label: 'Cómo funciona', href: '#bento-a' },
         { label: 'Comparativa', href: '#related' },
         { label: 'Precios', href: '#pricing' },
+        /**
+         * ⚠️ ESTE ES EL ÚNICO ENLACE QUE TIENE LA GUÍA EN TODO EL SITIO.
+         *
+         * /precios-chatbot-whatsapp-peru existe para traer gente desde Google,
+         * pero una página a la que no apunta nadie desde dentro es una página
+         * huérfana: el rastreador llega a ella solo por el sitemap, tarda más
+         * en volver y no le reparte nada de la autoridad de la portada.
+         *
+         * Si algún día se quita de aquí, hay que enlazarla desde otro sitio,
+         * no dejarla suelta.
+         */
+        { label: '¿Cuánto cuesta un chatbot?', href: '/precios-chatbot-whatsapp-peru' },
         { label: 'Casos de uso', href: '#use-cases' },
         // "Novedades" se queda sin enlace: no hay changelog ni blog todavía.
         { label: 'Novedades' },

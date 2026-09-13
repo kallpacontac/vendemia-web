@@ -1,5 +1,6 @@
 import type { MetadataRoute } from 'next';
 import { ACTUALIZADO_ISO } from '@/lib/legal';
+import { GUIAS_ACTUALIZADAS_ISO } from '@/lib/guias';
 
 /**
  * /sitemap.xml — el mapa que se le entrega a Google Search Console.
@@ -12,7 +13,11 @@ import { ACTUALIZADO_ISO } from '@/lib/legal';
  * Listarlas sería publicar el índice de lo que hay que atacar, y además Google
  * solo vería la pantalla de carga.
  *
- * Si algún día hay blog o páginas por rubro, se añaden aquí y Search Console
+ * Las GUÍAS sí son rutas propias y sí van aquí: existen precisamente para que
+ * Google las encuentre, y son las únicas páginas del sitio cuyo trabajo es
+ * traer gente que todavía no sabe que existimos.
+ *
+ * Si algún día hay blog o páginas por rubro, se añaden a GUIAS y Search Console
  * las recoge en la siguiente pasada sin tocar nada más.
  */
 const SITIO = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://vendemias.com';
@@ -47,6 +52,14 @@ const LANDING_ACTUALIZADA = '2026-09-06';
  */
 const LEGALES = ['/terminos', '/privacidad', '/garantia', '/reclamaciones'];
 
+/**
+ * Las guías. Prioridad 0.8 —por debajo de la landing, muy por encima de las
+ * legales— y 'monthly': cambian cuando se revisan los precios de mercado, que
+ * es como mucho un par de veces al año, pero decirle a Google que las mire de
+ * vez en cuando es barato y es lo que queremos.
+ */
+const GUIAS = ['/precios-chatbot-whatsapp-peru'];
+
 export default function sitemap(): MetadataRoute.Sitemap {
   return [
     {
@@ -55,6 +68,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
       changeFrequency: 'weekly',
       priority: 1,
     },
+    ...GUIAS.map((ruta) => ({
+      url: `${SITIO}${ruta}`,
+      lastModified: GUIAS_ACTUALIZADAS_ISO,
+      changeFrequency: 'monthly' as const,
+      priority: 0.8,
+    })),
     ...LEGALES.map((ruta) => ({
       url: `${SITIO}${ruta}`,
       lastModified: ACTUALIZADO_ISO,

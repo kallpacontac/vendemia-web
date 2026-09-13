@@ -1,4 +1,5 @@
 import { BRAND, FAQ, FOOTER, PRICING, WHATSAPP, whatsappUrl } from '@/lib/content';
+import { FAQ_PRECIOS, GUIAS_ACTUALIZADAS_ISO } from '@/lib/guias';
 
 /**
  * ══════════════════════════════════════════════════════════════════════════
@@ -94,6 +95,56 @@ export function jsonLdLanding() {
             // `text` es un solo campo.
             text: item.a.join(' '),
           },
+        })),
+      },
+    ],
+  };
+}
+
+/**
+ * El JSON-LD de /precios-chatbot-whatsapp-peru.
+ *
+ * Dos bloques y ninguno es decorativo:
+ *
+ * · FAQPage — las seis preguntas de la guía. Es lo que puede sacar las
+ *   desplegables debajo del resultado, y en una búsqueda de precios eso es
+ *   media pantalla contestando antes de que nadie entre.
+ *
+ * · Article — le dice a Google que esto es contenido editorial con fecha y
+ *   autor, no una página de producto más. `dateModified` importa de verdad
+ *   aquí: en "precios 2026" compites contra guías viejas, y la fecha es lo
+ *   que separa un resultado vigente de uno que nadie pulsa.
+ *
+ * ⚠️ `dateModified` sale de GUIAS_ACTUALIZADAS_ISO, escrito a mano, por el
+ * mismo motivo que el `lastmod` del sitemap: con `new Date()` sería la hora
+ * del build y cada despliegue del panel le diría a Google que la guía cambió.
+ * Súbelo cuando revises los precios de verdad.
+ */
+export function jsonLdPrecios() {
+  const url = `${SITIO}/precios-chatbot-whatsapp-peru`;
+  return {
+    '@context': 'https://schema.org',
+    '@graph': [
+      {
+        '@type': 'Article',
+        '@id': `${url}#article`,
+        headline: '¿Cuánto cuesta un chatbot de WhatsApp en Perú? Precios 2026',
+        description:
+          'Rangos reales del mercado peruano, los costos que no salen en la cotización y qué preguntar antes de firmar.',
+        inLanguage: 'es-PE',
+        datePublished: GUIAS_ACTUALIZADAS_ISO,
+        dateModified: GUIAS_ACTUALIZADAS_ISO,
+        mainEntityOfPage: url,
+        author: { '@type': 'Organization', name: BRAND.name, url: SITIO },
+        publisher: { '@type': 'Organization', name: BRAND.name, url: SITIO },
+      },
+      {
+        '@type': 'FAQPage',
+        '@id': `${url}#faq`,
+        mainEntity: FAQ_PRECIOS.map((item) => ({
+          '@type': 'Question',
+          name: item.q,
+          acceptedAnswer: { '@type': 'Answer', text: item.a },
         })),
       },
     ],
