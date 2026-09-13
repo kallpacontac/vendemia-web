@@ -21,7 +21,11 @@ export default function Faq() {
 
   return (
     <section id="faq" className="cv-auto relative" style={{ background: 'var(--bg-900)' }}>
-      <div className="mx-auto w-full max-w-container px-6 pb-[64px] md:pb-[120px]">
+      {/* El aire de abajo bajó de 120px a 72px. Sumado a los 120 que abría el
+          cierre, entre la última pregunta y el titular final había 240px de
+          negro seguidos: no se leía como respiro, se leía como el final de la
+          página, y quien iba bajando pensaba que ya no venía nada. */}
+      <div className="mx-auto w-full max-w-container px-6 pb-[48px] md:pb-[72px]">
         <RevealHeading
           as="h2"
           text={FAQ.h2}

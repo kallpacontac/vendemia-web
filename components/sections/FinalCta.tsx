@@ -37,7 +37,11 @@ export default function FinalCta() {
         style={{ backdropFilter: 'blur(30px)', WebkitBackdropFilter: 'blur(30px)' }}
       />
 
-      <div className="relative z-10 mx-auto w-full max-w-container px-6 pt-[80px] text-center md:pt-[120px]">
+      {/* De 120px a 72px por arriba. El degradado NO se toca: sigue naciendo
+          por debajo del viewport (at 50% 130%) y respirando en bucle, que es de
+          donde sale la cúpula. Lo que se recorta es el negro de encima, no la
+          luz. Ver la nota del componente. */}
+      <div className="relative z-10 mx-auto w-full max-w-container px-6 pt-[56px] text-center md:pt-[72px]">
         {/* El badge repite el titular del hero. Para cuando el lector llega
             aquí ha bajado una página entera y ya no tiene presente por qué
             empezó a leer; el cierre tiene que devolvérselo antes de pedir. */}
