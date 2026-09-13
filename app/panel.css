@@ -1126,10 +1126,31 @@ body:has(.demo-banda) .sidebar{padding-top:44px}
   .line-wrap{height:160px}
   .rango .select{flex:1;min-width:130px}
 
-  /* La rejilla sigue scrollando, pero con columnas más estrechas se ve media
-     semana de un vistazo en vez de dos días. */
-  .cal-grid{grid-template-columns:52px repeat(7,minmax(96px,1fr));min-width:740px;gap:4px}
+  /* La agenda deja de ser una semana y pasa a ser UN DÍA: siete columnas en
+     360px tocan a cincuenta píxeles, y llegar al viernes era arrastrar de lado
+     a ciegas. El día se elige con las flechas de la cabecera o con la tira.
+     Ver useMovil() en components/panel/: el cambio es de marcado, no de CSS. */
   .cal-scroll{padding:10px}
+  /* La semana solo se ve en el primer fotograma, antes de que useMovil()
+     conteste. Se deja estrecha para que ese instante no sea una rejilla que
+     se sale de la pantalla. */
+  .cal-grid{grid-template-columns:52px repeat(7,minmax(96px,1fr));min-width:740px;gap:4px}
+  .dia-tira{display:flex;gap:5px;margin-bottom:10px}
+  .dia-pieza{flex:1;min-width:0;padding:7px 2px;border:1px solid var(--line);border-radius:11px;
+    background:#fff;display:flex;flex-direction:column;align-items:center;gap:1px;cursor:pointer;
+    font:inherit;color:var(--ink);transition:.12s}
+  .dia-pieza span{font-size:10px;color:var(--ink-mute);font-weight:700;text-transform:capitalize}
+  .dia-pieza b{font-size:14px;font-weight:800;line-height:1.1}
+  .dia-pieza.hoy{border-color:var(--brand)}
+  .dia-pieza.activa{background:var(--brand);border-color:var(--brand);color:var(--on-brand)}
+  .dia-pieza.activa span{color:inherit;opacity:.85}
+  /* La hora a la izquierda y la franja entera a lo ancho: lo mismo que una
+     fila de la rejilla, pero sin las otras seis columnas. */
+  .dia-fila{display:grid;grid-template-columns:46px minmax(0,1fr);gap:8px;margin-bottom:5px}
+  .dia-fila:last-child{margin-bottom:0}
+  .dia-fila .hourlbl{align-items:center;padding-top:0}
+  /* Con todo el ancho disponible, una reserva cabe en una línea legible. */
+  .dia-fila .cell{font-size:12px}
 
   /* Un select a media pantalla no se puede leer antes de abrirlo. */
   .toolbar .search{width:100%}

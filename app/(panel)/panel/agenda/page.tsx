@@ -44,6 +44,7 @@ import Paginacion, { usePaginacion } from '@/components/panel/Paginacion';
 import { useSesion } from '@/components/panel/Sesion';
 import { useAvisar, useComando } from '@/components/panel/Avisos';
 import { useCargar } from '@/components/panel/useCargar';
+import { useMovil } from '@/components/panel/useMovil';
 import { construirSemana, lunesDe } from '@/lib/panel/agenda';
 import { diaMes, ESTADO_CITA, hora as horaDe } from '@/lib/panel/format';
 import {
@@ -138,6 +139,29 @@ export default function Agenda() {
   const [fEmpleado, setFEmpleado] = useState('');
   /** El formulario de alta: la cita que se pide por teléfono o en el mostrador. */
   const [creando, setCreando] = useState(false);
+  /**
+   * En el móvil la rejilla se convierte en UN DÍA por pantalla. Siete columnas
+   * en 360 píxeles tocan a cincuenta cada una: se veía media semana y había que
+   * arrastrar de lado para llegar al viernes. El índice es 0 = lunes.
+   *
+   * Arranca en el día de hoy porque es la pantalla a la que se entra a mirar.
+   */
+  const esMovil = useMovil();
+  const [diaSel, setDiaSel] = useState(() => (new Date().getDay() + 6) % 7);
+
+  /** Las flechas ruedan de semana: pasar del domingo es el lunes siguiente. */
+  function irDia(paso: number) {
+    const n = diaSel + paso;
+    if (n < 0) {
+      setOffset((o) => o - 1);
+      setDiaSel(6);
+    } else if (n > 6) {
+      setOffset((o) => o + 1);
+      setDiaSel(0);
+    } else {
+      setDiaSel(n);
+    }
+  }
 
   const comando = useComando();
   /** La cita que va por el aire ahora mismo, y el hueco sobre el que está. */
@@ -269,6 +293,12 @@ export default function Agenda() {
   const ocupacion = semana?.totales.capacidad
     ? Math.round((semana.totales.reservado / semana.totales.capacidad) * 100)
     : 0;
+
+  /** El día de la vista móvil. Se acota por si la semana viniera corta. */
+  const diaActual = Math.min(diaSel, Math.max(0, (semana?.dias.length ?? 1) - 1));
+  const dia = semana?.dias[diaActual];
+  /** Un día entero cerrado no merece doce franjas rayadas, una línea basta. */
+  const diaCerrado = Boolean(dia) && dia!.huecos.length > 0 && dia!.huecos.every((h) => h.cerrado);
 
   return (
     <main className="main">
@@ -426,15 +456,26 @@ export default function Agenda() {
         ) : (
           <>
             <div className="agenda-head">
+              {/* Las flechas del móvil pasan de día y ruedan de semana solas, así
+                  que la navegación por semanas sobra ahí: serían dos parejas de
+                  flechas casi iguales, una encima de otra, en la parte más
+                  estrecha de la pantalla. */}
               <div className="week-nav">
-                <div className="nb" onClick={() => setOffset((o) => o - 1)}>
+                <div className="nb" onClick={() => (esMovil ? irDia(-1) : setOffset((o) => o - 1))}>
                   <ChevronLeft size={16} />
                 </div>
-                <b>
-                  {offset === 0 && 'Esta semana · '}
-                  {diaMes(lunesDe(offset))} – {diaMes(new Date(lunesDe(offset).getTime() + 6 * 864e5))}
-                </b>
-                <div className="nb" onClick={() => setOffset((o) => o + 1)}>
+                {esMovil ? (
+                  <b>
+                    {dia?.esHoy && 'Hoy · '}
+                    {dia ? `${dia.weekday.replace('.', '')} ${diaMes(dia.fecha)}` : '—'}
+                  </b>
+                ) : (
+                  <b>
+                    {offset === 0 && 'Esta semana · '}
+                    {diaMes(lunesDe(offset))} – {diaMes(new Date(lunesDe(offset).getTime() + 6 * 864e5))}
+                  </b>
+                )}
+                <div className="nb" onClick={() => (esMovil ? irDia(1) : setOffset((o) => o + 1))}>
                   <ChevronRight size={16} />
                 </div>
               </div>
@@ -482,25 +523,67 @@ export default function Agenda() {
               )}
             </div>
 
-            <div className="cal-scroll">
-              <div className="cal-grid">
-                <div />
-                {semana?.dias.map((d) => (
-                  <div className={`gh ${d.esHoy ? 'today' : ''}`} key={d.iso}>
-                    <div className="wd">{d.weekday.replace('.', '')}</div>
-                    <div className="dt">{d.fecha.getDate()}</div>
-                  </div>
-                ))}
+            {/*
+              ⚠️ Se pinta UNA de las dos, no las dos con una escondida por CSS.
+              Cada hueco es un destino de `drop`: montar la semana entera además
+              del día dejaría dos celdas distintas escuchando el mismo soltar, y
+              el arrastre acabaría en la que ganara el sorteo del navegador.
+            */}
+            {esMovil ? (
+              <div className="dia-vista">
+                {/* La tira de días es para saltar al viernes sin pulsar la
+                    flecha cuatro veces. Siete piezas de 42px caben en 330. */}
+                <div className="dia-tira">
+                  {semana?.dias.map((d, i) => (
+                    <button
+                      key={d.iso}
+                      type="button"
+                      className={`dia-pieza${i === diaActual ? ' activa' : ''}${d.esHoy ? ' hoy' : ''}`}
+                      onClick={() => setDiaSel(i)}
+                    >
+                      <span>{d.weekday.replace('.', '')}</span>
+                      <b>{d.fecha.getDate()}</b>
+                    </button>
+                  ))}
+                </div>
 
-                {semana?.horas.map((hora, i) => (
-                  <FilaDeHoras key={hora} hora={hora}>
-                    {semana.dias.map((d) => (
-                      <Celda key={d.iso + hora} hueco={d.huecos[i]} vista={vista} dnd={dnd} />
+                {diaCerrado ? (
+                  <div className="vacio">
+                    <b>Cerrado</b>
+                    Este día no se atiende. Cámbialo en Ajustes › Horario.
+                  </div>
+                ) : dia ? (
+                  <div className="cal-scroll">
+                    {semana?.horas.map((hora, i) => (
+                      <div className="dia-fila" key={hora}>
+                        <div className="hourlbl">{hora}</div>
+                        <Celda hueco={dia.huecos[i]} vista={vista} dnd={dnd} />
+                      </div>
                     ))}
-                  </FilaDeHoras>
-                ))}
+                  </div>
+                ) : null}
               </div>
-            </div>
+            ) : (
+              <div className="cal-scroll">
+                <div className="cal-grid">
+                  <div />
+                  {semana?.dias.map((d) => (
+                    <div className={`gh ${d.esHoy ? 'today' : ''}`} key={d.iso}>
+                      <div className="wd">{d.weekday.replace('.', '')}</div>
+                      <div className="dt">{d.fecha.getDate()}</div>
+                    </div>
+                  ))}
+
+                  {semana?.horas.map((hora, i) => (
+                    <FilaDeHoras key={hora} hora={hora}>
+                      {semana.dias.map((d) => (
+                        <Celda key={d.iso + hora} hueco={d.huecos[i]} vista={vista} dnd={dnd} />
+                      ))}
+                    </FilaDeHoras>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {semana && semana.horas.length === 0 && (
               <div className="vacio">
