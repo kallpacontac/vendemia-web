@@ -541,3 +541,26 @@ html:not([data-intro='run']) .brand-intro {
   outline: 2px solid var(--orange-500);
   outline-offset: 2px;
 }
+
+/*
+  EL PIE · el número de columnas sale del contenido, no de una lista escrita.
+
+  Estaba clavado a "2fr 1fr 1fr 1fr 1fr" —la marca más cuatro columnas— y al
+  añadir una quinta, "Legal" caía sola a una segunda fila con un hueco enorme
+  al lado: el pie se rompía por añadir contenido, que es justo cuando nadie
+  está mirando el pie.
+
+  `auto-fit` reparte lo que haya: la marca se queda con su columna ancha y las
+  demás se acomodan solas. Añadir o quitar una columna en content.ts ya no
+  descuadra nada.
+*/
+@media (min-width: 1024px) {
+  .footer-grid {
+    /* La marca se lleva su columna ancha; cada columna que venga después se
+       crea sola y todas valen lo mismo. `auto-fit` no vale aquí: necesita una
+       cuenta de pistas que con `grid-auto-flow: column` no está definida. */
+    grid-template-columns: 1.6fr;
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(0, 1fr);
+  }
+}

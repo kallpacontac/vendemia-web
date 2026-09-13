@@ -1297,23 +1297,28 @@ export const FOOTER = {
         { label: 'Cómo funciona', href: '#bento-a' },
         { label: 'Comparativa', href: '#related' },
         { label: 'Precios', href: '#pricing' },
-        /**
-         * ⚠️ ESTE ES EL ÚNICO ENLACE QUE TIENE LA GUÍA EN TODO EL SITIO.
-         *
-         * /precios-chatbot-whatsapp-peru existe para traer gente desde Google,
-         * pero una página a la que no apunta nadie desde dentro es una página
-         * huérfana: el rastreador llega a ella solo por el sitemap, tarda más
-         * en volver y no le reparte nada de la autoridad de la portada.
-         *
-         * Si algún día se quita de aquí, hay que enlazarla desde otro sitio,
-         * no dejarla suelta.
-         */
+        { label: 'Casos de uso', href: '#use-cases' },
+      ],
+    },
+    {
+      /**
+       * ⚠️ ESTA COLUMNA Y LA SIGUIENTE SON EL ÚNICO CAMINO INTERNO A LAS
+       * GUÍAS Y A LAS PÁGINAS DE RUBRO.
+       *
+       * Existen para traer gente desde Google, pero una página a la que no
+       * apunta nadie desde dentro es huérfana: el rastreador llega solo por el
+       * sitemap, vuelve tarde y no le reparte nada de la autoridad de la
+       * portada. Si se quitan de aquí, hay que enlazarlas desde otro sitio.
+       *
+       * Van en columna propia y no colgando de "Producto" porque no son
+       * secciones de esta página: son páginas enteras, y mezcladas dejaban esa
+       * columna con el doble de enlaces que las demás.
+       */
+      title: 'Guías',
+      links: [
         { label: '¿Cuánto cuesta un chatbot?', href: '/precios-chatbot-whatsapp-peru' },
         { label: 'Responder WhatsApp automático', href: '/responder-whatsapp-automatico-peru' },
         { label: 'WhatsApp Business API', href: '/whatsapp-business-api-peru' },
-        { label: 'Casos de uso', href: '#use-cases' },
-        // "Novedades" se queda sin enlace: no hay changelog ni blog todavía.
-        { label: 'Novedades' },
       ],
     },
     {
@@ -1335,21 +1340,27 @@ export const FOOTER = {
       ],
     },
     {
+      /**
+       * ⚠️ ERAN DOS COLUMNAS Y OCHO ETIQUETAS, SIETE DE ELLAS SIN DESTINO.
+       *
+       * "Empresa" (Sobre nosotros, Blog, Trabaja con nosotros, Contacto) y
+       * "Ayuda" (Centro de ayuda, Cómo empezar, Estado del servicio, Soporte)
+       * ocupaban dos columnas enteras del pie para no llevar a ninguna parte
+       * —y "Cómo empezar" era además el mismo ancla que "Cómo funciona", dos
+       * filas más arriba—.
+       *
+       * Aparentar un sitio más grande del que eres cuesta algo concreto: esas
+       * dos columnas empujaban "Legal" a una segunda fila y dejaban las
+       * páginas que SÍ existen compitiendo por la atención con promesas.
+       *
+       * Se quedan las tres que son creíbles de un negocio de este tamaño y que
+       * se van a construir. Cuando existan, se les pone el href y ya está.
+       */
       title: 'Empresa',
       links: [
         { label: 'Sobre nosotros' },
         { label: 'Blog' },
-        { label: 'Trabaja con nosotros' },
         { label: 'Contacto' },
-      ],
-    },
-    {
-      title: 'Ayuda',
-      links: [
-        { label: 'Centro de ayuda' },
-        { label: 'Cómo empezar', href: '#bento-a' },
-        { label: 'Estado del servicio' },
-        { label: 'Soporte' },
       ],
     },
     {

@@ -13,6 +13,11 @@ import { FOOTER, BRAND, whatsappLink } from '@/lib/content';
  * quien llega hasta aquí ya está convencido o ya se fue.
  */
 export default function Footer() {
+  /** Solo los perfiles que existen de verdad. Ver la nota de más abajo. */
+  const redes = FOOTER.social.flatMap((r) =>
+    'url' in r && r.url ? [{ label: r.label, url: r.url as string }] : [],
+  );
+
   return (
     <footer className="cv-auto relative overflow-hidden" style={{ background: 'var(--bg-900)' }}>
       {/* Nebulosa difusa en la esquina superior derecha */}
@@ -33,8 +38,18 @@ export default function Footer() {
       <Starfield count={30} />
 
       <Reveal from="up" className="relative mx-auto w-full max-w-container px-6 py-20">
-        {/* Grid de 5 columnas */}
-        <div className="grid grid-cols-1 gap-12 md:grid-cols-2 lg:grid-cols-[2fr_1fr_1fr_1fr_1fr]">
+        {/*
+          ⚠️ EL NÚMERO DE COLUMNAS SALE DE FOOTER.columns, NO ESTÁ ESCRITO AQUÍ.
+
+          Estaba clavado a "2fr 1fr 1fr 1fr 1fr" —marca más cuatro columnas—, y
+          al añadir una quinta, "Legal" caía sola a una segunda fila con un
+          hueco enorme al lado. El pie se rompía por añadir contenido, que es
+          justo cuando nadie mira el pie.
+
+          `gridTemplateColumns` se calcula: la marca vale 1.6 y cada columna 1.
+          Añadir o quitar una en content.ts ya no descuadra nada.
+        */}
+        <div className="footer-grid grid grid-cols-1 gap-x-8 gap-y-12 sm:grid-cols-2 lg:gap-x-10">
           <div>
             <div className="flex items-center gap-2">
               <Mark size={30} />
@@ -43,20 +58,33 @@ export default function Footer() {
             <p className="mt-4 max-w-[300px] text-[14px] leading-[1.6]" style={{ color: 'var(--text-mid)' }}>
               {FOOTER.description}
             </p>
-            {/* Mientras no haya perfiles, son marcas, no enlaces. Ver la nota
-                de FOOTER.social en content.ts. */}
-            <div className="mt-6 grid w-[220px] grid-cols-5 gap-3">
-              {FOOTER.social.map((s) => (
-                <span
-                  key={s.label}
-                  title={s.label}
-                  className="flex h-[18px] w-[18px] items-center justify-center text-[10px]"
+          {/*
+            ⚠️ SI NO HAY PERFILES, NO SE PINTA NADA.
+
+            Antes se enseñaban las seis etiquetas recortadas a dos letras —"Wh
+            In Ti Fa Li Yo"— para marcar el sitio donde irían los iconos. En
+            pantalla no se leía como un hueco reservado: se leía como texto
+            roto, que es peor que no tener redes.
+
+            En cuanto un perfil tenga `url` en FOOTER.social aparece aquí solo,
+            como enlace de verdad. Ver la nota de allí.
+          */}
+          {redes.length > 0 && (
+            <div className="mt-6 flex flex-wrap gap-x-4 gap-y-2">
+              {redes.map((r) => (
+                <a
+                  key={r.label}
+                  href={r.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-[13px] transition-colors duration-[250ms] hover:text-white"
                   style={{ color: 'var(--text-low)' }}
                 >
-                  {s.label.slice(0, 2)}
-                </span>
+                  {r.label}
+                </a>
               ))}
             </div>
+          )}
           </div>
 
           {FOOTER.columns.map((col) => (
