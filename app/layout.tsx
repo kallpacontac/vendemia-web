@@ -43,7 +43,7 @@ export const metadata: Metadata = {
   // nadie. Delante va lo que sí se busca, y "en Perú" es la señal geográfica
   // que separa este resultado de las webs de bots de WhatsApp de España y
   // México, que es contra quien compite este dominio.
-  title: 'Vendedor digital para WhatsApp en Perú · Vendemia',
+  title: 'Sistema para Salones, Barberías y Academias en Perú · Vendemia',
   // La anterior contaba lo que hace Mia pero no decía PARA QUIÉN, y las
   // búsquedas de este mercado son de cola larga y por rubro: "responder
   // whatsapp automático barbería", "agendar citas clínica whatsapp". Nombrar
