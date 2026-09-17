@@ -1,5 +1,7 @@
 'use client';
 
+import type { ReactNode } from 'react';
+
 import Mark from '@/components/Mark';
 import AssetSlot from '@/components/AssetSlot';
 import Reveal from '@/components/Reveal';
@@ -12,7 +14,7 @@ import { FOOTER, BRAND, whatsappLink } from '@/lib/content';
  * Entrada: solo un fade suave. Sin M1, sin M2. El footer no necesita drama —
  * quien llega hasta aquí ya está convencido o ya se fue.
  */
-export default function Footer() {
+export default function Footer({ wordmark, socialLogos, hidePaymentAssets = false, compactBottom = false }: { wordmark?: ReactNode; socialLogos?: ReactNode; hidePaymentAssets?: boolean; compactBottom?: boolean } = {}) {
   /** Solo los perfiles que existen de verdad. Ver la nota de más abajo. */
   const redes = FOOTER.social.flatMap((r) =>
     'url' in r && r.url ? [{ label: r.label, url: r.url as string }] : [],
@@ -37,7 +39,7 @@ export default function Footer() {
       </div>
       <Starfield count={30} />
 
-      <Reveal from="up" className="relative mx-auto w-full max-w-container px-6 py-20">
+      <Reveal from="up" className={`relative mx-auto w-full max-w-container px-6 ${compactBottom ? 'pt-20 pb-0' : 'py-20'}`}>
         {/*
           ⚠️ EL NÚMERO DE COLUMNAS SALE DE FOOTER.columns, NO ESTÁ ESCRITO AQUÍ.
 
@@ -53,7 +55,7 @@ export default function Footer() {
           <div>
             <div className="flex items-center gap-2">
               <Mark size={30} />
-              <span className="text-[18px] font-semibold tracking-[0.06em]">{BRAND.name}</span>
+              <span className="text-[18px] font-semibold tracking-[0.06em]">{wordmark ?? BRAND.name}</span>
             </div>
             <p className="mt-4 max-w-[300px] text-[14px] leading-[1.6]" style={{ color: 'var(--text-mid)' }}>
               {FOOTER.description}
@@ -120,7 +122,7 @@ export default function Footer() {
 
         {/* Franja media */}
         <div className="flex flex-col items-center gap-8 py-10 lg:flex-row lg:justify-between">
-          <div className="flex gap-4">
+          {socialLogos ?? <div className="flex gap-4">
             {[0, 1, 2].map((i) => (
               <AssetSlot
                 key={i}
@@ -133,7 +135,7 @@ export default function Footer() {
                 className="h-12 w-12"
               />
             ))}
-          </div>
+          </div>}
 
           <p className="max-w-[320px] text-center text-[15px] font-medium leading-[1.5] lg:text-left">
             {FOOTER.contacto.title}
@@ -163,7 +165,7 @@ export default function Footer() {
             <p>{FOOTER.legal.address}</p>
           </div>
 
-          <div className="flex gap-3">
+          {!hidePaymentAssets && <div className="flex gap-3">
             {[0, 1, 2, 3].map((i) => (
               <AssetSlot
                 key={i}
@@ -176,7 +178,7 @@ export default function Footer() {
                 className="h-8 w-8"
               />
             ))}
-          </div>
+          </div>}
         </div>
       </Reveal>
     </footer>

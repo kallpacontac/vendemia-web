@@ -1,0 +1,45 @@
+/* Reference particle ribbon, colorized to Vendemia's orange / copper palette. */
+.vendemia-landing-page nav[aria-label="Principal"] {
+  background: transparent !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+.vendemia-particles {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  background: #060200;
+  isolation: isolate;
+}
+.vendemia-particles__palette { position: absolute; }
+.vendemia-particles__film {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  inset: 0;
+  object-fit: cover;
+  object-position: center 35%;
+  filter: url('#vendemia-particle-palette');
+}
+.vendemia-particles__reading-shade {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at 50% 43%, rgba(6,2,0,.38), transparent 65%), linear-gradient(180deg, rgba(6,2,0,.08) 0%, rgba(6,2,0,.12) 22%, rgba(6,2,0,.56) 45%, rgba(6,2,0,.72) 65%, #060200 100%);
+}
+@media (max-width: 639px) {
+  .vendemia-particles__film {
+    /* Wider composition keeps both folds visible on portrait screens. */
+    width: 170%;
+    height: 70%;
+    max-width: none;
+    left: -35%;
+    top: 0;
+    object-fit: cover;
+    object-position: center;
+  }
+  .vendemia-particles__reading-shade {
+    background: linear-gradient(180deg, rgba(6,2,0,.08), rgba(6,2,0,.12) 23%, rgba(6,2,0,.60) 45%, #060200 72%);
+  }
+}

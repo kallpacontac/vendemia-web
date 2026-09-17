@@ -1,0 +1,14 @@
+.vendemia-wordmark {
+  font-family: 'Outfit', sans-serif;
+  font-weight: 700;
+  font-size: 1.2em;
+  letter-spacing: -0.04em;
+  white-space: nowrap;
+  line-height: 1;
+}
+
+.vendemia-wordmark__period { color: #E85D26; }
+
+@media (min-width: 768px) {
+  .vendemia-wordmark { font-size: 1.32em; }
+}

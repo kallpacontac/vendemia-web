@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import gsap from 'gsap';
 import { ChevronDown, Menu, X } from 'lucide-react';
 import Mark from './Mark';
@@ -29,7 +29,7 @@ import { registerGsap, prefersReducedMotion, cascadeText } from '@/lib/motion';
  */
 const cta = whatsappLink(NAV_CTA.solid);
 
-export default function Navbar() {
+export default function Navbar({ wordmark }: { wordmark?: ReactNode } = {}) {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const markRef = useRef<HTMLSpanElement>(null);
@@ -140,7 +140,7 @@ export default function Navbar() {
                 aria-hidden="true"
                 className="nav-word text-[18px] font-semibold tracking-[0.06em]"
               >
-                {BRAND.letters.map((letter, i) => (
+                {wordmark ?? BRAND.letters.map((letter, i) => (
                   <span key={i} className="cascade-part">
                     {letter}
                   </span>
@@ -252,7 +252,7 @@ export default function Navbar() {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Mark size={24} variant="plane" />
-              <span className="text-[18px] font-semibold tracking-[0.06em]">{BRAND.name}</span>
+              <span className="text-[18px] font-semibold tracking-[0.06em]">{wordmark ?? BRAND.name}</span>
             </div>
             {/* El icono mide 22px y el boton medía lo mismo: la mitad del
                 minimo tactil. `-m-3 p-3` le da los 46px de zona de toque sin
