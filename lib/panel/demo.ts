@@ -53,6 +53,7 @@ import type {
 } from '@/lib/supabase/types';
 import type {
   Cita,
+  Hueco,
   ItemCatalogo,
   Lead,
   Mensaje,
@@ -184,6 +185,37 @@ export function catalogoDemo(companyId: string): ItemCatalogo[] {
     paquete: [],
   })) as unknown as ItemCatalogo[];
   return cacheCatalogo;
+}
+
+/* ── Huecos de conocimiento ─────────────────────────────────────────────── */
+
+/**
+ * Preguntas de mentira, repartidas en el mes: unas variantes casi iguales
+ * entre sí (a propósito, para que se vea el agrupado por parecido de
+ * lib/panel/huecos.ts) y un grupo sin producto, que son las del negocio.
+ */
+const HUECOS: { producto: string; pregunta: string; veces: number }[] = [
+  { producto: 'Tratamiento capilar', pregunta: '¿sirve para pelo teñido?', veces: 4 },
+  { producto: 'Tratamiento capilar', pregunta: '¿le puedo poner si tengo el pelo pintado?', veces: 2 },
+  { producto: 'Tratamiento capilar', pregunta: '¿cuánto dura el efecto?', veces: 3 },
+  { producto: 'Corte clásico', pregunta: '¿usan máquina o tijera?', veces: 5 },
+  { producto: 'Coloración', pregunta: '¿la coloración daña el cabello?', veces: 2 },
+  { producto: '', pregunta: '¿atienden niños?', veces: 6 },
+  { producto: '', pregunta: '¿tienen estacionamiento?', veces: 3 },
+];
+
+export function huecosDemo(desde: string): Hueco[] {
+  const min = new Date(desde).getTime();
+  const salida: Hueco[] = [];
+  let i = 0;
+  for (const h of HUECOS) {
+    for (let v = 0; v < h.veces; v++) {
+      const creado = dia(-entre(1, 29));
+      if (creado.getTime() < min) continue;
+      salida.push({ id: `demo-hueco-${i++}`, pregunta: h.pregunta, producto: h.producto, creado });
+    }
+  }
+  return salida;
 }
 
 /* ── Trabajadores ───────────────────────────────────────────────────────── */

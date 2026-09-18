@@ -50,14 +50,17 @@
  * lugar de fingir que no existe.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import Link from 'next/link';
 import {
   AlertTriangle,
+  ArrowRight,
   Boxes,
   Check,
   ChevronDown,
   ChevronUp,
   Eye,
   EyeOff,
+  HelpCircle,
   ImagePlus,
   Package,
   Plus,
@@ -76,11 +79,24 @@ import {
   getCatalogo,
   getCompania,
   getComandosCatalogo,
+  getHuecos,
   getMediosDeVarios,
   type ItemCatalogo,
 } from '@/lib/supabase/queries';
 import { esPendiente, superponer } from '@/lib/panel/pendientes';
-import { textoVigencia } from '@/lib/panel/inscripciones';
+import { hoyLima, textoVigencia } from '@/lib/panel/inscripciones';
+import { agruparHuecos, type GrupoHueco } from '@/lib/panel/huecos';
+import { PRESETS, rangoDe } from '@/lib/panel/serie';
+import {
+  DIAS_DEL_MES,
+  borradorVigencia,
+  construirVigencia,
+  describirVentana,
+  errorVigencia,
+  vigenteHoy,
+  type BorradorVigencia,
+  type ModoVigencia,
+} from '@/lib/panel/vigencia';
 import { b01, bool } from '@/lib/supabase/parse';
 import type { BusinessMode, CatalogMediaRow } from '@/lib/supabase/types';
 
@@ -149,6 +165,11 @@ interface Borrador {
   package_services: string[];
   /** Solo negocios recurrentes. Ver CatalogRow.vigencia_meses. */
   vigencia_meses: string;
+  /**
+   * CUÁNDO se puede ofrecer. ⚠️ No es `vigencia_meses`, que es cuánto dura lo
+   * comprado: se guardan los dos y no tienen nada que ver. Ver lib/panel/vigencia.ts.
+   */
+  promo: BorradorVigencia;
 }
 
 /** Lo que admite el bot para `vigencia_meses`: meses enteros, de 1 a 24. */
@@ -166,6 +187,7 @@ function borradorDe(it: ItemCatalogo): Borrador {
     capacity: it.capacity == null ? '' : String(it.capacity),
     package_services: it.paquete,
     vigencia_meses: String(it.vigencia_meses ?? 1),
+    promo: borradorVigencia(it.promo_vigencia),
   };
 }
 
@@ -187,6 +209,14 @@ export default function Catalogo() {
   const [abierto, setAbierto] = useState<string | null>(null);
   const [creando, setCreando] = useState(false);
   const [nombreNuevo, setNombreNuevo] = useState('');
+
+  /**
+   * La pestaña de «Lo que no supe contestar» va aparte y no encima de la
+   * lista: es una lista que crece con cada conversación, y lo que hoy son
+   * tres filas en un año es una pantalla entera de scroll delante de los
+   * productos, que es a lo que se entra normalmente.
+   */
+  const [tab, setTab] = useState<'catalogo' | 'huecos'>('catalogo');
 
   const { datos, cargando, releer } = useCargar(async () => {
     if (!companyId) return null;
@@ -245,6 +275,60 @@ export default function Catalogo() {
   const activos = items.filter((i) => i.activo).length;
   const sinFoto = items.filter((i) => i.activo && !(vista.medios[i.id]?.length)).length;
 
+  /**
+   * «Lo que no supe contestar». Aparte del useCargar de arriba a propósito:
+   * cambiar el periodo no tiene por qué disparar la ráfaga de reintentos del
+   * catálogo, y si esta consulta falla —la tabla es nueva— el resto de la
+   * pantalla sigue funcionando igual.
+   */
+  const [periodoHuecos, setPeriodoHuecos] = useState('30d');
+  const desdeHuecos = useMemo(
+    () => rangoDe(PRESETS.find((p) => p.clave === periodoHuecos)?.dias ?? 30).desde,
+    [periodoHuecos],
+  );
+  const { datos: huecos, cargando: cargandoHuecos } = useCargar(async () => {
+    if (!companyId) return null;
+    return getHuecos(companyId, desdeHuecos);
+  }, [companyId, desdeHuecos]);
+
+  const gruposHuecos = useMemo(() => agruparHuecos(huecos ?? []), [huecos]);
+
+  /** Nombre → producto del catálogo, para el botón «editar ficha» de un grupo. */
+  const itemPorNombre = useMemo(() => {
+    const mapa = new Map<string, ItemCatalogo>();
+    for (const it of items) mapa.set(it.name.trim().toLowerCase(), it);
+    return mapa;
+  }, [items]);
+
+  /**
+   * Con el id del producto ya resuelto: así <Huecos> sabe si el botón «editar
+   * ficha» tiene a dónde ir sin tener que conocer el catálogo entero. Un
+   * grupo sin id es un producto que se renombró o se borró desde que se hizo
+   * la pregunta — sigue siendo útil saber que se preguntó, pero no hay ficha
+   * que abrir.
+   */
+  const gruposHuecosVista = useMemo(
+    () =>
+      gruposHuecos.map((g) => ({
+        ...g,
+        itemId: g.producto ? (itemPorNombre.get(g.producto.trim().toLowerCase())?.id ?? null) : null,
+      })),
+    [gruposHuecos, itemPorNombre],
+  );
+
+  /** Abre la ficha de ESE producto, deshaciendo cualquier filtro que la esconda. */
+  function irAFicha(producto: string) {
+    const it = itemPorNombre.get(producto.trim().toLowerCase());
+    if (!it) return;
+    setBusqueda('');
+    if (!it.activo) setVerOcultos(true);
+    setAbierto(it.id);
+    setTab('catalogo');
+    requestAnimationFrame(() => {
+      document.getElementById(`cat-item-${it.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  }
+
   async function crear() {
     const nombre = nombreNuevo.trim();
     if (!nombre) return;
@@ -273,144 +357,171 @@ export default function Catalogo() {
       <div className="wrap">
         <Topbar titulo="Catálogo" sub="Lo único que Mia puede vender" />
 
-        <div className="mini-row">
-          <div className="mini">
-            <div className="ic" style={{ background: 'var(--brand-soft)', color: 'var(--brand-txt)' }}>
-              <Package size={20} />
-            </div>
-            <div>
-              <b>{items.length}</b>
-              <small>En el catálogo</small>
-            </div>
-          </div>
-          <div className="mini">
-            <div className="ic" style={{ background: '#E8FBF2', color: 'var(--new)' }}>
-              <Check size={20} />
-            </div>
-            <div>
-              <b>{activos}</b>
-              <small>Visibles para Mia</small>
-            </div>
-          </div>
-          {/* Sin foto no es un error, pero es la razón número uno de que un
-              producto se venda peor. Se cuenta solo entre los activos: avisar
-              de que un producto oculto no tiene foto no sirve de nada. */}
-          <div className="mini">
-            <div className="ic" style={{ background: '#FEF6E7', color: 'var(--warm)' }}>
-              <ImagePlus size={20} />
-            </div>
-            <div>
-              <b>{sinFoto}</b>
-              <small>Activos sin foto</small>
-            </div>
-          </div>
-        </div>
-
-        <div className="toolbar">
-          <div className="search">
-            <Search size={16} />
-            <input
-              placeholder="Buscar por nombre o descripción…"
-              value={busqueda}
-              onChange={(e) => setBusqueda(e.target.value)}
-            />
-          </div>
-          {/* Solo aparece si hay alguno oculto: un interruptor que nunca cambia
-              nada es ruido en la barra. */}
-          {ocultos > 0 && (
-            <button
-              className={`btn btn-sm ${verOcultos ? 'btn-primary' : 'btn-ghost'}`}
-              onClick={() => setVerOcultos((v) => !v)}
-            >
-              {verOcultos ? <EyeOff size={15} /> : <Eye size={15} />}
-              {verOcultos ? 'Esconder ocultos' : `Ver ocultos (${ocultos})`}
-            </button>
-          )}
-          <button className="btn btn-primary btn-sm" onClick={() => setCreando((v) => !v)}>
-            <Plus size={15} /> Añadir producto
+        {/*
+          El número va en la pestaña a propósito, igual que en Agenda: lo que
+          no se ve, se olvida. Va aparte de la lista de productos porque crece
+          con cada conversación — ver el aviso de arriba.
+        */}
+        <div className="view-toggle tabs-agenda">
+          <button className={tab === 'catalogo' ? 'active' : ''} onClick={() => setTab('catalogo')}>
+            <Package size={15} /> Catálogo
+          </button>
+          <button className={tab === 'huecos' ? 'active' : ''} onClick={() => setTab('huecos')}>
+            <HelpCircle size={15} /> Lo que no supe contestar
+            {(huecos?.length ?? 0) > 0 ? ` (${huecos?.length})` : ''}
           </button>
         </div>
 
-        {creando && (
-          <div className="card" style={{ padding: 18, marginBottom: 16 }}>
-            <label className="field-label">Nombre del producto o servicio</label>
-            <div style={{ display: 'flex', gap: 10 }}>
-              <input
-                className="input"
-                autoFocus
-                placeholder="Corte de cabello"
-                value={nombreNuevo}
-                onChange={(e) => setNombreNuevo(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && void crear()}
-              />
-              <button className="btn btn-primary" onClick={() => void crear()}>
-                Crear
-              </button>
-              <button className="btn btn-ghost" onClick={() => setCreando(false)}>
-                Cancelar
+        {tab === 'huecos' ? (
+          <Huecos
+            grupos={gruposHuecosVista}
+            cargando={cargandoHuecos}
+            periodo={periodoHuecos}
+            alCambiarPeriodo={setPeriodoHuecos}
+            alEditarFicha={irAFicha}
+          />
+        ) : (
+          <>
+            <div className="mini-row">
+              <div className="mini">
+                <div className="ic" style={{ background: 'var(--brand-soft)', color: 'var(--brand-txt)' }}>
+                  <Package size={20} />
+                </div>
+                <div>
+                  <b>{items.length}</b>
+                  <small>En el catálogo</small>
+                </div>
+              </div>
+              <div className="mini">
+                <div className="ic" style={{ background: '#E8FBF2', color: 'var(--new)' }}>
+                  <Check size={20} />
+                </div>
+                <div>
+                  <b>{activos}</b>
+                  <small>Visibles para Mia</small>
+                </div>
+              </div>
+              {/* Sin foto no es un error, pero es la razón número uno de que un
+                  producto se venda peor. Se cuenta solo entre los activos: avisar
+                  de que un producto oculto no tiene foto no sirve de nada. */}
+              <div className="mini">
+                <div className="ic" style={{ background: '#FEF6E7', color: 'var(--warm)' }}>
+                  <ImagePlus size={20} />
+                </div>
+                <div>
+                  <b>{sinFoto}</b>
+                  <small>Activos sin foto</small>
+                </div>
+              </div>
+            </div>
+    
+            <div className="toolbar">
+              <div className="search">
+                <Search size={16} />
+                <input
+                  placeholder="Buscar por nombre o descripción…"
+                  value={busqueda}
+                  onChange={(e) => setBusqueda(e.target.value)}
+                />
+              </div>
+              {/* Solo aparece si hay alguno oculto: un interruptor que nunca cambia
+                  nada es ruido en la barra. */}
+              {ocultos > 0 && (
+                <button
+                  className={`btn btn-sm ${verOcultos ? 'btn-primary' : 'btn-ghost'}`}
+                  onClick={() => setVerOcultos((v) => !v)}
+                >
+                  {verOcultos ? <EyeOff size={15} /> : <Eye size={15} />}
+                  {verOcultos ? 'Esconder ocultos' : `Ver ocultos (${ocultos})`}
+                </button>
+              )}
+              <button className="btn btn-primary btn-sm" onClick={() => setCreando((v) => !v)}>
+                <Plus size={15} /> Añadir producto
               </button>
             </div>
-            <small className="muted" style={{ fontSize: 11.5 }}>
-              Se crea con precio 0 y visible. El resto se rellena abajo.
-            </small>
-          </div>
+    
+            {creando && (
+              <div className="card" style={{ padding: 18, marginBottom: 16 }}>
+                <label className="field-label">Nombre del producto o servicio</label>
+                <div style={{ display: 'flex', gap: 10 }}>
+                  <input
+                    className="input"
+                    autoFocus
+                    placeholder="Corte de cabello"
+                    value={nombreNuevo}
+                    onChange={(e) => setNombreNuevo(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && void crear()}
+                  />
+                  <button className="btn btn-primary" onClick={() => void crear()}>
+                    Crear
+                  </button>
+                  <button className="btn btn-ghost" onClick={() => setCreando(false)}>
+                    Cancelar
+                  </button>
+                </div>
+                <small className="muted" style={{ fontSize: 11.5 }}>
+                  Se crea con precio 0 y visible. El resto se rellena abajo.
+                </small>
+              </div>
+            )}
+    
+            {cargando && (
+              <div className="cargando">
+                <div className="spin" />
+                Cargando el catálogo…
+              </div>
+            )}
+    
+            {!cargando && visibles.length === 0 && (
+              <p className="vacio">
+                <b>
+                  {!items.length
+                    ? 'El catálogo está vacío'
+                    : ocultos === items.length && !verOcultos
+                      ? 'Todo está oculto para Mia'
+                      : 'Sin resultados'}
+                </b>
+                {!items.length
+                  ? 'Mia no puede vender lo que no está aquí: añade tus servicios o productos.'
+                  : ocultos === items.length && !verOcultos
+                    ? `Tienes ${ocultos} producto(s), pero ninguno visible. Mia no puede vender nada ahora mismo.`
+                    : 'Prueba con otra búsqueda.'}
+              </p>
+            )}
+    
+            {/*
+              Un cambio que el bot RECHAZÓ. Como se guarda sin esperarle, el rechazo
+              llega después del clic, y no se puede dejar pintado como guardado.
+            */}
+            {vista.fallidos.length > 0 && (
+              <p className="aviso-fallo">
+                No se pudo aplicar{' '}
+                {vista.fallidos.length === 1 ? 'un cambio' : vista.fallidos.length + ' cambios'}
+                {vista.fallidos[0].error ? ': ' + vista.fallidos[0].error : ''}. Revisa el producto y
+                vuelve a guardarlo.
+              </p>
+            )}
+    
+            {visibles.map((it) => (
+              <Ficha
+                key={it.id}
+                item={it}
+                modo={modo}
+                todos={items}
+                medios={vista.medios[it.id] ?? []}
+                companyId={companyId}
+                abierta={abierto === it.id}
+                // Un producto recién creado aún no tiene id real: no se abre hasta
+                // que llegue, o sus cambios irían contra un id que la base no conoce.
+                alAbrir={() => {
+                  if (!esPendiente(it.id)) setAbierto((a) => (a === it.id ? null : it.id));
+                }}
+                aplicandose={vista.aplicandose.has(it.id)}
+                alCambiar={releer}
+              />
+            ))}
+          </>
         )}
-
-        {cargando && (
-          <div className="cargando">
-            <div className="spin" />
-            Cargando el catálogo…
-          </div>
-        )}
-
-        {!cargando && visibles.length === 0 && (
-          <p className="vacio">
-            <b>
-              {!items.length
-                ? 'El catálogo está vacío'
-                : ocultos === items.length && !verOcultos
-                  ? 'Todo está oculto para Mia'
-                  : 'Sin resultados'}
-            </b>
-            {!items.length
-              ? 'Mia no puede vender lo que no está aquí: añade tus servicios o productos.'
-              : ocultos === items.length && !verOcultos
-                ? `Tienes ${ocultos} producto(s), pero ninguno visible. Mia no puede vender nada ahora mismo.`
-                : 'Prueba con otra búsqueda.'}
-          </p>
-        )}
-
-        {/*
-          Un cambio que el bot RECHAZÓ. Como se guarda sin esperarle, el rechazo
-          llega después del clic, y no se puede dejar pintado como guardado.
-        */}
-        {vista.fallidos.length > 0 && (
-          <p className="aviso-fallo">
-            No se pudo aplicar{' '}
-            {vista.fallidos.length === 1 ? 'un cambio' : vista.fallidos.length + ' cambios'}
-            {vista.fallidos[0].error ? ': ' + vista.fallidos[0].error : ''}. Revisa el producto y
-            vuelve a guardarlo.
-          </p>
-        )}
-
-        {visibles.map((it) => (
-          <Ficha
-            key={it.id}
-            item={it}
-            modo={modo}
-            todos={items}
-            medios={vista.medios[it.id] ?? []}
-            companyId={companyId}
-            abierta={abierto === it.id}
-            // Un producto recién creado aún no tiene id real: no se abre hasta
-            // que llegue, o sus cambios irían contra un id que la base no conoce.
-            alAbrir={() => {
-              if (!esPendiente(it.id)) setAbierto((a) => (a === it.id ? null : it.id));
-            }}
-            aplicandose={vista.aplicandose.has(it.id)}
-            alCambiar={releer}
-          />
-        ))}
       </div>
     </main>
   );
@@ -459,6 +570,33 @@ function Ficha({
   const vigenciaValida = Number.isInteger(vigencia) && vigencia >= 1 && vigencia <= VIGENCIA_MAX;
 
   const set = <K extends keyof Borrador>(k: K, v: Borrador[K]) => setF((x) => ({ ...x, [k]: v }));
+  const setPromo = (v: Partial<BorradorVigencia>) => set('promo', { ...f.promo, ...v });
+
+  /**
+   * La ventana de la promo, tal como quedaría al guardar.
+   *
+   * El estado se calcula sobre el BORRADOR y no sobre la fila: quien mueve los
+   * días quiere ver ahí mismo si eso deja la promo dentro o fuera. Pero solo se
+   * dice lo que el bot está haciendo —«no la está ofreciendo»— cuando lo de la
+   * pantalla es ya lo que hay guardado; si no, sería hablar de un cambio que
+   * todavía no ha salido de aquí.
+   */
+  const promoTexto = construirVigencia(f.promo);
+  const promoGuardada = promoTexto === (item.promo_vigencia ?? '');
+  const promoVigente = vigenteHoy(promoTexto, hoyLima());
+  /** Lo que impediría guardar. Se enseña al escribir, no solo al darle al botón. */
+  const avisoVentana = errorVigencia(f.promo);
+
+  /**
+   * Lo mismo pero de la FILA, no del borrador: es lo que Mia está haciendo
+   * ahora mismo, y por eso se puede decir en la cabecera con la ficha cerrada.
+   *
+   * Solo sale cuando hay ventana configurada y hoy queda fuera — `vigenteHoy`
+   * devuelve true para un producto sin ventana, que son casi todos. Un «vigente»
+   * en cada fila sería ruido; el caso que hay que ver sin abrir nada es el
+   * contrario: el producto que existe, está activo, y aun así no se ofrece.
+   */
+  const fueraDeVentana = !vigenteHoy(item.promo_vigencia, hoyLima());
 
   async function guardar() {
     if (!f.name.trim()) {
@@ -467,6 +605,18 @@ function Ficha({
     }
     if (esRecurrente && !vigenciaValida) {
       avisar(`La duración va en meses enteros, de 1 a ${VIGENCIA_MAX}.`, 'error');
+      return;
+    }
+    /**
+     * La ventana se valida AQUÍ porque el bot no se va a quejar: un
+     * `promo_vigencia` que no entiende lo deja VIGENTE, no apagado (a propósito
+     * — ver lib/panel/vigencia.ts). O sea que una errata no salta por ningún
+     * lado: simplemente la ventana no se aplicaría y la promo caducada seguiría
+     * ofreciéndose, que es justo el fallo que este campo viene a cerrar.
+     */
+    const malaVentana = errorVigencia(f.promo);
+    if (malaVentana) {
+      avisar(malaVentana, 'error');
       return;
     }
     setGuardando(true);
@@ -501,6 +651,9 @@ function Ficha({
           capacity: esCita ? num(f.capacity) : null,
           // ⚠️ text, no jsonb. Y son ids, no nombres.
           package_services: JSON.stringify(f.package_services),
+          // Cadena, no objeto. `''` en «Siempre», y va explícito: el upsert es
+          // un PATCH, así que es lo único que limpia una ventana anterior.
+          promo_vigencia: promoTexto,
           // Solo donde el formulario la enseña: en otros modos no significa nada.
           ...(esRecurrente ? { vigencia_meses: vigencia } : {}),
         },
@@ -532,7 +685,7 @@ function Ficha({
   const precio = item.price == null ? '—' : `${item.currency || 'PEN'} ${item.price}`;
 
   return (
-    <div className={`cat-item ${item.activo ? '' : 'oculto'}`}>
+    <div id={`cat-item-${item.id}`} className={`cat-item ${item.activo ? '' : 'oculto'}`}>
       <div className="cat-head" onClick={alAbrir}>
         <Miniaturas medios={medios} salen={salen} />
         <div className="cat-id">
@@ -556,6 +709,22 @@ function Ficha({
             title="Guardado en la cola. Mia lo verá en un máximo de 15 minutos; si el bot está apagado, se aplica en cuanto vuelva."
           >
             <Clock size={12} /> Guardado · aplicándose
+          </span>
+        )}
+
+        {/*
+          Va ANTES que «Queda poco» y «Sin foto»: esas dos dicen que el producto
+          se vende peor, esta que no se vende nada. Y un producto activo, con
+          foto y con stock que no aparece en ninguna conversación no tiene otra
+          explicación a la vista.
+        */}
+        {fueraDeVentana && (
+          <span
+            className="badge-pill"
+            style={{ color: 'var(--warm)', background: '#FEF6E7' }}
+            title={`${describirVentana(item.promo_vigencia)} Hoy queda fuera, así que Mia no lo está ofreciendo.`}
+          >
+            ⏸ Fuera de ventana
           </span>
         )}
 
@@ -713,6 +882,143 @@ function Ficha({
                 </div>
               </>
             )}
+
+            {/*
+              CUÁNDO SE PUEDE OFRECER. Tres opciones y sus controles: nunca un
+              textarea de JSON — quien rellena esto es el dueño de una barbería.
+
+              El estado de hoy se enseña al lado a propósito. Sin él, se
+              configura una ventana, se ve que Mia no menciona la promo, y se
+              cree que Mia está rota: un ticket de soporte en lugar de una
+              función que se entiende sola.
+            */}
+            <div className="full">
+              <label className="field-label">Disponibilidad</label>
+
+              <div className="opciones" style={{ gridTemplateColumns: '1fr', marginTop: 0, gap: 8 }}>
+                {(
+                  [
+                    ['siempre', 'Siempre'],
+                    ['mensual', 'Todos los meses, del'],
+                    ['rango', 'Solo entre'],
+                  ] as [ModoVigencia, string][]
+                ).map(([modo, rotulo]) => (
+                  <label
+                    key={modo}
+                    className={`opcion ${f.promo.modo === modo ? 'on' : ''}`}
+                    style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}
+                  >
+                    {/* Los controles van DENTRO del label: tocar un día elige
+                        también su opción, que es lo que cualquiera espera. */}
+                    <input
+                      type="radio"
+                      name={`promo-${item.id}`}
+                      checked={f.promo.modo === modo}
+                      onChange={() => setPromo({ modo })}
+                      style={{ accentColor: 'var(--brand)', cursor: 'pointer' }}
+                    />
+                    <b style={{ fontWeight: 700, fontSize: 13 }}>{rotulo}</b>
+
+                    {modo === 'mensual' && (
+                      <>
+                        {/* Desplegables y no texto libre: a mano se teclea un 0 o un 32. */}
+                        <select
+                          className="select"
+                          style={{ width: 'auto', minWidth: 72, padding: '7px 10px' }}
+                          value={f.promo.dia_desde}
+                          onChange={(e) => setPromo({ modo, dia_desde: e.target.value })}
+                        >
+                          {DIAS_DEL_MES.map((d) => (
+                            <option key={d} value={d}>
+                              {d}
+                            </option>
+                          ))}
+                        </select>
+                        <b style={{ fontWeight: 700, fontSize: 13 }}>al</b>
+                        <select
+                          className="select"
+                          style={{ width: 'auto', minWidth: 72, padding: '7px 10px' }}
+                          value={f.promo.dia_hasta}
+                          onChange={(e) => setPromo({ modo, dia_hasta: e.target.value })}
+                        >
+                          {DIAS_DEL_MES.map((d) => (
+                            <option key={d} value={d}>
+                              {d}
+                            </option>
+                          ))}
+                        </select>
+                      </>
+                    )}
+
+                    {modo === 'rango' && (
+                      <>
+                        <input
+                          className="input"
+                          type="date"
+                          style={{ width: 'auto', minWidth: 150, padding: '7px 10px' }}
+                          value={f.promo.desde}
+                          onChange={(e) => setPromo({ modo, desde: e.target.value })}
+                        />
+                        <b style={{ fontWeight: 700, fontSize: 13 }}>y</b>
+                        <input
+                          className="input"
+                          type="date"
+                          style={{ width: 'auto', minWidth: 150, padding: '7px 10px' }}
+                          value={f.promo.hasta}
+                          onChange={(e) => setPromo({ modo, hasta: e.target.value })}
+                        />
+                      </>
+                    )}
+
+                    {modo === 'siempre' && <span className="opcion__def">por defecto</span>}
+                  </label>
+                ))}
+              </div>
+
+              {/*
+                Con el rango a medio rellenar no se enseña el estado: sin las
+                dos fechas la ventana no dice nada todavía, y un «vigente hoy»
+                ahí sería una respuesta a una pregunta que aún no está hecha.
+                Se enseña lo que falta, y lo mismo que impediría guardar.
+              */}
+              {avisoVentana ? (
+                <small
+                  style={{
+                    display: 'block',
+                    marginTop: 8,
+                    fontSize: 11.5,
+                    fontWeight: 700,
+                    color: 'var(--warm)',
+                  }}
+                >
+                  {avisoVentana}
+                </small>
+              ) : (
+                <div
+                  style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}
+                >
+                  {promoVigente ? (
+                    <span className="badge-pill" style={{ color: 'var(--new)', background: '#E8FBF2' }}>
+                      ✅ Vigente hoy
+                    </span>
+                  ) : (
+                    <span className="badge-pill" style={{ color: 'var(--warm)', background: '#FEF6E7' }}>
+                      ⏸ Fuera de ventana
+                      {promoGuardada ? ' — Mia no la está ofreciendo' : ' con estas fechas'}
+                    </span>
+                  )}
+                  <small className="muted" style={{ fontSize: 11.5 }}>
+                    {describirVentana(promoTexto)}
+                  </small>
+                </div>
+              )}
+
+              <small className="muted" style={{ fontSize: 11.5, display: 'block', marginTop: 6 }}>
+                Es CUÁNDO SE OFRECE, no cuánto dura lo que se compra
+                {esRecurrente ? ' (eso es «Duración (meses)», aquí arriba)' : ''}. Del 28 al 3
+                también vale: se entiende como fin de mes y principio del siguiente.
+              </small>
+            </div>
           </div>
 
           <Paquete
@@ -1126,6 +1432,166 @@ function Medios({
           if (file) void subir(file, sustituyendo);
         }}
       />
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════════════════ */
+
+/**
+ * ══════════════════════════════════════════════════════════════════════════
+ * LO QUE NO SUPE CONTESTAR
+ * ══════════════════════════════════════════════════════════════════════════
+ *
+ * No es «errores del bot»: Mia no se equivocó, acertó al no inventarse un
+ * dato. Lo que falta es información del negocio, y por eso NO hay botón que
+ * rellene la ficha con IA — sería exactamente el fallo que esta pantalla
+ * viene a arreglar, un piso más arriba.
+ *
+ * Tampoco hay nombre de cliente ni enlace a su conversación: lo útil aquí es
+ * el agregado. Un hueco preguntado por siete personas no es de ninguna de
+ * ellas.
+ */
+interface GrupoHuecoVista extends GrupoHueco {
+  /** null = el producto se renombró u ocultó desde que se hizo la pregunta. */
+  itemId: string | null;
+}
+
+function Huecos({
+  grupos,
+  cargando,
+  periodo,
+  alCambiarPeriodo,
+  alEditarFicha,
+}: {
+  grupos: GrupoHuecoVista[];
+  cargando: boolean;
+  periodo: string;
+  alCambiarPeriodo: (v: string) => void;
+  alEditarFicha: (producto: string) => void;
+}) {
+  return (
+    <div>
+      <p className="muted" style={{ fontSize: 12.5, marginBottom: 10 }}>
+        Cada vez que Mia admite que no sabe algo en vez de inventárselo, queda aquí. Ordenado por
+        cuántas veces se lo han preguntado: eso es lo que más ventas te está costando.
+      </p>
+
+      <div className="rango">
+        <span className="etq">Periodo</span>
+        <select className="select" value={periodo} onChange={(e) => alCambiarPeriodo(e.target.value)}>
+          {PRESETS.map((p) => (
+            <option key={p.clave} value={p.clave}>
+              {p.label}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      {cargando && (
+        <div className="cargando">
+          <div className="spin" />
+          Cargando…
+        </div>
+      )}
+
+      {!cargando && grupos.length === 0 && (
+        <p className="vacio">
+          <b>Nada pendiente</b>
+          El bot pudo contestar todo lo que le preguntaron en este periodo.
+        </p>
+      )}
+
+      {grupos.map((g) => (
+        <GrupoDeProducto key={g.producto || '·negocio·'} grupo={g} alEditarFicha={alEditarFicha} />
+      ))}
+    </div>
+  );
+}
+
+function GrupoDeProducto({
+  grupo,
+  alEditarFicha,
+}: {
+  grupo: GrupoHuecoVista;
+  alEditarFicha: (producto: string) => void;
+}) {
+  const esNegocio = grupo.producto === '';
+
+  return (
+    <div className="cat-item">
+      <div className="cat-head" style={{ cursor: 'default' }}>
+        <div className="cat-id">
+          <b>{esNegocio ? 'Del negocio (no van en una ficha)' : grupo.producto}</b>
+          {esNegocio && (
+            <small>Se arreglan en las reglas del negocio, no en una ficha de producto.</small>
+          )}
+        </div>
+        <span className="badge-pill" style={{ color: 'var(--warm)', background: '#FEF6E7' }}>
+          {grupo.veces} {grupo.veces === 1 ? 'vez' : 'veces'}
+        </span>
+      </div>
+
+      <div className="cat-body" style={{ paddingTop: 4 }}>
+        {grupo.preguntas.map((v, i) => (
+          <VariantePregunta key={i} variante={v} />
+        ))}
+
+        <div className="nav-btns" style={{ marginTop: 14 }}>
+          {esNegocio ? (
+            <Link href="/panel/configuracion?paso=3" className="btn btn-ghost btn-sm">
+              Editar reglas del negocio <ArrowRight size={14} />
+            </Link>
+          ) : grupo.itemId ? (
+            <button className="btn btn-ghost btn-sm" onClick={() => alEditarFicha(grupo.producto)}>
+              Editar ficha <ArrowRight size={14} />
+            </button>
+          ) : (
+            <small className="muted" style={{ fontSize: 11.5 }}>
+              Este producto ya no está en el catálogo con ese nombre — puede que se renombrara u
+              ocultara después de la pregunta.
+            </small>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/** Una pregunta agrupada por parecido. Las variantes se ven al desplegar. */
+function VariantePregunta({ variante }: { variante: GrupoHueco['preguntas'][number] }) {
+  const [abierta, setAbierta] = useState(false);
+  const otras = variante.variantes.filter((t) => t !== variante.pregunta);
+
+  return (
+    <div style={{ marginBottom: 8 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <span style={{ fontSize: 13.5, flex: 1 }}>
+          · «{variante.pregunta}»
+          <span className="muted" style={{ marginLeft: 6, fontSize: 12.5 }}>
+            ({variante.veces})
+          </span>
+        </span>
+        {otras.length > 0 && (
+          <button
+            type="button"
+            className="q-icon"
+            aria-label={abierta ? 'Ocultar variantes' : 'Ver variantes'}
+            onClick={() => setAbierta((a) => !a)}
+          >
+            {abierta ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+          </button>
+        )}
+      </div>
+      {abierta && otras.length > 0 && (
+        <ul style={{ margin: '4px 0 0 22px', padding: 0, listStyle: 'none' }}>
+          {otras.map((t, i) => (
+            <li key={i} className="muted" style={{ fontSize: 12.5 }}>
+              «{t}»
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }

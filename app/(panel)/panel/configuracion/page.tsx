@@ -31,8 +31,9 @@
  *     El emparejamiento se hace en persona. Si `status = needs_qr`, lo único
  *     que puede hacer el panel es avisar.
  */
-import { useEffect, useMemo, useState } from 'react';
+import { Suspense, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import {
   ArrowLeft,
   ArrowRight,
@@ -192,13 +193,39 @@ function construirPatch(
   };
 }
 
-export default function Configuracion() {
+/**
+ * `?paso=3` abre directo en Reglas y política — lo usa el aviso de huecos de
+ * conocimiento del catálogo para mandar aquí con «editar reglas del negocio»
+ * ya en la pantalla correcta, en vez de dejar que alguien cuente hasta 3.
+ */
+export default function ConfiguracionPage() {
+  return (
+    <Suspense
+      fallback={
+        <main className="main">
+          <div className="cargando">
+            <div className="spin" />
+            Cargando configuración…
+          </div>
+        </main>
+      }
+    >
+      <Configuracion />
+    </Suspense>
+  );
+}
+
+function Configuracion() {
   const { companyId, esDueno } = useSesion();
   const { salud } = useSalud();
   const comando = useComando();
   const avisar = useAvisar();
+  const parametros = useSearchParams();
 
-  const [paso, setPaso] = useState(1);
+  const [paso, setPaso] = useState(() => {
+    const p = Number(parametros.get('paso'));
+    return p >= 1 && p <= 4 ? p : 1;
+  });
   const [form, setForm] = useState<Formulario | null>(null);
   const [horario, setHorario] = useState<Horario>({});
   const [pagos, setPagos] = useState<MetodoPago[]>([]);

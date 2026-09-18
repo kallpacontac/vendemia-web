@@ -238,6 +238,17 @@ export interface CatalogRow {
    */
   vigencia_meses: number | null;
   /**
+   * JSON en text: CUÁNDO SE PUEDE OFRECER. `''` (todas las filas de antes de la
+   * 0031) = siempre. Dos formas: `{"tipo":"mensual","dia_desde":1,
+   * "dia_hasta":15}` y `{"tipo":"rango","desde":"…","hasta":"…"}`.
+   *
+   * ⚠️ No lo confundas con `vigencia_meses`, aquí arriba: aquel dice cuánto
+   * DURA lo comprado, este en qué ventana está A LA VENTA. Un producto fuera de
+   * ventana no entra al prompt del bot. La regla, copiada del bot y con el
+   * porqué entero, está en `lib/panel/vigencia.ts`. (0031)
+   */
+  promo_vigencia: string | null;
+  /**
    * ⚠️ CAMPO MUERTO. El bot NO lo envía nunca. Las fotos viven en
    * `catalog_media`. No lo ofrezcas en ningún formulario: quien lo rellene
    * creerá que sirve y la foto no saldrá jamás.
@@ -397,6 +408,26 @@ export interface EscalationRow {
   kind: string;
   /** JSON en text */
   detail: string | null;
+  created_at: number | null;
+  created_ts: string | null;
+}
+
+/**
+ * Traza de la conversación. Hoy solo se lee un `event_type`: `KNOWLEDGE_GAP`,
+ * que el bot escribe cada vez que admite que no tiene un dato en vez de
+ * inventárselo. Ver lib/panel/huecos.ts para qué hace el panel con esto.
+ */
+export interface ConversationEventRow {
+  id: string;
+  company_id: string;
+  lead_id: string | null;
+  event_type: string;
+  /**
+   * JSON en text. Para `KNOWLEDGE_GAP`: `{"pregunta": "…", "producto": "…"}`.
+   * `producto` puede venir vacío — es una pregunta del negocio en general, no
+   * de una ficha del catálogo, y no significa que falte el dato.
+   */
+  payload: string | null;
   created_at: number | null;
   created_ts: string | null;
 }

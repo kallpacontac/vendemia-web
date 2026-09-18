@@ -66,6 +66,7 @@ const CAMPOS_ITEM = [
   'capacity',
   'package_services',
   'vigencia_meses',
+  'promo_vigencia',
 ] as const;
 
 export function superponer(

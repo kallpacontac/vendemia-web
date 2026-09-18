@@ -31,6 +31,7 @@ import {
   citasDemo,
   demoActivo,
   horarioDemo,
+  huecosDemo,
   ingresosPorDiaDemo,
   intencionPorDiaDemo,
   leadsDemo,
@@ -461,6 +462,50 @@ export async function getEscalaciones(companyId: string): Promise<Escalacion[]> 
     detalle: json<Record<string, unknown>>(e.detail, {}),
     creada: fecha(e.created_ts),
   }));
+}
+
+/* ── Huecos de conocimiento: lo que Mia no supo contestar ───────────────── */
+
+export interface Hueco {
+  id: string;
+  /** Lo que escribió el cliente, tal cual, recortado a 300 caracteres. */
+  pregunta: string;
+  /** '' = pregunta del negocio en general, no de una ficha del catálogo. */
+  producto: string;
+  creado: Date | null;
+}
+
+/**
+ * Cada vez que Mia admite que no tiene un dato en vez de inventárselo, escribe
+ * un evento `KNOWLEDGE_GAP` en `conversation_events`. Aquí se leen y se
+ * parsean; el agrupado por producto y por parecido entre preguntas vive en
+ * lib/panel/huecos.ts, que es quien decide qué se enseña.
+ */
+export async function getHuecos(companyId: string, desde: string): Promise<Hueco[]> {
+  if (demoActivo()) return huecosDemo(desde);
+  const { data, error } = await supabase()
+    .from('conversation_events')
+    .select('id, payload, created_ts')
+    .eq('company_id', companyId)
+    .eq('event_type', 'KNOWLEDGE_GAP')
+    .gte('created_ts', desde)
+    .order('created_at', { ascending: false })
+    .limit(3000);
+  if (error) throw error;
+
+  return ((data ?? []) as { id: string; payload: string | null; created_ts: string | null }[])
+    .map((e) => {
+      const p = json<{ pregunta?: string; producto?: string }>(e.payload, {});
+      return {
+        id: e.id,
+        pregunta: (p.pregunta ?? '').trim(),
+        producto: (p.producto ?? '').trim(),
+        creado: fecha(e.created_ts),
+      };
+    })
+    // Un evento sin pregunta no dice nada — no debería pasar, pero no es
+    // motivo para que la pantalla enseñe una fila en blanco.
+    .filter((h) => h.pregunta);
 }
 
 /* ── Trabajadores ───────────────────────────────────────────────────────── */
