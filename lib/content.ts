@@ -581,7 +581,7 @@ export const BENEFIT = {
 
 export const BENTO_A = {
   badge: 'Cómo funciona',
-  h2: 'Mia no contesta. Vende.',
+  h2: 'Mia no contesta. Mia Vende.',
   cards: {
     network: {
       title: 'Maneja la objeción sin pasártela a ti',
@@ -842,21 +842,21 @@ export const DEMO = {
       label: 'Tienda online',
       nombre: 'EstiloShop',
       precio: {
-        cliente: 'Hola, ¿cuánto cuesta el modelo negro?',
+        cliente: 'Hola, ¿cuánto cuesta el polo negro?',
         hechos:
-          'El negro está en S/89 con *envío gratis a Lima*. Quedan tallas M y L.\nSi lo pides hoy, sale mañana temprano.',
+          'El polo negro está en S/89 con *envío gratis a Lima*. Quedan tallas M y L.\nSi lo pides hoy, sale mañana temprano.',
         respuesta: 'Ya, lo quiero en M. ¿Cómo pago?',
       },
       objecion: {
         cliente: 'Está un poco caro, lo voy a pensar.',
         hechos:
-          'Te entiendo. Es cuero sintético con 6 meses de garantía, y si no te queda lo cambias sin costo.\nNo hay descuento, pero sí puedo apartártelo 24 horas.',
+          'Te entiendo. El polo es de algodón, y si no te queda puedes cambiar la talla sin costo.\nNo hay descuento, pero sí puedo apartártelo 24 horas.',
         respuesta: 'Bueno, apártamelo. Mañana te confirmo.',
       },
       disponibilidad: {
-        cliente: '¿Tienen stock del negro en talla M?',
+        cliente: '¿Tienen stock del polo negro en talla M?',
         hechos:
-          'Sí, quedan 3 en M.\nEnvío gratis a Lima y llega en 24 a 48 horas.\nPuedes pagar con Yape o Plin por acá mismo.',
+          'Sí, quedan 3 polos negros en talla M.\nEnvío gratis a Lima y llega en 24 a 48 horas.\nPuedes pagar con Yape o Plin por acá mismo.',
         respuesta: 'Sí, genérame el pedido. Pago con Yape.',
       },
     },

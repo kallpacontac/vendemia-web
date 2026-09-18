@@ -68,7 +68,7 @@ export default function InteractiveChatDemo() {
   const submitDetails = () => {
     const customer = negocio === 2 ? (caso === 1 ? 'Talla M, por favor. Soy Alex.' : 'Soy Alex. La entrega sería en Miraflores.') : 'Mi nombre es Alex.';
     const reply = negocio === 2
-      ? (caso === 1 ? 'Gracias, Alex. Dejamos la talla M apartada por 24 horas. Cuando quieras continuar, escríbenos por aquí.' : 'Gracias, Alex. El modelo negro en talla M cuesta S/89 e incluye envío a Lima. El siguiente paso es compartirte los datos de pago y confirmar tu dirección de entrega.')
+      ? (caso === 1 ? 'Gracias, Alex. Dejamos el polo negro en talla M apartado por 24 horas. Cuando quieras continuar, escríbenos por aquí.' : 'Gracias, Alex. El polo negro en talla M cuesta S/89 e incluye envío a Lima. El siguiente paso es compartirte los datos de pago y confirmar tu dirección de entrega.')
       : (caso === 1 ? 'Gracias, Alex. Tomamos tu solicitud de reserva. Te confirmaremos el horario por aquí antes de darla por registrada.' : 'Gracias, Alex. Registramos tu elección de horario en esta demostración. Te enviaremos la confirmación y el recordatorio por aquí.');
     send(customer, reply, 'fin');
   };
@@ -101,7 +101,7 @@ export default function InteractiveChatDemo() {
             <div role="group" aria-label="Mensajes sugeridos" className="border-t border-black/5 bg-[#F1F0EB] p-3 sm:p-4">
               <p className="mb-2 flex items-center gap-2 text-[12px] font-medium text-[#666]"><Send size={13} />{typing ? 'Mia está preparando su respuesta…' : stage === 'fin' ? 'Conversación de ejemplo terminada' : 'Elige un mensaje para enviar'}</p>
               <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                {stage === 'inicio' && <><Option disabled={typing} onClick={() => ask(0)}>¿Cuánto cuesta?</Option><Option disabled={typing} onClick={() => ask(2)}>¿Tienen disponibilidad?</Option></>}
+                {stage === 'inicio' && <><Option disabled={typing} onClick={() => ask(0)}>{negocio === 2 ? '¿Cuánto cuesta el polo negro?' : '¿Cuánto cuesta?'}</Option><Option disabled={typing} onClick={() => ask(2)}>{negocio === 2 ? '¿Tienen el polo negro en talla M?' : '¿Tienen disponibilidad?'}</Option></>}
                 {stage === 'respuesta' && <><Option disabled={typing} onClick={continueConversation}>{script.respuesta}</Option>{caso !== 1 && <Option disabled={typing} onClick={() => ask(1)}>Déjame pensarlo</Option>}</>}
                 {stage === 'datos' && <Option disabled={typing} onClick={submitDetails}>{negocio === 2 ? (caso === 1 ? 'Talla M, por favor. Soy Alex.' : 'Soy Alex. La entrega sería en Miraflores.') : 'Mi nombre es Alex.'}</Option>}
                 {stage === 'fin' && <Option disabled={typing} onClick={() => reset()}>Probar otra conversación</Option>}
