@@ -49,6 +49,7 @@ import {
 } from '@/lib/panel/demo';
 import type {
   AppointmentRow,
+  BusinessMode,
   CatalogMediaRow,
   CatalogRow,
   CompanyRow,
@@ -84,6 +85,11 @@ export interface CompaniaAccesible {
   id: string;
   nombre: string;
   rol: Rol;
+  /**
+   * Para poder ocultar/mostrar por tipo de negocio (la Sidebar, sobre todo)
+   * sin una consulta aparte. Ver lib/panel/modo.ts.
+   */
+  business_mode: BusinessMode | null;
 }
 
 /**
@@ -93,12 +99,17 @@ export interface CompaniaAccesible {
 export async function misCompanias(): Promise<CompaniaAccesible[]> {
   const { data, error } = await supabase()
     .from('memberships')
-    .select('company_id, role, companies(name)');
+    .select('company_id, role, companies(name, business_mode)');
   if (error) throw error;
 
   return ((data ?? []) as MembershipRow[]).map((m) => {
     const c = Array.isArray(m.companies) ? m.companies[0] : m.companies;
-    return { id: m.company_id, nombre: c?.name ?? 'Mi negocio', rol: m.role };
+    return {
+      id: m.company_id,
+      nombre: c?.name ?? 'Mi negocio',
+      rol: m.role,
+      business_mode: c?.business_mode ?? null,
+    };
   });
 }
 

@@ -571,7 +571,10 @@ a{color:inherit;text-decoration:none}
 .toast svg{width:16px;height:16px;color:var(--bot-on)}
 
 /* ── metricas ─────────────────────────────────────────────────────────── */
-.kpi5{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-bottom:18px}
+/* auto-fit y no repeat(5,1fr) fijo: "Citas hoy" se oculta en ecommerce (ver
+   metricas/page.tsx), y con columnas fijas eso dejaba un carril vacío al
+   final de la fila en vez de repartir el espacio entre las que quedan. */
+.kpi5{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;margin-bottom:18px}
 .kpi5 .kpi__num{font-size:26px}
 .row-2{display:grid;grid-template-columns:1.7fr 1fr;gap:18px;margin-bottom:18px;align-items:start}
 .line-wrap{height:200px;margin-top:10px}.line-wrap svg{width:100%;height:100%}

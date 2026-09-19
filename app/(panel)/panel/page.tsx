@@ -32,6 +32,7 @@ import { useCargar } from '@/components/panel/useCargar';
 import { areaPath, seriesPts, smoothPath } from '@/lib/panel/charts';
 import { conversionDeHoy } from '@/lib/panel/conversion';
 import { cuando, hora, intent, isoLocal, hace, soles } from '@/lib/panel/format';
+import { esAppointmentFamily } from '@/lib/panel/modo';
 import {
   getCitas,
   getCompania,
@@ -119,6 +120,8 @@ export default function Dashboard() {
   const leadsHoy = metricaHoy?.leads ?? 0;
   const citasHoy = metricaHoy?.appointments ?? 0;
   const ingresosHoy = metricaHoy?.revenue ?? 0;
+  /** Cita puntual o grupo recurrente: los dos negocios que tienen citas que enseñar. */
+  const conCitas = esAppointmentFamily(datos?.empresa?.business_mode);
 
   /**
    * ⚠️ NO es `paid_orders ÷ leads`. Eso daba 0 % en negocios de citas y, con
@@ -281,13 +284,15 @@ export default function Dashboard() {
                   <b>{leadsHoy}</b>
                   <small>Leads</small>
                 </div>
-                <div className="tile">
-                  <div className="ic" style={{ background: '#FDEBE4', color: '#F26B45' }}>
-                    <CalendarDays size={16} />
+                {conCitas && (
+                  <div className="tile">
+                    <div className="ic" style={{ background: '#FDEBE4', color: '#F26B45' }}>
+                      <CalendarDays size={16} />
+                    </div>
+                    <b>{citasHoy}</b>
+                    <small>Citas</small>
                   </div>
-                  <b>{citasHoy}</b>
-                  <small>Citas</small>
-                </div>
+                )}
                 <div className="tile">
                   <div className="ic" style={{ background: '#FFE9EE', color: '#FF5B79' }}>
                     <TrendingUp size={16} />
@@ -361,41 +366,43 @@ export default function Dashboard() {
             </div>
 
             {/* ── Citas del mes ── */}
-            <div className="card">
-              <div className="card-mini-head">
-                <h3>Citas de este mes</h3>
-              </div>
-              <div className="ring-wrap">
-                <div className="ring">
-                  <svg viewBox="0 0 36 36">
-                    <circle cx="18" cy="18" r="15.9" fill="none" stroke="#EEF0F6" strokeWidth="3.5" />
-                    <circle
-                      cx="18"
-                      cy="18"
-                      r="15.9"
-                      fill="none"
-                      stroke="#FF4900"
-                      strokeWidth="3.5"
-                      strokeLinecap="round"
-                      strokeDasharray={`${anillo.pct} ${100 - anillo.pct}`}
-                      strokeDashoffset="25"
-                      transform="rotate(-90 18 18)"
-                    />
-                  </svg>
-                  <div className="c">{anillo.pct}%</div>
+            {conCitas && (
+              <div className="card">
+                <div className="card-mini-head">
+                  <h3>Citas de este mes</h3>
                 </div>
-                <div className="ring-txt">
-                  <b>
-                    {anillo.hechas} / {anillo.total} citas
-                  </b>
-                  <p>
-                    {anillo.total === 0
-                      ? 'Todavía no hay citas este mes.'
-                      : 'Confirmadas o ya atendidas sobre el total del mes.'}
-                  </p>
+                <div className="ring-wrap">
+                  <div className="ring">
+                    <svg viewBox="0 0 36 36">
+                      <circle cx="18" cy="18" r="15.9" fill="none" stroke="#EEF0F6" strokeWidth="3.5" />
+                      <circle
+                        cx="18"
+                        cy="18"
+                        r="15.9"
+                        fill="none"
+                        stroke="#FF4900"
+                        strokeWidth="3.5"
+                        strokeLinecap="round"
+                        strokeDasharray={`${anillo.pct} ${100 - anillo.pct}`}
+                        strokeDashoffset="25"
+                        transform="rotate(-90 18 18)"
+                      />
+                    </svg>
+                    <div className="c">{anillo.pct}%</div>
+                  </div>
+                  <div className="ring-txt">
+                    <b>
+                      {anillo.hechas} / {anillo.total} citas
+                    </b>
+                    <p>
+                      {anillo.total === 0
+                        ? 'Todavía no hay citas este mes.'
+                        : 'Confirmadas o ya atendidas sobre el total del mes.'}
+                    </p>
+                  </div>
                 </div>
               </div>
-            </div>
+            )}
 
             {/* ── Servicios top ── */}
             <div className="card">
@@ -500,38 +507,40 @@ export default function Dashboard() {
               </div>
             </div>
 
-            <div className="rail">
-              <div className="card-mini-head">
-                <h3>Próximas citas</h3>
-                <Link href="/panel/agenda" style={{ fontSize: 12, color: 'var(--brand)', fontWeight: 700 }}>
-                  Agenda
-                </Link>
+            {conCitas && (
+              <div className="rail">
+                <div className="card-mini-head">
+                  <h3>Próximas citas</h3>
+                  <Link href="/panel/agenda" style={{ fontSize: 12, color: 'var(--brand)', fontWeight: 700 }}>
+                    Agenda
+                  </Link>
+                </div>
+                {proximas.length === 0 ? (
+                  <p className="vacio">Sin citas confirmadas por delante.</p>
+                ) : (
+                  proximas.map((c, i) => {
+                    const [fondo, color, Icono] = ICONOS_CITA[i % ICONOS_CITA.length];
+                    const esHoy = c.inicio && isoLocal(c.inicio) === hoy;
+                    return (
+                      <div className="appt-row" key={c.id}>
+                        <div className="appt-ic" style={{ background: fondo, color }}>
+                          <Icono size={18} />
+                        </div>
+                        <div className="info">
+                          <b>{c.service || 'Cita'}</b>
+                          <small>
+                            {c.inicio ? hora(c.inicio) : '—'} · {nombrePorLead.get(c.lead_id) ?? 'Cliente'}
+                          </small>
+                        </div>
+                        <span className="date">
+                          {esHoy ? 'Hoy' : c.inicio ? c.inicio.toLocaleDateString('es-PE', { day: 'numeric', month: 'short' }) : ''}
+                        </span>
+                      </div>
+                    );
+                  })
+                )}
               </div>
-              {proximas.length === 0 ? (
-                <p className="vacio">Sin citas confirmadas por delante.</p>
-              ) : (
-                proximas.map((c, i) => {
-                  const [fondo, color, Icono] = ICONOS_CITA[i % ICONOS_CITA.length];
-                  const esHoy = c.inicio && isoLocal(c.inicio) === hoy;
-                  return (
-                    <div className="appt-row" key={c.id}>
-                      <div className="appt-ic" style={{ background: fondo, color }}>
-                        <Icono size={18} />
-                      </div>
-                      <div className="info">
-                        <b>{c.service || 'Cita'}</b>
-                        <small>
-                          {c.inicio ? hora(c.inicio) : '—'} · {nombrePorLead.get(c.lead_id) ?? 'Cliente'}
-                        </small>
-                      </div>
-                      <span className="date">
-                        {esHoy ? 'Hoy' : c.inicio ? c.inicio.toLocaleDateString('es-PE', { day: 'numeric', month: 'short' }) : ''}
-                      </span>
-                    </div>
-                  );
-                })
-              )}
-            </div>
+            )}
 
             <div className="rail">
               <div className="prof">
@@ -547,10 +556,12 @@ export default function Dashboard() {
                   <b style={{ color: 'var(--brand)' }}>{datos?.leads.length ?? 0}</b>
                   <small>Clientes</small>
                 </div>
-                <div>
-                  <b style={{ color: '#0FA968' }}>{citasHoy}</b>
-                  <small>Citas hoy</small>
-                </div>
+                {conCitas && (
+                  <div>
+                    <b style={{ color: '#0FA968' }}>{citasHoy}</b>
+                    <small>Citas hoy</small>
+                  </div>
+                )}
                 <div>
                   <b style={{ color: '#FBB040' }}>{metricaHoy?.escalations_pending ?? 0}</b>
                   <small>Pendientes</small>

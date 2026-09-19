@@ -30,7 +30,7 @@ import { RUTA_GLOBAL_POR_DEFECTO, esRutaGlobal } from '@/lib/panel/rutas';
 function Guardia({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const ruta = usePathname();
-  const { session, cargando, reconectando, companias, companyId, esAdminPlataforma } = useSesion();
+  const { session, cargando, reconectando, companias, companyId, esAdminPlataforma, compania } = useSesion();
 
   /** Sin compañía activa: o es una cuenta recién creada, o es el admin de plataforma. */
   const sinCompania = !companias.length || !companyId;
@@ -123,7 +123,7 @@ function Guardia({ children }: { children: React.ReactNode }) {
   return (
     <>
       <BandaDemo />
-      <Sidebar soloGlobal={soloGlobal} />
+      <Sidebar soloGlobal={soloGlobal} modo={compania?.business_mode} />
       {children}
     </>
   );

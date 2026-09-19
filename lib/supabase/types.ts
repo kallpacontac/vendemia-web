@@ -436,7 +436,10 @@ export interface MembershipRow {
   company_id: string;
   auth_user_id: string;
   role: Rol;
-  companies?: { name: string } | { name: string }[] | null;
+  companies?:
+    | { name: string; business_mode: BusinessMode | null }
+    | { name: string; business_mode: BusinessMode | null }[]
+    | null;
 }
 
 export interface DailyMetricRow {

@@ -61,6 +61,7 @@ import { necesitaEmparejar, useSalud } from '@/components/panel/Salud';
 import { useAvisar, useComando } from '@/components/panel/Avisos';
 import { useCargar } from '@/components/panel/useCargar';
 import { supabase } from '@/lib/supabase/client';
+import { esAppointmentFamily, esEcommerce } from '@/lib/panel/modo';
 import { getCatalogo, getCompania } from '@/lib/supabase/queries';
 import { b01 } from '@/lib/supabase/parse';
 import type { ResultadoAddMember, ResultadoUpdateCompany } from '@/lib/supabase/commands';
@@ -492,18 +493,20 @@ function Configuracion() {
                   pedidos, y al revés.
                 </small>
               </div>
-              <div>
-                <label className="field-label">Entrega</label>
-                <select
-                  className="select"
-                  value={form.delivery_type}
-                  onChange={(e) => set('delivery_type', e.target.value as Formulario['delivery_type'])}
-                >
-                  <option value="pickup">Recojo en local</option>
-                  <option value="delivery">Delivery</option>
-                  <option value="both">Ambos</option>
-                </select>
-              </div>
+              {esEcommerce(form.business_mode) && (
+                <div>
+                  <label className="field-label">Entrega</label>
+                  <select
+                    className="select"
+                    value={form.delivery_type}
+                    onChange={(e) => set('delivery_type', e.target.value as Formulario['delivery_type'])}
+                  >
+                    <option value="pickup">Recojo en local</option>
+                    <option value="delivery">Delivery</option>
+                    <option value="both">Ambos</option>
+                  </select>
+                </div>
+              )}
               <Campo
                 etiqueta="WhatsApp del bot"
                 valor={form.whatsapp_phone}
@@ -574,42 +577,49 @@ function Configuracion() {
             </div>
           </div>
 
-          <div className="sec">
-            <h4>
-              <Clock /> Reserva
-            </h4>
-            <div className="grid-form">
-              <div>
-                <label className="field-label">Duración por turno (minutos)</label>
-                <input
-                  className="input"
-                  type="number"
-                  min={5}
-                  value={form.slot_minutes}
-                  onChange={(e) => set('slot_minutes', Number(e.target.value))}
+          {/*
+            Toda la sección es de quien agenda: la duración va en turnos y el
+            toggle habla de «la cita». Un ecommerce no reserva turnos —para él
+            el pago sí o sí es el pedido, no algo que se active aquí.
+          */}
+          {esAppointmentFamily(form.business_mode) && (
+            <div className="sec">
+              <h4>
+                <Clock /> Reserva
+              </h4>
+              <div className="grid-form">
+                <div>
+                  <label className="field-label">Duración por turno (minutos)</label>
+                  <input
+                    className="input"
+                    type="number"
+                    min={5}
+                    value={form.slot_minutes}
+                    onChange={(e) => set('slot_minutes', Number(e.target.value))}
+                  />
+                </div>
+              </div>
+              {/*
+                ⚠️ Este y "Comprobantes de pago" (paso 2) suenan igual y no tienen
+                nada que ver. Este dice CUÁNDO se reserva el cupo; el otro, QUIÉN
+                comprueba que el pago llegó. Son independientes: se puede cobrar
+                por adelantado y aun así querer mirar los Yapes a mano. Por eso la
+                copia habla de la cita y no de "el pago" a secas.
+              */}
+              <div className="toggle-row" style={{ marginTop: 12 }}>
+                <div className="t">
+                  <b>Requerir pago para confirmar</b>
+                  <small>La cita queda en «esperando pago» hasta que llegue el comprobante</small>
+                </div>
+                <div
+                  className={`toggle ${form.require_payment_to_confirm ? 'on' : ''}`}
+                  onClick={() => set('require_payment_to_confirm', !form.require_payment_to_confirm)}
+                  role="switch"
+                  aria-checked={form.require_payment_to_confirm}
                 />
               </div>
             </div>
-            {/*
-              ⚠️ Este y "Comprobantes de pago" (paso 2) suenan igual y no tienen
-              nada que ver. Este dice CUÁNDO se reserva el cupo; el otro, QUIÉN
-              comprueba que el pago llegó. Son independientes: se puede cobrar
-              por adelantado y aun así querer mirar los Yapes a mano. Por eso la
-              copia habla de la cita y no de "el pago" a secas.
-            */}
-            <div className="toggle-row" style={{ marginTop: 12 }}>
-              <div className="t">
-                <b>Requerir pago para confirmar</b>
-                <small>La cita queda en «esperando pago» hasta que llegue el comprobante</small>
-              </div>
-              <div
-                className={`toggle ${form.require_payment_to_confirm ? 'on' : ''}`}
-                onClick={() => set('require_payment_to_confirm', !form.require_payment_to_confirm)}
-                role="switch"
-                aria-checked={form.require_payment_to_confirm}
-              />
-            </div>
-          </div>
+          )}
 
           <div className="sec">
             <h4>
@@ -781,30 +791,41 @@ function Configuracion() {
               </p>
             )}
 
-            <div className="toggle-row" style={{ marginTop: 14 }}>
-              <div className="t">
-                <b>Pedir la ubicación para la entrega</b>
-                <small>Mia pide el punto de Maps cuando el pedido es a domicilio</small>
+            {/* Solo pide Maps quien entrega a domicilio: una cita no tiene «pedido». */}
+            {esEcommerce(form.business_mode) && (
+              <div className="toggle-row" style={{ marginTop: 14 }}>
+                <div className="t">
+                  <b>Pedir la ubicación para la entrega</b>
+                  <small>Mia pide el punto de Maps cuando el pedido es a domicilio</small>
+                </div>
+                <div
+                  className={`toggle ${form.request_location ? 'on' : ''}`}
+                  onClick={() => set('request_location', !form.request_location)}
+                  role="switch"
+                  aria-checked={form.request_location}
+                />
               </div>
-              <div
-                className={`toggle ${form.request_location ? 'on' : ''}`}
-                onClick={() => set('request_location', !form.request_location)}
-                role="switch"
-                aria-checked={form.request_location}
-              />
-            </div>
-            <div className="toggle-row">
-              <div className="t">
-                <b>Mencionar la dirección del local</b>
-                <small>La dice sin que se la pidan, en vez de esperar a que pregunten</small>
+            )}
+            {/*
+              Un negocio de citas siempre tiene local al que ir. Uno de
+              ecommerce solo si recoge (delivery_type pickup/both) — con
+              delivery puro el bot no usa esto para nada.
+            */}
+            {(esAppointmentFamily(form.business_mode) ||
+              (esEcommerce(form.business_mode) && form.delivery_type !== 'delivery')) && (
+              <div className="toggle-row">
+                <div className="t">
+                  <b>Mencionar la dirección del local</b>
+                  <small>La dice sin que se la pidan, en vez de esperar a que pregunten</small>
+                </div>
+                <div
+                  className={`toggle ${form.proactive_venue ? 'on' : ''}`}
+                  onClick={() => set('proactive_venue', !form.proactive_venue)}
+                  role="switch"
+                  aria-checked={form.proactive_venue}
+                />
               </div>
-              <div
-                className={`toggle ${form.proactive_venue ? 'on' : ''}`}
-                onClick={() => set('proactive_venue', !form.proactive_venue)}
-                role="switch"
-                aria-checked={form.proactive_venue}
-              />
-            </div>
+            )}
 
             {/*
               La duda razonable al tocar cualquiera de estos es "¿hay que

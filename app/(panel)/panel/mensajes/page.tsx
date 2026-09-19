@@ -36,6 +36,7 @@ import {
   type Mensaje,
 } from '@/lib/supabase/queries';
 import { colorDe, cuando, hora, iniciales, intent, telefono } from '@/lib/panel/format';
+import { esAppointmentFamily } from '@/lib/panel/modo';
 
 type Filtro = 'all' | 'hot' | 'new' | 'manual';
 
@@ -63,7 +64,8 @@ export default function MensajesPage() {
 }
 
 function Mensajes() {
-  const { companyId } = useSesion();
+  const { companyId, compania } = useSesion();
+  const conCitas = esAppointmentFamily(compania?.business_mode);
   const comando = useComando();
   const params = useSearchParams();
   const leadDeLaUrl = params.get('lead');
@@ -356,20 +358,24 @@ function Mensajes() {
             <span>{it?.label ?? '—'}</span>
           </div>
 
-          <h4>Historial de citas</h4>
-          {citasDelLead.length === 0 ? (
-            <p className="muted" style={{ fontSize: 12.5 }}>
-              Sin citas.
-            </p>
-          ) : (
-            citasDelLead.map((c) => (
-              <div className="hist" key={c.id}>
-                <b>{c.service || 'Cita'}</b>
-                <small>
-                  {c.recurrente ? 'Grupo recurrente' : c.slot_start} · {c.status}
-                </small>
-              </div>
-            ))
+          {conCitas && (
+            <>
+              <h4>Historial de citas</h4>
+              {citasDelLead.length === 0 ? (
+                <p className="muted" style={{ fontSize: 12.5 }}>
+                  Sin citas.
+                </p>
+              ) : (
+                citasDelLead.map((c) => (
+                  <div className="hist" key={c.id}>
+                    <b>{c.service || 'Cita'}</b>
+                    <small>
+                      {c.recurrente ? 'Grupo recurrente' : c.slot_start} · {c.status}
+                    </small>
+                  </div>
+                ))
+              )}
+            </>
           )}
 
           <h4>Escalaciones</h4>

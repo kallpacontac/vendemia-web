@@ -24,6 +24,7 @@ import { useCargar } from '@/components/panel/useCargar';
 import { conversionDeHoy } from '@/lib/panel/conversion';
 import { construirSemana } from '@/lib/panel/agenda';
 import { INTENT, intent, isoLocal, soles } from '@/lib/panel/format';
+import { esAppointmentFamily } from '@/lib/panel/modo';
 import { motivoDe } from '@/lib/panel/retargeting';
 import {
   anterior,
@@ -122,6 +123,8 @@ export default function Metricas() {
   const hoy = isoLocal(new Date());
   const metricaHoy = datos?.metricas.find((m) => m.date === hoy);
   const leadsHoy = metricaHoy?.leads ?? 0;
+  /** Cita puntual o grupo recurrente: los dos negocios que tienen citas que enseñar. */
+  const conCitas = esAppointmentFamily(datos?.empresa?.business_mode);
   /** Pedidos cobrados + citas en pie. Ver el azulejo "Cerrados hoy". */
   const cerradosHoy = (metricaHoy?.paid_orders ?? 0) + (metricaHoy?.appointments ?? 0);
 
@@ -303,13 +306,15 @@ export default function Metricas() {
 
         <div className="kpi5">
           <Kpi icono={<Users size={18} />} fondo="#FFF1E6" color="#F58220" valor={leadsHoy} etiqueta="Leads hoy" />
-          <Kpi
-            icono={<CalendarCheck size={18} />}
-            fondo="#E9FBF3"
-            color="#00C48C"
-            valor={metricaHoy?.appointments ?? 0}
-            etiqueta="Citas hoy"
-          />
+          {conCitas && (
+            <Kpi
+              icono={<CalendarCheck size={18} />}
+              fondo="#E9FBF3"
+              color="#00C48C"
+              valor={metricaHoy?.appointments ?? 0}
+              etiqueta="Citas hoy"
+            />
+          )}
           <Kpi
             icono={<Target size={18} />}
             fondo="#FEF6E7"
