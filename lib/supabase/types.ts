@@ -334,6 +334,19 @@ export interface AppointmentRow {
    */
   periodo_desde: string | null;
   periodo_hasta: string | null;
+  /**
+   * QUIÉN recibe el servicio, si no es quien escribe (migración 0032, 21-sep).
+   * La madre que reserva el corte de su hijo: el lead es ella, esto es él.
+   * `''` = el mismo que escribe, que es casi toda cita.
+   *
+   * ⚠️ OPCIONAL a propósito: getCitas() lee con `select('*')`, y mientras la
+   * 0032 no esté aplicada en Supabase la columna simplemente no llega. Nombrarla
+   * en un `select` explícito sí rompería — PostgREST falla con una columna que
+   * no existe, y se llevaría por delante la agenda entera.
+   */
+  beneficiario?: string | null;
+  /** Su edad tal cual la dijo el cliente: "8", "3 años y medio". Texto, no número. */
+  beneficiario_edad?: string | null;
 }
 
 export interface AppointmentServiceRow {

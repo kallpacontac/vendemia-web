@@ -33,11 +33,15 @@ import {
   getLeads,
   getMensajes,
   getMovimientosDeLead,
+  getTrabajadores,
+  type Cita,
   type Lead,
   type Mensaje,
 } from '@/lib/supabase/queries';
-import { colorDe, cuando, hora, iniciales, intent, soles, telefono } from '@/lib/panel/format';
+import { colorDe, cuando, diaMes, hora, iniciales, intent, soles, telefono } from '@/lib/panel/format';
+import { selloCumplido } from '@/lib/panel/confirmacion';
 import { esIngreso, suma } from '@/lib/panel/dinero';
+import { haceCuanto, paraQuien, personasDe, separar } from '@/lib/panel/ficha';
 import { esAppointmentFamily } from '@/lib/panel/modo';
 import type { MovimientoRow } from '@/lib/supabase/types';
 
@@ -77,8 +81,19 @@ function Mensajes() {
   const [busqueda, setBusqueda] = useState('');
   const [activoId, setActivoId] = useState<string | null>(null);
   const [mensajes, setMensajes] = useState<Mensaje[]>([]);
-  /** Pedidos y citas de este cliente, para la ficha. Ver el efecto de abajo. */
-  const [movimientos, setMovimientos] = useState<MovimientoRow[]>([]);
+  /**
+   * Pedidos y citas de este cliente, para la ficha. Ver el efecto de abajo.
+   *
+   * ⚠️ Con el lead al que PERTENECEN, no solo las filas. Al cambiar de
+   * conversación, las filas viejas siguen puestas hasta que llegan las nuevas,
+   * y durante ese instante la ficha de un cliente enseñaría lo que dejó otro.
+   */
+  const [cargados, setCargados] = useState<{ lead: string | null; filas: MovimientoRow[] }>({
+    lead: null,
+    filas: [],
+  });
+  const movimientosListos = cargados.lead === activoId;
+  const movimientos = movimientosListos ? cargados.filas : [];
   const [cargandoChat, setCargandoChat] = useState(false);
   const [borrador, setBorrador] = useState('');
   const [enviando, setEnviando] = useState(false);
@@ -90,12 +105,15 @@ function Mensajes() {
 
   const { datos, recargar } = useCargar(async () => {
     if (!companyId) return null;
-    const [leads, citas, escalaciones] = await Promise.all([
+    const [leads, citas, escalaciones, trabajadores] = await Promise.all([
       getLeads(companyId),
       getCitas(companyId),
       getEscalaciones(companyId),
+      // Para poner nombre a quien atendió cada cita. Si falla, la ficha sale
+      // sin nombres de profesional, pero la bandeja no se cae por eso.
+      getTrabajadores(companyId).catch(() => []),
     ]);
-    return { leads, citas, escalaciones };
+    return { leads, citas, escalaciones, trabajadores };
   }, [companyId]);
 
   const leads = useMemo(() => datos?.leads ?? [], [datos]);
@@ -153,10 +171,10 @@ function Mensajes() {
     let vivo = true;
     void getMovimientosDeLead(activoId)
       .then((m) => {
-        if (vivo) setMovimientos(m);
+        if (vivo) setCargados({ lead: activoId, filas: m });
       })
       .catch(() => {
-        if (vivo) setMovimientos([]);
+        if (vivo) setCargados({ lead: activoId, filas: [] });
       });
     return () => {
       vivo = false;
@@ -176,7 +194,10 @@ function Mensajes() {
     });
   }, [leads, filtro, busqueda, botPendiente]);
 
-  const citasDelLead = (datos?.citas ?? []).filter((c) => c.lead_id === activoId);
+  const citasDelLead = useMemo(
+    () => (datos?.citas ?? []).filter((c) => c.lead_id === activoId),
+    [datos, activoId],
+  );
   /**
    * Lo que este cliente ha dejado, y en qué.
    *
@@ -187,6 +208,35 @@ function Mensajes() {
    */
   const gastado = suma((movimientos ?? []).filter(esIngreso));
   const pedidosDelLead = (movimientos ?? []).filter((m) => m.fuente === 'order');
+
+  /* ── La ficha: qué tiene por delante, qué se le hizo, y a quién ─────────
+     Ver lib/panel/ficha.ts — sobre todo por qué «a quién» no es el cliente. */
+  const historial = useMemo(() => separar(citasDelLead), [citasDelLead]);
+  const personas = useMemo(() => personasDe(citasDelLead), [citasDelLead]);
+  const nombreEmpleado = useMemo(
+    () => new Map((datos?.trabajadores ?? []).map((t) => [t.id, t.name])),
+    [datos],
+  );
+  /** El importe de cada cita sale de `v_movimientos`, no se recalcula aquí. */
+  const importeCita = useMemo(
+    () =>
+      new Map(
+        (movimientos ?? [])
+          .filter((m) => m.fuente === 'appointment')
+          .map((m) => [m.movimiento_id, m.importe]),
+      ),
+    [movimientos],
+  );
+  /**
+   * El historial crece con cada visita, y en un lateral estrecho diez citas ya
+   * empujan las escalaciones fuera de la vista. Se enseñan las últimas y se
+   * dice cuántas hay — cortar sin decirlo sería esconderlas.
+   */
+  const [historialEntero, setHistorialEntero] = useState(false);
+  // Al abrir otra conversación, plegado otra vez: si no, la siguiente clienta
+  // aparece con todo su historial desplegado sin haberlo pedido nadie.
+  useEffect(() => setHistorialEntero(false), [activoId]);
+  const VISIBLES_HISTORIAL = 5;
   const escalacionesDelLead = (datos?.escalaciones ?? []).filter(
     (e) => e.lead_id === activoId && e.status === 'pending' && !resueltas.has(e.id),
   );
@@ -402,26 +452,108 @@ function Mensajes() {
           <div className="kv">
             <b>Ha dejado</b>
             <span title="Pedidos cobrados y citas en pie. Mismo criterio que los ingresos de Métricas.">
-              {movimientos.length === 0 ? 'Todavía nada' : soles(gastado)}
+              {!movimientosListos ? '…' : movimientos.length === 0 ? 'Todavía nada' : soles(gastado)}
             </span>
           </div>
 
+          {/*
+            Lo que describe a cada PERSONA, no al cliente. Con una sola persona
+            —quien escribe, que es lo normal— van como dos líneas más de la
+            información. Con beneficiarios, una por persona: «se atiende con
+            Marco» dicho de la madre sería falso si Marco solo les corta a sus
+            hijos. Ver lib/panel/ficha.ts.
+          */}
+          {conCitas &&
+            (personas.length === 1 && !personas[0].nombre ? (
+              <>
+                <div className="kv">
+                  <b>Última cita</b>
+                  <span title="La última que no se canceló ni se marcó como «no vino». Que viniera de verdad solo consta si alguien lo marcó.">
+                    {personas[0].ultima ? haceCuanto(personas[0].ultima) : '—'}
+                  </span>
+                </div>
+                {personas[0].habitual && (
+                  <div className="kv">
+                    <b>Se atiende con</b>
+                    <span>
+                      {nombreEmpleado.get(personas[0].habitual.employeeId) ?? '—'} (
+                      {personas[0].habitual.veces} de {personas[0].citas})
+                    </span>
+                  </div>
+                )}
+              </>
+            ) : (
+              personas.length > 0 && (
+                <>
+                  <h4>Para quién reserva</h4>
+                  {personas.map((p) => (
+                    <div className="hist" key={p.nombre || '·titular·'}>
+                      <b>
+                        {p.nombre || activo?.name || 'Quien escribe'}
+                        {p.edad ? ` (${p.edad})` : ''}
+                      </b>
+                      <small>
+                        {p.ultima ? `última cita ${haceCuanto(p.ultima)}` : 'ninguna cita todavía'}
+                        {p.habitual
+                          ? ` · con ${nombreEmpleado.get(p.habitual.employeeId) ?? '—'}`
+                          : ''}
+                      </small>
+                    </div>
+                  ))}
+                </>
+              )
+            ))}
+
           {conCitas && (
             <>
-              <h4>Historial de citas</h4>
-              {citasDelLead.length === 0 ? (
+              {historial.proximas.length > 0 && (
+                <>
+                  <h4>Próximas citas</h4>
+                  {historial.proximas.map((c) => (
+                    <FilaCita
+                      key={c.id}
+                      cita={c}
+                      estilista={nombreEmpleado.get(c.employee_id ?? '')}
+                    />
+                  ))}
+                </>
+              )}
+
+              <h4>
+                Historial de citas
+                {historial.pasadas.length > VISIBLES_HISTORIAL ? ` (${historial.pasadas.length})` : ''}
+              </h4>
+              {historial.pasadas.length === 0 ? (
                 <p className="muted" style={{ fontSize: 12.5 }}>
-                  Sin citas.
+                  Sin citas pasadas.
                 </p>
               ) : (
-                citasDelLead.map((c) => (
-                  <div className="hist" key={c.id}>
-                    <b>{c.service || 'Cita'}</b>
-                    <small>
-                      {c.recurrente ? 'Grupo recurrente' : c.slot_start} · {c.status}
-                    </small>
-                  </div>
-                ))
+                <>
+                  {(historialEntero
+                    ? historial.pasadas
+                    : historial.pasadas.slice(0, VISIBLES_HISTORIAL)
+                  ).map((c) => (
+                    <FilaCita
+                      key={c.id}
+                      cita={c}
+                      estilista={nombreEmpleado.get(c.employee_id ?? '')}
+                      importe={importeCita.get(c.id)}
+                      pasada
+                    />
+                  ))}
+                  {historial.pasadas.length > VISIBLES_HISTORIAL && (
+                    <button
+                      type="button"
+                      className="btn btn-ghost btn-sm"
+                      style={{ marginTop: 6 }}
+                      onClick={() => setHistorialEntero((v) => !v)}
+                    >
+                      {historialEntero
+                        ? 'Ver solo las últimas'
+                        : `Ver las ${historial.pasadas.length - VISIBLES_HISTORIAL} anteriores`}
+                    </button>
+                  )}
+                </>
               )}
             </>
           )}
@@ -493,4 +625,58 @@ function resumenDetalle(detalle: Record<string, unknown>): string {
   const claves = Object.keys(detalle);
   if (!claves.length) return 'Sin detalle.';
   return claves.map((k) => `${k}: ${String(detalle[k])}`).join(' · ');
+}
+
+/**
+ * Una cita en la ficha: qué, cuándo, con quién, para quién — y, si ya pasó,
+ * cómo acabó y cuánto fue.
+ *
+ * El sello de «vino / no vino / presunta» es el de lib/panel/confirmacion.ts,
+ * el mismo que la Agenda: una cita que cerró el reloj se lee «Presunta» aquí
+ * y allí, no «Vino». Salvo la cancelada, que ese módulo no contempla —para él
+ * es «Sin resolver», y en un historial eso es falso: sí se sabe qué pasó.
+ */
+function FilaCita({
+  cita,
+  estilista,
+  importe,
+  pasada = false,
+}: {
+  cita: Cita;
+  estilista?: string;
+  importe?: number;
+  pasada?: boolean;
+}) {
+  const fecha = cita.recurrente
+    ? 'Grupo recurrente'
+    : cita.inicio
+      ? pasada
+        ? diaMes(cita.inicio)
+        : `${diaMes(cita.inicio)}, ${hora(cita.inicio)}`
+      : '—';
+  const para = paraQuien(cita);
+
+  const sello = !pasada
+    ? null
+    : cita.status === 'cancelled'
+      ? { label: 'Cancelada', color: '#93938C', ayuda: 'Se canceló antes de la cita.' }
+      : selloCumplido('appointment', cita.status, cita.cumplido_por);
+
+  return (
+    <div className="hist">
+      <b>
+        {cita.service || 'Cita'}
+        {sello && (
+          <span title={sello.ayuda} style={{ color: sello.color, fontWeight: 700, marginLeft: 6, fontSize: 11 }}>
+            · {sello.label}
+          </span>
+        )}
+      </b>
+      <small>
+        {[fecha, estilista && `con ${estilista}`, para, importe ? soles(importe) : '']
+          .filter(Boolean)
+          .join(' · ')}
+      </small>
+    </div>
+  );
 }
