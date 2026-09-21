@@ -65,6 +65,7 @@ import type {
   MembershipRow,
   MessageRow,
   MetodoPago,
+  MovimientoRow,
   OrderRow,
   PreguntaObligatoria,
   ProductoIngreso,
@@ -676,6 +677,70 @@ export async function getIngresosPorProducto(
   });
   if (error) throw error;
   return (data ?? []) as ProductoIngreso[];
+}
+
+/* ── Movimientos · pedidos y citas en la misma forma ────────────────────── */
+
+/**
+ * Las filas de `v_movimientos` de un periodo. De aquí cuelgan comisiones, caja
+ * y la ficha del cliente: una sola consulta y tres lecturas distintas de las
+ * mismas filas (ver lib/panel/dinero.ts).
+ *
+ * Se filtra por `fecha_servicio` —cuándo se presta, no cuándo se creó— porque
+ * es lo que responde a «cuánto trabajó Ana en septiembre» y a «cuánto entró
+ * hoy». Las filas sin fecha de servicio caen por `fecha_creacion`, que es lo
+ * único que se sabe de ellas; sin ese respaldo, una inscripción antigua sin
+ * periodo calculado desaparecería de todas las cuentas sin decir nada.
+ *
+ * ⚠️ `importe` y `unidades` se pasan por Number() aquí: son `numeric` de
+ * Postgres y el driver los puede entregar como texto. Sumar texto en
+ * JavaScript concatena, y el error no se ve — solo sale un total absurdo.
+ */
+export async function getMovimientos(
+  companyId: string,
+  desde: string,
+  hasta: string,
+): Promise<MovimientoRow[]> {
+  // Vacío en demo, no inventado: va por el company_id REAL, así que sin este
+  // corte una demo enseñaría el dinero de verdad del negocio mezclado con el
+  // de mentira. Ver la cabecera de este fichero.
+  if (demoActivo()) return [];
+  const { data, error } = await supabase()
+    .from('v_movimientos')
+    .select('*')
+    .eq('company_id', companyId)
+    .or(
+      `and(fecha_servicio.gte.${desde},fecha_servicio.lte.${hasta}),` +
+        `and(fecha_servicio.is.null,fecha_creacion.gte.${desde},fecha_creacion.lte.${hasta})`,
+    )
+    .limit(5000);
+  if (error) throw error;
+
+  return ((data ?? []) as Record<string, unknown>[]).map((m) => ({
+    ...(m as unknown as MovimientoRow),
+    importe: Number(m.importe ?? 0),
+    unidades: Number(m.unidades ?? 0),
+  }));
+}
+
+/**
+ * Los movimientos de UN cliente, para su ficha. Sin ventana de fechas: lo que
+ * se quiere saber ahí es qué ha dejado en total desde que existe.
+ */
+export async function getMovimientosDeLead(leadId: string): Promise<MovimientoRow[]> {
+  if (demoActivo()) return [];
+  const { data, error } = await supabase()
+    .from('v_movimientos')
+    .select('*')
+    .eq('lead_id', leadId)
+    .limit(500);
+  if (error) throw error;
+
+  return ((data ?? []) as Record<string, unknown>[]).map((m) => ({
+    ...(m as unknown as MovimientoRow),
+    importe: Number(m.importe ?? 0),
+    unidades: Number(m.unidades ?? 0),
+  }));
 }
 
 /* ── La serie temporal, con el grano que pida la pantalla ───────────────── */

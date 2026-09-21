@@ -32,11 +32,14 @@ import {
   getEscalaciones,
   getLeads,
   getMensajes,
+  getMovimientosDeLead,
   type Lead,
   type Mensaje,
 } from '@/lib/supabase/queries';
-import { colorDe, cuando, hora, iniciales, intent, telefono } from '@/lib/panel/format';
+import { colorDe, cuando, hora, iniciales, intent, soles, telefono } from '@/lib/panel/format';
+import { esIngreso, suma } from '@/lib/panel/dinero';
 import { esAppointmentFamily } from '@/lib/panel/modo';
+import type { MovimientoRow } from '@/lib/supabase/types';
 
 type Filtro = 'all' | 'hot' | 'new' | 'manual';
 
@@ -74,6 +77,8 @@ function Mensajes() {
   const [busqueda, setBusqueda] = useState('');
   const [activoId, setActivoId] = useState<string | null>(null);
   const [mensajes, setMensajes] = useState<Mensaje[]>([]);
+  /** Pedidos y citas de este cliente, para la ficha. Ver el efecto de abajo. */
+  const [movimientos, setMovimientos] = useState<MovimientoRow[]>([]);
   const [cargandoChat, setCargandoChat] = useState(false);
   const [borrador, setBorrador] = useState('');
   const [enviando, setEnviando] = useState(false);
@@ -137,6 +142,27 @@ function Mensajes() {
     if (c) c.scrollTop = c.scrollHeight;
   }, [mensajes]);
 
+  /* ── Lo que ha dejado este cliente ──────────────────────────────────────
+     Se pide por lead y no de una vez para toda la empresa: esto es una
+     bandeja, y traerse los movimientos de todos los clientes para enseñar el
+     total de uno es descargar de más en cada carga. Un fallo aquí no rompe la
+     conversación —se queda la ficha sin cifras— porque `v_movimientos` es una
+     vista y el panel no controla si existe en la base de ese cliente. */
+  useEffect(() => {
+    if (!activoId) return;
+    let vivo = true;
+    void getMovimientosDeLead(activoId)
+      .then((m) => {
+        if (vivo) setMovimientos(m);
+      })
+      .catch(() => {
+        if (vivo) setMovimientos([]);
+      });
+    return () => {
+      vivo = false;
+    };
+  }, [activoId]);
+
   /* ── Lista ──────────────────────────────────────────────────────────── */
   const lista = useMemo(() => {
     const q = busqueda.trim().toLowerCase();
@@ -151,6 +177,16 @@ function Mensajes() {
   }, [leads, filtro, busqueda, botPendiente]);
 
   const citasDelLead = (datos?.citas ?? []).filter((c) => c.lead_id === activoId);
+  /**
+   * Lo que este cliente ha dejado, y en qué.
+   *
+   * `esIngreso` y no «todo lo que hay»: una cita cancelada o un pedido sin
+   * pagar no es dinero de nadie, y sumarlo aquí inflaría al cliente delante de
+   * quien está decidiendo cuánto mimarlo. Es el MISMO criterio que Métricas
+   * —ver lib/panel/dinero.ts—, así que las dos cifras se pueden comparar.
+   */
+  const gastado = suma((movimientos ?? []).filter(esIngreso));
+  const pedidosDelLead = (movimientos ?? []).filter((m) => m.fuente === 'order');
   const escalacionesDelLead = (datos?.escalaciones ?? []).filter(
     (e) => e.lead_id === activoId && e.status === 'pending' && !resueltas.has(e.id),
   );
@@ -357,6 +393,18 @@ function Mensajes() {
             <b>Intención</b>
             <span>{it?.label ?? '—'}</span>
           </div>
+          {/*
+            Cuánto ha dejado, al lado de con quién estás hablando. Es el dato
+            que cambia el tono de la respuesta —no se le contesta igual a quien
+            lleva S/ 900 que a quien preguntó una vez— y hasta ahora había que
+            deducirlo leyendo la conversación entera.
+          */}
+          <div className="kv">
+            <b>Ha dejado</b>
+            <span title="Pedidos cobrados y citas en pie. Mismo criterio que los ingresos de Métricas.">
+              {movimientos.length === 0 ? 'Todavía nada' : soles(gastado)}
+            </span>
+          </div>
 
           {conCitas && (
             <>
@@ -375,6 +423,26 @@ function Mensajes() {
                   </div>
                 ))
               )}
+            </>
+          )}
+
+          {/*
+            Solo si los hay. Un negocio de citas no crea pedidos, así que un
+            «Sin pedidos» permanente en su lateral sería un hueco fijo que no
+            informa de nada — el mismo criterio que el historial de citas, que
+            desaparece entero cuando el negocio no agenda.
+          */}
+          {pedidosDelLead.length > 0 && (
+            <>
+              <h4>Historial de pedidos</h4>
+              {pedidosDelLead.map((m) => (
+                <div className="hist" key={m.movimiento_id}>
+                  <b>{m.concepto || 'Pedido'}</b>
+                  <small>
+                    {m.fecha_servicio ?? m.fecha_creacion} · {m.estado} · {soles(m.importe)}
+                  </small>
+                </div>
+              ))}
             </>
           )}
 

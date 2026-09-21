@@ -452,6 +452,51 @@ export interface DailyMetricRow {
   escalations_pending: number;
 }
 
+/**
+ * ══════════════════════════════════════════════════════════════════════════
+ * UNA FILA DE `v_movimientos` · pedidos y citas en la misma forma
+ * ══════════════════════════════════════════════════════════════════════════
+ *
+ * La vista (migración 0027) une `orders` y `appointments` para que el dinero se
+ * lea de un solo sitio. Es la fuente de la que cuelgan ingresos, comisiones y
+ * caja — tres preguntas distintas sobre las MISMAS filas. Quién decide cuál es
+ * cuál está en lib/panel/dinero.ts, no aquí.
+ *
+ * ⚠️ `importe` y `unidades` son `numeric` de Postgres y pueden llegar como
+ * TEXTO según el driver. getMovimientos() los pasa por Number(); si lees la
+ * vista por tu cuenta, hazlo tú.
+ *
+ * ⚠️ NO trae método de pago. `orders` tiene `payment_method` y las citas no
+ * guardan ninguno, así que la vista no puede ofrecer una columna que sería
+ * nula justo en los negocios de citas. Para el desglose «efectivo o Yape» hace
+ * falta primero que `marcar_pagado` lo registre.
+ */
+export interface MovimientoRow {
+  company_id: string;
+  /** El id del pedido o de la cita. NO es único entre fuentes: úsalo con `fuente`. */
+  movimiento_id: string;
+  fuente: 'order' | 'appointment';
+  modo: BusinessMode | null;
+  lead_id: string | null;
+  /** ⚠️ Siempre `''` en la rama `order`: no se guarda quién vendió un producto. */
+  employee_id: string;
+  /** `''` cuando el movimiento tiene más de un producto distinto. */
+  catalog_item_id: string;
+  concepto: string;
+  unidades: number;
+  importe: number;
+  estado: string;
+  /** Lo calcula Postgres con `estados_con_ingreso()`. Ver lib/panel/dinero.ts. */
+  cuenta_ingreso: boolean;
+  /** Quién dio el cobro por bueno: `voucher` · `panel` · `cron` · `''` = nadie. */
+  pagado_por: string;
+  cumplido_por: string;
+  /** Fecha de creación, en hora de Lima. */
+  fecha_creacion: string;
+  /** Cuándo se presta el servicio. `null` si no se puede saber. */
+  fecha_servicio: string | null;
+}
+
 export interface PuntoDia {
   date: string;
   count: number;
