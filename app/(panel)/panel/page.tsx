@@ -37,7 +37,7 @@ import {
   getCitas,
   getCompania,
   getIngresosPorProducto,
-  getLeads,
+  getConversaciones,
   getMetricasDiarias,
   getPedidos,
   getSerie,
@@ -78,7 +78,9 @@ export default function Dashboard() {
       getCitas(companyId),
       // 500 y no 200: el denominador de la conversión sale de estas filas, así
       // que un límite corto no "pierde leads viejos", falsea el porcentaje de hoy.
-      getLeads(companyId, 500),
+      // getConversaciones y no getLeads: son los mismos leads, más su último
+      // mensaje, que es lo que pinta «Conversaciones recientes». Ver queries.ts.
+      getConversaciones(companyId, 500),
       getPedidos(companyId),
       getIngresosPorProducto(companyId, desde, hasta).catch(() => []),
       getCompania(companyId),
@@ -162,7 +164,9 @@ export default function Dashboard() {
     [datos],
   );
 
-  const recientes = (datos?.leads ?? []).filter((l) => l.last_message).slice(0, 4);
+  // Ya vienen ordenadas por el último mensaje. Antes filtraba por
+  // `last_message`, que no existe en Supabase: la tarjeta salía siempre vacía.
+  const recientes = (datos?.leads ?? []).filter((l) => l.ultimoMensaje).slice(0, 4);
   const maxIngreso = Math.max(...semana.map((s) => s.ingresos), 1);
   const productos = (datos?.productos ?? []).slice(0, 5);
   const maxProducto = Math.max(...productos.map((p) => p.revenue), 1);
@@ -456,12 +460,12 @@ export default function Dashboard() {
                       </div>
                       <div className="info">
                         <b>{l.name || l.phone}</b>
-                        <p>{l.last_message}</p>
+                        <p>{l.ultimoMensaje}</p>
                       </div>
                       <div className="r">
                         <span className={`badge-pill ${it.cls}`}>{it.short}</span>
                         <br />
-                        <small>{cuando(l.creado)}</small>
+                        <small>{cuando(l.ultimoAt)}</small>
                       </div>
                     </Link>
                   );

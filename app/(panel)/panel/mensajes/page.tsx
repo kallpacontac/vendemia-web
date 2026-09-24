@@ -17,8 +17,13 @@
  *
  * Ninguna de las tres se pinta como hecha antes de tiempo. Lo que se ve en el
  * chat son las filas que el bot escribió y el espejo subió: si el mensaje no
- * llegó a WhatsApp, aquí tampoco aparece. El INSERT en `messages` llega por
- * Realtime en 1-2 segundos.
+ * llegó a WhatsApp, aquí tampoco aparece.
+ *
+ * Cómo llega lo nuevo: por Realtime al instante SI `messages` está en la
+ * publicación (scripts/realtime-mensajes.sql), y en cualquier caso por sondeo
+ * —el chat abierto cada 4 s, la lista cada 15 s, solo con la pestaña a la
+ * vista—. Antes solo había Realtime, y como la tabla no está publicada, la
+ * bandeja no se movía hasta recargar la página.
  *
  * ⚠️ `messages` no tiene company_id: su política resuelve el permiso a través
  * de `leads`, así que siempre se consulta por lead_id.
@@ -33,16 +38,18 @@ import { NuevoMensaje } from '@/components/panel/NuevoMensaje';
 import { Burbuja } from '@/components/panel/Burbuja';
 import { BotonAdjunto, ChipAdjunto, useAdjunto } from '@/components/panel/SelectorAdjunto';
 import { useEnviarMensaje } from '@/components/panel/useEnviarMensaje';
+import { useSondeo } from '@/components/panel/useSondeo';
 import {
   escucharMensajes,
   getCitas,
+  getConversaciones,
   getEscalaciones,
-  getLeads,
   getMensajes,
+  getMensajesDesde,
   getMovimientosDeLead,
   getTrabajadores,
   type Cita,
-  type Lead,
+  type Conversacion,
   type Mensaje,
 } from '@/lib/supabase/queries';
 import { colorDe, cuando, diaMes, hora, iniciales, intent, soles, telefono } from '@/lib/panel/format';
@@ -53,6 +60,28 @@ import { esAppointmentFamily } from '@/lib/panel/modo';
 import type { MovimientoRow } from '@/lib/supabase/types';
 
 type Filtro = 'all' | 'hot' | 'new' | 'manual';
+
+/**
+ * Cada cuánto se mira si hay algo nuevo, con la pestaña a la vista (ver
+ * useSondeo). El chat abierto más a menudo que la lista: es donde alguien está
+ * esperando una respuesta. La consulta del chat solo trae lo posterior al
+ * último mensaje, así que casi siempre vuelve vacía y no pesa.
+ */
+const SONDEO_CHAT_MS = 4000;
+const SONDEO_BANDEJA_MS = 15000;
+
+/**
+ * Añade al chat lo que falte, sin repetir y en orden. Devuelve el MISMO array
+ * si no había nada nuevo, para que React no repinte ni baje el scroll por un
+ * sondeo vacío.
+ */
+function juntar(prev: Mensaje[], nuevos: Mensaje[]): Mensaje[] {
+  const ya = new Set(prev.map((m) => m.id));
+  const faltan = nuevos.filter((m) => !ya.has(m.id));
+  if (!faltan.length) return prev;
+  // sort es estable: dos del mismo segundo conservan el orden en que llegaron.
+  return [...prev, ...faltan].sort((a, b) => (a.created_at ?? 0) - (b.created_at ?? 0));
+}
 
 const ETIQUETA_ESCALACION: Record<string, string> = {
   paid_removal: 'Quitar cita (pagada)',
@@ -88,6 +117,9 @@ function Mensajes() {
   const [busqueda, setBusqueda] = useState('');
   const [activoId, setActivoId] = useState<string | null>(null);
   const [mensajes, setMensajes] = useState<Mensaje[]>([]);
+  /** El chat abierto AHORA, para que una respuesta que llega tarde no se pinte en otro. */
+  const activoIdRef = useRef<string | null>(null);
+  activoIdRef.current = activoId;
   /**
    * Pedidos y citas de este cliente, para la ficha. Ver el efecto de abajo.
    *
@@ -125,18 +157,30 @@ function Mensajes() {
 
   const { datos, recargar } = useCargar(async () => {
     if (!companyId) return null;
-    const [leads, citas, escalaciones, trabajadores] = await Promise.all([
-      getLeads(companyId),
+    const [citas, escalaciones, trabajadores] = await Promise.all([
       getCitas(companyId),
       getEscalaciones(companyId),
       // Para poner nombre a quien atendió cada cita. Si falla, la ficha sale
       // sin nombres de profesional, pero la bandeja no se cae por eso.
       getTrabajadores(companyId).catch(() => []),
     ]);
-    return { leads, citas, escalaciones, trabajadores };
+    return { citas, escalaciones, trabajadores };
   }, [companyId]);
 
-  const leads = useMemo(() => datos?.leads ?? [], [datos]);
+  /**
+   * La bandeja va aparte del resto porque es lo único que se sondea: se relee
+   * sola cada SONDEO_BANDEJA_MS (ver useSondeo). Juntas, cada tic se traería
+   * también todas las citas, escalaciones y trabajadores de la empresa, que
+   * no cambian a ese ritmo.
+   */
+  const {
+    datos: bandeja,
+    recargar: recargarBandeja,
+    releer: releerBandeja,
+  } = useCargar(async () => (companyId ? getConversaciones(companyId) : null), [companyId]);
+  useSondeo(releerBandeja, SONDEO_BANDEJA_MS, !!companyId);
+
+  const leads = useMemo(() => bandeja ?? [], [bandeja]);
 
   // Primera conversación: la de la URL si vino de Leads, si no la más reciente.
   useEffect(() => {
@@ -160,10 +204,10 @@ function Mensajes() {
     setBusqueda('');
     if (leadId) setActivoId(leadId);
     else setTelPendiente(phone);
-    recargar();
+    recargarBandeja();
   }
 
-  const activo: Lead | null = leads.find((l) => l.id === activoId) ?? null;
+  const activo: Conversacion | null = leads.find((l) => l.id === activoId) ?? null;
 
   const botActivo = activo ? (botPendiente[activo.id] ?? activo.botActivo) : true;
 
@@ -183,10 +227,10 @@ function Mensajes() {
 
     // Los mensajes nuevos llegan por Realtime: los del cliente, los de Mia y
     // los que mandes tú desde aquí. Todos por el mismo camino, porque todos
-    // pasan por el bot antes de existir.
-    const parar = escucharMensajes(activoId, (m) =>
-      setMensajes((prev) => (prev.some((x) => x.id === m.id) ? prev : [...prev, m])),
-    );
+    // pasan por el bot antes de existir. Solo si `messages` está en la
+    // publicación de Realtime (scripts/realtime-mensajes.sql); si no, los trae
+    // el sondeo de abajo.
+    const parar = escucharMensajes(activoId, (m) => setMensajes((prev) => juntar(prev, [m])));
 
     return () => {
       vivo = false;
@@ -194,9 +238,47 @@ function Mensajes() {
     };
   }, [activoId]);
 
+  /**
+   * El sondeo del chat abierto: lo que ha llegado desde el último mensaje que
+   * ya tenemos. Una consulta pequeña cada SONDEO_CHAT_MS, solo con la pestaña
+   * a la vista. Si trae algo, se relee también la bandeja para que la vista
+   * previa y el orden de la lista no esperen a su propio tic.
+   */
+  const ultimoCreado = mensajes.length ? mensajes[mensajes.length - 1].created_at ?? 0 : 0;
+  useSondeo(
+    () => {
+      const lead = activoId;
+      if (!lead || cargandoChat) return;
+      void getMensajesDesde(lead, ultimoCreado)
+        .then((nuevos) => {
+          // Si mientras tanto se cambió de conversación, esto es de otra.
+          if (lead !== activoIdRef.current) return;
+          const ya = new Set(mensajes.map((m) => m.id));
+          if (!nuevos.some((n) => !ya.has(n.id))) return;
+          setMensajes((prev) => juntar(prev, nuevos));
+          releerBandeja();
+        })
+        .catch(() => {
+          /* Un tic fallido no importa: el siguiente lo vuelve a intentar. */
+        });
+    },
+    SONDEO_CHAT_MS,
+    !!activoId,
+  );
+
+  /**
+   * Bajar al último mensaje cuando llega uno… salvo si estás leyendo más
+   * arriba. Con el chat refrescándose solo, arrastrar a quien repasa el
+   * historial hasta el final cada vez que escribe el cliente hace imposible
+   * leer. Al abrir otra conversación, siempre abajo.
+   */
+  const pegadoAbajo = useRef(true);
+  useEffect(() => {
+    pegadoAbajo.current = true;
+  }, [activoId]);
   useEffect(() => {
     const c = cajaMsgs.current;
-    if (c) c.scrollTop = c.scrollHeight;
+    if (c && pegadoAbajo.current) c.scrollTop = c.scrollHeight;
   }, [mensajes]);
 
   /* ── Lo que ha dejado este cliente ──────────────────────────────────────
@@ -227,7 +309,7 @@ function Mensajes() {
       if (filtro === 'hot' && l.intent !== 'purchase_ready') return false;
       if (filtro === 'new' && l.status !== 'new') return false;
       if (filtro === 'manual' && (botPendiente[l.id] ?? l.botActivo)) return false;
-      if (q && !(l.name ?? '').toLowerCase().includes(q) && !(l.last_message ?? '').toLowerCase().includes(q))
+      if (q && !(l.name ?? '').toLowerCase().includes(q) && !l.ultimoMensaje.toLowerCase().includes(q))
         return false;
       return true;
     });
@@ -297,7 +379,7 @@ function Mensajes() {
     // Si el bot no aplicó el cambio, el interruptor vuelve a donde estaba: es
     // preferible a enseñar "manual" mientras Mia sigue contestando sola.
     if (!r) setBotPendiente((p) => ({ ...p, [activo.id]: activo.botActivo }));
-    else recargar();
+    else recargarBandeja();
   }
 
   async function enviar() {
@@ -397,9 +479,9 @@ function Mensajes() {
                   <div className="info">
                     <div className="top">
                       <b>{l.name || telefono(l.phone)}</b>
-                      <span className="time">{cuando(l.creado)}</span>
+                      <span className="time">{cuando(l.ultimoAt)}</span>
                     </div>
-                    <div className="prev">{l.last_message ?? ''}</div>
+                    <div className="prev">{l.ultimoMensaje}</div>
                     <span className={`badge-pill ${li.cls}`} style={{ marginTop: 5 }}>
                       {li.short}
                     </span>
@@ -448,7 +530,15 @@ function Mensajes() {
             cliente hasta que la reactives.
           </div>
 
-          <div className="msgs" ref={cajaMsgs}>
+          <div
+            className="msgs"
+            ref={cajaMsgs}
+            onScroll={(e) => {
+              const c = e.currentTarget;
+              // «Abajo» con margen: un par de líneas por encima del final cuentan como abajo.
+              pegadoAbajo.current = c.scrollHeight - c.scrollTop - c.clientHeight < 120;
+            }}
+          >
             {cargandoChat && <p className="vacio">Cargando la conversación…</p>}
             {!cargandoChat && mensajes.length === 0 && (
               <p className="vacio">No hay mensajes en esta conversación.</p>

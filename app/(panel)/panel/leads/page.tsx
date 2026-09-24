@@ -25,7 +25,7 @@ import { CheckCircle, Download, Flame, MessageCircle, Search, Users } from 'luci
 import Topbar from '@/components/panel/Topbar';
 import { useSesion } from '@/components/panel/Sesion';
 import { useCargar } from '@/components/panel/useCargar';
-import { getLeads } from '@/lib/supabase/queries';
+import { getConversaciones } from '@/lib/supabase/queries';
 import { colorDe, cuando, iniciales, intent, status, STATUS, telefono } from '@/lib/panel/format';
 import { ESTADOS } from '@/lib/panel/retargeting';
 import type { LeadIntent, LeadStatus } from '@/lib/supabase/types';
@@ -34,7 +34,21 @@ const POR_PAGINA = 8;
 
 export default function Leads() {
   const { companyId } = useSesion();
-  const { datos, cargando } = useCargar(async () => (companyId ? getLeads(companyId) : []), [companyId]);
+  /**
+   * getConversaciones y no getLeads: trae el último mensaje de cada lead, que
+   * es la columna «Último mensaje» (antes leía `last_message`, que no existe en
+   * Supabase, y salía siempre «—»). Se reordena por alta porque esta tabla es
+   * el registro de leads, no la bandeja: su orden es el de siempre.
+   */
+  const { datos, cargando } = useCargar(
+    async () =>
+      companyId
+        ? (await getConversaciones(companyId)).sort(
+            (a, b) => (b.creado?.getTime() ?? 0) - (a.creado?.getTime() ?? 0),
+          )
+        : [],
+    [companyId],
+  );
 
   const [busqueda, setBusqueda] = useState('');
   const [fIntent, setFIntent] = useState('');
@@ -77,7 +91,7 @@ export default function Leads() {
         l.phone,
         intent(l.intent).label,
         status(l.status).label,
-        (l.last_message ?? '').replace(/[,\n]/g, ' '),
+        l.ultimoMensaje.replace(/[,\n]/g, ' '),
         l.creado ? l.creado.toISOString().slice(0, 10) : '',
         ...claves.map((k) => l.datos[k] ?? ''),
       ]),
@@ -248,7 +262,7 @@ export default function Leads() {
                         whiteSpace: 'nowrap',
                       }}
                     >
-                      {l.last_message || '—'}
+                      {l.ultimoMensaje || '—'}
                     </td>
                     {/*
                       Lo que el bot guardó por las preguntas obligatorias con

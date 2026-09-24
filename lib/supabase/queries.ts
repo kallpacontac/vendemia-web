@@ -226,7 +226,11 @@ export async function getLeads(companyId: string, limite = 500): Promise<Lead[]>
     .limit(limite);
   if (error) throw error;
 
-  return ((data ?? []) as LeadRow[]).map((l) => ({
+  return ((data ?? []) as LeadRow[]).map(aLead);
+}
+
+function aLead(l: LeadRow): Lead {
+  return {
     ...l,
     // Por defecto true: un lead recién espejado sin el campo lo atiende el bot.
     botActivo: bool(l.bot_active, true),
@@ -240,7 +244,69 @@ export async function getLeads(companyId: string, limite = 500): Promise<Lead[]>
         typeof v === 'string' ? v : JSON.stringify(v),
       ]),
     ),
-  }));
+  };
+}
+
+/** Una conversación de la bandeja: el lead y lo último que se dijo en ella. */
+export interface Conversacion extends Lead {
+  /** Texto del último mensaje, de quien sea. Con un adjunto sin texto, qué se mandó. */
+  ultimoMensaje: string;
+  /** Cuándo. Sin mensajes, cuándo se creó el lead. Es lo que ordena la bandeja. */
+  ultimoAt: Date | null;
+}
+
+const RESUMEN_ADJUNTO: Record<string, string> = {
+  image: '📷 Foto',
+  video: '🎥 Vídeo',
+  audio: '🎤 Audio',
+  document: '📄 Documento',
+  sticker: 'Sticker',
+};
+
+/**
+ * La bandeja de Mensajes: los leads con su último mensaje, lo más reciente
+ * arriba.
+ *
+ * ⚠️ `leads.last_message` NO EXISTE EN SUPABASE. El bot lo calcula al vuelo en
+ * su propia API, y el espejo sube la tabla tal cual, sin él: la vista previa
+ * de cada conversación salía siempre vacía, y la lista iba ordenada por el día
+ * en que se creó el lead, no por quién escribió último. Una conversación de
+ * hace un año que acaba de recibir un mensaje se quedaba abajo del todo.
+ *
+ * El último mensaje sale EMBEBIDO en la misma consulta (una fila de
+ * `messages` por lead, la más reciente), así que es una ida y vuelta, no una
+ * por conversación. `messages(*)` y no una lista de columnas: las del adjunto
+ * llegan con una migración del bot, y nombrarlas antes tumbaría la consulta.
+ */
+export async function getConversaciones(companyId: string, limite = 500): Promise<Conversacion[]> {
+  if (demoActivo()) {
+    return leadsDemo(companyId)
+      .slice(0, limite)
+      .map((l) => ({ ...l, ultimoMensaje: l.last_message ?? '', ultimoAt: l.creado }));
+  }
+  const { data, error } = await supabase()
+    .from('leads')
+    .select('*, messages(*)')
+    .eq('company_id', companyId)
+    .order('created_at', { ascending: false })
+    .order('created_at', { referencedTable: 'messages', ascending: false })
+    .limit(1, { referencedTable: 'messages' })
+    .limit(limite);
+  if (error) throw error;
+
+  return ((data ?? []) as (LeadRow & { messages?: MessageRow[] })[])
+    .map(({ messages, ...fila }) => {
+      const lead = aLead(fila);
+      const ultimo = messages?.[0];
+      const texto =
+        ultimo?.content?.trim() || (ultimo?.media_type ? RESUMEN_ADJUNTO[ultimo.media_type] ?? '' : '');
+      return {
+        ...lead,
+        ultimoMensaje: texto,
+        ultimoAt: ultimo ? fecha(ultimo.created_ts) : lead.creado,
+      };
+    })
+    .sort((a, b) => (b.ultimoAt?.getTime() ?? 0) - (a.ultimoAt?.getTime() ?? 0));
 }
 
 /* ── Mensajes ───────────────────────────────────────────────────────────── */
@@ -271,7 +337,36 @@ export async function getMensajes(leadId: string): Promise<Mensaje[]> {
   return ((data ?? []) as MessageRow[]).map((m) => ({ ...m, cuando: fecha(m.created_ts) }));
 }
 
-/** Mensajes nuevos en vivo. Devuelve la función para darse de baja. */
+/**
+ * Lo que ha llegado a un chat desde `desde` (epoch en segundos), para el
+ * sondeo de la bandeja.
+ *
+ * `gte` y no `gt`: `created_at` va en segundos, y dos mensajes del mismo
+ * segundo —el del cliente y la respuesta de Mia, que el bot guarda seguidos—
+ * se perderían con `gt` si el primero ya estaba. Lo repetido se descarta al
+ * juntar, por id.
+ */
+export async function getMensajesDesde(leadId: string, desde: number): Promise<Mensaje[]> {
+  if (demoActivo()) return [];
+  const { data, error } = await supabase()
+    .from('messages')
+    .select('*')
+    .eq('lead_id', leadId)
+    .gte('created_at', desde)
+    .order('created_at', { ascending: true });
+  if (error) throw error;
+  return ((data ?? []) as MessageRow[]).map((m) => ({ ...m, cuando: fecha(m.created_ts) }));
+}
+
+/**
+ * Mensajes nuevos en vivo. Devuelve la función para darse de baja.
+ *
+ * ⚠️ SOLO FUNCIONA SI `messages` ESTÁ EN LA PUBLICACIÓN `supabase_realtime`, y
+ * según las migraciones no lo está (solo commands, sync_state e instances). El
+ * canal se suscribe sin error y no llega ningún evento. Por eso la bandeja
+ * además sondea (ver mensajes/page.tsx), y scripts/realtime-mensajes.sql es lo
+ * que hay que ejecutar para que esto funcione de verdad.
+ */
 export function escucharMensajes(leadId: string, alLlegar: (m: Mensaje) => void): () => void {
   const sb = supabase();
   const canal = sb
