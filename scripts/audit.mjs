@@ -213,7 +213,10 @@ console.log('\n9 · Regresiones conocidas');
   const intro = read(join(ROOT, 'components/BrandIntro.tsx'));
   const mark = read(join(ROOT, 'components/Mark.tsx'));
   const reveal = read(join(ROOT, 'components/RevealHeading.tsx'));
-  const page = read(join(ROOT, 'app/(landing)/page.tsx'));
+  // El apilado vive en LandingPage desde que app/(landing)/page.tsx quedó
+  // como un envoltorio de una línea («Aplicar la landing aprobada», 78a3e6e).
+  // Leer page.tsx hacía fallar F5 aunque la espera estuviera bien puesta.
+  const page = read(join(ROOT, 'components/landing/LandingPage.tsx'));
 
   // F1 · el telón medía el 100 % de la PÁGINA (~15 000 px), no del viewport
   if (/transform:\s*translateY\(100%\)/.test(css)) {
