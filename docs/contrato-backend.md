@@ -538,7 +538,7 @@ guardar.
 | `delete_employee_block` | `{ id }` | `{ id }` | miembro |
 | `modificar_cita` | `{ id, accion: 'cancelar' \| 'mover' \| 'reasignar', slot_start?, employee_id? }` — `slot_start` como `'YYYY-MM-DD HH:MM'`; mover y reasignar se combinan | `{ id, accion, antes, ahora, mensaje, wa_link }` + `libera` al cancelar. ⚠️ `antes`/`ahora` son **cadenas** al cancelar y **objetos** `{slot_start, employee_id}` al mover/reasignar. **No escribe al cliente**: el mensaje lo manda una persona | miembro (el admin de plataforma **no** puede) |
 | `marcar_seguimiento` | `{ lead_id, motivo, resultado?, nota? }` | `{ lead_id, motivo, enviado_at }` | miembro · **o admin de plataforma** |
-| `send_message` | `{ text, phone }` o `{ text, lead_id }` | `{ phone }` | miembro |
+| `send_message` | `{ text, phone }` o `{ text, lead_id }` — con `phone` abre conversación a un número nuevo. Además `client_msg_id` (siempre) y `media_url`, `media_type`, `media_name` (si hay adjunto; entonces `text` puede ir vacío) | `{ phone, lead_id }`, con el lead creado si no existía y el mensaje guardado como `role: 'owner'`. **Pedido:** `media: true` si salió el adjunto y `repetido: true` si ese `client_msg_id` ya se había enviado (docs/prompt-bot-adjuntos-y-duplicados.md) | miembro |
 | `toggle_bot` | `{ lead_id, active: boolean }` | `{ lead_id, bot_active }` | miembro |
 | `handoff` | `{ lead_id }` | `{ lead_id }` | miembro |
 | `resolve_escalation` | `{ escalation_id }` | `{ escalation_id }` | miembro |

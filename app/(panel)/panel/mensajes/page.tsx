@@ -9,7 +9,10 @@
  * las tres escrituras pasan por la cola de comandos:
  *
  *   toggle_bot         · pausar o reactivar a Mia en ESTE lead
- *   send_message       · escribirle tú al cliente por WhatsApp
+ *   send_message       · escribirle tú al cliente por WhatsApp — en su chat
+ *                        (con Mia en pausa) o, con «Nuevo», abrirle tú la
+ *                        conversación a un número (Mia sigue activa y retoma
+ *                        cuando conteste; ver components/panel/NuevoMensaje)
  *   resolve_escalation · cerrar algo que el bot no supo resolver
  *
  * Ninguna de las tres se pinta como hecha antes de tiempo. Lo que se ve en el
@@ -22,10 +25,14 @@
  */
 import { Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { AlertTriangle, Check, Search, Send } from 'lucide-react';
+import { AlertTriangle, Check, MessageSquarePlus, Search, Send } from 'lucide-react';
 import { useSesion } from '@/components/panel/Sesion';
 import { useComando } from '@/components/panel/Avisos';
 import { useCargar } from '@/components/panel/useCargar';
+import { NuevoMensaje } from '@/components/panel/NuevoMensaje';
+import { Burbuja } from '@/components/panel/Burbuja';
+import { BotonAdjunto, ChipAdjunto, useAdjunto } from '@/components/panel/SelectorAdjunto';
+import { useEnviarMensaje } from '@/components/panel/useEnviarMensaje';
 import {
   escucharMensajes,
   getCitas,
@@ -96,10 +103,23 @@ function Mensajes() {
   const movimientos = movimientosListos ? cargados.filas : [];
   const [cargandoChat, setCargandoChat] = useState(false);
   const [borrador, setBorrador] = useState('');
-  const [enviando, setEnviando] = useState(false);
+  const { enviar: enviarMensaje, enviando } = useEnviarMensaje();
+  const {
+    adjunto,
+    subiendo: subiendoAdjunto,
+    elegir: elegirAdjunto,
+    quitar: quitarAdjunto,
+  } = useAdjunto(companyId);
   /** Lo que el usuario acaba de pulsar en el interruptor, hasta que el espejo confirme. */
   const [botPendiente, setBotPendiente] = useState<Record<string, boolean>>({});
   const [resueltas, setResueltas] = useState<Set<string>>(new Set());
+  const [nuevoAbierto, setNuevoAbierto] = useState(false);
+  /**
+   * El número al que acabas de escribir, hasta que su lead llega por el espejo.
+   * Hace falta si el bot no devuelve `lead_id`: entonces la conversación se
+   * abre en cuanto aparece un lead con ese teléfono.
+   */
+  const [telPendiente, setTelPendiente] = useState<string | null>(null);
 
   const cajaMsgs = useRef<HTMLDivElement>(null);
 
@@ -123,6 +143,25 @@ function Mensajes() {
     if (activoId || !leads.length) return;
     setActivoId(leads.find((l) => l.id === leadDeLaUrl)?.id ?? leads[0].id);
   }, [leads, leadDeLaUrl, activoId]);
+
+  useEffect(() => {
+    if (!telPendiente) return;
+    const l = leads.find((x) => x.phone.replace(/\D/g, '') === telPendiente);
+    if (l) {
+      setActivoId(l.id);
+      setTelPendiente(null);
+    }
+  }, [leads, telPendiente]);
+
+  /** Tras escribirle a alguien nuevo, su conversación queda abierta y a la vista. */
+  function trasNuevoMensaje(phone: string, leadId: string | null) {
+    setNuevoAbierto(false);
+    setFiltro('all');
+    setBusqueda('');
+    if (leadId) setActivoId(leadId);
+    else setTelPendiente(phone);
+    recargar();
+  }
 
   const activo: Lead | null = leads.find((l) => l.id === activoId) ?? null;
 
@@ -236,6 +275,9 @@ function Mensajes() {
   // Al abrir otra conversación, plegado otra vez: si no, la siguiente clienta
   // aparece con todo su historial desplegado sin haberlo pedido nadie.
   useEffect(() => setHistorialEntero(false), [activoId]);
+  // El archivo elegido es para ESA conversación: al cambiar de cliente se
+  // descarta, o saldría hacia quien no era con un clic distraído.
+  useEffect(() => quitarAdjunto(), [activoId, quitarAdjunto]);
   const VISIBLES_HISTORIAL = 5;
   const escalacionesDelLead = (datos?.escalaciones ?? []).filter(
     (e) => e.lead_id === activoId && e.status === 'pending' && !resueltas.has(e.id),
@@ -260,13 +302,16 @@ function Mensajes() {
 
   async function enviar() {
     const texto = borrador.trim();
-    if (!activo || !texto || botActivo) return;
-    setEnviando(true);
-    const r = await comando<{ phone: string }>('send_message', { lead_id: activo.id, text: texto });
-    setEnviando(false);
+    if (!activo || (!texto && !adjunto) || botActivo || subiendoAdjunto) return;
+    // Doble clic, Enter repetido y reenvíos tras un «se está aplicando»: todo
+    // eso lo resuelve useEnviarMensaje. Aquí solo se decide qué mandar.
+    const r = await enviarMensaje({ lead_id: activo.id }, texto, adjunto);
     // El mensaje NO se pinta a mano: llega por Realtime cuando el bot lo mandó
     // de verdad. Así lo que se ve en el chat es lo que el cliente recibió.
-    if (r) setBorrador('');
+    if (r) {
+      setBorrador('');
+      quitarAdjunto();
+    }
   }
 
   async function resolver(id: string) {
@@ -287,11 +332,21 @@ function Mensajes() {
           <div className="list__head">
             <div className="t">
               <h2>Mensajes</h2>
-              {escalacionesPendientes(datos?.escalaciones, resueltas) > 0 && (
-                <span className="badge-pill b-hot">
-                  {escalacionesPendientes(datos?.escalaciones, resueltas)} por revisar
-                </span>
-              )}
+              <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                {escalacionesPendientes(datos?.escalaciones, resueltas) > 0 && (
+                  <span className="badge-pill b-hot">
+                    {escalacionesPendientes(datos?.escalaciones, resueltas)} por revisar
+                  </span>
+                )}
+                <button
+                  type="button"
+                  className="btn btn-ghost btn-sm"
+                  title="Escribirle tú primero a un cliente"
+                  onClick={() => setNuevoAbierto(true)}
+                >
+                  <MessageSquarePlus size={15} /> Nuevo
+                </button>
+              </span>
             </div>
             <div className="search">
               <Search size={16} />
@@ -399,26 +454,42 @@ function Mensajes() {
               <p className="vacio">No hay mensajes en esta conversación.</p>
             )}
             {mensajes.map((m) => (
-              <div key={m.id} className={`msg ${m.role === 'user' ? 'user' : 'bot'}`}>
-                {m.role !== 'user' && <span className="tag">🤖 Mia</span>}
-                {m.content}
-              </div>
+              <Burbuja key={m.id} m={m} />
             ))}
           </div>
 
+          {adjunto && !botActivo && (
+            <div className="composer__adjunto">
+              <ChipAdjunto adjunto={adjunto} alQuitar={quitarAdjunto} />
+            </div>
+          )}
           <div className={`composer ${botActivo ? 'locked' : ''}`}>
+            <BotonAdjunto
+              alElegir={(f) => void elegirAdjunto(f)}
+              deshabilitado={botActivo || enviando}
+              subiendo={subiendoAdjunto}
+            />
             <input
               value={borrador}
               disabled={botActivo || enviando}
               placeholder={
-                botActivo ? 'Pausa a Mia para escribir tú' : 'Escribe tu mensaje…'
+                botActivo
+                  ? 'Pausa a Mia para escribir tú'
+                  : adjunto
+                    ? 'Añade un texto (opcional)…'
+                    : 'Escribe tu mensaje…'
               }
               onChange={(e) => setBorrador(e.target.value)}
               onKeyDown={(e) => {
-                if (e.key === 'Enter') void enviar();
+                // `repeat`: con Enter mantenido el navegador repite el evento.
+                if (e.key === 'Enter' && !e.repeat) void enviar();
               }}
             />
-            <button className="send" onClick={() => void enviar()} disabled={botActivo || enviando}>
+            <button
+              className="send"
+              onClick={() => void enviar()}
+              disabled={botActivo || enviando || subiendoAdjunto}
+            >
               <Send size={16} />
             </button>
           </div>
@@ -607,6 +678,9 @@ function Mensajes() {
           </p>
         </div>
       </div>
+      {nuevoAbierto && (
+        <NuevoMensaje leads={leads} alEnviar={trasNuevoMensaje} alCerrar={() => setNuevoAbierto(false)} />
+      )}
     </main>
   );
 }

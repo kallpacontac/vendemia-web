@@ -187,8 +187,22 @@ export interface LeadRow {
 export interface MessageRow {
   id: string;
   lead_id: string;
-  role: 'user' | 'assistant';
+  /**
+   * 'owner' = lo escribió una persona del negocio (desde el panel o a mano
+   * desde el teléfono), no Mia. Las filas anteriores a que el bot lo separara
+   * vienen como 'assistant' aunque las escribiera una persona.
+   */
+  role: 'user' | 'assistant' | 'owner';
+  /** Con adjunto, el pie de foto. Puede venir vacío. */
   content: string;
+  /**
+   * El adjunto, si lo hay. PEDIDO al bot (docs/prompt-bot-adjuntos-y-duplicados.md):
+   * hasta que exista la columna no llegan, por eso son opcionales y por eso
+   * `getMensajes` pide `*` y no una lista de columnas.
+   */
+  media_url?: string | null;
+  media_type?: 'image' | 'video' | 'audio' | 'document' | 'sticker' | null;
+  media_name?: string | null;
   created_at: number | null;
   created_ts: string | null;
 }

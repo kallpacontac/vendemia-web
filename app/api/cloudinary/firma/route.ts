@@ -59,8 +59,9 @@ export async function POST(req: Request) {
   }
 
   let companyId: unknown;
+  let destino: unknown;
   try {
-    ({ companyId } = await req.json());
+    ({ companyId, destino } = await req.json());
   } catch {
     return Response.json({ error: 'Cuerpo inválido' }, { status: 400 });
   }
@@ -112,7 +113,14 @@ export async function POST(req: Request) {
    * mensaje que no dice cuál falta.
    */
   const timestamp = Math.floor(Date.now() / 1000);
-  const folder = `catalog/${companyId}`;
+  /**
+   * `chat/` para lo que se manda por WhatsApp desde el buzón, aparte del
+   * catálogo: son ficheros de conversaciones, no fotos de producto, y
+   * mezclados en la misma carpeta no hay forma de limpiar unos sin tocar los
+   * otros. Solo dos valores posibles — el destino no llega nunca a la ruta tal
+   * cual viene.
+   */
+  const folder = `${destino === 'chat' ? 'chat' : 'catalog'}/${companyId}`;
   const signature = createHash('sha1')
     .update(`folder=${folder}&timestamp=${timestamp}${SECRET}`)
     .digest('hex');

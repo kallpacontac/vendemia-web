@@ -260,7 +260,10 @@ export async function getMensajes(leadId: string): Promise<Mensaje[]> {
   if (demoActivo()) return mensajesDemo(leadId);
   const { data, error } = await supabase()
     .from('messages')
-    .select('id, lead_id, role, content, created_at, created_ts')
+    // `*` a propósito: las columnas del adjunto (media_url…) llegan con una
+    // migración del bot. Pedirlas por nombre antes de que existan tumba la
+    // consulta entera con un 42703, y el chat se quedaría vacío.
+    .select('*')
     .eq('lead_id', leadId)
     .order('created_at', { ascending: true });
   if (error) throw error;
