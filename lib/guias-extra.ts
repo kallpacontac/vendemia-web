@@ -91,7 +91,7 @@ export const AUTOMATICO = {
     },
     {
       q: '¿Necesito la API de WhatsApp Business?',
-      a: 'Depende de la solución. La API oficial es necesaria para algunas integraciones y tiene costo por conversación que cobra Meta aparte. Otras soluciones trabajan vinculando tu número como WhatsApp Web, sin esa tarifa. Ninguna de las dos es mejor en abstracto: depende de tu volumen y de qué necesites integrar.',
+      a: 'Para que un sistema responda por ti, la vía oficial es la API de WhatsApp Business de Meta, y es la que usa Vendemia. No hace falta que la programes tú: basta con una solución que ya esté conectada a ella y te deje registrar tu número con Meta desde su panel. Y si usas la app WhatsApp Business en el celular, puedes seguir usándola con el mismo número.',
     },
     {
       q: '¿Los clientes se molestan si les contesta un sistema?',
@@ -99,7 +99,7 @@ export const AUTOMATICO = {
     },
     {
       q: '¿Cuánto tarda en estar funcionando?',
-      a: 'Las respuestas rápidas, diez minutos. Un chatbot de menús, de unas horas a unos días según cuántas ramas tenga. Un flujo con agencia, de dos a seis semanas. Una plataforma de IA lista para usar, minutos: solo hay que darle tus precios, tus horarios y vincular el número.',
+      a: 'Las respuestas rápidas, diez minutos. Un chatbot de menús, de unas horas a unos días según cuántas ramas tenga. Un flujo con agencia, de dos a seis semanas. Una plataforma de IA lista para usar, minutos: solo hay que darle tus precios, tus horarios y conectar el número con el registro de Meta.',
     },
   ],
 } as const;
@@ -109,10 +109,10 @@ export const AUTOMATICO = {
 export const API_PERU = {
   metaTitulo: 'WhatsApp Business API en Perú: qué es, cuánto cuesta y cuándo la necesitas · Vendemia',
   metaDescripcion:
-    'Qué es la API de WhatsApp Business, en qué se diferencia de la app normal, cómo cobra Meta por conversación y en qué casos un negocio peruano no la necesita.',
+    'Qué es la API de WhatsApp Business, en qué se diferencia de la app normal, cómo cobra Meta y en qué casos un negocio peruano no necesita montarla por su cuenta.',
   h1: 'WhatsApp Business API en Perú: qué es y cuándo la necesitas de verdad',
   bajada:
-    'Es lo primero que te nombran cuando preguntas por automatizar tu WhatsApp, y muchas veces no hace falta. Esto es qué es, qué cuesta y cómo saber si estás en el caso que sí la necesita.',
+    'Es lo primero que te nombran cuando preguntas por automatizar tu WhatsApp, y muchas veces no hace falta montarla tú. Esto es qué es, qué cuesta y cómo saber si estás en el caso que necesita una integración propia.',
   bloques: [
     {
       h: 'Qué es, en una frase',
@@ -147,11 +147,19 @@ export const API_PERU = {
       ],
     },
     {
-      h: 'Cuándo no la necesitas',
+      /**
+       * 24-sep-2026: esta sección decía que Vendemia trabajaba «vinculando tu
+       * número como WhatsApp Web, sin tarifa por conversación». Se reescribió
+       * al pasar a la API oficial (verificación de Meta como Tech Provider):
+       * una web que presume de no usar la API describe justo el uso que Meta
+       * no permite. La pregunta de la sección sigue siendo la misma —¿tengo
+       * que montar yo la API?—, la respuesta ya no es «usa otra cosa».
+       */
+      h: 'Cuándo no necesitas montarla tú',
       p: [
-        'Si eres un negocio que atiende desde un número y lo que te falta es que alguien conteste rápido y bien, la API resuelve un problema que no tienes y te añade dos que sí: una factura variable y un proceso de verificación.',
-        'Para ese caso hay soluciones que trabajan sobre el número que ya repartes, vinculándolo como WhatsApp Web, sin tarifa por conversación y sin cambiar nada de cara a tus clientes. Vendemia es una de ellas: por eso el precio de aquí es un precio fijo al mes y no un precio más lo que salga.',
-        'La forma honesta de decidirlo es esta: si tu problema se llama "no damos abasto entre varios", mira la API. Si se llama "no contestamos a tiempo", no la mires todavía.',
+        'Si eres un negocio que atiende desde un número y lo que te falta es que alguien conteste rápido y bien, no necesitas contratar una integración a medida ni pelearte tú con la API: basta con una solución que ya esté conectada a ella.',
+        'Vendemia es una de ellas: usa la API oficial de WhatsApp Business, conectas tu número con el registro de Meta desde tu panel, y si usas la app WhatsApp Business en el celular puedes seguir usándola con el mismo número. Por eso el precio de aquí es un precio fijo al mes, sin desarrollo ni instalación.',
+        'La forma honesta de decidirlo es esta: si tu problema se llama "tengo que conectarlo con mi propio sistema", mira una integración a medida. Si se llama "no contestamos a tiempo", te basta una solución que ya la trae hecha.',
       ],
     },
   ] as Bloque[],
@@ -169,12 +177,12 @@ export const API_PERU = {
       a: 'Para la verificación del negocio en Meta necesitas acreditar la empresa, y en Perú eso pasa por el RUC y documentación a nombre de la razón social. Si todavía no tienes empresa formal, es un requisito a resolver antes.',
     },
     {
-      q: '¿Puedo automatizar mi WhatsApp sin la API?',
-      a: 'Sí. Hay soluciones que vinculan tu número actual como WhatsApp Web y automatizan sobre él, sin tarifa por conversación ni proceso de verificación. Para un negocio que atiende desde un solo número suele ser el camino más corto y más barato.',
+      q: '¿Tengo que programar la API yo?',
+      a: 'No. Hay soluciones que ya están conectadas a la API oficial y solo te piden registrar tu número con Meta desde su panel, en unos minutos. Para un negocio que atiende desde un solo número suele ser el camino más corto y más barato.',
     },
     {
       q: '¿Puedo usar mi número de siempre?',
-      a: 'Con la API, un número solo puede estar en un sitio: si lo pasas a la API, deja de funcionar en la app normal de ese teléfono. Es la razón por la que muchos negocios acaban con dos números sin haberlo querido. Las soluciones que vinculan como WhatsApp Web no tienen ese problema.',
+      a: 'Sí. Antes, pasar un número a la API lo sacaba de la app del teléfono, y por eso muchos negocios acabaron con dos números sin haberlo querido. Con la coexistencia de Meta, un número que ya usa la app WhatsApp Business se puede conectar a la API y seguir funcionando en el celular a la vez. Si un proveedor te pide un número nuevo, pregúntale por qué.',
     },
   ],
 } as const;

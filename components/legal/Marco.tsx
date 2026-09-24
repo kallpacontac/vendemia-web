@@ -2,6 +2,7 @@ import Link from 'next/link';
 import Mark from '@/components/Mark';
 import { BRAND } from '@/lib/content';
 import { ACTUALIZADO, EMPRESA } from '@/lib/legal';
+import PieEmpresa from './PieEmpresa';
 
 /**
  * El marco común de las cuatro páginas legales.
@@ -22,10 +23,13 @@ export default function Marco({
   titulo,
   bajada,
   children,
+  conFecha = true,
 }: {
   titulo: string;
   bajada: string;
   children: React.ReactNode;
+  /** false en /contacto: una ficha de datos no es un documento con versiones. */
+  conFecha?: boolean;
 }) {
   return (
     <div className="min-h-screen" style={{ background: 'var(--bg-900)' }}>
@@ -57,9 +61,11 @@ export default function Marco({
           <p className="mt-4 text-[17px] leading-[1.6]" style={{ color: 'var(--text-mid)' }}>
             {bajada}
           </p>
-          <p className="mt-6 text-[13px]" style={{ color: 'var(--text-low)' }}>
-            Última actualización: {ACTUALIZADO}
-          </p>
+          {conFecha && (
+            <p className="mt-6 text-[13px]" style={{ color: 'var(--text-low)' }}>
+              Última actualización: {ACTUALIZADO}
+            </p>
+          )}
 
           <hr className="my-10 border-0 border-t" style={{ borderColor: 'var(--border-dark)' }} />
 
@@ -68,10 +74,9 @@ export default function Marco({
           <hr className="my-10 border-0 border-t" style={{ borderColor: 'var(--border-dark)' }} />
 
           <p className="text-[13px] leading-[1.7]" style={{ color: 'var(--text-low)' }}>
-            {EMPRESA.razonSocial} · RUC {EMPRESA.ruc} · {EMPRESA.domicilio} · {EMPRESA.ciudad}
-            <br />
-            ¿Dudas sobre este documento? Escríbenos a {EMPRESA.email} o al {EMPRESA.whatsapp}.
+            ¿Dudas sobre este documento? Escríbenos a {EMPRESA.email} o al {EMPRESA.telefono}.
           </p>
+          <PieEmpresa />
         </div>
       </main>
     </div>

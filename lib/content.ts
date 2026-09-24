@@ -699,9 +699,15 @@ export const BENTO_B = {
        * mejor: un humano que contesta al momento es una ventaja, no una
        * concesión.
        */
+      /**
+       * 24-sep-2026: ya no se habla de escanear un QR. La conexión es la de la
+       * API oficial de WhatsApp Business: el negocio registra su número con
+       * Meta desde su panel. Ver la nota de la FAQ «¿Cuánto tiempo toma
+       * configurarlo?».
+       */
       title: 'Listo en 10 minutos',
       body: [
-        { text: 'Escaneas un QR para vincular tu número —como cuando abres WhatsApp en la computadora— y lo dejamos funcionando contigo ' },
+        { text: 'Conectas tu número con la API oficial de WhatsApp Business en el registro de Meta, desde tu panel, y lo dejamos funcionando contigo ' },
         { text: 'en la misma conversación', strong: true },
         { text: '. Sin programar nada y sin llamada que agendar.' },
       ] as RichText,
@@ -1136,25 +1142,25 @@ export const FAQ = {
       q: '¿Cuánto tiempo toma configurarlo?',
       a: [
         /**
-         * ⚠️ FALTABA EL PASO DEL QR, Y ES EL ÚNICO PASO TÉCNICO QUE HAY.
+         * ⚠️ EL PASO DE CONECTAR EL NÚMERO NO SE PUEDE OMITIR: ES EL ÚNICO
+         * PASO TÉCNICO QUE HAY.
          *
-         * Omitirlo no hacía la respuesta más corta: la hacía incompleta justo
+         * Omitirlo no hace la respuesta más corta: la hace incompleta justo
          * donde el lector está calculando cuánto esfuerzo le va a costar. Y
          * quien descubre un paso que no le contaron —aunque sea trivial— deja
          * de fiarse de que no haya más.
          *
-         * Se dice comparándolo con WhatsApp Web a propósito. Escanear un QR
-         * suena a trámite; "lo mismo que ya haces para abrir WhatsApp en la
-         * computadora" es un gesto que el lector ya ha hecho y le salió bien.
-         * Es la diferencia entre añadir un requisito y quitar un miedo.
+         * 24-sep-2026: antes decía «escaneas un QR para vincular tu número,
+         * como en WhatsApp Web». Se cambió por la conexión con la API oficial
+         * (registro de Meta), que es lo que revisa Meta en la verificación de
+         * Tech Provider: una web que describe vincular como WhatsApp Web
+         * describe justo el uso que Meta no permite.
          *
-         * ⚠️ Y POR ESO "sin código" TUVO QUE IRSE de esta respuesta.
-         * Decíamos "sin código" (sin programar) en la misma frase en la que
-         * ahora pedimos escanear "un código". La palabra choca consigo misma y
-         * el lector tropieza. "Sin programar nada" dice lo mismo sin colisión.
+         * La coexistencia va en la respuesta porque es la duda que frena: «si
+         * paso mi número a la API, ¿pierdo el WhatsApp del celular?». No.
          */
-        'Diez minutos por WhatsApp. Nos escribes, nos dices qué vendes, con qué precios y con qué horarios, y escaneas un QR con tu celular para vincular tu número — el mismo gesto que ya haces para abrir WhatsApp en la computadora.',
-        'Te dejamos a Mia funcionando en esa misma conversación: sin programar nada, sin instalar nada y sin agendar una llamada para el jueves.',
+        'Unos diez minutos. Nos escribes, nos dices qué vendes, con qué precios y con qué horarios, y conectas tu número con la API oficial de WhatsApp Business desde tu panel, con el registro de Meta. Lo hacemos contigo, paso a paso.',
+        'Si ya usas la app WhatsApp Business en tu celular, puedes seguir usándola: tu número funciona en la app y con Mia a la vez. Sin programar nada, sin instalar nada y sin agendar una llamada para el jueves.',
       ],
     },
     {
@@ -1353,14 +1359,15 @@ export const FOOTER = {
        * dos columnas empujaban "Legal" a una segunda fila y dejaban las
        * páginas que SÍ existen compitiendo por la atención con promesas.
        *
-       * Se quedan las tres que son creíbles de un negocio de este tamaño y que
-       * se van a construir. Cuando existan, se les pone el href y ya está.
+       * Se quedan las que existen de verdad. «Blog» se quitó el 24-sep-2026: no
+       * hay blog, y un enlace muerto en el pie es justo lo que hace dudar a
+       * quien revisa si detrás hay un negocio real (la verificación de Meta,
+       * sin ir más lejos). Si algún día hay blog, vuelve con su href.
        */
       title: 'Empresa',
       links: [
-        { label: 'Sobre nosotros' },
-        { label: 'Blog' },
-        { label: 'Contacto' },
+        { label: 'Sobre nosotros', href: '/nosotros' },
+        { label: 'Contacto', href: '/contacto' },
       ],
     },
     {
@@ -1384,6 +1391,7 @@ export const FOOTER = {
         { label: 'Privacidad', href: '/privacidad' },
         { label: 'Garantía de reembolso', href: '/garantia' },
         { label: 'Libro de reclamaciones', href: '/reclamaciones' },
+        { label: 'Eliminación de datos', href: '/eliminacion-de-datos' },
       ],
     },
   ],
@@ -1440,6 +1448,8 @@ export const FOOTER = {
    */
   legal: {
     copyright: `© ${new Date().getFullYear()} Vendemia · Hecho en Perú 🇵🇪`,
-    address: 'Mia, tu vendedor digital en WhatsApp · Lima, Perú',
+    // La línea de dirección ("Mia, tu vendedor digital en WhatsApp · Lima,
+    // Perú") la sustituye components/legal/LineaLegal: razón social, RUC,
+    // domicilio y contacto, que es lo que pide la verificación de Meta.
   },
 } as const;

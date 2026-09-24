@@ -7,6 +7,7 @@ import AssetSlot from '@/components/AssetSlot';
 import Reveal from '@/components/Reveal';
 import { Starfield } from '@/components/ui';
 import { FOOTER, BRAND, whatsappLink } from '@/lib/content';
+import LineaLegal from '@/components/legal/LineaLegal';
 
 /**
  * 12 · FOOTER — dark (#000)
@@ -96,9 +97,11 @@ export default function Footer({ wordmark, socialLogos, hidePaymentAssets = fals
                   destino todavía se ven igual pero no son pulsables — antes
                   eran `href="#"` y devolvían al principio de la página. */}
               <ul className="mt-4 space-y-3">
-                {col.links.map((l) => (
+                {/* Tipado a mano: hoy todos llevan href y, sin esto, TypeScript
+                    da la rama de texto plano por imposible y deja de compilar. */}
+                {(col.links as readonly { label: string; href?: string }[]).map((l) => (
                   <li key={l.label}>
-                    {'href' in l && l.href ? (
+                    {l.href ? (
                       <a
                         href={l.href}
                         className="text-[14px] transition-colors duration-[250ms] hover:text-white"
@@ -162,7 +165,8 @@ export default function Footer({ wordmark, socialLogos, hidePaymentAssets = fals
             {/* El aviso de reCAPTCHA se retiró: la página no lleva reCAPTCHA.
                 Ver la nota en FOOTER.legal (content.ts). */}
             <p>{FOOTER.legal.copyright}</p>
-            <p>{FOOTER.legal.address}</p>
+            {/* Quién está detrás de la marca. Ver la nota del componente. */}
+            <LineaLegal />
           </div>
 
           {!hidePaymentAssets && <div className="flex gap-3">

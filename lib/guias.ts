@@ -147,7 +147,7 @@ export const FAQ_PRECIOS = [
   },
   {
     q: '¿Meta cobra aparte por los mensajes?',
-    a: 'Si la solución usa la API oficial de WhatsApp Business, sí: Meta factura por conversación y ese costo es independiente de lo que te cobre el proveedor. Si en cambio la solución trabaja sobre tu número vinculándolo como WhatsApp Web, no hay tarifa por conversación de Meta. Conviene preguntarlo antes de firmar, porque escala con tu volumen.',
+    a: 'Puede cobrar, sí. Las soluciones que usan la API oficial de WhatsApp Business —que es la vía que Meta permite para automatizar— están sujetas a sus tarifas, y ese costo es independiente de lo que te cobre el proveedor. Conviene preguntar antes de firmar qué mensajes cobra Meta en tu caso y si el precio del proveedor los incluye, porque escala con tu volumen.',
   },
   {
     q: '¿Necesito un número de WhatsApp nuevo?',
@@ -155,7 +155,7 @@ export const FAQ_PRECIOS = [
   },
   {
     q: '¿Cuánto tarda en estar funcionando?',
-    a: 'Una plataforma lista para usar se configura en minutos, porque solo hay que darle tus precios, tus horarios y vincular el número. Un flujo a medida con agencia tarda de dos a seis semanas, y un desarrollo propio, meses.',
+    a: 'Una plataforma lista para usar se configura en minutos, porque solo hay que darle tus precios, tus horarios y conectar el número con el registro de Meta. Un flujo a medida con agencia tarda de dos a seis semanas, y un desarrollo propio, meses.',
   },
   {
     q: '¿Conviene un chatbot hecho a medida?',

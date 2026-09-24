@@ -51,7 +51,21 @@ const LANDING_ACTUALIZADA = '2026-09-06';
  * `changeFrequency: 'yearly'` y prioridad baja: cambian poco y no compiten con
  * la landing por la atencion del rastreador.
  */
-const LEGALES = ['/terminos', '/privacidad', '/garantia', '/reclamaciones'];
+const LEGALES = [
+  '/terminos',
+  '/privacidad',
+  '/garantia',
+  '/reclamaciones',
+  /**
+   * Las tres de empresa (24-sep-2026). Van aquí y no aparte porque cambian al
+   * mismo ritmo que las legales —cuando cambian los datos de la empresa— y
+   * comparten su fecha. /eliminacion-de-datos es además la URL que se
+   * registra en la app de Meta: tiene que ser alcanzable y estar indexada.
+   */
+  '/nosotros',
+  '/contacto',
+  '/eliminacion-de-datos',
+];
 
 /**
  * Las guías. Prioridad 0.8 —por debajo de la landing, muy por encima de las

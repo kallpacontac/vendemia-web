@@ -44,8 +44,19 @@ export const EMPRESA = {
   razonSocial: 'KALLPA TRIATLON S.A.C.',
   ruc: '20608585541',
   domicilio: 'Av. Talara Nro. 450, A.F. Angamos, Jesús María',
-  email: 'kallpa.contacto.peru@gmail.com',
+  /** Para el JSON-LD (addressLocality / addressRegion). Mismo domicilio de arriba. */
+  distrito: 'Jesús María',
+  region: 'Lima',
+  /**
+   * Correo del dominio y no el Gmail de antes: Meta, en la verificación de
+   * negocio, busca que el correo de contacto sea del mismo dominio que la web.
+   * Un Gmail no demuestra que la marca y la empresa sean la misma cosa.
+   */
+  email: 'contacto@vendemias.com',
   ciudad: 'Lima, Perú',
+  /** Para leer: "+51 947 144 701". */
+  telefono: '+51 947 144 701',
+  /** Para enlazar y para el JSON-LD: "+51947144701". Sale de WHATSAPP, el número de todos los botones. */
   whatsapp: `+${WHATSAPP.phone}`,
 } as const;
 
@@ -55,7 +66,7 @@ export const EMPRESA = {
  * informando de nada — el sentido de esa fecha es marcar cuándo cambió el
  * texto, y eso solo lo sabe quien lo cambia.
  */
-export const ACTUALIZADO = '3 de septiembre de 2026';
+export const ACTUALIZADO = '24 de septiembre de 2026';
 
 /**
  * La misma fecha en ISO, para el `lastmod` del sitemap.
@@ -64,9 +75,15 @@ export const ACTUALIZADO = '3 de septiembre de 2026';
  * una persona al pie de la página y la otra un rastreador, no porque puedan
  * decir cosas distintas.
  */
-export const ACTUALIZADO_ISO = '2026-09-03';
+export const ACTUALIZADO_ISO = '2026-09-24';
 
-export type Bloque = { h?: string; p?: string[]; li?: string[] };
+export type Bloque = {
+  h?: string;
+  p?: string[];
+  li?: string[];
+  /** Enlaces al final del bloque, como enlaces de verdad y no como una URL en el texto. */
+  enlaces?: { href: string; label: string }[];
+};
 export type PaginaLegal = {
   slug: string;
   titulo: string;
@@ -167,6 +184,13 @@ export const PRIVACIDAD: PaginaLegal = {
       ],
     },
     {
+      h: 'La asistente es de cada negocio, no un asistente de uso general',
+      p: [
+        'Mia, la asistente de Vendemia, se configura para un negocio concreto: atiende las consultas de los clientes de ese negocio sobre sus productos, sus precios, sus horarios y sus citas, con la información que el propio negocio carga en su panel.',
+        'No es un asistente de inteligencia artificial de uso general ni un servicio al que el público pueda escribir para cualquier cosa. Cada conversación pertenece al negocio en cuyo número de WhatsApp tiene lugar, y solo ese negocio la ve.',
+      ],
+    },
+    {
       h: 'Qué tratamos de ti',
       li: [
         'Datos de identificación y contacto: nombre, correo, teléfono, datos del negocio.',
@@ -194,11 +218,36 @@ export const PRIVACIDAD: PaginaLegal = {
       ],
     },
     {
+      h: 'Datos obtenidos de la plataforma de WhatsApp',
+      p: [
+        'Para prestar el servicio recibimos, a través de la API de WhatsApp Business de Meta, los datos de las conversaciones que ocurren en el número de WhatsApp del negocio que nos contrató:',
+      ],
+      li: [
+        'El número de teléfono y el nombre de perfil de WhatsApp de quien escribe.',
+        'El contenido de los mensajes: texto, notas de voz, imágenes y documentos que esa persona envía, y las respuestas que se le dan.',
+        'Los datos técnicos de cada mensaje que la plataforma entrega junto a él, como la fecha, la hora y el estado de entrega.',
+      ],
+    },
+    {
+      p: [
+        'Esos datos se usan únicamente para prestar el servicio al negocio que nos contrató: responder a sus clientes, agendar sus citas, registrar sus pedidos y enseñarle sus conversaciones en su panel.',
+        'No los vendemos, no los cedemos a terceros, no los usamos para publicidad ni para crear perfiles, y no los cruzamos entre negocios distintos: lo que un cliente le dice a un negocio no lo ve ningún otro.',
+      ],
+    },
+    {
       h: 'Con quién se comparten',
       p: [
-        'Con los proveedores necesarios para que el servicio funcione: la infraestructura de mensajería de WhatsApp y Meta, nuestro proveedor de alojamiento y base de datos, y el proveedor de pagos. Cada uno trata solo lo que necesita para su función.',
-        'No vendemos datos personales ni los cedemos a terceros con fines publicitarios.',
+        'Solo con los proveedores necesarios para que el servicio funcione, que actúan como encargados y tratan únicamente lo que necesitan para su función:',
       ],
+      li: [
+        'Meta, como proveedor de la API de WhatsApp Business por la que se envían y reciben los mensajes.',
+        'El proveedor de inteligencia artificial que genera las respuestas de la asistente, que recibe el contenido de la conversación en curso para poder contestarla.',
+        'Nuestros proveedores de alojamiento, base de datos y almacenamiento de archivos (donde se guardan las conversaciones y los archivos enviados).',
+        'El proveedor de pagos, solo para cobrar el plan del negocio que nos contrata.',
+      ],
+    },
+    {
+      p: ['No vendemos datos personales ni los cedemos a terceros con fines publicitarios.'],
     },
     {
       h: 'Transferencias internacionales',
@@ -218,7 +267,9 @@ export const PRIVACIDAD: PaginaLegal = {
       p: [
         `Puedes acceder a tus datos, rectificarlos, cancelarlos y oponerte a su tratamiento —los derechos ARCO de la Ley 29733— escribiendo a ${EMPRESA.email}. Responderemos en los plazos legales.`,
         'Si consideras que no hemos atendido bien tu solicitud, puedes acudir a la Autoridad Nacional de Protección de Datos Personales del Ministerio de Justicia.',
+        'Si le escribiste por WhatsApp a un negocio que usa Vendemia y quieres que se borren tus datos, el procedimiento está explicado paso a paso en nuestra página de eliminación de datos.',
       ],
+      enlaces: [{ href: '/eliminacion-de-datos', label: 'Cómo pedir la eliminación de tus datos' }],
     },
     {
       /**
@@ -312,5 +363,118 @@ export const RECLAMACIONES = {
     queja: 'Queja · malestar con la atención recibida, no con el servicio en sí.',
   },
 } as const;
+
+/**
+ * /nosotros — quién está detrás de la marca.
+ *
+ * La lee sobre todo quien verifica: la revisión de negocio de Meta y la de la
+ * app como Tech Provider comprueban que la marca y la empresa legal son la
+ * misma, y que el uso de WhatsApp es el de un software para negocios. Por eso
+ * dice las dos cosas sin rodeos y en el primer párrafo.
+ */
+export const NOSOTROS: PaginaLegal = {
+  slug: 'nosotros',
+  titulo: 'Sobre nosotros',
+  bajada: `${BRAND.name} es un software de atención y ventas por WhatsApp para pequeños negocios del Perú.`,
+  bloques: [
+    {
+      h: 'Qué hacemos',
+      p: [
+        `${BRAND.name} le da a cada negocio una asistente, Mia, que atiende por WhatsApp a sus clientes: responde preguntas sobre sus productos y precios, agenda citas, toma pedidos y hace seguimiento de las conversaciones que quedaron abiertas.`,
+        'Mia responde con la información que el propio negocio configura en su panel —su catálogo, sus precios, sus horarios— y el negocio ve todas sus conversaciones y puede tomar el control de cualquiera en cualquier momento.',
+      ],
+    },
+    {
+      h: 'Para quién',
+      p: [
+        'Para pymes peruanas que venden y atienden por WhatsApp: barberías y salones, clínicas, academias y gimnasios, tiendas online. Negocios en los que un mensaje sin responder es una venta perdida y no hay una persona dedicada solo a contestar.',
+      ],
+    },
+    {
+      h: 'Cómo nos conectamos a WhatsApp',
+      p: [
+        `${BRAND.name} usa la API oficial de WhatsApp Business de Meta. Cada negocio conecta su propio número mediante el registro de Meta, desde su panel, y los mensajes se envían y reciben por esa API.`,
+        'Mia atiende solo a los clientes del negocio que la contrató y solo en su número. No es un asistente de uso general ni envía mensajes masivos: responde a quien le escribe al negocio.',
+      ],
+    },
+    {
+      h: 'Quién está detrás',
+      p: [
+        `${BRAND.name} es una marca de ${EMPRESA.razonSocial}, sociedad peruana con RUC ${EMPRESA.ruc} y domicilio en ${EMPRESA.domicilio}, ${EMPRESA.ciudad}. Es la empresa que presta el servicio, emite las facturas y responde ante los clientes.`,
+      ],
+      enlaces: [
+        { href: '/contacto', label: 'Contacto' },
+        { href: '/terminos', label: 'Términos del servicio' },
+        { href: '/privacidad', label: 'Política de privacidad' },
+      ],
+    },
+  ],
+};
+
+/**
+ * /eliminacion-de-datos — la URL de «instrucciones de eliminación de datos»
+ * que se registra en la configuración de la app de Meta.
+ *
+ * Meta la exige y la visita: tiene que decir a quién escribir, qué se borra y
+ * en cuánto tiempo. Y la tiene que entender quien le escribió a una barbería,
+ * no un abogado: por eso separa al negocio de su cliente, que son dos pedidos
+ * distintos.
+ *
+ * ⚠️ Los plazos son promesas. Si no se pueden cumplir, se cambian aquí antes
+ * de que venza el primero, no después.
+ */
+export const ELIMINACION: PaginaLegal = {
+  slug: 'eliminacion-de-datos',
+  titulo: 'Eliminación de datos',
+  bajada:
+    'Cómo pedir que borremos tus datos, qué se borra y en cuánto tiempo. Vale tanto si eres un negocio que usa Vendemia como si le escribiste por WhatsApp a uno.',
+  bloques: [
+    {
+      h: 'Cómo pedirlo',
+      p: ['Escríbenos por cualquiera de estas dos vías con el asunto «Eliminación de datos»:'],
+      li: [`Correo: ${EMPRESA.email}`, `WhatsApp: ${EMPRESA.telefono}`],
+    },
+    {
+      p: ['Para encontrar tus datos necesitamos:'],
+      li: [
+        'Si le escribiste a un negocio: el número de teléfono desde el que escribiste y el nombre del negocio.',
+        'Si eres un negocio que usa Vendemia: el nombre del negocio y el correo o teléfono asociado a la cuenta.',
+      ],
+    },
+    {
+      p: [
+        'Antes de borrar comprobamos que la petición viene de quien dice venir: normalmente, pidiéndote que nos escribas desde el mismo número o correo. Así nadie puede borrar los datos de otra persona.',
+      ],
+    },
+    {
+      h: 'Qué se borra',
+      li: [
+        'Si le escribiste a un negocio: tu número, tu nombre de perfil, el historial de conversación con ese negocio y los archivos que enviaste, junto con los datos que diste en ella (nombre, dirección, datos de una cita o de un pedido).',
+        'Si eres un negocio: tu cuenta, la configuración de tu asistente, tu catálogo y las conversaciones de tus clientes. Antes de borrarlas te ofrecemos una copia, si la quieres.',
+      ],
+    },
+    {
+      h: 'Qué se conserva, y por qué',
+      p: [
+        'Solo lo que la ley nos obliga a guardar: los comprobantes de pago y los datos de facturación de los negocios, durante los plazos de conservación tributaria. No se usan para nada más.',
+        'Si el negocio al que escribiste necesita conservar el registro de una venta o una cita por sus propias obligaciones legales, te lo diremos al responderte.',
+      ],
+    },
+    {
+      h: 'Plazos',
+      li: [
+        'Confirmamos que recibimos tu pedido en un máximo de 2 días hábiles.',
+        'La eliminación queda hecha en un máximo de 10 días hábiles desde que comprobamos tu identidad, y te avisamos cuando está hecha.',
+      ],
+    },
+    {
+      h: 'Si le escribiste a un negocio',
+      p: [
+        'Ese negocio es el responsable de tus datos y nosotros tratamos esas conversaciones por encargo suyo. Puedes pedirle la eliminación a él o directamente a nosotros: si nos escribes, la hacemos y se lo comunicamos.',
+      ],
+      enlaces: [{ href: '/privacidad', label: 'Política de privacidad completa' }],
+    },
+  ],
+};
 
 export const PAGINAS_LEGALES = [TERMINOS, PRIVACIDAD, GARANTIA] as const;

@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import Mark from '@/components/Mark';
 import CtaGuia from '@/components/guias/CtaGuia';
+import PieEmpresa from '@/components/legal/PieEmpresa';
 import { BRAND } from '@/lib/content';
 
 /**
@@ -101,6 +102,10 @@ export default function MarcoGuia({
               Ver qué hace Mia
             </Link>
           </div>
+        </div>
+
+        <div className="mx-auto max-w-[72ch]">
+          <PieEmpresa />
         </div>
       </main>
     </div>

@@ -77,12 +77,12 @@ export function jsonLdLanding() {
         image: `${SITIO}/opengraph-image.png`,
         description: FOOTER.description,
         email: EMPRESA.email,
-        telephone: `+${WHATSAPP.phone}`,
+        telephone: EMPRESA.whatsapp,
         address: {
           '@type': 'PostalAddress',
           streetAddress: EMPRESA.domicilio,
-          addressLocality: 'Jesús María',
-          addressRegion: 'Lima',
+          addressLocality: EMPRESA.distrito,
+          addressRegion: EMPRESA.region,
           addressCountry: 'PE',
         },
         /**

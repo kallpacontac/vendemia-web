@@ -39,6 +39,20 @@ export default function Bloques({ bloques }: { bloques: readonly Bloque[] }) {
               ))}
             </ul>
           )}
+          {b.enlaces && (
+            <p className="mt-3 flex flex-wrap gap-x-5 gap-y-2 text-[15px] leading-[1.7]">
+              {b.enlaces.map((e) => (
+                <a
+                  key={e.href}
+                  href={e.href}
+                  className="underline underline-offset-4"
+                  style={{ color: 'var(--text-hi)' }}
+                >
+                  {e.label}
+                </a>
+              ))}
+            </p>
+          )}
         </section>
       ))}
     </div>
