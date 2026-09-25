@@ -75,6 +75,8 @@ import { useSesion } from '@/components/panel/Sesion';
 import { useAvisar, useGuardar } from '@/components/panel/Avisos';
 import { useCargar } from '@/components/panel/useCargar';
 import { supabase } from '@/lib/supabase/client';
+import { useVocabulario } from '@/components/panel/useVocabulario';
+import { cap } from '@/lib/panel/vocabulario';
 import {
   getCatalogo,
   getCompania,
@@ -192,6 +194,8 @@ function borradorDe(it: ItemCatalogo): Borrador {
 }
 
 export default function Catalogo() {
+  // «servicio» en una barbería, «clase» en una academia, «producto» en una tienda.
+  const v = useVocabulario();
   const { companyId } = useSesion();
   const guardar = useGuardar();
   const avisar = useAvisar();
@@ -333,7 +337,7 @@ export default function Catalogo() {
     const nombre = nombreNuevo.trim();
     if (!nombre) return;
     if (items.some((i) => i.name.trim().toLowerCase() === nombre.toLowerCase())) {
-      avisar('Ya tienes un producto con ese nombre. Mia los pide por nombre: dos iguales la confunden.', 'error');
+      avisar(`Ya tienes ${v.aItem === 'a' ? 'una' : 'un'} ${v.item} con ese nombre. Mia los pide por nombre: dos iguales la confunden.`, 'error');
       return;
     }
     /* Cerrar el formulario va en el mismo callback que el refresco, no en un
@@ -343,7 +347,7 @@ export default function Catalogo() {
     await guardar(
       'upsert_catalog_item',
       { item: { name: nombre, price: 0, is_active: 1, currency: 'PEN' } },
-      'Producto añadido',
+      `${cap(v.item)} añadid${v.aItem}`,
       () => {
         setCreando(false);
         setNombreNuevo('');
@@ -436,13 +440,15 @@ export default function Catalogo() {
                 </button>
               )}
               <button className="btn btn-primary btn-sm" onClick={() => setCreando((v) => !v)}>
-                <Plus size={15} /> Añadir producto
+                <Plus size={15} /> Añadir {v.item}
               </button>
             </div>
     
             {creando && (
               <div className="card" style={{ padding: 18, marginBottom: 16 }}>
-                <label className="field-label">Nombre del producto o servicio</label>
+                <label className="field-label">
+                  {v.item === 'producto' ? 'Nombre del producto' : `Nombre de${v.laItem === 'la' ? ' la' : 'l'} ${v.item} o producto`}
+                </label>
                 <div style={{ display: 'flex', gap: 10 }}>
                   <input
                     className="input"
@@ -482,9 +488,9 @@ export default function Catalogo() {
                       : 'Sin resultados'}
                 </b>
                 {!items.length
-                  ? 'Mia no puede vender lo que no está aquí: añade tus servicios o productos.'
+                  ? `Mia no puede vender lo que no está aquí: añade tus ${v.item === 'producto' ? 'productos' : v.items + ' o productos'}.`
                   : ocultos === items.length && !verOcultos
-                    ? `Tienes ${ocultos} producto(s), pero ninguno visible. Mia no puede vender nada ahora mismo.`
+                    ? `Tienes ${ocultos} ${ocultos === 1 ? v.item : v.items}, pero ningun${v.aItem} visible. Mia no puede vender nada ahora mismo.`
                     : 'Prueba con otra búsqueda.'}
               </p>
             )}
@@ -497,7 +503,7 @@ export default function Catalogo() {
               <p className="aviso-fallo">
                 No se pudo aplicar{' '}
                 {vista.fallidos.length === 1 ? 'un cambio' : vista.fallidos.length + ' cambios'}
-                {vista.fallidos[0].error ? ': ' + vista.fallidos[0].error : ''}. Revisa el producto y
+                {vista.fallidos[0].error ? ': ' + vista.fallidos[0].error : ''}. Revisa {v.laItem} {v.item} y
                 vuelve a guardarlo.
               </p>
             )}
@@ -551,6 +557,8 @@ function Ficha({
   /** Tiene cambios guardados en la cola que el bot aún no ha aplicado. */
   aplicandose: boolean;
 }) {
+  // «servicio» en una barbería, «clase» en una academia, «producto» en una tienda.
+  const v = useVocabulario();
   const enviar = useGuardar();
   const avisar = useAvisar();
   const [f, setF] = useState<Borrador>(() => borradorDe(item));
@@ -600,7 +608,7 @@ function Ficha({
 
   async function guardar() {
     if (!f.name.trim()) {
-      avisar('El producto necesita un nombre: es como Mia lo pide.', 'error');
+      avisar(`${cap(v.laItem)} ${v.item} necesita un nombre: es como Mia l${v.aItem} pide.`, 'error');
       return;
     }
     if (esRecurrente && !vigenciaValida) {
@@ -658,7 +666,7 @@ function Ficha({
           ...(esRecurrente ? { vigencia_meses: vigencia } : {}),
         },
       },
-      'Producto guardado',
+      `${cap(v.item)} guardad${v.aItem}`,
       alCambiar,
     );
     setGuardando(false);
@@ -671,12 +679,12 @@ function Ficha({
      * "restaurar".
      */
     if (item.activo) {
-      await enviar('delete_catalog_item', { id: item.id }, 'Producto oculto para Mia', alCambiar);
+      await enviar('delete_catalog_item', { id: item.id }, `${cap(v.item)} ocult${v.aItem} para Mia`, alCambiar);
     } else {
       await enviar(
         'upsert_catalog_item',
         { item: { id: item.id, name: item.name, is_active: 1 } },
-        'Producto visible otra vez',
+        `${cap(v.item)} visible otra vez`,
         alCambiar,
       );
     }
@@ -1030,7 +1038,7 @@ function Ficha({
 
           {modo === 'recurring_appointment' && (
             <div className="desfase" style={{ background: 'var(--bg-soft)', borderColor: 'var(--line-2)', color: 'var(--ink-soft)', marginTop: 14 }}>
-              Las <b>franjas semanales</b> de este producto (días, horas y aforo) no se editan desde
+              Las <b>franjas semanales</b> de {v.laItem === 'la' ? 'esta' : 'este'} {v.item} (días, horas y aforo) no se editan desde
               aquí todavía. De ellas dependen las reservas, y un editor a medias rompería agendas sin
               avisar. Dínoslo y las ajustamos.
             </div>
@@ -1057,7 +1065,7 @@ function Ficha({
               )}
             </button>
             <button className="btn btn-primary" onClick={() => void guardar()} disabled={guardando}>
-              <Check size={16} /> {guardando ? 'Guardando…' : 'Guardar producto'}
+              <Check size={16} /> {guardando ? 'Guardando…' : `Guardar ${v.item}`}
             </button>
           </div>
         </div>
@@ -1173,6 +1181,8 @@ function Medios({
   companyId: string | null;
   alCambiar: () => void;
 }) {
+  // «servicio» en una barbería, «clase» en una academia, «producto» en una tienda.
+  const v = useVocabulario();
   const guardar = useGuardar();
   const avisar = useAvisar();
   const [subiendo, setSubiendo] = useState(false);
@@ -1330,7 +1340,7 @@ function Medios({
                 compitiendo en una miniatura de 120px no informan: decoran.
               */}
               {principal ? (
-                <span className="medio__sale" title="Es la que Mia enseña al presentar el producto.">
+                <span className="medio__sale" title={`Es la que Mia enseña al presentar ${v.laItem} ${v.item}.`}>
                   <Star size={12} /> Principal
                 </span>
               ) : pordefecto ? (
@@ -1343,7 +1353,7 @@ function Medios({
               ) : salen.has(m.id) ? (
                 <span
                   className="medio__sale medio__sale--extra"
-                  title="Sale como «otra vista», detrás de la principal, cuando el cliente pregunta solo por este producto."
+                  title={`Sale como «otra vista», detrás de la principal, cuando el cliente pregunta solo por ${v.laItem === 'la' ? 'esta' : 'este'} ${v.item}.`}
                 >
                   también sale
                 </span>
@@ -1364,7 +1374,7 @@ function Medios({
                   title={
                     esVideo
                       ? 'Marcarlo elige QUÉ vídeo se manda, pero el vídeo solo sale si el cliente pide verlo en movimiento. Para lo que Mia enseña de entrada, marca una foto.'
-                      : 'Que sea esta la que Mia enseñe al presentar el producto.'
+                      : `Que sea esta la que Mia enseñe al presentar ${v.laItem} ${v.item}.`
                   }
                 >
                   <Star size={13} />
@@ -1516,6 +1526,8 @@ function GrupoDeProducto({
   grupo: GrupoHuecoVista;
   alEditarFicha: (producto: string) => void;
 }) {
+  // «servicio» en una barbería, «clase» en una academia, «producto» en una tienda.
+  const v = useVocabulario();
   const esNegocio = grupo.producto === '';
 
   return (
@@ -1524,7 +1536,7 @@ function GrupoDeProducto({
         <div className="cat-id">
           <b>{esNegocio ? 'Del negocio (no van en una ficha)' : grupo.producto}</b>
           {esNegocio && (
-            <small>Se arreglan en las reglas del negocio, no en una ficha de producto.</small>
+            <small>Se arreglan en las reglas del negocio, no en una ficha de {v.item}.</small>
           )}
         </div>
         <span className="badge-pill" style={{ color: 'var(--warm)', background: '#FEF6E7' }}>

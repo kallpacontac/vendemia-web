@@ -29,10 +29,12 @@ import {
 import Topbar from '@/components/panel/Topbar';
 import { useSesion } from '@/components/panel/Sesion';
 import { useCargar } from '@/components/panel/useCargar';
+import { useSondeo } from '@/components/panel/useSondeo';
 import { areaPath, seriesPts, smoothPath } from '@/lib/panel/charts';
 import { conversionDeHoy } from '@/lib/panel/conversion';
 import { cuando, hora, intent, isoLocal, hace, soles } from '@/lib/panel/format';
 import { esAppointmentFamily } from '@/lib/panel/modo';
+import { cap, vocabulario } from '@/lib/panel/vocabulario';
 import {
   getCitas,
   getCompania,
@@ -43,6 +45,9 @@ import {
   getSerie,
 } from '@/lib/supabase/queries';
 import { delta, rangoDe, total } from '@/lib/panel/serie';
+
+/** Cada cuánto se relee el dashboard con la pestaña a la vista. Ver useSondeo. */
+const SONDEO_DASHBOARD_MS = 60000;
 
 const DIAS_CORTOS = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
 const COLORES_SERVICIO = ['#FF4900', '#0E7C86', '#FBB040', '#0FA968', '#7C5CFF'];
@@ -58,7 +63,7 @@ export default function Dashboard() {
   const [mesOffset, setMesOffset] = useState(0);
   const [tip, setTip] = useState<{ x: number; y: number; texto: string } | null>(null);
 
-  const { datos, cargando } = useCargar(async () => {
+  const { datos, cargando, releer } = useCargar(async () => {
     if (!companyId) return null;
     const desde = isoLocal(hace(29));
     const hasta = isoLocal(new Date());
@@ -87,6 +92,18 @@ export default function Dashboard() {
     ]);
     return { metricas, serie, citas, leads, pedidos, productos, empresa };
   }, [companyId]);
+
+  /**
+   * El dashboard se cargaba UNA vez al abrirlo. Una conversación, un lead o
+   * una cita que llegaba después —por el espejo, con el bot atendiendo— no
+   * aparecía hasta recargar a mano, y un dashboard que se deja abierto en el
+   * mostrador todo el día enseñaba la mañana a media tarde.
+   *
+   * Cada 60 s y no más a menudo: son siete consultas, y aquí nadie espera una
+   * respuesta al segundo como en el chat. Solo con la pestaña a la vista, y
+   * al volver a ella se relee al momento (ver useSondeo).
+   */
+  useSondeo(releer, SONDEO_DASHBOARD_MS, !!companyId);
 
   /** Los 30 días que se pintan, y los 30 de antes con los que se comparan. */
   const ultimos30 = useMemo(() => (datos?.serie ?? []).slice(-30), [datos]);
@@ -124,6 +141,8 @@ export default function Dashboard() {
   const ingresosHoy = metricaHoy?.revenue ?? 0;
   /** Cita puntual o grupo recurrente: los dos negocios que tienen citas que enseñar. */
   const conCitas = esAppointmentFamily(datos?.empresa?.business_mode);
+  /** «citas» en una barbería, «reservas»/«clases» en una academia. Ver lib/panel/vocabulario. */
+  const v = vocabulario(compania?.business_mode ?? datos?.empresa?.business_mode);
 
   /**
    * ⚠️ NO es `paid_orders ÷ leads`. Eso daba 0 % en negocios de citas y, con
@@ -241,7 +260,9 @@ export default function Dashboard() {
                 Lo que hay que comunicar es lo que NO entra: un pedido abierto
                 no es dinero, por muy avanzada que esté la conversación.
               */}
-              <div className="big">Pedidos cobrados y citas · no cuentan los pendientes</div>
+              <div className="big">
+                {v.reserva === 'pedido' ? 'Pedidos cobrados' : `Pedidos cobrados y ${v.reservas}`} · no cuentan los pendientes
+              </div>
               <div className="num">{soles(ingresosHoy)}</div>
               <div className="bars-legend">
                 <span>
@@ -294,7 +315,7 @@ export default function Dashboard() {
                       <CalendarDays size={16} />
                     </div>
                     <b>{citasHoy}</b>
-                    <small>Citas</small>
+                    <small>{cap(v.reservas)}</small>
                   </div>
                 )}
                 <div className="tile">
@@ -373,7 +394,7 @@ export default function Dashboard() {
             {conCitas && (
               <div className="card">
                 <div className="card-mini-head">
-                  <h3>Citas de este mes</h3>
+                  <h3>{cap(v.reservas)} de este mes</h3>
                 </div>
                 <div className="ring-wrap">
                   <div className="ring">
@@ -396,11 +417,11 @@ export default function Dashboard() {
                   </div>
                   <div className="ring-txt">
                     <b>
-                      {anillo.hechas} / {anillo.total} citas
+                      {anillo.hechas} / {anillo.total} {v.reservas}
                     </b>
                     <p>
                       {anillo.total === 0
-                        ? 'Todavía no hay citas este mes.'
+                        ? `Todavía no hay ${v.reservas} este mes.`
                         : 'Confirmadas o ya atendidas sobre el total del mes.'}
                     </p>
                   </div>
@@ -411,7 +432,7 @@ export default function Dashboard() {
             {/* ── Servicios top ── */}
             <div className="card">
               <div className="card-mini-head">
-                <h3>Servicios más vendidos</h3>
+                <h3>{cap(v.items)} más vendid{v.aItem}s</h3>
               </div>
               {productos.length === 0 ? (
                 <p className="vacio">Sin ventas registradas en los últimos 30 días.</p>
@@ -511,16 +532,21 @@ export default function Dashboard() {
               </div>
             </div>
 
-            {conCitas && (
+            {/*
+              En una academia solo si hay algo: la lista son reservas con hora, y
+              las de grupo no la tienen (su slot es "sched:…"), así que saldría
+              «Sin reservas confirmadas por delante» siempre.
+            */}
+            {conCitas && (v.sesion !== 'clase' || proximas.length > 0) && (
               <div className="rail">
                 <div className="card-mini-head">
-                  <h3>Próximas citas</h3>
+                  <h3>Próximas {v.sesiones}</h3>
                   <Link href="/panel/agenda" style={{ fontSize: 12, color: 'var(--brand)', fontWeight: 700 }}>
                     Agenda
                   </Link>
                 </div>
                 {proximas.length === 0 ? (
-                  <p className="vacio">Sin citas confirmadas por delante.</p>
+                  <p className="vacio">Sin {v.reservas} confirmadas por delante.</p>
                 ) : (
                   proximas.map((c, i) => {
                     const [fondo, color, Icono] = ICONOS_CITA[i % ICONOS_CITA.length];
@@ -531,7 +557,7 @@ export default function Dashboard() {
                           <Icono size={18} />
                         </div>
                         <div className="info">
-                          <b>{c.service || 'Cita'}</b>
+                          <b>{c.service || cap(v.sesion)}</b>
                           <small>
                             {c.inicio ? hora(c.inicio) : '—'} · {nombrePorLead.get(c.lead_id) ?? 'Cliente'}
                           </small>
@@ -563,7 +589,7 @@ export default function Dashboard() {
                 {conCitas && (
                   <div>
                     <b style={{ color: '#0FA968' }}>{citasHoy}</b>
-                    <small>Citas hoy</small>
+                    <small>{cap(v.reservas)} hoy</small>
                   </div>
                 )}
                 <div>

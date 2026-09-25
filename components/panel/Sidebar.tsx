@@ -24,6 +24,7 @@ import {
 import { useSesion } from './Sesion';
 import { esRutaGlobal } from '@/lib/panel/rutas';
 import { esAppointmentFamily, esCita, esEcommerce } from '@/lib/panel/modo';
+import { vocabulario } from '@/lib/panel/vocabulario';
 import type { BusinessMode } from '@/lib/supabase/types';
 
 const NAV = [
@@ -83,7 +84,9 @@ export default function Sidebar({
       </div>
 
       <nav className="sidebar__nav">
-        {nav.map(({ href, icon: Icono, label }) => {
+        {nav.map(({ href, icon: Icono, label: fijo }) => {
+          // «Agenda» en una barbería, «Clases» en una academia. Ver lib/panel/vocabulario.
+          const label = href === '/panel/agenda' ? vocabulario(modo).agenda : fijo;
           // El dashboard es prefijo de todo lo demás: solo coincide exacto.
           const activo = href === '/panel' ? ruta === '/panel' : ruta.startsWith(href);
           return (

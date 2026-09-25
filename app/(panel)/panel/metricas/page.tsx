@@ -25,6 +25,7 @@ import { conversionDeHoy } from '@/lib/panel/conversion';
 import { construirSemana } from '@/lib/panel/agenda';
 import { INTENT, intent, isoLocal, soles } from '@/lib/panel/format';
 import { esAppointmentFamily } from '@/lib/panel/modo';
+import { cap, vocabulario } from '@/lib/panel/vocabulario';
 import { motivoDe } from '@/lib/panel/retargeting';
 import {
   anterior,
@@ -125,6 +126,14 @@ export default function Metricas() {
   const leadsHoy = metricaHoy?.leads ?? 0;
   /** Cita puntual o grupo recurrente: los dos negocios que tienen citas que enseñar. */
   const conCitas = esAppointmentFamily(datos?.empresa?.business_mode);
+  /** Cómo se llama cada cosa en este negocio. Ver lib/panel/vocabulario. */
+  const v = vocabulario(compania?.business_mode ?? datos?.empresa?.business_mode);
+  /**
+   * Las dos fechas por las que se puede agrupar, dichas como las entiende cada
+   * negocio: una tienda no «reserva» ni «atiende», compra y entrega.
+   */
+  const fechaCreacion = v.reserva === 'pedido' ? 'de compra' : 'de reserva';
+  const fechaServicio = v.reserva === 'pedido' ? 'de entrega' : v.sesion === 'clase' ? 'de clase' : 'de atención';
   /** Pedidos cobrados + citas en pie. Ver el azulejo "Cerrados hoy". */
   const cerradosHoy = (metricaHoy?.paid_orders ?? 0) + (metricaHoy?.appointments ?? 0);
 
@@ -194,8 +203,8 @@ export default function Metricas() {
   function resumenWhatsApp() {
     const texto =
       `📊 Resumen Vendemia — ${compania?.nombre ?? ''}\n` +
-      `${leadsHoy} leads · ${metricaHoy?.appointments ?? 0} citas · ${conversion.pct}% conversión · ${soles(metricaHoy?.revenue)} hoy\n` +
-      `Servicio top: ${servicioTop} · Mejor día: ${mejorDia}`;
+      `${leadsHoy} leads · ${metricaHoy?.appointments ?? 0} ${v.reservas} · ${conversion.pct}% conversión · ${soles(metricaHoy?.revenue)} hoy\n` +
+      `${cap(v.item)} top: ${servicioTop} · Mejor día: ${mejorDia}`;
     // 'noopener' o la pestaña de WhatsApp recibe window.opener y puede
     // redirigir esta desde fuera; 'noreferrer' evita además mandarle la URL
     // actual, que lleva el negocio y a veces un id de lead.
@@ -266,14 +275,14 @@ export default function Metricas() {
             value={fecha}
             onChange={(e) => setFecha(e.target.value as TipoFechaSerie)}
           >
-            <option value="creacion">de reserva</option>
-            <option value="servicio">de atención</option>
+            <option value="creacion">{fechaCreacion}</option>
+            <option value="servicio">{fechaServicio}</option>
           </select>
         </div>
 
         {fecha === 'servicio' && (
           <div className="desfase" style={{ marginBottom: 14 }}>
-            Agrupando por <b>fecha de atención</b>: cada venta cuenta el día que se presta, no el
+            Agrupando por <b>fecha {fechaServicio}</b>: cada venta cuenta el día que se presta, no el
             día que se cerró. Los pedidos <b>sin fecha de entrega concretada</b> no tienen esa fecha
             y se caen de la serie.
           </div>
@@ -312,7 +321,7 @@ export default function Metricas() {
               fondo="#E9FBF3"
               color="#00C48C"
               valor={metricaHoy?.appointments ?? 0}
-              etiqueta="Citas hoy"
+              etiqueta={`${cap(v.reservas)} hoy`}
             />
           )}
           <Kpi
@@ -430,7 +439,7 @@ export default function Metricas() {
 
           <div className="card">
             <div className="card-head">
-              <h3>Top servicios por ingresos</h3>
+              <h3>Top {v.items} por ingresos</h3>
             </div>
             {productos.length === 0 ? (
               <p className="vacio">Sin ventas en los últimos 30 días.</p>
@@ -561,7 +570,7 @@ export default function Metricas() {
           </div>
           <div className="sum-grid">
             <div className="sum">
-              <small>🏆 Servicio top</small>
+              <small>🏆 {cap(v.item)} top</small>
               <b>{servicioTop}</b>
             </div>
             <div className="sum">

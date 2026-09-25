@@ -79,7 +79,14 @@ export type TipoComando =
    * Agendar desde el mostrador: la cita que se pide por teléfono o entrando por
    * la puerta, y que por tanto NO pasa por Mia. Ver ResultadoCrearCita.
    */
-  | 'crear_cita';
+  | 'crear_cita'
+  /**
+   * Editar los datos de un cliente: nombre, correo, dirección, los valores de
+   * `custom_data` y `notas_salon`. Solo viaja lo que cambió. El bot devuelve
+   * `actualizados` con lo que guardó de verdad (ver EditarLead y
+   * docs/prompt-bot-editar-lead.md); hoy solo guarda `notas_salon`.
+   */
+  | 'actualizar_lead';
 
 /**
  * ⚠️ `ignored` NO significa "rechazado". Significa "esto no cambió".

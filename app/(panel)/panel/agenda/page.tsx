@@ -46,6 +46,7 @@ import { useAvisar, useComando } from '@/components/panel/Avisos';
 import { useCargar } from '@/components/panel/useCargar';
 import { useMovil } from '@/components/panel/useMovil';
 import { construirSemana, lunesDe } from '@/lib/panel/agenda';
+import { cap, vocabulario, type Vocabulario } from '@/lib/panel/vocabulario';
 import { diaMes, ESTADO_CITA, hora as horaDe } from '@/lib/panel/format';
 import {
   adelantada,
@@ -205,6 +206,8 @@ export default function Agenda() {
   }, [datos, offset, fEmpleado]);
 
   const esRecurrente = datos?.empresa?.business_mode === 'recurring_appointment';
+  /** «cita» en una barbería, «clase» en una academia. Ver lib/panel/vocabulario. */
+  const v = vocabulario(datos?.empresa?.business_mode);
 
   /**
    * Las citas que se enseñan, ya filtradas por profesional.
@@ -303,7 +306,7 @@ export default function Agenda() {
   return (
     <main className="main">
       <div className="wrap">
-        <Topbar titulo="Agenda" sub="Disponibilidad y reservas" />
+        <Topbar titulo={v.agenda} sub="Disponibilidad y reservas" />
 
         <div className="summary">
           <div className="sm">
@@ -344,16 +347,26 @@ export default function Agenda() {
           <button className={tab === 'semana' ? 'active' : ''} onClick={() => setTab('semana')}>
             <CalendarCheck size={15} /> {esRecurrente ? 'Grupos' : 'Semana'}
           </button>
-          <button className={tab === 'proximas' ? 'active' : ''} onClick={() => setTab('proximas')}>
-            <Clock size={15} /> Próximas{nProximas > 0 ? ` (${nProximas})` : ''}
-          </button>
-          <button
-            className={tab === 'pasadas' ? 'active' : ''}
-            onClick={() => setTab('pasadas')}
-            title="Citas que ya pasaron y siguen sin confirmar o sin cobrar"
-          >
-            <CheckCircle size={15} /> Ya pasaron{nPendientes > 0 ? ` (${nPendientes})` : ''}
-          </button>
+          {/*
+            En una academia estas dos pestañas solo salen si tienen algo: listan
+            reservas con hora (porVenir / yaPasaron excluyen las de grupo, que no
+            tienen una hora que pase), y una academia casi nunca tiene de esas.
+            Dos pestañas vacías para siempre solo confunden.
+          */}
+          {(!esRecurrente || nProximas > 0) && (
+            <button className={tab === 'proximas' ? 'active' : ''} onClick={() => setTab('proximas')}>
+              <Clock size={15} /> Próximas{nProximas > 0 ? ` (${nProximas})` : ''}
+            </button>
+          )}
+          {(!esRecurrente || nPendientes > 0) && (
+            <button
+              className={tab === 'pasadas' ? 'active' : ''}
+              onClick={() => setTab('pasadas')}
+              title={`${cap(v.sesiones)} que ya pasaron y siguen sin confirmar o sin cobrar`}
+            >
+              <CheckCircle size={15} /> Ya pasaron{nPendientes > 0 ? ` (${nPendientes})` : ''}
+            </button>
+          )}
         </div>
 
         {/*
@@ -431,6 +444,7 @@ export default function Agenda() {
 
         {tab === 'pasadas' && (
           <PorConfirmar
+            v={v}
             citas={citasVista}
             nombrePorLead={new Map((datos?.leads ?? []).map((l) => [l.id, l.name || l.phone]))}
             alCambiar={recargar}
@@ -439,6 +453,7 @@ export default function Agenda() {
 
         {tab === 'proximas' && (
           <Proximas
+            v={v}
             citas={citasVista}
             nombrePorLead={new Map((datos?.leads ?? []).map((l) => [l.id, l.name || l.phone]))}
             trabajadores={datos?.trabajadores ?? []}
@@ -1011,11 +1026,13 @@ const POR_PAGINA = 10;
  * el enlace, y lo manda una persona. Ver components/panel/AvisarCliente.tsx.
  */
 function Proximas({
+  v,
   citas,
   nombrePorLead,
   trabajadores,
   alCambiar,
 }: {
+  v: Vocabulario;
   citas: Cita[];
   nombrePorLead: Map<string, string>;
   trabajadores: Trabajador[];
@@ -1083,13 +1100,13 @@ function Proximas({
 
     const titulo =
       cambiaHora && cambiaQuien
-        ? 'Cita movida y reasignada'
+        ? `${cap(v.sesion)} movid${v.a} y reasignad${v.a}`
         : cambiaQuien
-          ? 'Cita reasignada'
-          : 'Cita movida';
+          ? `${cap(v.sesion)} reasignad${v.a}`
+          : `${cap(v.sesion)} movid${v.a}`;
 
     setPorConfirmar({
-      titulo: '¿Cambiar esta cita?',
+      titulo: `¿Cambiar ${v.esta} ${v.sesion}?`,
       textoConfirmar: 'Sí, cambiarla',
       detalle: (
         <>
@@ -1110,8 +1127,8 @@ function Proximas({
             </p>
           )}
           <p className="muted">
-            Si no cabe, Mia te dirá por qué y la cita se queda como está. Al cliente no le llega
-            nada solo: al terminar te doy el mensaje para avisarle.
+            Si no cabe, Mia te dirá por qué y {v.la} {v.sesion} se queda como está. Al cliente no le
+            llega nada solo: al terminar te doy el mensaje para avisarle.
           </p>
         </>
       ),
@@ -1136,7 +1153,7 @@ function Proximas({
      cancelarle el turno a alguien. */
   function cancelar(c: Cita, quien: string) {
     setPorConfirmar({
-      titulo: '¿Cancelar esta cita?',
+      titulo: `¿Cancelar ${v.esta} ${v.sesion}?`,
       textoConfirmar: 'Sí, cancelarla',
       peligro: true,
       detalle: (
@@ -1152,20 +1169,20 @@ function Proximas({
           </p>
         </>
       ),
-      hacer: () => ejecutar(c, { accion: 'cancelar' }, 'Cita cancelada'),
+      hacer: () => ejecutar(c, { accion: 'cancelar' }, `${cap(v.sesion)} cancelad${v.a}`),
     });
   }
 
   return (
     <div className="card" style={{ marginBottom: 18 }}>
       <div className="card-head">
-        <h3>Próximas citas</h3>
+        <h3>Próximas {v.sesiones}</h3>
         <small className="muted">{todas.length} por delante</small>
       </div>
 
       {todas.length === 0 && (
         <p className="vacio" style={{ padding: '18px 20px' }}>
-          <b>Sin citas por delante</b>
+          <b>Sin {v.sesiones} por delante</b>
           Cuando Mia cierre una, aparecerá aquí para poder moverla o cancelarla.
         </p>
       )}
@@ -1286,7 +1303,7 @@ function Proximas({
                       lo calcula con la misma función con la que vende.
                     */}
                     Si no se puede —está ocupado, de vacaciones o fuera de su horario— Mia te dirá
-                    exactamente por qué y la cita se queda como está.{' '}
+                    exactamente por qué y {v.la} {v.sesion} se queda como está.{' '}
                     {/*
                       Y se dice lo que NO se puede tocar, en vez de callarlo: el
                       bot conserva la duración y el servicio, así que un campo
@@ -1345,10 +1362,12 @@ function Proximas({
  * recompensa de haberla mirado.
  */
 function PorConfirmar({
+  v,
   citas,
   nombrePorLead,
   alCambiar,
 }: {
+  v: Vocabulario;
   citas: Cita[];
   nombrePorLead: Map<string, string>;
   alCambiar: () => void;
@@ -1400,7 +1419,7 @@ function PorConfirmar({
       avisar(
         r.cambio
           ? 'Cobrada. El cupo queda confirmado.'
-          : 'Esta cita ya constaba como cobrada: no se ha cambiado nada.',
+          : `${cap(v.esta)} ${v.sesion} ya constaba como cobrad${v.a}: no se ha cambiado nada.`,
         r.cambio ? 'ok' : 'espera',
       );
     }
@@ -1410,7 +1429,7 @@ function PorConfirmar({
   return (
     <div className="card" style={{ marginBottom: 18 }}>
       <div className="card-head">
-        <h3>Citas que ya pasaron</h3>
+        <h3>{cap(v.sesiones)} que ya pasaron</h3>
         {/*
           El desglose NO es un adorno: «12 atendidas» a secas mezcla lo que
           confirmó una persona con lo que supuso un reloj, y quien lea esa cifra
@@ -1423,9 +1442,9 @@ function PorConfirmar({
 
       {pendientes.length === 0 ? (
         <p className="vacio" style={{ padding: '18px 20px' }}>
-          <b>{pasadas.length === 0 ? 'Todavía no hay citas pasadas' : 'Nada que revisar'}</b>
+          <b>{pasadas.length === 0 ? `Todavía no hay ${v.sesiones} pasadas` : 'Nada que revisar'}</b>
           {pasadas.length === 0
-            ? 'Cuando pase la hora de una cita, aparecerá aquí para confirmar si vino y si se cobró.'
+            ? `Cuando pase la hora de ${v.una} ${v.sesion}, aparecerá aquí para confirmar si vino y si se cobró.`
             : 'Todas las que ya pasaron están confirmadas a mano y cobradas.'}
         </p>
       ) : (

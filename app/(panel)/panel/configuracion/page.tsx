@@ -62,6 +62,7 @@ import { useAvisar, useComando } from '@/components/panel/Avisos';
 import { useCargar } from '@/components/panel/useCargar';
 import { supabase } from '@/lib/supabase/client';
 import { esAppointmentFamily, esEcommerce } from '@/lib/panel/modo';
+import { cap, vocabulario } from '@/lib/panel/vocabulario';
 import { getCatalogo, getCompania } from '@/lib/supabase/queries';
 import { b01 } from '@/lib/supabase/parse';
 import type { ResultadoAddMember, ResultadoUpdateCompany } from '@/lib/supabase/commands';
@@ -450,7 +451,8 @@ function Configuracion() {
           <div className="stepper">
             {[
               'Mi negocio',
-              'Servicios, horario y pagos',
+              // «Servicios» en una barbería, «Clases» en una academia. Ver lib/panel/vocabulario.
+              `${cap(vocabulario(form?.business_mode).items)}, horario y pagos`,
               'Personalidad y reglas',
               'Preguntas obligatorias',
             ].map((txt, i) => (
@@ -558,7 +560,10 @@ function Configuracion() {
           */}
           <div className="sec">
             <h4>
-              <Scissors /> Servicios y productos
+              <Scissors />{' '}
+              {vocabulario(form?.business_mode).item === 'producto'
+                ? 'Productos'
+                : `${cap(vocabulario(form?.business_mode).items)} y productos`}
             </h4>
             <div className="cfg-enlace">
               <div>
@@ -609,7 +614,10 @@ function Configuracion() {
               <div className="toggle-row" style={{ marginTop: 12 }}>
                 <div className="t">
                   <b>Requerir pago para confirmar</b>
-                  <small>La cita queda en «esperando pago» hasta que llegue el comprobante</small>
+                  <small>
+                    {cap(vocabulario(form.business_mode).la)} {vocabulario(form.business_mode).reserva} queda en
+                    «esperando pago» hasta que llegue el comprobante
+                  </small>
                 </div>
                 <div
                   className={`toggle ${form.require_payment_to_confirm ? 'on' : ''}`}

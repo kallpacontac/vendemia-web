@@ -179,6 +179,12 @@ export interface LeadRow {
   /** JSON en text: {clave: valor} */
   custom_data: string | null;
   customer_notes: string | null;
+  /**
+   * Lo que apunta el NEGOCIO sobre el cliente (migración 0034 del bot). Aparte
+   * de `customer_notes`, que es de Mia: si compartieran columna, el resumen del
+   * bot borraría lo que escribió una persona. Opcional: llega con `select('*')`.
+   */
+  notas_salon?: string | null;
   last_message: string | null;
   created_at: number | null;
   created_ts: string | null;

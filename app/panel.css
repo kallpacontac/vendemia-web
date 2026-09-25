@@ -484,9 +484,12 @@ a{color:inherit;text-decoration:none}
 .tstamp::before,.tstamp::after{content:"";width:60px;height:1px;background:var(--line)}
 .msg{max-width:70%;padding:11px 15px;font-size:14px;line-height:1.5;margin-bottom:10px;box-shadow:var(--sh-sm)}
 .msg .tag{font-size:10px;opacity:.7;display:block;margin-bottom:3px}
-.msg.bot{background:var(--bg-input);border-radius:16px 16px 16px 4px;align-self:flex-start}
-.msg.agent{background:#EAFBF3;border:1px solid #C9F0DE;border-radius:16px 16px 16px 4px;align-self:flex-start}
-.msg.user{background:var(--brand-grad);color:#fff;border-radius:16px 16px 4px 16px;align-self:flex-end}
+/* Como en el WhatsApp del negocio: el cliente a la izquierda, el negocio —Mia
+   o una persona— a la derecha. Antes era al revés (el cliente a la derecha y en
+   naranja), que es como se ve desde el móvil DEL CLIENTE, no desde el panel. */
+.msg.user{background:#fff;border:1px solid var(--line);border-radius:16px 16px 16px 4px;align-self:flex-start}
+.msg.bot{background:var(--brand-soft);border-radius:16px 16px 4px 16px;align-self:flex-end}
+.msg.agent{background:#EAFBF3;border:1px solid #C9F0DE;border-radius:16px 16px 4px 16px;align-self:flex-end}
 .composer{border-top:1px solid var(--line);padding:14px 20px;display:flex;gap:10px;align-items:center;flex-shrink:0}
 .composer input{flex:1;height:46px;border:1.5px solid var(--line-2);border-radius:var(--r-full);padding:0 18px;font:500 14px 'Plus Jakarta Sans'}
 .composer input:focus{outline:none;border-color:var(--brand)}

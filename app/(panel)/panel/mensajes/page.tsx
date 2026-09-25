@@ -30,11 +30,12 @@
  */
 import { Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { AlertTriangle, Check, MessageSquarePlus, Search, Send } from 'lucide-react';
+import { AlertTriangle, Check, MessageSquarePlus, Pencil, Search, Send } from 'lucide-react';
 import { useSesion } from '@/components/panel/Sesion';
 import { useComando } from '@/components/panel/Avisos';
 import { useCargar } from '@/components/panel/useCargar';
 import { NuevoMensaje } from '@/components/panel/NuevoMensaje';
+import { EditarLead } from '@/components/panel/EditarLead';
 import { Burbuja } from '@/components/panel/Burbuja';
 import { BotonAdjunto, ChipAdjunto, useAdjunto } from '@/components/panel/SelectorAdjunto';
 import { useEnviarMensaje } from '@/components/panel/useEnviarMensaje';
@@ -57,6 +58,7 @@ import { selloCumplido } from '@/lib/panel/confirmacion';
 import { esIngreso, suma } from '@/lib/panel/dinero';
 import { haceCuanto, paraQuien, personasDe, separar } from '@/lib/panel/ficha';
 import { esAppointmentFamily } from '@/lib/panel/modo';
+import { cap, vocabulario, type Vocabulario } from '@/lib/panel/vocabulario';
 import type { MovimientoRow } from '@/lib/supabase/types';
 
 type Filtro = 'all' | 'hot' | 'new' | 'manual';
@@ -83,11 +85,13 @@ function juntar(prev: Mensaje[], nuevos: Mensaje[]): Mensaje[] {
   return [...prev, ...faltan].sort((a, b) => (a.created_at ?? 0) - (b.created_at ?? 0));
 }
 
-const ETIQUETA_ESCALACION: Record<string, string> = {
-  paid_removal: 'Quitar cita (pagada)',
-  paid_reschedule: 'Reprogramar cita (pagada)',
-  paid_order_cancel: 'Cancelar pedido (pagado)',
-};
+/** Qué pide cada escalación, dicho con las palabras de este negocio. */
+function etiquetaEscalacion(kind: string, v: Vocabulario): string {
+  if (kind === 'paid_removal') return `Quitar ${v.reserva} (pagad${v.a})`;
+  if (kind === 'paid_reschedule') return `Reprogramar ${v.reserva} (pagad${v.a})`;
+  if (kind === 'paid_order_cancel') return 'Cancelar pedido (pagado)';
+  return kind;
+}
 
 export default function MensajesPage() {
   return (
@@ -109,6 +113,8 @@ export default function MensajesPage() {
 function Mensajes() {
   const { companyId, compania } = useSesion();
   const conCitas = esAppointmentFamily(compania?.business_mode);
+  /** «cita» en una barbería, «reserva»/«clase»/«alumno» en una academia. Ver lib/panel/vocabulario. */
+  const v = vocabulario(compania?.business_mode);
   const comando = useComando();
   const params = useSearchParams();
   const leadDeLaUrl = params.get('lead');
@@ -146,6 +152,7 @@ function Mensajes() {
   const [botPendiente, setBotPendiente] = useState<Record<string, boolean>>({});
   const [resueltas, setResueltas] = useState<Set<string>>(new Set());
   const [nuevoAbierto, setNuevoAbierto] = useState(false);
+  const [editando, setEditando] = useState(false);
   /**
    * El número al que acabas de escribir, hasta que su lead llega por el espejo.
    * Hace falta si el bot no devuelve `lead_id`: entonces la conversación se
@@ -587,8 +594,20 @@ function Mensajes() {
 
         {/* ── INFO ── */}
         <div className="info-pane">
-          <h4>Información</h4>
-          <div className="kv">
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <h4 style={{ margin: 0 }}>Información</h4>
+            {activo && (
+              <button
+                type="button"
+                className="btn btn-ghost btn-sm"
+                style={{ padding: '5px 10px', fontSize: 12 }}
+                onClick={() => setEditando(true)}
+              >
+                <Pencil size={13} /> Editar
+              </button>
+            )}
+          </div>
+          <div className="kv" style={{ marginTop: 10 }}>
             <b>Nombre</b>
             <span>{activo?.name || '—'}</span>
           </div>
@@ -596,6 +615,26 @@ function Mensajes() {
             <b>Teléfono</b>
             <span>{activo ? telefono(activo.phone) : '—'}</span>
           </div>
+          {activo?.customer_email && (
+            <div className="kv">
+              <b>Correo</b>
+              <span>{activo.customer_email}</span>
+            </div>
+          )}
+          {activo?.customer_address && (
+            <div className="kv">
+              <b>Dirección</b>
+              <span>{activo.customer_address}</span>
+            </div>
+          )}
+          {/* Lo que Mia fue recogiendo (preguntas obligatorias). Editable desde «Editar». */}
+          {activo &&
+            Object.entries(activo.datos).map(([k, v]) => (
+              <div className="kv" key={k}>
+                <b>{k}</b>
+                <span>{v || '—'}</span>
+              </div>
+            ))}
           <div className="kv">
             <b>Primer contacto</b>
             <span>{activo?.creado ? cuando(activo.creado) : '—'}</span>
@@ -612,7 +651,7 @@ function Mensajes() {
           */}
           <div className="kv">
             <b>Ha dejado</b>
-            <span title="Pedidos cobrados y citas en pie. Mismo criterio que los ingresos de Métricas.">
+            <span title={`Pedidos cobrados y ${v.reservas} en pie. Mismo criterio que los ingresos de Métricas.`}>
               {!movimientosListos ? '…' : movimientos.length === 0 ? 'Todavía nada' : soles(gastado)}
             </span>
           </div>
@@ -628,7 +667,7 @@ function Mensajes() {
             (personas.length === 1 && !personas[0].nombre ? (
               <>
                 <div className="kv">
-                  <b>Última cita</b>
+                  <b>Última {v.sesion}</b>
                   <span title="La última que no se canceló ni se marcó como «no vino». Que viniera de verdad solo consta si alguien lo marcó.">
                     {personas[0].ultima ? haceCuanto(personas[0].ultima) : '—'}
                   </span>
@@ -646,7 +685,7 @@ function Mensajes() {
             ) : (
               personas.length > 0 && (
                 <>
-                  <h4>Para quién reserva</h4>
+                  <h4>{v.persona === 'alumno' ? 'Alumnos' : 'Para quién reserva'}</h4>
                   {personas.map((p) => (
                     <div className="hist" key={p.nombre || '·titular·'}>
                       <b>
@@ -654,7 +693,7 @@ function Mensajes() {
                         {p.edad ? ` (${p.edad})` : ''}
                       </b>
                       <small>
-                        {p.ultima ? `última cita ${haceCuanto(p.ultima)}` : 'ninguna cita todavía'}
+                        {p.ultima ? `última ${v.sesion} ${haceCuanto(p.ultima)}` : `ninguna ${v.sesion} todavía`}
                         {p.habitual
                           ? ` · con ${nombreEmpleado.get(p.habitual.employeeId) ?? '—'}`
                           : ''}
@@ -669,9 +708,10 @@ function Mensajes() {
             <>
               {historial.proximas.length > 0 && (
                 <>
-                  <h4>Próximas citas</h4>
+                  <h4>Próximas {v.sesiones}</h4>
                   {historial.proximas.map((c) => (
                     <FilaCita
+                      v={v}
                       key={c.id}
                       cita={c}
                       estilista={nombreEmpleado.get(c.employee_id ?? '')}
@@ -681,12 +721,12 @@ function Mensajes() {
               )}
 
               <h4>
-                Historial de citas
+                Historial de {v.reservas}
                 {historial.pasadas.length > VISIBLES_HISTORIAL ? ` (${historial.pasadas.length})` : ''}
               </h4>
               {historial.pasadas.length === 0 ? (
                 <p className="muted" style={{ fontSize: 12.5 }}>
-                  Sin citas pasadas.
+                  Sin {v.reservas} pasadas.
                 </p>
               ) : (
                 <>
@@ -695,6 +735,7 @@ function Mensajes() {
                     : historial.pasadas.slice(0, VISIBLES_HISTORIAL)
                   ).map((c) => (
                     <FilaCita
+                      v={v}
                       key={c.id}
                       cita={c}
                       estilista={nombreEmpleado.get(c.employee_id ?? '')}
@@ -747,7 +788,7 @@ function Mensajes() {
           ) : (
             escalacionesDelLead.map((e) => (
               <div className="esc" key={e.id}>
-                <b>⚠️ {ETIQUETA_ESCALACION[e.kind] ?? e.kind}</b>
+                <b>⚠️ {etiquetaEscalacion(e.kind, v)}</b>
                 <p>{resumenDetalle(e.detalle)}</p>
                 <button onClick={() => void resolver(e.id)}>
                   <Check size={11} /> Resolver
@@ -756,7 +797,12 @@ function Mensajes() {
             ))
           )}
 
-          <h4>Notas del cliente</h4>
+          <h4>Notas del negocio</h4>
+          <p className="muted" style={{ fontSize: 12.5, lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>
+            {activo?.notas_salon || 'Sin notas. Añádelas desde «Editar».'}
+          </p>
+
+          <h4>Notas de Mia</h4>
           {/*
             Solo lectura: `customer_notes` lo escribe el bot según va hablando, y
             no hay comando para cambiarlo. Una caja de texto editable aquí
@@ -770,6 +816,17 @@ function Mensajes() {
       </div>
       {nuevoAbierto && (
         <NuevoMensaje leads={leads} alEnviar={trasNuevoMensaje} alCerrar={() => setNuevoAbierto(false)} />
+      )}
+      {editando && activo && (
+        <EditarLead
+          key={activo.id}
+          lead={activo}
+          alCerrar={() => setEditando(false)}
+          alGuardar={() => {
+            setEditando(false);
+            recargarBandeja();
+          }}
+        />
       )}
     </main>
   );
@@ -805,8 +862,11 @@ function FilaCita({
   estilista,
   importe,
   pasada = false,
+  v,
 }: {
   cita: Cita;
+  /** Las palabras de este negocio. Ver lib/panel/vocabulario. */
+  v: Vocabulario;
   estilista?: string;
   importe?: number;
   pasada?: boolean;
@@ -823,13 +883,13 @@ function FilaCita({
   const sello = !pasada
     ? null
     : cita.status === 'cancelled'
-      ? { label: 'Cancelada', color: '#93938C', ayuda: 'Se canceló antes de la cita.' }
+      ? { label: 'Cancelada', color: '#93938C', ayuda: `Se canceló antes de ${v.la} ${v.sesion}.` }
       : selloCumplido('appointment', cita.status, cita.cumplido_por);
 
   return (
     <div className="hist">
       <b>
-        {cita.service || 'Cita'}
+        {cita.service || cap(v.sesion)}
         {sello && (
           <span title={sello.ayuda} style={{ color: sello.color, fontWeight: 700, marginLeft: 6, fontSize: 11 }}>
             · {sello.label}
