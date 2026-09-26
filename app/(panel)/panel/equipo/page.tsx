@@ -38,6 +38,7 @@ import {
   ChevronDown,
   ChevronUp,
   MessageCircle,
+  Percent,
   Plus,
   Trash2,
   UserCheck,
@@ -328,6 +329,7 @@ function Ficha({
   const [nombre, setNombre] = useState(t.name);
   const [propio, setPropio] = useState(tienePropio);
   const [horario, setHorario] = useState<Horario>(tienePropio ? t.horario : copiaDe(horarioNegocio));
+  const [comision, setComision] = useState(String(t.comision_pct ?? 0));
   const [guardando, setGuardando] = useState(false);
 
   /* El borrador se rehace SOLO al abrir: si se repintara con cada recarga,
@@ -339,6 +341,7 @@ function Ficha({
       setNombre(t.name);
       setPropio(tienePropio);
       setHorario(tienePropio ? t.horario : copiaDe(horarioNegocio));
+      setComision(String(t.comision_pct ?? 0));
     }
   }
 
@@ -365,6 +368,15 @@ function Ficha({
     } else if (tienePropio) {
       cambios.schedule = null; // «que herede el del negocio»
     }
+
+    /* De 0 a 100, no de 0 a 1: «45» es 45 %. Un 0,45 aquí pagaría 45 céntimos
+       donde tocaban 45 soles, y no revienta en ningún sitio: se nota a fin de mes. */
+    const pct = Number(comision.replace(',', '.'));
+    if (!comision.trim() || !Number.isFinite(pct) || pct < 0 || pct > 100) {
+      avisar('La comisión va de 0 a 100 (45 = 45 %).', 'error');
+      return;
+    }
+    if (pct !== (t.comision_pct ?? 0)) cambios.comision_pct = pct;
 
     if (!nombre.trim()) {
       avisar('Hace falta un nombre: es como Mia lo reconoce.', 'error');
@@ -406,6 +418,7 @@ function Ficha({
           <small>
             {tienePropio ? resumen(t.horario) : 'Horario del negocio'}
             {proximas > 0 ? ` · ${proximas} cita${proximas > 1 ? 's' : ''} por delante` : ''}
+            {(t.comision_pct ?? 0) > 0 ? ` · ${t.comision_pct} % de comisión` : ''}
           </small>
         </div>
         {vigentes.length > 0 && (
@@ -499,6 +512,26 @@ function Ficha({
                   </div>
                 );
               })}
+          </div>
+
+          <div className="sec" style={{ marginTop: 14 }}>
+            <h4>
+              <Percent /> Comisión
+            </h4>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, maxWidth: 220 }}>
+              <input
+                className="input"
+                inputMode="decimal"
+                value={comision}
+                onChange={(e) => setComision(e.target.value)}
+                aria-label="Porcentaje de comisión"
+              />
+              <b>%</b>
+            </div>
+            <small className="muted" style={{ fontSize: 11.5 }}>
+              Sobre el precio de cada servicio que atienda, cuando la cita se marca como atendida. Si un
+              servicio tiene su propia comisión en el Catálogo, manda la del servicio. 0 = sin comisión.
+            </small>
           </div>
 
           <Ausencias

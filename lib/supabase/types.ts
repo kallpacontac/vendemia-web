@@ -105,6 +105,13 @@ export interface CompanyRow {
    */
   require_payment_to_confirm: Bool01 | null;
   /**
+   * 1 = pasada la hora y sin noticias, el cron da la cita por atendida
+   * (`completed`, cumplido_por = 'cron'). 0 (defecto, 0034) = no marca nada: la
+   * cita espera a que una persona diga si vino. Decide si se paga comisión por
+   * una cita que nadie confirmó. Ver lib/panel/comisiones.ts.
+   */
+  asumir_asistencia?: Bool01 | null;
+  /**
    * ¿Quién comprueba que el pago llegó — el bot o una persona? (migración 0017)
    *
    * ⚠️ EL VALOR POR DEFECTO ES 1, NO 0. En Postgres es `integer not null
@@ -258,6 +265,13 @@ export interface CatalogRow {
    */
   vigencia_meses: number | null;
   /**
+   * Comisión de ESTE servicio (0034). `comision_monto` es un importe fijo y gana
+   * al porcentaje; `comision_pct` va de 0 a 100. NULL en los dos = se usa la del
+   * trabajador. 0 = este servicio no paga comisión. Ver lib/panel/comisiones.ts.
+   */
+  comision_pct?: number | null;
+  comision_monto?: number | null;
+  /**
    * JSON en text: CUÁNDO SE PUEDE OFRECER. `''` (todas las filas de antes de la
    * 0031) = siempre. Dos formas: `{"tipo":"mensual","dia_desde":1,
    * "dia_hasta":15}` y `{"tipo":"rango","desde":"…","hasta":"…"}`.
@@ -367,11 +381,15 @@ export interface AppointmentRow {
   beneficiario?: string | null;
   /** Su edad tal cual la dijo el cliente: "8", "3 años y medio". Texto, no número. */
   beneficiario_edad?: string | null;
+  /** Con qué se pagó (0034): yape · plin · bank_transfer · cash · cod. `''` = no consta. */
+  metodo_pago?: string | null;
 }
 
 export interface AppointmentServiceRow {
   id: string;
   appointment_id: string;
+  /** El servicio del catálogo. Puede venir vacío en filas antiguas: entonces manda la comisión del trabajador. */
+  catalog_item_id?: string | null;
   name: string;
   price: number | null;
   duration_minutes: number | null;
@@ -420,6 +438,30 @@ export interface EmployeeRow {
   is_active: Bool01 | null;
   /** JSON en text, mismo formato que companies.schedule. Vacío = hereda el de la empresa. */
   schedule: string | null;
+  /**
+   * Comisión por defecto, de 0 a 100 (45 = 45 %). 0 = sin comisión. Migración
+   * 0034 del bot. La de un servicio concreto, si la tiene, gana a esta: ver
+   * lib/panel/comisiones.ts.
+   */
+  comision_pct?: number | null;
+}
+
+/**
+ * Un gasto de la caja (0034 del bot): alquiler, insumos, el adelanto a una
+ * estilista. Lo escribe el bot por `upsert_gasto`; el panel solo lo lee.
+ */
+export interface GastoRow {
+  id: string;
+  company_id: string;
+  /** 'YYYY-MM-DD', día de Lima. */
+  fecha: string;
+  concepto: string;
+  /** Texto libre. «adelanto» es un adelanto de sueldo. */
+  categoria: string;
+  importe: number;
+  /** auth.uid() de quien lo apuntó (commands.created_by). */
+  creado_por: string;
+  created_at: number;
 }
 
 export interface EmployeeBlockRow {

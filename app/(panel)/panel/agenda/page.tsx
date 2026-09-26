@@ -47,6 +47,8 @@ import { useCargar } from '@/components/panel/useCargar';
 import { useMovil } from '@/components/panel/useMovil';
 import { construirSemana, lunesDe } from '@/lib/panel/agenda';
 import { cap, vocabulario, type Vocabulario } from '@/lib/panel/vocabulario';
+import { cobroPorApuntar, etiquetaMetodo, type MetodoPago } from '@/lib/panel/metodosPago';
+import { BotonCobrar } from '@/components/panel/BotonCobrar';
 import { diaMes, ESTADO_CITA, hora as horaDe } from '@/lib/panel/format';
 import {
   adelantada,
@@ -1401,7 +1403,7 @@ function PorConfirmar({
     setEnVuelo(null);
   }
 
-  async function cobrar(c: Cita) {
+  async function cobrar(c: Cita, metodo: MetodoPago) {
     setEnVuelo(c.id);
     /**
      * ⚠️ El `result` trae `cambio`. Si ya estaba cobrada no se anuncia nada:
@@ -1411,14 +1413,17 @@ function PorConfirmar({
      */
     const r = await comando<ResultadoMarcarPagado>(
       'marcar_pagado',
-      { tipo: 'appointment', id: c.id },
+      // El método va a la caja del día: sin él, el cobro entra como «sin método».
+      { tipo: 'appointment', id: c.id, metodo_pago: metodo },
       undefined,
       alCambiar,
     );
     if (r) {
       avisar(
         r.cambio
-          ? 'Cobrada. El cupo queda confirmado.'
+          ? `Cobrada con ${etiquetaMetodo(metodo).toLowerCase()}. El cupo queda confirmado.`
+          : r.antes === 'confirmed' || r.antes === 'completed'
+            ? `Cobro apuntado: ${etiquetaMetodo(metodo).toLowerCase()}.`
           : `${cap(v.esta)} ${v.sesion} ya constaba como cobrad${v.a}: no se ha cambiado nada.`,
         r.cambio ? 'ok' : 'espera',
       );
@@ -1456,7 +1461,7 @@ function PorConfirmar({
               cliente={nombrePorLead.get(c.lead_id) ?? 'Cliente'}
               ocupado={enVuelo === c.id}
               alResolver={(vino) => void resolver(c, vino)}
-              alCobrar={() => void cobrar(c)}
+              alCobrar={(metodo) => void cobrar(c, metodo)}
             />
           ))}
           <Paginacion pagina={pag.pagina} paginas={pag.paginas} irA={pag.irA} />
@@ -1478,7 +1483,7 @@ function FilaPorConfirmar({
   cliente: string;
   ocupado: boolean;
   alResolver: (vino: boolean) => void;
-  alCobrar: () => void;
+  alCobrar: (metodo: MetodoPago) => void;
 }) {
   const cumplido = selloCumplido('appointment', cita.status, cita.cumplido_por);
   const pagado = selloPagado('appointment', cita.status, cita.pagado_por);
@@ -1536,12 +1541,12 @@ function FilaPorConfirmar({
         >
           <X size={14} /> No vino
         </button>
-        {/* Solo si falta cobrarla: su caso es `pending_payment`, donde cobrar
-            además LIBERA EL CUPO al pasar a `confirmed`. */}
-        {faltaCobrar('appointment', cita.status) && (
-          <button className="btn btn-primary btn-sm" disabled={ocupado} onClick={alCobrar}>
-            <Wallet size={14} /> Cobrada
-          </button>
+        {/* Mientras no conste quién la cobró. Antes solo en `pending_payment`, y
+            en una barbería que cobra en el local no salía nunca: el efectivo del
+            día no se podía apuntar. Ver cobroPorApuntar. En `pending_payment`,
+            cobrar además LIBERA EL CUPO al pasar a `confirmed`. */}
+        {cobroPorApuntar(cita.status, cita.pagado_por) && (
+          <BotonCobrar ocupado={ocupado} alCobrar={alCobrar} />
         )}
       </div>
     </div>

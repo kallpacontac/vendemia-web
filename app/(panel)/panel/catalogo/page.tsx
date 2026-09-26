@@ -172,6 +172,9 @@ interface Borrador {
    * comprado: se guardan los dos y no tienen nada que ver. Ver lib/panel/vigencia.ts.
    */
   promo: BorradorVigencia;
+  /** Solo negocios de citas. Vacío = usa la del trabajador. Ver lib/panel/comisiones.ts. */
+  comision_pct: string;
+  comision_monto: string;
 }
 
 /** Lo que admite el bot para `vigencia_meses`: meses enteros, de 1 a 24. */
@@ -190,6 +193,8 @@ function borradorDe(it: ItemCatalogo): Borrador {
     package_services: it.paquete,
     vigencia_meses: String(it.vigencia_meses ?? 1),
     promo: borradorVigencia(it.promo_vigencia),
+    comision_pct: it.comision_pct == null ? '' : String(it.comision_pct),
+    comision_monto: it.comision_monto == null ? '' : String(it.comision_monto),
   };
 }
 
@@ -627,6 +632,21 @@ function Ficha({
       avisar(malaVentana, 'error');
       return;
     }
+    /* Porcentaje de 0 a 100 («45» es 45 %), monto en soles y no negativo. Un
+       0,45 como porcentaje pagaría céntimos donde tocaban soles, y no revienta
+       en ningún sitio: se nota a fin de mes. */
+    if (esCita) {
+      const pct = f.comision_pct.trim() === '' ? null : Number(f.comision_pct.replace(',', '.'));
+      if (pct != null && (!Number.isFinite(pct) || pct < 0 || pct > 100)) {
+        avisar('La comisión en % va de 0 a 100 (45 = 45 %). Vacía = la del trabajador.', 'error');
+        return;
+      }
+      const monto = f.comision_monto.trim() === '' ? null : Number(f.comision_monto.replace(',', '.'));
+      if (monto != null && (!Number.isFinite(monto) || monto < 0)) {
+        avisar('La comisión fija tiene que ser un importe de 0 o más.', 'error');
+        return;
+      }
+    }
     setGuardando(true);
     /**
      * Desde el 11-sep-2026 `upsert_catalog_item` es un PATCH: lo que se manda
@@ -664,6 +684,15 @@ function Ficha({
           promo_vigencia: promoTexto,
           // Solo donde el formulario la enseña: en otros modos no significa nada.
           ...(esRecurrente ? { vigencia_meses: vigencia } : {}),
+          // La comisión solo tiene sentido donde hay personal que atiende. Va
+          // `null` explícito cuando se vacía: es lo que devuelve el servicio a
+          // «usa la del trabajador» (el upsert es un PATCH).
+          ...(esCita
+            ? {
+                comision_pct: num(f.comision_pct.replace(',', '.')),
+                comision_monto: num(f.comision_monto.replace(',', '.')),
+              }
+            : {}),
         },
       },
       `${cap(v.item)} guardad${v.aItem}`,
@@ -853,6 +882,26 @@ function Ficha({
                     min={0}
                     value={f.capacity}
                     onChange={(e) => set('capacity', e.target.value)}
+                  />
+                </div>
+                <div>
+                  <label className="field-label">Comisión (%)</label>
+                  <input
+                    className="input"
+                    inputMode="decimal"
+                    placeholder="vacío = la del trabajador"
+                    value={f.comision_pct}
+                    onChange={(e) => set('comision_pct', e.target.value)}
+                  />
+                </div>
+                <div>
+                  <label className="field-label">Comisión fija ({f.currency || 'PEN'})</label>
+                  <input
+                    className="input"
+                    inputMode="decimal"
+                    placeholder="gana al %"
+                    value={f.comision_monto}
+                    onChange={(e) => set('comision_monto', e.target.value)}
                   />
                 </div>
               </>

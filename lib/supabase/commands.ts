@@ -86,7 +86,14 @@ export type TipoComando =
    * `actualizados` con lo que guardó de verdad (ver EditarLead y
    * docs/prompt-bot-editar-lead.md); hoy solo guarda `notas_salon`.
    */
-  | 'actualizar_lead';
+  | 'actualizar_lead'
+  /**
+   * Caja: apuntar o corregir un gasto del día (`{ gasto: { id?, fecha,
+   * concepto, categoria, importe } }`) y borrarlo (`{ id }`). Un adelanto de
+   * sueldo es un gasto con categoria 'adelanto'.
+   */
+  | 'upsert_gasto'
+  | 'delete_gasto';
 
 /**
  * ⚠️ `ignored` NO significa "rechazado". Significa "esto no cambió".

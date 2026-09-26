@@ -49,6 +49,8 @@ import {
 } from '@/lib/panel/demo';
 import type {
   AppointmentRow,
+  AppointmentServiceRow,
+  GastoRow,
   BusinessMode,
   CatalogMediaRow,
   CatalogRow,
@@ -526,6 +528,78 @@ export async function getCitas(companyId: string, limite = 500): Promise<Cita[]>
     inicio: parseSlot(a.slot_start),
     recurrente: Boolean(a.slot_start?.startsWith('sched:')),
   }));
+}
+
+/**
+ * Las citas PUNTUALES cuya hora cae en [desde, hasta] (fechas 'YYYY-MM-DD',
+ * ambas incluidas), para comisiones y caja.
+ *
+ * Aparte de `getCitas` porque aquella trae las 500 más recientes: en una
+ * barbería con movimiento, una quincena entera puede no caber, y una comisión
+ * calculada sobre citas que faltan sale baja sin que nada lo diga. Aquí se
+ * acota por fecha y se pagina hasta el final.
+ *
+ * `slot_start` es texto "YYYY-MM-DD HH:MM" y se compara como texto: ordena
+ * igual que como fecha. Las recurrentes ("sched:…") quedan fuera solas, porque
+ * "s" va después de cualquier dígito y el `lte` las corta.
+ */
+export async function getCitasDelPeriodo(companyId: string, desde: string, hasta: string): Promise<Cita[]> {
+  if (demoActivo()) return [];
+  const sb = supabase();
+  const filas: AppointmentRow[] = [];
+  const PAGINA = 1000;
+  for (let desdeFila = 0; ; desdeFila += PAGINA) {
+    const { data, error } = await sb
+      .from('appointments')
+      .select('*')
+      .eq('company_id', companyId)
+      .gte('slot_start', desde)
+      .lte('slot_start', `${hasta} 23:59`)
+      .order('slot_start', { ascending: true })
+      .range(desdeFila, desdeFila + PAGINA - 1);
+    if (error) throw error;
+    filas.push(...((data ?? []) as AppointmentRow[]));
+    if ((data ?? []).length < PAGINA) break;
+  }
+  return filas.map((a) => ({ ...a, inicio: parseSlot(a.slot_start), recurrente: false }));
+}
+
+/**
+ * Las líneas de servicio de unas citas: qué se hizo en cada una y a qué precio.
+ * Es de donde sale la comisión, línea a línea (ver lib/panel/comisiones.ts).
+ *
+ * En tandas de 100 ids: un `in` con cientos de ids no cabe en la URL de la
+ * petición y falla entero.
+ */
+export async function getServiciosDeCitas(ids: string[]): Promise<AppointmentServiceRow[]> {
+  if (demoActivo() || ids.length === 0) return [];
+  const sb = supabase();
+  const tandas: string[][] = [];
+  for (let i = 0; i < ids.length; i += 100) tandas.push(ids.slice(i, i + 100));
+  const respuestas = await Promise.all(
+    tandas.map((t) => sb.from('appointment_services').select('*').in('appointment_id', t)),
+  );
+  const lineas: AppointmentServiceRow[] = [];
+  for (const r of respuestas) {
+    if (r.error) throw r.error;
+    lineas.push(
+      ...((r.data ?? []) as AppointmentServiceRow[]).map((l) => ({ ...l, price: Number(l.price ?? 0) })),
+    );
+  }
+  return lineas;
+}
+
+/** Los gastos apuntados un día, para la caja. `importe` pasa por Number(): puede llegar como texto. */
+export async function getGastos(companyId: string, fecha: string): Promise<GastoRow[]> {
+  if (demoActivo()) return [];
+  const { data, error } = await supabase()
+    .from('gastos')
+    .select('*')
+    .eq('company_id', companyId)
+    .eq('fecha', fecha)
+    .order('created_at', { ascending: true });
+  if (error) throw error;
+  return ((data ?? []) as GastoRow[]).map((g) => ({ ...g, importe: Number(g.importe ?? 0) }));
 }
 
 /* ── Pedidos ────────────────────────────────────────────────────────────── */

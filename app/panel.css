@@ -992,6 +992,21 @@ a{color:inherit;text-decoration:none}
 .confirmar-sellos{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
 .confirmar-acciones{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
 .confirmar-acciones .btn{white-space:nowrap}
+/* Caja del día: cobrado y gastos lado a lado; «sin cobro apuntado» a lo ancho. */
+.caja-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.caja-ancha{grid-column:1/-1}
+@media (max-width:900px){.caja-grid{grid-template-columns:1fr}}
+.kv-fila{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:9px 0;
+  border-bottom:1px solid var(--line);font-size:13.5px}
+.kv-fila:last-of-type{border-bottom:none}
+.gasto-form{display:grid;grid-template-columns:2fr 1.4fr 1fr auto;gap:8px;margin-top:14px;align-items:center}
+@media (max-width:640px){.gasto-form{grid-template-columns:1fr 1fr}}
+
+/* Comisiones: el detalle de un profesional, debajo de su fila. */
+.fila-detalle td{background:var(--bg-soft);font-size:12.5px;padding-top:8px;padding-bottom:8px}
+
+/* «¿Con qué se pagó?» al pulsar Cobrada: los métodos en fila, en el mismo sitio. */
+.elegir-metodo{display:inline-flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
 /* «No vino» se distingue de «Vino» sin gritar: son dos opciones legítimas, no
    un error y un acierto. */
 .confirmar-no:hover{color:#E5484D;border-color:#E5484D}

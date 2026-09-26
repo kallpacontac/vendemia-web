@@ -14,12 +14,14 @@ import {
   LogOut,
   MessageCircle,
   Package,
+  Percent,
   Receipt,
   Send,
   Settings,
   Sparkles,
   UserCog,
   Users,
+  Wallet,
 } from 'lucide-react';
 import { useSesion } from './Sesion';
 import { esRutaGlobal } from '@/lib/panel/rutas';
@@ -39,8 +41,10 @@ const NAV = [
   // recurring_appointment — sus grupos van por schedule_slots, sin asignar
   // persona. Mismo criterio que ya aplicaba equipo/page.tsx:235.
   { href: '/panel/equipo', icon: UserCog, label: 'Equipo', sirveA: esCita },
+  { href: '/panel/comisiones', icon: Percent, label: 'Comisiones', sirveA: esCita },
   // Pedidos es del negocio que vende productos: una barbería no crea pedidos.
   { href: '/panel/pedidos', icon: Receipt, label: 'Pedidos', sirveA: esEcommerce },
+  { href: '/panel/caja', icon: Wallet, label: 'Caja' },
   { href: '/panel/catalogo', icon: Package, label: 'Catálogo' },
   { href: '/panel/metricas', icon: BarChart2, label: 'Métricas' },
   { href: '/panel/configuracion', icon: Settings, label: 'Ajustes' },

@@ -105,6 +105,7 @@ interface Formulario {
   business_description: string;
   slot_minutes: number;
   require_payment_to_confirm: boolean;
+  asumir_asistencia: boolean;
   verify_vouchers: boolean;
   request_location: boolean;
   proactive_venue: boolean;
@@ -184,6 +185,7 @@ function construirPatch(
   return {
     ...form,
     require_payment_to_confirm: b01(form.require_payment_to_confirm),
+    asumir_asistencia: b01(form.asumir_asistencia),
     verify_vouchers: b01(form.verify_vouchers),
     request_location: b01(form.request_location),
     proactive_venue: b01(form.proactive_venue),
@@ -267,6 +269,7 @@ function Configuracion() {
       business_description: e.business_description ?? '',
       slot_minutes: e.slot_minutes ?? 30,
       require_payment_to_confirm: e.require_payment_to_confirm === 1,
+      asumir_asistencia: e.asumir_asistencia === 1,
       /**
        * ⚠️ `!== 0`, NO `=== 1`. En Postgres es `integer not null default 1`:
        * encendido es el valor por defecto. Con `=== 1`, un `null` que llegara
@@ -626,6 +629,30 @@ function Configuracion() {
                   aria-checked={form.require_payment_to_confirm}
                 />
               </div>
+              {/*
+                Decisión de Alvaro (18-sep-2026): apagado por defecto. Con él
+                encendido, una cita a la que nadie dijo «no vino» se da por
+                atendida sola, y un plantón acaba pagando comisión. Solo en
+                citas puntuales: un grupo recurrente no tiene una hora que pase.
+              */}
+              {form.business_mode === 'appointment' && (
+                <div className="toggle-row" style={{ marginTop: 12 }}>
+                  <div className="t">
+                    <b>Dar por atendida la cita si nadie dice lo contrario</b>
+                    <small>
+                      {form.asumir_asistencia
+                        ? 'Pasada la hora, la cita cuenta como atendida sola. Un plantón que no marques como «No vino» pagará comisión.'
+                        : 'Apagado: la cita espera a que marques «Vino» o «No vino» en la Agenda. Hasta entonces no genera comisión.'}
+                    </small>
+                  </div>
+                  <div
+                    className={`toggle ${form.asumir_asistencia ? 'on' : ''}`}
+                    onClick={() => set('asumir_asistencia', !form.asumir_asistencia)}
+                    role="switch"
+                    aria-checked={form.asumir_asistencia}
+                  />
+                </div>
+              )}
             </div>
           )}
 
