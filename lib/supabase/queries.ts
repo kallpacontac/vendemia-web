@@ -29,6 +29,7 @@ import {
   bloqueosDemo,
   catalogoDemo,
   citasDemo,
+  consumoDemo,
   demoActivo,
   horarioDemo,
   huecosDemo,
@@ -51,6 +52,8 @@ import type {
   AppointmentRow,
   AppointmentServiceRow,
   GastoRow,
+  ConsumoMensualRow,
+  RecargaRow,
   BusinessMode,
   CatalogMediaRow,
   CatalogRow,
@@ -81,6 +84,8 @@ import type {
   SeguimientoRow,
   TipoFechaSerie,
 } from './types';
+import { esPlan, PLAN_POR_DEFECTO } from '@/lib/planes';
+import type { Consumo } from '@/lib/panel/consumo';
 
 /* ── Compañías del usuario ──────────────────────────────────────────────── */
 
@@ -1128,4 +1133,65 @@ export async function getComandosCatalogo(companyId: string): Promise<ComandoCat
     return [];
   }
   return (data ?? []) as ComandoCatalogo[];
+}
+
+/* ── Consumo del plan ───────────────────────────────────────────────────── */
+
+/**
+ * ¿El error es "esa tabla no existe"? Pasa mientras el bot no aplique la
+ * migración 0036: PostgREST responde PGRST205 (no está en su caché de esquema)
+ * y Postgres, 42P01.
+ */
+const faltaTabla = (e: { code?: string } | null) =>
+  !!e && (e.code === 'PGRST205' || e.code === '42P01');
+
+/**
+ * El consumo de ESTE mes (hora de Lima) y el saldo de recargas vigentes.
+ *
+ * Devuelve `null` si las tablas aún no existen: el dashboard esconde la
+ * tarjeta en vez de enseñar "0 de 300", que diría que Mia no ha atendido a
+ * nadie. Un mes sin fila sí es 0 de verdad: el bot la crea con la primera
+ * conversación del mes.
+ */
+export async function getConsumo(companyId: string): Promise<Consumo | null> {
+  if (demoActivo()) return consumoDemo();
+
+  const ahora = new Date();
+  const mes = `${ahora.getFullYear()}-${String(ahora.getMonth() + 1).padStart(2, '0')}`;
+
+  const [empresa, consumo, recargas] = await Promise.all([
+    // `*` y no `plan`: pedir una columna que aún no existe da error, y pedir
+    // todas simplemente no la trae.
+    supabase().from('companies').select('*').eq('id', companyId).maybeSingle(),
+    supabase()
+      .from('consumo_mensual')
+      .select('*')
+      .eq('company_id', companyId)
+      .eq('mes', mes)
+      .maybeSingle(),
+    supabase()
+      .from('recargas')
+      .select('conversaciones, usadas, vence_at')
+      .eq('company_id', companyId)
+      .gt('vence_at', ahora.toISOString()),
+  ]);
+  if (faltaTabla(consumo.error) || faltaTabla(recargas.error)) return null;
+  if (empresa.error) throw empresa.error;
+  if (consumo.error) throw consumo.error;
+  if (recargas.error) throw recargas.error;
+
+  const fila = consumo.data as ConsumoMensualRow | null;
+  const saldoRecargas = ((recargas.data ?? []) as Pick<RecargaRow, 'conversaciones' | 'usadas'>[])
+    .reduce((t, r) => t + Math.max(0, (r.conversaciones ?? 0) - (r.usadas ?? 0)), 0);
+
+  const plan = (empresa.data as CompanyRow | null)?.plan;
+  return {
+    plan: esPlan(plan) ? plan : PLAN_POR_DEFECTO,
+    mes,
+    conversaciones: fila?.conversaciones ?? 0,
+    deRecarga: fila?.de_recarga ?? 0,
+    deGracia: fila?.de_gracia ?? 0,
+    derivadas: fila?.derivadas ?? 0,
+    saldoRecargas,
+  };
 }

@@ -26,6 +26,7 @@ import {
   TrendingUp,
   User,
 } from 'lucide-react';
+import Consumo from '@/components/panel/Consumo';
 import Topbar from '@/components/panel/Topbar';
 import { useSesion } from '@/components/panel/Sesion';
 import { useCargar } from '@/components/panel/useCargar';
@@ -332,6 +333,9 @@ export default function Dashboard() {
                 </div>
               </div>
             </div>
+
+            {/* ── Consumo del plan ── Se esconde sola si aún no hay datos. */}
+            <Consumo companyId={companyId} negocio={compania?.nombre ?? undefined} />
 
             {/*
               ── Leads de los últimos 30 días ──

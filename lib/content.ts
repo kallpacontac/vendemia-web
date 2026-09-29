@@ -1,5 +1,6 @@
 import type { MouseEvent } from 'react';
 import { evento, sufijoAtribucion } from '@/lib/medicion';
+import { PLANES, RECARGAS, miles } from '@/lib/planes';
 
 /**
  * Todo el copy de la página, tipado. Nada hardcodeado en el JSX.
@@ -1072,7 +1073,7 @@ export const PRICING = {
       // Best Seller dejó de ser "ilimitado": un solo número con spam lo
       // ponía en pérdida.
       specs: [
-        { icon: 'chat', label: 'Hasta 300 conversaciones/mes' },
+        { icon: 'chat', label: `Hasta ${miles(PLANES.starter.tope)} conversaciones/mes` },
         { icon: 'shield', label: 'Vende y maneja objeciones 24/7' },
         { icon: 'calendar', label: 'Agenda citas, reservas y pedidos' },
         { icon: 'chart', label: 'Resumen diario en tu WhatsApp', tooltip: 'Llega cada mañana a las 8, con lo que pasó ayer.' },
@@ -1095,7 +1096,7 @@ export const PRICING = {
       waMessage: 'Hola 👋 Quiero el plan Seller de Vendemia (S/149 al mes) para mi negocio.',
       incluye: 'Todo lo de Starter, y además:',
       specs: [
-        { icon: 'chat', label: 'Hasta 700 conversaciones/mes' },
+        { icon: 'chat', label: `Hasta ${miles(PLANES.seller.tope)} conversaciones/mes` },
         { icon: 'shield', label: 'Seguimiento a quien dejó de responder' },
         // Decía "Remarketing automático", y la regla del bot es la contraria:
         // nada sale a WhatsApp sin que lo mande una persona. Hoy lo trabaja
@@ -1124,7 +1125,7 @@ export const PRICING = {
       waMessage: 'Hola 👋 Quiero el plan Best Seller de Vendemia (S/189 al mes) para mi negocio.',
       incluye: 'Todo lo de Seller, y además:',
       specs: [
-        { icon: 'chat', label: 'Hasta 1.000 conversaciones/mes' },
+        { icon: 'chat', label: `Hasta ${miles(PLANES.best_seller.tope)} conversaciones/mes` },
         { icon: 'calendar', label: 'Equipo con horarios y ausencias' },
         { icon: 'check', label: 'Comisiones por profesional' },
         { icon: 'chart', label: 'Caja del día con gastos' },
@@ -1140,9 +1141,8 @@ export const PRICING = {
     },
   ],
   prontoLabel: 'Próximamente',
-  // Más caras por conversación que el plan siguiente, a propósito: quien
-  // recarga seguido encuentra que subir de plan le sale mejor.
-  recargas: '¿Te quedas corto? Recargas de +100 conversaciones por S/19, +300 por S/49 o +1.000 por S/129. Mia nunca corta una venta a medias.',
+  // Los números salen de lib/planes.ts, que también lee el panel.
+  recargas: `¿Te quedas corto? Recargas de ${RECARGAS.map((r, i) => `+${miles(r.conversaciones)}${i === 0 ? ' conversaciones' : ''} por S/${r.precio}`).join(', ').replace(/, ([^,]*)$/, ' o $1')}. Mia nunca corta una venta a medias.`,
   footnote: 'Garantía de reembolso 30 días · Sin costo de instalación · Cancela cuando quieras',
 } as const;
 

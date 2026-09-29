@@ -112,6 +112,12 @@ export interface CompanyRow {
    */
   asumir_asistencia?: Bool01 | null;
   /**
+   * 'starter' · 'seller' · 'best_seller' (migración 0036). Opcional porque un
+   * espejo anterior a la migración no la trae; vacía = Starter. Los topes NO
+   * viven en la base: salen de lib/planes.ts.
+   */
+  plan?: string | null;
+  /**
    * ¿Quién comprueba que el pago llegó — el bot o una persona? (migración 0017)
    *
    * ⚠️ EL VALOR POR DEFECTO ES 1, NO 0. En Postgres es `integer not null
@@ -754,4 +760,31 @@ export interface RetargetingRow {
   /** `0` = lo más urgente … `99` = sin motivo. Es el orden natural de la lista. */
   prioridad: number;
   actualizado_at: number;
+}
+
+/**
+ * Una fila por negocio y mes (migración 0036). La escribe el BOT en cada
+ * conversación nueva: es él quien decide si entra en el plan, en una recarga o
+ * en la gracia. El panel solo la lee. Ver lib/panel/consumo.ts.
+ */
+export interface ConsumoMensualRow {
+  company_id: string;
+  /** 'YYYY-MM' en hora de Lima. */
+  mes: string;
+  conversaciones: number;
+  de_recarga: number;
+  de_gracia: number;
+  derivadas: number;
+  updated_at: string | null;
+}
+
+/** Recarga pagada (migración 0036). La registra el bot por comando del admin. */
+export interface RecargaRow {
+  id: string;
+  company_id: string;
+  conversaciones: number;
+  usadas: number;
+  precio: number;
+  pagada_at: string;
+  vence_at: string;
 }

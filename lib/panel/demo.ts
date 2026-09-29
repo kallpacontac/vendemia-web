@@ -822,3 +822,20 @@ export const horarioDemo = (): Horario => ({
   friday: { open: '09:00', close: '21:00', capacity: 3 },
   saturday: { open: '10:00', close: '18:00', capacity: 3 },
 });
+
+/**
+ * Consumo de ejemplo: un Seller al 83 %, que es el estado que más enseña —la
+ * barra en ámbar y el botón de recargar— sin asustar con "agotado".
+ */
+export function consumoDemo(): import('@/lib/panel/consumo').Consumo {
+  const d = new Date();
+  return {
+    plan: 'seller',
+    mes: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`,
+    conversaciones: 583,
+    deRecarga: 0,
+    deGracia: 0,
+    derivadas: 0,
+    saldoRecargas: 0,
+  };
+}
