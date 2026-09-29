@@ -267,7 +267,7 @@ export default function Retargeting() {
         </div>
 
         <div className="table-card">
-          <table className="table">
+          <table className="table table--tarjeta">
             <thead>
               <tr>
                 <th>Cliente</th>
@@ -370,7 +370,10 @@ function Fila({
 
   return (
     <tr>
-      <td>
+      {/* Las clases c-* solo cuentan en el teléfono, donde la fila es una
+          tarjeta compacta (panel.css, «tarjeta»): quién y cuánto arriba, las
+          píldoras en una línea, el motivo, y los botones a lo ancho. */}
+      <td className="c-quien">
         <div className="cell-user">
           <div className="ava-ini" style={{ background: colorDe(f.lead_id) }}>
             {iniciales(f.nombre, f.telefono)}
@@ -381,17 +384,17 @@ function Fila({
           </div>
         </div>
       </td>
-      <td>
+      <td className="c-pill">
         <span className="badge-pill" style={{ color: '#5C5C5C', background: '#F1F3F9' }}>
           {f.negocio || f.company_id}
         </span>
       </td>
-      <td>
+      <td className="c-pill">
         <span className="badge-pill" style={{ color: est.color, background: `${est.color}18` }}>
           {est.label}
         </span>
       </td>
-      <td style={{ maxWidth: 260 }}>
+      <td className="c-fila c-tarde" style={{ maxWidth: 260 }}>
         {f.motivo ? (
           <>
             <span className="badge-pill" style={{ color: mot.color, background: `${mot.color}18` }}>
@@ -413,7 +416,7 @@ function Fila({
           <span className="muted">Al día</span>
         )}
       </td>
-      <td>
+      <td className={`c-fila c-tarde ${f.n_compras > 0 ? '' : 'c-vacio'}`}>
         {f.n_compras > 0 ? (
           <div style={{ fontSize: 12.5 }}>
             <b>
@@ -427,11 +430,11 @@ function Fila({
           <span className="muted">—</span>
         )}
       </td>
-      <td className="muted">{haceDias(f.ultima_actividad)}</td>
-      <td style={{ textAlign: 'right', fontWeight: 700 }}>
+      <td className="muted c-pill c-act">{haceDias(f.ultima_actividad)}</td>
+      <td className={`c-dcha ${f.monto > 0 ? '' : 'c-vacio'}`} style={{ textAlign: 'right', fontWeight: 700 }}>
         {f.monto > 0 ? soles(f.monto) : <span className="muted">—</span>}
       </td>
-      <td style={{ textAlign: 'right' }}>
+      <td className="c-tarde" style={{ textAlign: 'right' }}>
         {/*
           El texto ya viaja dentro del enlace: lo redacta `recuperar.service.ts`
           del bot, con el cuidado de no prometer lo que el negocio no puede

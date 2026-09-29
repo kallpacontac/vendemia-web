@@ -194,7 +194,7 @@ export default function Leads() {
         </div>
 
         <div className="table-card">
-          <table className="table">
+          <table className="table table--tarjeta">
             <thead>
               <tr>
                 <th>Lead</th>
@@ -232,7 +232,9 @@ export default function Leads() {
                 const st = status(l.status as LeadStatus);
                 return (
                   <tr key={l.id}>
-                    <td data-label="Lead">
+                    {/* Las clases c-* solo cuentan en el teléfono, donde la
+                        fila es una tarjeta compacta (panel.css, «tarjeta»). */}
+                    <td data-label="Lead" className="c-quien">
                       <div className="cell-user">
                         <div className="ava-ini" style={{ background: colorDe(l.id) }}>
                           {iniciales(l.name, l.phone)}
@@ -243,18 +245,18 @@ export default function Leads() {
                         </div>
                       </div>
                     </td>
-                    <td data-label="Teléfono">{telefono(l.phone)}</td>
-                    <td data-label="Intención">
+                    <td data-label="Teléfono" className="c-fila c-sutil">{telefono(l.phone)}</td>
+                    <td data-label="Intención" className="c-pill">
                       <span className={`badge-pill ${it.cls}`}>{it.label}</span>
                     </td>
-                    <td data-label="Estado">
+                    <td data-label="Estado" className="c-pill">
                       <span className="badge-pill" style={{ color: st.color, background: `${st.color}18` }}>
                         {st.label}
                       </span>
                     </td>
                     <td
                       data-label="Último mensaje"
-                      className="muted"
+                      className={`muted c-fila c-recorte ${l.ultimoMensaje ? '' : 'c-vacio'}`}
                       style={{
                         maxWidth: 220,
                         overflow: 'hidden',
@@ -269,7 +271,7 @@ export default function Leads() {
                       `field_key`. Se enseña con la clave delante porque la
                       elige el dueño: sin ella, un "3" suelto no dice nada.
                     */}
-                    <td data-label="Datos">
+                    <td data-label="Datos" className={`c-fila ${Object.keys(l.datos).length ? '' : 'c-vacio'}`}>
                       {Object.keys(l.datos).length === 0 ? (
                         <span className="muted">—</span>
                       ) : (
@@ -283,7 +285,7 @@ export default function Leads() {
                         </div>
                       )}
                     </td>
-                    <td data-label="Alta" className="muted">{cuando(l.creado)}</td>
+                    <td data-label="Alta" className="muted c-dcha">{cuando(l.creado)}</td>
                     <td data-label="" style={{ textAlign: 'right' }}>
                       <Link className="btn btn-ghost btn-sm" href={`/panel/mensajes?lead=${l.id}`}>
                         <MessageCircle size={14} /> Ver chat

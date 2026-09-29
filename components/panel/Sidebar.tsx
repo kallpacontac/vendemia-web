@@ -5,6 +5,7 @@
  * public/assets/data.js (renderSidebar), pero con rutas de Next, el ítem
  * activo resuelto desde la URL y el logout de verdad.
  */
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
@@ -13,20 +14,24 @@ import {
   LayoutDashboard,
   LogOut,
   MessageCircle,
+  MoreHorizontal,
   Package,
   Percent,
   Receipt,
   Send,
   Settings,
-  Sparkles,
   UserCog,
   Users,
   Wallet,
 } from 'lucide-react';
 import { useSesion } from './Sesion';
+import { useCargar } from './useCargar';
 import { esRutaGlobal } from '@/lib/panel/rutas';
 import { esAppointmentFamily, esCita, esEcommerce } from '@/lib/panel/modo';
 import { vocabulario } from '@/lib/panel/vocabulario';
+import { estadoConsumo } from '@/lib/panel/consumo';
+import { PLANES, miles } from '@/lib/planes';
+import { getConsumo } from '@/lib/supabase/queries';
 import type { BusinessMode } from '@/lib/supabase/types';
 
 const NAV = [
@@ -51,6 +56,26 @@ const NAV = [
 ];
 
 /**
+ * ══════════════════════════════════════════════════════════════════════════
+ * MÓVIL · cuatro fijas y «Más»
+ * ══════════════════════════════════════════════════════════════════════════
+ *
+ * En el teléfono la barra baja al pie. Con las once entradas en fila tocaban a
+ * 35 px cada una, con rótulos de 9 px, y Caja, Catálogo, Métricas y Ajustes
+ * quedaban fuera de la pantalla detrás de un scroll lateral que nada indicaba.
+ *
+ * Se quedan a la vista las cuatro que se usan de pie en el local, y el resto
+ * va en una hoja que abre «Más». En escritorio no cambia nada: la hoja y el
+ * botón solo se ven por debajo de 820 px (panel.css).
+ *
+ * La tercera es Agenda o, en una tienda (que no tiene agenda), Pedidos.
+ */
+const FIJAS_MOVIL = ['/panel', '/panel/mensajes', '/panel/agenda', '/panel/pedidos', '/panel/caja'];
+const MAX_FIJAS_MOVIL = 4;
+
+type Entrada = (typeof NAV)[number];
+
+/**
  * @param soloGlobal admin de plataforma sin membresías: solo puede abrir las
  *        pantallas que no dependen de una compañía. Enseñarle las otras siete
  *        sería ofrecerle siete pantallas en blanco. Ver lib/panel/rutas.ts.
@@ -71,6 +96,10 @@ export default function Sidebar({
 }) {
   const ruta = usePathname();
   const { salir } = useSesion();
+  const [masAbierto, setMasAbierto] = useState(false);
+
+  // Al cambiar de pantalla la hoja se cierra: ya cumplió.
+  useEffect(() => setMasAbierto(false), [ruta]);
 
   const nav = NAV.filter((n) => {
     if (soloGlobal) return esRutaGlobal(n.href);
@@ -80,6 +109,41 @@ export default function Sidebar({
     return n.sirveA(modo);
   });
 
+  const fijas = new Set(
+    nav
+      .filter((n) => FIJAS_MOVIL.includes(n.href))
+      .slice(0, MAX_FIJAS_MOVIL)
+      .map((n) => n.href),
+  );
+  const extra = nav.filter((n) => !fijas.has(n.href));
+  // El dashboard es prefijo de todo lo demás: solo coincide exacto.
+  const esActivo = (href: string) => (href === '/panel' ? ruta === '/panel' : ruta.startsWith(href));
+  // Estando en una de las de «Más», es «Más» la que se ilumina: si no, en la
+  // barra del teléfono no se vería dónde estás.
+  const extraActiva = extra.some((n) => esActivo(n.href));
+
+  const pintar = ({ href, icon: Icono, label: fijo }: Entrada, enHoja = false) => {
+    // «Agenda» en una barbería, «Clases» en una academia. Ver lib/panel/vocabulario.
+    const label = href === '/panel/agenda' ? vocabulario(modo).agenda : fijo;
+    const clases = [
+      'nav-item',
+      esActivo(href) ? 'active' : '',
+      // En la barra del teléfono solo se ven las fijas; el resto, en la hoja.
+      !enHoja && !fijas.has(href) ? 'nav-item--extra' : '',
+    ]
+      .filter(Boolean)
+      .join(' ');
+    return (
+      <Link key={href} href={href} className={clases}>
+        <span className="ico">
+          <Icono size={18} />
+        </span>
+        <span>{label}</span>
+        {href === '/panel/mensajes' && pendientes > 0 && <span className="badge">{pendientes}</span>}
+      </Link>
+    );
+  };
+
   return (
     <aside className="sidebar">
       <div className="sidebar__brand">
@@ -88,46 +152,75 @@ export default function Sidebar({
       </div>
 
       <nav className="sidebar__nav">
-        {nav.map(({ href, icon: Icono, label: fijo }) => {
-          // «Agenda» en una barbería, «Clases» en una academia. Ver lib/panel/vocabulario.
-          const label = href === '/panel/agenda' ? vocabulario(modo).agenda : fijo;
-          // El dashboard es prefijo de todo lo demás: solo coincide exacto.
-          const activo = href === '/panel' ? ruta === '/panel' : ruta.startsWith(href);
-          return (
-            <Link key={href} href={href} className={`nav-item ${activo ? 'active' : ''}`}>
-              <span className="ico">
-                <Icono size={18} />
-              </span>
-              <span>{label}</span>
-              {href === '/panel/mensajes' && pendientes > 0 && (
-                <span className="badge">{pendientes}</span>
-              )}
-            </Link>
-          );
-        })}
+        {nav.map((n) => pintar(n))}
+        {extra.length > 0 && (
+          <button
+            type="button"
+            className={`nav-item nav-mas ${extraActiva || masAbierto ? 'active' : ''}`}
+            aria-expanded={masAbierto}
+            aria-controls="nav-hoja"
+            onClick={() => setMasAbierto((v) => !v)}
+          >
+            <span className="ico">
+              <MoreHorizontal size={18} />
+            </span>
+            <span>Más</span>
+          </button>
+        )}
       </nav>
 
+      {masAbierto && (
+        <>
+          <div className="nav-velo" onClick={() => setMasAbierto(false)} aria-hidden="true" />
+          <nav id="nav-hoja" className="nav-hoja" aria-label="Más secciones">
+            {extra.map((n) => pintar(n, true))}
+          </nav>
+        </>
+      )}
+
       <div className="sidebar__foot">
-        {/* El anuncio lleva a /panel/metricas, que el admin de plataforma no
-            puede abrir: sería un botón que devuelve a esta misma pantalla. Y de
-            todas formas el reclamo comercial no es para él. */}
-        {!soloGlobal && (
-          <div className="sidebar__promo">
-            <div className="ic">
-              <Sparkles size={22} />
-            </div>
-            <p>
-              Desbloquea reportes y automatizaciones con <b>Vendemia Pro</b>
-            </p>
-            <Link href="/panel/metricas">
-              <button type="button">Descubrir Pro</button>
-            </Link>
-          </div>
-        )}
+        {/* El admin de plataforma no tiene plan propio: no se le enseña. */}
+        {!soloGlobal && <TuPlan />}
         <div className="sidebar__logout" onClick={() => void salir()}>
           <LogOut size={18} /> Cerrar sesión
         </div>
       </div>
     </aside>
+  );
+}
+
+/**
+ * ══════════════════════════════════════════════════════════════════════════
+ * TU PLAN · donde estaba el anuncio de «Vendemia Pro»
+ * ══════════════════════════════════════════════════════════════════════════
+ *
+ * «Vendemia Pro» no existe: los planes son Starter, Seller y Best Seller. El
+ * hueco se usa para lo que sí le sirve al dueño a diario: qué plan tiene y
+ * cuánto lleva del mes. Mismo cálculo que la tarjeta del dashboard
+ * (lib/panel/consumo.ts), así que no pueden contar cosas distintas.
+ *
+ * Mientras el bot no cree `consumo_mensual`, getConsumo devuelve null y aquí no
+ * se pinta nada: mejor un hueco que otro anuncio de algo que no existe.
+ */
+function TuPlan() {
+  const { companyId } = useSesion();
+  const { datos } = useCargar(
+    async () => (companyId ? getConsumo(companyId).catch(() => null) : null),
+    [companyId],
+  );
+  if (!datos) return null;
+  const e = estadoConsumo(datos);
+
+  return (
+    <Link href="/panel" className={`sidebar__plan ${e.nivel !== 'ok' ? 'sidebar__plan--alerta' : ''}`}>
+      <small>Tu plan</small>
+      <b>{PLANES[datos.plan].nombre}</b>
+      <span className="sidebar__plan-barra" aria-hidden="true">
+        <i style={{ width: `${e.pct}%` }} />
+      </span>
+      <small>
+        {miles(e.delPlan)} de {miles(e.tope)} conversaciones
+      </small>
+    </Link>
   );
 }

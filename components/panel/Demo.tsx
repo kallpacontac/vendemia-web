@@ -20,7 +20,7 @@ import { alternarDemo, demoActivo } from '@/lib/panel/demo';
  * el render daría un HTML distinto al del cliente y React se quejaría de la
  * hidratación, así que se resuelve después de montar.
  */
-function useDemo(): boolean | null {
+export function useDemo(): boolean | null {
   const [activo, setActivo] = useState<boolean | null>(null);
   useEffect(() => setActivo(demoActivo()), []);
   return activo;
@@ -45,10 +45,15 @@ export function BandaDemo() {
   );
 }
 
-/** El interruptor, para la barra superior. */
+/**
+ * En la barra superior SOLO mientras la demo está encendida, para salir de un
+ * toque. Apagada vive en el menú de la cuenta (Topbar.tsx): era un botón en la
+ * cabecera de todas las pantallas de todos los dueños, para algo que usa quien
+ * enseña el panel — y en el teléfono se comía media fila.
+ */
 export function BotonDemo() {
   const activo = useDemo();
-  if (activo === null) return null;
+  if (!activo) return null;
 
   return (
     <button

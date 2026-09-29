@@ -15,10 +15,11 @@
  * teléfono delante.
  */
 import { useEffect, useRef, useState } from 'react';
-import { Bell, ChevronDown, LogOut } from 'lucide-react';
+import { Bell, ChevronDown, FlaskConical, LogOut } from 'lucide-react';
 import { useSesion } from './Sesion';
 import { necesitaEmparejar, useSalud } from './Salud';
-import { BotonDemo } from './Demo';
+import { BotonDemo, useDemo } from './Demo';
+import { alternarDemo } from '@/lib/panel/demo';
 
 /**
  * Silencio mientras todo va bien: devuelve `null` en todos los casos menos
@@ -77,6 +78,7 @@ function MenuCuenta({ email, pie }: { email: string; pie: string }) {
   const { salir } = useSesion();
   const [abierto, setAbierto] = useState(false);
   const caja = useRef<HTMLDivElement>(null);
+  const demo = useDemo();
 
   /* Se cierra al pulsar fuera o con Escape: un menú que solo se cierra con su
      propio botón se queda abierto encima de lo que quieras mirar después. */
@@ -124,6 +126,21 @@ function MenuCuenta({ email, pie }: { email: string; pie: string }) {
             <b>{email || 'Cuenta'}</b>
             <small>{pie}</small>
           </div>
+          {/* El interruptor de la demo vive aquí y no en la cabecera: es de
+              quien enseña el panel, no del día a día del dueño. Encendida, la
+              cabecera enseña además «Salir de demo» (BotonDemo). */}
+          <button
+            type="button"
+            role="menuitem"
+            className="menu-cuenta__item"
+            title="Llena el panel con datos de ejemplo para enseñarlo. No toca la base de datos."
+            onClick={() => {
+              setAbierto(false);
+              alternarDemo();
+            }}
+          >
+            <FlaskConical size={16} /> {demo ? 'Salir del modo demo' : 'Modo demo'}
+          </button>
           <button
             type="button"
             role="menuitem"
