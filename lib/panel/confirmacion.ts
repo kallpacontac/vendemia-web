@@ -78,6 +78,13 @@ const PENDIENTE_CUMPLIDO: Sello = {
   ayuda: 'Todavía no se sabe si vino.',
 };
 
+const SIN_COBRO_APUNTADO: Sello = {
+  grado: 'pendiente',
+  label: 'Sin cobro apuntado',
+  color: '#B26B00',
+  ayuda: 'No consta con qué se pagó: ni Mia verificó un comprobante ni se apuntó desde el panel.',
+};
+
 /**
  * ¿Cómo de fiable es «esto está cobrado»?
  *
@@ -89,6 +96,20 @@ const PENDIENTE_CUMPLIDO: Sello = {
 export function selloPagado(tipo: Tipo, estado: string | null, pagadoPor: string | null): Sello {
   const cobrado = tipo === 'order' ? PEDIDO_COBRADO : CITA_COBRADA;
   if (!estado || !cobrado.has(estado)) return PENDIENTE_PAGO;
+
+  /**
+   * ⚠️ UNA CITA SIN `pagado_por` NO ESTÁ COBRADA, aunque esté confirmada.
+   *
+   * Aquí caía en «Cobrado · no consta quién», heredado de cuando una cita solo
+   * pasaba a `confirmed` pagando. En una barbería que cobra en el local nace
+   * `confirmed` sin que nadie haya pagado, así que la Agenda enseñaba
+   * «Cobrado» y, al lado, el botón «Cobrada» — y la Caja la listaba en «sin
+   * cobro apuntado». Tres pantallas, dos respuestas. Manda la de la Caja
+   * (cobroPorApuntar, lib/panel/metodosPago.ts).
+   *
+   * Los pedidos NO: `paid` sí significa cobrado, conste o no quién lo dijo.
+   */
+  if (tipo === 'appointment' && !pagadoPor) return SIN_COBRO_APUNTADO;
 
   switch (pagadoPor) {
     case 'voucher':
@@ -154,9 +175,15 @@ export function selloCumplido(tipo: Tipo, estado: string | null, cumplidoPor: st
   }
 }
 
-/** ¿Merece la pena enseñar el botón de cobrar? */
+/**
+ * ¿Merece la pena enseñar el botón de cobrar? Mira SOLO el estado.
+ *
+ * No pasa por selloPagado a propósito: con `pagadoPor` en null, toda cita sale
+ * «Sin cobro apuntado», y la Agenda metería en «Ya pasaron» cada cita atendida
+ * para siempre. Para citas, el botón lo decide cobroPorApuntar.
+ */
 export const faltaCobrar = (tipo: Tipo, estado: string | null): boolean =>
-  selloPagado(tipo, estado, null).grado === 'pendiente';
+  !(tipo === 'order' ? PEDIDO_COBRADO : CITA_COBRADA).has(estado ?? '');
 
 /**
  * ¿Pide esta fila que alguien la mire?
