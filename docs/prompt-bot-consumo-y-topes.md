@@ -75,6 +75,9 @@ perder.
 -- 0036_consumo_y_recargas.sql
 
 -- ── 1 · El plan de cada negocio ──────────────────────────────────────────────
+-- ⚠️ YA EXISTE desde 0001_schema.sql (y en SQLite), `text not null default 'starter'`,
+-- y los cinco negocios están en 'starter' (comprobado el 29-sep). Los valores coinciden con
+-- los del panel. El `if not exists` hace que esta línea no haga nada; se deja solo el comentario.
 -- Los TOPES no van aquí: viven en código (bot y web). Aquí solo qué plan tiene.
 alter table public.companies add column if not exists plan text not null default 'starter';
 comment on column public.companies.plan is
