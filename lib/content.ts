@@ -1025,7 +1025,7 @@ export const USE_CASES = {
  *     Decían "para empezar a vender", "el más popular", "para escalar". Eso
  *     obliga a leer las tres columnas enteras y comparar specs para saber cuál
  *     te toca. Ahora dicen "para el que atiende solo", "para el que ya no da
- *     abasto", "para el que tiene más de un local": el lector se reconoce en
+ *     abasto", "para el que ya tiene equipo": el lector se reconoce en
  *     una línea y deja de comparar. "El más popular" además no informaba de
  *     nada — es presión social, y ya la da el borde iluminado de la tarjeta.
  *
@@ -1062,11 +1062,29 @@ export const PRICING = {
       // Ahora abre WhatsApp con el plan ya nombrado, asi que la conversacion
       // empieza en "quiero Starter" y no en "hola, informacion".
       waMessage: 'Hola 👋 Quiero el plan Starter de Vendemia (S/89 al mes) para mi negocio.',
+      // ⚠️ specs[0] SIEMPRE es el tope de conversaciones: PlanJourney.tsx lo
+      // enseña solo, como resumen del plan elegido.
+      //
+      // LOS TOPES SALEN DEL COSTO MEDIDO, NO DE LA COMPETENCIA. Una
+      // conversación (un cliente, un día) cuesta ~S/0,05 de IA de media y
+      // S/0,10 en el caso malo (usage_log, sep-2026). Regla: con el caso malo,
+      // el tope entero no se come más de la mitad del precio. Por eso
+      // Best Seller dejó de ser "ilimitado": un solo número con spam lo
+      // ponía en pérdida.
       specs: [
         { icon: 'chat', label: 'Hasta 300 conversaciones/mes' },
-        { icon: 'shield', label: 'Objeciones automáticas' },
-        { icon: 'calendar', label: 'Agenda de citas' },
-        { icon: 'chart', label: 'Resumen diario y panel básico', tooltip: 'El resumen llega a tu WhatsApp cada noche.' },
+        { icon: 'shield', label: 'Vende y maneja objeciones 24/7' },
+        { icon: 'calendar', label: 'Agenda citas, reservas y pedidos' },
+        { icon: 'chart', label: 'Resumen diario en tu WhatsApp', tooltip: 'Llega cada mañana a las 8, con lo que pasó ayer.' },
+        { icon: 'check', label: 'Entiende audios y fotos' },
+        { icon: 'check', label: 'Te pasa la conversación cuando hace falta' },
+      ],
+      // LO QUE VIENE SE ENSEÑA SEPARADO Y CON SU ETIQUETA. Mezclarlo con lo que
+      // ya funciona es prometer algo que un cliente de hoy no recibe.
+      pronto: [
+        'Tu catálogo en un enlace para Instagram',
+        'Reporte mensual de lo que vendió Mia',
+        'Zonas y costo de envío',
       ],
     },
     {
@@ -1075,27 +1093,56 @@ export const PRICING = {
       featured: true,
       cta: 'Empiezo con Seller',
       waMessage: 'Hola 👋 Quiero el plan Seller de Vendemia (S/149 al mes) para mi negocio.',
+      incluye: 'Todo lo de Starter, y además:',
       specs: [
-        { icon: 'chat', label: 'Hasta 800 conversaciones/mes' },
-        { icon: 'shield', label: 'Seguimiento inteligente 24h' },
-        { icon: 'calendar', label: 'Remarketing automático' },
-        { icon: 'chart', label: 'Panel en vivo y soporte prioritario', tooltip: 'Incluye todo lo de Starter.' },
+        { icon: 'chat', label: 'Hasta 700 conversaciones/mes' },
+        { icon: 'shield', label: 'Seguimiento a quien dejó de responder' },
+        // Decía "Remarketing automático", y la regla del bot es la contraria:
+        // nada sale a WhatsApp sin que lo mande una persona. Hoy lo trabaja
+        // nuestro equipo a mano, y eso es lo que se promete.
+        { icon: 'calendar', label: 'Remarketing a quien no compró', tooltip: 'Detectamos a quién escribirle y con qué mensaje, y lo trabajamos contigo.' },
+        { icon: 'check', label: 'Verifica pagos de Yape y Plin', tooltip: 'Revisa la foto del voucher antes de confirmar.' },
+        { icon: 'check', label: 'Avisa cuando se libera un cupo o vuelve el stock' },
+        { icon: 'chart', label: 'Métricas: de dónde vienen y cuánto vendes' },
+        { icon: 'check', label: 'Lo que Mia no supo contestar, para completarlo' },
+      ],
+      pronto: [
+        'Adelanto por Yape para reservar',
+        'Pedir reseñas en Google tras la visita',
+        'Tarjeta de sellos y saludos de cumpleaños',
+        'Lista de espera para horarios llenos',
+        'Exportar a Excel para tu contador',
       ],
     },
     {
-      header: 'Best Seller · para el que tiene más de un local',
+      // Decía "para el que tiene más de un local", pero varias sedes todavía
+      // no existe. Lo que sí tiene hoy es todo lo de manejar a un equipo.
+      header: 'Best Seller · para el que ya tiene equipo',
       price: 189,
       featured: false,
       cta: 'Empiezo con Best Seller',
       waMessage: 'Hola 👋 Quiero el plan Best Seller de Vendemia (S/189 al mes) para mi negocio.',
+      incluye: 'Todo lo de Seller, y además:',
       specs: [
-        { icon: 'chat', label: 'Conversaciones ilimitadas' },
-        { icon: 'shield', label: 'Multi-negocio en un panel' },
-        { icon: 'calendar', label: 'Integración con Yape y Plin' },
-        { icon: 'chart', label: 'Informes y onboarding a medida', tooltip: 'Incluye todo lo de Seller.' },
+        { icon: 'chat', label: 'Hasta 1.000 conversaciones/mes' },
+        { icon: 'calendar', label: 'Equipo con horarios y ausencias' },
+        { icon: 'check', label: 'Comisiones por profesional' },
+        { icon: 'chart', label: 'Caja del día con gastos' },
+        { icon: 'shield', label: 'Avisos al dueño y al administrador' },
+        { icon: 'check', label: 'Onboarding a medida', tooltip: 'Cargamos tu catálogo y tus horarios contigo.' },
+      ],
+      pronto: [
+        'Boletas y facturas electrónicas',
+        'Varias sedes en un solo panel',
+        'Instagram y Messenger con la misma Mia',
+        'Cobro con tarjeta por enlace',
       ],
     },
   ],
+  prontoLabel: 'Próximamente',
+  // Más caras por conversación que el plan siguiente, a propósito: quien
+  // recarga seguido encuentra que subir de plan le sale mejor.
+  recargas: '¿Te quedas corto? Recargas de +100 conversaciones por S/19, +300 por S/49 o +1.000 por S/129. Mia nunca corta una venta a medias.',
   footnote: 'Garantía de reembolso 30 días · Sin costo de instalación · Cancela cuando quieras',
 } as const;
 

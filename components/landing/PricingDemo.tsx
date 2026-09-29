@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import gsap from 'gsap';
-import { MessageSquare, ShieldCheck, CalendarCheck, BarChart3, Info } from 'lucide-react';
+import { MessageSquare, ShieldCheck, CalendarCheck, BarChart3, Check, Clock, Info } from 'lucide-react';
 import RevealHeading from '@/components/RevealHeading';
 import { PRICING, RELATED } from '@/lib/content';
 import { registerGsap, prefersReducedMotion, DIRECTIONAL_CUBIC } from '@/lib/motion';
@@ -25,6 +25,7 @@ const ICONS = {
   shield: ShieldCheck,
   calendar: CalendarCheck,
   chart: BarChart3,
+  check: Check,
 } as const;
 
 export default function Pricing({ startPath = '/empezar' }: { startPath?: string }) {
@@ -140,7 +141,7 @@ export default function Pricing({ startPath = '/empezar' }: { startPath?: string
           {PRICING.subtitle}
         </p>
 
-        <div ref={root} className="mt-14 grid grid-cols-1 items-center gap-6 md:grid-cols-2 lg:grid-cols-3">
+        <div ref={root} className="mt-14 grid grid-cols-1 items-stretch gap-6 md:grid-cols-2 lg:grid-cols-3">
           {PRICING.plans.map((plan, i) => (
             <div
               key={plan.header}
@@ -176,15 +177,24 @@ export default function Pricing({ startPath = '/empezar' }: { startPath?: string
 
               <hr className="my-6 border-0 border-t" style={{ borderColor: 'var(--border-dark)' }} />
 
-              <ul className="space-y-4 pb-8">
+              {/* Desde Seller la lista empieza con "Todo lo de…": sin esa línea,
+                  seis puntos por tarjeta parecen planes distintos y no
+                  escalones, y el lector compara columnas enteras. */}
+              {'incluye' in plan && plan.incluye && (
+                <p className="mb-4 text-[13px] font-medium" style={{ color: 'var(--text-hi)' }}>
+                  {plan.incluye}
+                </p>
+              )}
+
+              <ul className="space-y-4 pb-6">
                 {plan.specs.map((spec) => {
                   const Icon = ICONS[spec.icon as keyof typeof ICONS];
                   return (
-                    <li key={spec.label} className="flex items-center gap-3 text-[14px]">
-                      <Icon size={16} style={{ color: 'var(--text-low)' }} />
+                    <li key={spec.label} className="flex items-start gap-3 text-[14px] leading-[1.45]">
+                      <Icon size={16} className="mt-[2px] shrink-0" style={{ color: 'var(--text-low)' }} />
                       <span style={{ color: 'var(--text-mid)' }}>{spec.label}</span>
                       {'tooltip' in spec && spec.tooltip && (
-                        <span className="group relative inline-flex" tabIndex={0}>
+                        <span className="group relative mt-[3px] inline-flex shrink-0" tabIndex={0}>
                           <Info size={13} style={{ color: 'var(--text-low)' }} />
                           <span
                             role="tooltip"
@@ -203,6 +213,25 @@ export default function Pricing({ startPath = '/empezar' }: { startPath?: string
                   );
                 })}
               </ul>
+
+              {/* Lo que viene va aparte, más apagado y con su etiqueta: el
+                  lector ve hacia dónde crece el plan sin confundirlo con lo
+                  que recibe el primer día. */}
+              {plan.pronto.length > 0 && (
+                <div className="mb-8 rounded-icon border border-dashed p-4" style={{ borderColor: 'var(--border-dark)' }}>
+                  <p className="flex items-center gap-2 text-[12px] font-medium uppercase tracking-[0.08em]" style={{ color: 'var(--text-mid)' }}>
+                    <Clock size={13} aria-hidden="true" />
+                    {PRICING.prontoLabel}
+                  </p>
+                  <ul className="mt-3 space-y-2">
+                    {plan.pronto.map((item) => (
+                      <li key={item} className="text-[13px] leading-[1.45]" style={{ color: 'var(--text-mid)' }}>
+                        {item}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
 
               <Link
                 href={`${startPath}?plan=${PLAN_SLUGS[i]}&moneda=${cur.code}`}
@@ -224,7 +253,10 @@ export default function Pricing({ startPath = '/empezar' }: { startPath?: string
 
         {/* --text-mid: sobre el negro de esta sección, --text-low da 3.94 y
             suspende AA. Ver la misma nota en Hero.tsx. */}
-        <p className="mt-10 text-center text-[13px]" style={{ color: 'var(--text-mid)' }}>
+        <p className="mx-auto mt-10 max-w-[620px] text-center text-[14px]" style={{ color: 'var(--text-mid)' }}>
+          {PRICING.recargas}
+        </p>
+        <p className="mt-3 text-center text-[13px]" style={{ color: 'var(--text-mid)' }}>
           {PRICING.footnote}
         </p>
 
