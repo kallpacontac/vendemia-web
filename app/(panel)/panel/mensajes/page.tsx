@@ -30,7 +30,7 @@
  */
 import { Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { AlertTriangle, Check, MessageSquarePlus, Pencil, Search, Send } from 'lucide-react';
+import { AlertTriangle, Check, ChevronLeft, MessageSquarePlus, Pencil, Search, Send } from 'lucide-react';
 import { useSesion } from '@/components/panel/Sesion';
 import { useComando } from '@/components/panel/Avisos';
 import { useCargar } from '@/components/panel/useCargar';
@@ -122,6 +122,16 @@ function Mensajes() {
   const [filtro, setFiltro] = useState<Filtro>('all');
   const [busqueda, setBusqueda] = useState('');
   const [activoId, setActivoId] = useState<string | null>(null);
+  /**
+   * SOLO MÓVIL: ¿se ve el chat (true) o la lista (false)?
+   *
+   * En escritorio lista y chat van lado a lado y esto no pinta nada. En el
+   * teléfono no caben los dos, y la lista estaba con display:none: el dueño
+   * veía el chat que se abría solo y no tenía forma de ir a otro, ni de pulsar
+   * «Nuevo». Ahora el móvil funciona como WhatsApp: lista, tocas, chat, atrás.
+   * `activoId` se sigue eligiendo solo, para que el escritorio no cambie.
+   */
+  const [enChat, setEnChat] = useState(false);
   const [mensajes, setMensajes] = useState<Mensaje[]>([]);
   /** El chat abierto AHORA, para que una respuesta que llega tarde no se pinte en otro. */
   const activoIdRef = useRef<string | null>(null);
@@ -193,6 +203,8 @@ function Mensajes() {
   useEffect(() => {
     if (activoId || !leads.length) return;
     setActivoId(leads.find((l) => l.id === leadDeLaUrl)?.id ?? leads[0].id);
+    // Si vino desde Leads con «Ver chat», quería ESE chat, no la lista.
+    if (leadDeLaUrl && leads.some((l) => l.id === leadDeLaUrl)) setEnChat(true);
   }, [leads, leadDeLaUrl, activoId]);
 
   useEffect(() => {
@@ -211,6 +223,7 @@ function Mensajes() {
     setBusqueda('');
     if (leadId) setActivoId(leadId);
     else setTelPendiente(phone);
+    setEnChat(true);
     recargarBandeja();
   }
 
@@ -415,7 +428,7 @@ function Mensajes() {
 
   return (
     <main className="main main--inbox">
-      <div className="inbox">
+      <div className={`inbox ${enChat ? 'inbox--chat' : ''}`}>
         {/* ── LISTA ── */}
         <div className="list">
           <div className="list__head">
@@ -477,7 +490,10 @@ function Mensajes() {
                 <div
                   key={l.id}
                   className={`citem ${activoId === l.id ? 'active' : ''}`}
-                  onClick={() => setActivoId(l.id)}
+                  onClick={() => {
+                    setActivoId(l.id);
+                    setEnChat(true);
+                  }}
                 >
                   <div className="ava-ini" style={{ background: colorDe(l.id) }}>
                     {iniciales(l.name, l.phone)}
@@ -503,6 +519,10 @@ function Mensajes() {
         <div className="chat">
           <div className="chat__bar">
             <div className="chat__who">
+              {/* Solo se ve en el teléfono (panel.css): vuelve a la lista. */}
+              <button type="button" className="chat__volver" onClick={() => setEnChat(false)} aria-label="Volver a la lista de conversaciones">
+                <ChevronLeft size={20} />
+              </button>
               <div className="ava-ini" style={{ background: activo ? colorDe(activo.id) : '#ccc' }}>
                 {activo ? iniciales(activo.name, activo.phone) : '··'}
               </div>

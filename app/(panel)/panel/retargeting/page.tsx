@@ -185,8 +185,14 @@ export default function Retargeting() {
           herramienta de envío masivo en la cabeza de quien la usa.
         */}
         <p className="nota-envio">
-          <Send size={14} /> Los mensajes los envías <b>tú, uno a uno</b>. El botón abre WhatsApp con
-          el texto ya escrito; lo editas antes de enviar si quieres.
+          {/* El texto va en UN span: .nota-envio es flex, y suelto cada trozo
+              (texto, <b>, texto) era una columna aparte — en móvil salían
+              tres columnas estrechas en vez de una frase. */}
+          <Send size={14} />
+          <span>
+            Los mensajes los envías <b>tú, uno a uno</b>. El botón abre WhatsApp con el texto ya
+            escrito; lo editas antes de enviar si quieres.
+          </span>
         </p>
 
         <div className="toolbar">
