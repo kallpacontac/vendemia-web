@@ -52,6 +52,7 @@ import type {
   AppointmentRow,
   AppointmentServiceRow,
   GastoRow,
+  PendingPaymentRow,
   ConsumoMensualRow,
   RecargaRow,
   BusinessMode,
@@ -86,6 +87,7 @@ import type {
 } from './types';
 import { esPlan, PLAN_POR_DEFECTO } from '@/lib/planes';
 import type { Consumo } from '@/lib/panel/consumo';
+import { esInscripcionViva, ventasPorLead, type VentaLead } from '@/lib/panel/saldo';
 
 /* ── Compañías del usuario ──────────────────────────────────────────────── */
 
@@ -245,8 +247,15 @@ function aLead(l: LeadRow): Lead {
     creado: fecha(l.created_ts),
     // Se normaliza a string: el bot guarda números y booleanos tal cual salen
     // de la conversación, y una tabla no puede pintar un objeto.
+    //
+    // ⚠️ Las claves que empiezan por «_» son memoria interna del bot
+    // (`_grupos_ofrecidos`, `_alumnos`): JSON para el modelo, no datos del
+    // cliente. Salían en crudo en la ficha y en la columna «Datos». No se
+    // borran —editar la ficha solo envía lo que cambió—, solo no se enseñan.
     datos: Object.fromEntries(
-      Object.entries(json<Record<string, unknown>>(l.custom_data, {})).map(([k, v]) => [
+      Object.entries(json<Record<string, unknown>>(l.custom_data, {}))
+        .filter(([k]) => !k.startsWith('_'))
+        .map(([k, v]) => [
         k,
         typeof v === 'string' ? v : JSON.stringify(v),
       ]),
@@ -592,6 +601,35 @@ export async function getServiciosDeCitas(ids: string[]): Promise<AppointmentSer
     );
   }
   return lineas;
+}
+
+/**
+ * Las ventas de inscripciones con su saldo, por lead. Junta las tres piezas que
+ * hacen falta —inscripciones vivas, su precio congelado y los pagos— y deja la
+ * cuenta a lib/panel/saldo.ts, que es copia de la del bot.
+ *
+ * Recibe las citas ya cargadas (Agenda, Caja y Mensajes las tienen) para no
+ * pedirlas dos veces. Los pagos de pedidos se descartan aquí mismo.
+ */
+export async function getVentas(
+  companyId: string,
+  citas: Pick<AppointmentRow, 'id' | 'lead_id' | 'status' | 'slot_start' | 'created_at' | 'service' | 'beneficiario'>[],
+): Promise<Map<string, VentaLead>> {
+  const vivas = citas.filter(esInscripcionViva);
+  if (demoActivo() || vivas.length === 0) return new Map();
+  const [lineas, pagos] = await Promise.all([
+    getServiciosDeCitas(vivas.map((c) => c.id)),
+    supabase()
+      .from('pending_payments')
+      .select('id, lead_id, company_id, amount, operation_id, verified, created_at, order_id, appointment_id')
+      .eq('company_id', companyId)
+      .in('lead_id', [...new Set(vivas.map((c) => c.lead_id))])
+      .or('order_id.is.null,order_id.eq.')
+      .limit(2000),
+  ]);
+  if (pagos.error) throw pagos.error;
+  const filas = ((pagos.data ?? []) as PendingPaymentRow[]).map((p) => ({ ...p, amount: Number(p.amount ?? 0) }));
+  return ventasPorLead(vivas, lineas, filas);
 }
 
 /** Los gastos apuntados un día, para la caja. `importe` pasa por Number(): puede llegar como texto. */

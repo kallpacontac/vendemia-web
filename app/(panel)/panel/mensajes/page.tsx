@@ -43,6 +43,7 @@ import { useSondeo } from '@/components/panel/useSondeo';
 import {
   escucharMensajes,
   getCitas,
+  getVentas,
   getConversaciones,
   getEscalaciones,
   getMensajes,
@@ -57,6 +58,8 @@ import { colorDe, cuando, diaMes, hora, iniciales, intent, soles, telefono } fro
 import { selloCumplido } from '@/lib/panel/confirmacion';
 import { esIngreso, suma } from '@/lib/panel/dinero';
 import { haceCuanto, paraQuien, personasDe, separar } from '@/lib/panel/ficha';
+import type { VentaLead } from '@/lib/panel/saldo';
+import { SaldoDeFicha } from '@/components/panel/Saldos';
 import { esAppointmentFamily } from '@/lib/panel/modo';
 import { cap, vocabulario, type Vocabulario } from '@/lib/panel/vocabulario';
 import type { MovimientoRow } from '@/lib/supabase/types';
@@ -181,7 +184,10 @@ function Mensajes() {
       // sin nombres de profesional, pero la bandeja no se cae por eso.
       getTrabajadores(companyId).catch(() => []),
     ]);
-    return { citas, escalaciones, trabajadores };
+    // Lo que debe cada cliente por sus inscripciones (la seña reserva el
+    // cupo). Si falla, la ficha sale sin el bloque de pagos y nada más.
+    const ventas = await getVentas(companyId, citas).catch(() => new Map<string, VentaLead>());
+    return { citas, escalaciones, trabajadores, ventas };
   }, [companyId]);
 
   /**
@@ -723,6 +729,15 @@ function Mensajes() {
                 </>
               )
             ))}
+
+          {/* Solo con inscripciones vivas: sus alumnos, lo que pagó, lo que
+              debe y cada comprobante con su importe. Ver components/panel/Saldos. */}
+          {activo && datos?.ventas.get(activo.id) && (
+            <>
+              <h4>Pagos</h4>
+              <SaldoDeFicha v={datos.ventas.get(activo.id)} />
+            </>
+          )}
 
           {conCitas && (
             <>

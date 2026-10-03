@@ -57,6 +57,16 @@ export type TipoComando =
    */
   | 'marcar_seguimiento'
   /**
+   * Un pago CON IMPORTE de una inscripción (3-oct-2026): la seña en efectivo.
+   * `{ lead_id, monto > 0, metodo_pago?: yape|plin|bank_transfer|cash|cod
+   * (defecto cash), appointment_id? }`. El bot lo apunta en pending_payments,
+   * confirma los cupos y recalcula el saldo de la venta entera. Queda firmado
+   * como `panel`, no `voucher`. Reintentarlo no cobra dos veces (dedupe por id
+   * del comando; vuelve `duplicado: true`). Solo inscripciones: los pedidos
+   * siguen con marcar_pagado.
+   */
+  | 'registrar_pago'
+  /**
    * «Ya cobré esto», dicho por una persona. Ver ResultadoMarcarPagado.
    *
    * ⚠️ El estado al que lleva NO es el mismo en pedidos que en citas: un pedido

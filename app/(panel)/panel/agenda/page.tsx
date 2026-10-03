@@ -49,7 +49,8 @@ import { construirSemana, lunesDe } from '@/lib/panel/agenda';
 import { cap, vocabulario, type Vocabulario } from '@/lib/panel/vocabulario';
 import { cobroPorApuntar, etiquetaMetodo, type MetodoPago } from '@/lib/panel/metodosPago';
 import { BotonCobrar } from '@/components/panel/BotonCobrar';
-import { diaMes, ESTADO_CITA, hora as horaDe } from '@/lib/panel/format';
+import { diaMes, ESTADO_CITA, hora as horaDe, soles } from '@/lib/panel/format';
+import { estadoInscripcion, type EstadoInscripcion, type VentaLead } from '@/lib/panel/saldo';
 import {
   adelantada,
   claveGrupo,
@@ -71,6 +72,7 @@ import {
   getBloqueos,
   getCatalogo,
   getCitas,
+  getVentas,
   getCompania,
   getLeads,
   getTrabajadores,
@@ -184,7 +186,10 @@ export default function Agenda() {
       getBloqueos(companyId).catch(() => []),
       getCatalogo(companyId),
     ]);
-    return { empresa, citas, leads, trabajadores, bloqueos, catalogo };
+    // El saldo de cada venta (la seña reserva el cupo). Solo hay algo que
+    // calcular con inscripciones recurrentes; si falla, la agenda sigue sin él.
+    const ventas = await getVentas(companyId, citas).catch(() => new Map<string, VentaLead>());
+    return { empresa, citas, leads, trabajadores, bloqueos, catalogo, ventas };
   }, [companyId]);
 
   const semana = useMemo(() => {
@@ -468,6 +473,7 @@ export default function Agenda() {
             catalogo={datos?.catalogo ?? []}
             citas={datos?.citas ?? []}
             nombrePorLead={new Map((datos?.leads ?? []).map((l) => [l.id, l.name || l.phone]))}
+            ventas={datos?.ventas ?? new Map()}
             alCambiar={recargar}
           />
         ) : (
@@ -750,11 +756,13 @@ function Recurrentes({
   catalogo,
   citas,
   nombrePorLead,
+  ventas,
   alCambiar,
 }: {
   catalogo: { id: string; name: string; schedule_slots: string | null }[];
   citas: Cita[];
   nombrePorLead: Map<string, string>;
+  ventas: Map<string, VentaLead>;
   alCambiar: () => void;
 }) {
   const DIAS = ['D', 'L', 'M', 'M', 'J', 'V', 'S'];
@@ -896,6 +904,11 @@ function Recurrentes({
                       {/* `service` ya dice el pack Y el nivel donde ocupa plaza:
                           «Pack Promo Cyber — 10 Clases (Nivel Básico / Pollito)». */}
                       {c.service && c.service !== f.servicio && <small className="muted">{c.service}</small>}
+                      {/* Tres estados, dos en la base: `confirmed` ya no es
+                          «cobrada», es «tiene el cupo». Con saldo = tiene el
+                          cupo y debe plata — el único caso en que hay que
+                          llamar a alguien. El saldo es de la VENTA del lead. */}
+                      <EstadoAlumno c={c} ventas={ventas} />
                       <small className="muted">
                         {c.status === 'pending_payment'
                           ? 'sin pagar'
@@ -957,6 +970,35 @@ interface Pendiente {
 }
 
 /** "2026-09-18 16:00" → "18 sep · 16:00". */
+const ESTADO_ALUMNO: Record<EstadoInscripcion, { label: string; color: string; fondo: string }> = {
+  por_pagar: { label: 'Por pagar', color: '#B26B00', fondo: '#FEF6E7' },
+  con_saldo: { label: 'Con saldo', color: '#C2410C', fondo: '#FFEDD5' },
+  confirmada: { label: 'Confirmada', color: '#0FA968', fondo: '#E8FBF2' },
+};
+
+/** La píldora de estado de un alumno, con la cifra cuando debe. Ver lib/panel/saldo.ts. */
+function EstadoAlumno({ c, ventas }: { c: Cita; ventas: Map<string, VentaLead> }) {
+  const estado = estadoInscripcion(c, ventas);
+  const e = ESTADO_ALUMNO[estado];
+  const debe = ventas.get(c.lead_id)?.saldo.saldo ?? 0;
+  return (
+    <span
+      className="badge-pill"
+      style={{ color: e.color, background: e.fondo }}
+      title={
+        estado === 'por_pagar'
+          ? 'No tiene cupo todavía: otro se lo puede llevar.'
+          : estado === 'con_saldo'
+            ? 'Tiene el cupo por la seña, y debe el resto. El saldo es de toda la venta de este cliente.'
+            : 'Pagada del todo.'
+      }
+    >
+      {e.label}
+      {estado === 'con_saldo' ? ` · debe ${soles(debe)}` : ''}
+    </span>
+  );
+}
+
 function textoSlot(slot: string): string {
   const d = parseSlot(slot);
   return d ? `${diaMes(d)} · ${horaDe(d)}` : slot;

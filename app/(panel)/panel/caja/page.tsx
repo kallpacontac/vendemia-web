@@ -35,6 +35,7 @@ import { useAvisar, useComando } from '@/components/panel/Avisos';
 import { useCargar } from '@/components/panel/useCargar';
 import { useVocabulario } from '@/components/panel/useVocabulario';
 import { BotonCobrar } from '@/components/panel/BotonCobrar';
+import { SaldosPendientes } from '@/components/panel/Saldos';
 import { diaMes, hora, isoLocal, soles, telefono } from '@/lib/panel/format';
 import { cobradoSinConstancia, entroEnCaja, suma } from '@/lib/panel/dinero';
 import { cobroPorApuntar, etiquetaMetodo, type MetodoPago } from '@/lib/panel/metodosPago';
@@ -135,6 +136,10 @@ export default function Caja() {
     <main className="main">
       <div className="wrap">
         <Topbar titulo="Caja" sub="Lo que entró, con qué, y lo que salió" />
+
+        {/* Encima del día y no dentro: un saldo no es de ningún día, es lo que
+            falta por entrar. Solo existe con inscripciones pagadas a medias. */}
+        <SaldosPendientes />
 
         <div className="filters" style={{ marginBottom: 16, alignItems: 'center' }}>
           <button type="button" className="btn btn-ghost btn-sm" onClick={() => setDia((d) => correr(d, -1))}>

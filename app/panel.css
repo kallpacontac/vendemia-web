@@ -1400,3 +1400,29 @@ body:has(.demo-banda) .sidebar{padding-top:44px}
   .table--tarjeta .acciones-fila{display:flex;flex-direction:row;align-items:stretch;gap:8px;width:100%}
   .table--tarjeta .acciones-fila .btn{flex:1;justify-content:center}
 }
+
+/* ── Saldos (la seña reserva el cupo, 3-oct-2026) · ver components/panel/Saldos.tsx ── */
+.saldos{margin-bottom:16px}
+.saldos__total{font-size:20px;font-weight:800;color:#C2410C}
+.saldos__lista{list-style:none;margin:0;padding:0}
+.saldos__fila{display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;padding:12px 0;border-top:1px solid var(--line)}
+.saldos__quien{flex:1 1 220px;min-width:0}
+.saldos__quien b{display:block;font-size:14px}
+.saldos__quien small{font-size:12px}
+.saldos__debe{color:#C2410C;font-size:14px;white-space:nowrap}
+.saldos__form{display:flex;flex-wrap:wrap;gap:8px;flex-basis:100%;align-items:center}
+.saldos__form .input{width:110px}
+.saldos__form .select{width:auto;min-width:150px}
+.saldo-ficha{margin-bottom:6px}
+.saldo-ficha__cifras{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-bottom:10px}
+.saldo-ficha__cifras span{background:var(--bg-soft);border-radius:10px;padding:8px 10px}
+.saldo-ficha__cifras small{display:block;font-size:11px;color:var(--ink-soft)}
+.saldo-ficha__cifras b{font-size:14px}
+.saldo-ficha__cifras .debe{background:#FFEDD5}
+.saldo-ficha__cifras .debe b{color:#C2410C}
+.saldo-ficha__lista{list-style:none;margin:0 0 8px;padding:0}
+.saldo-ficha__lista li{display:flex;justify-content:space-between;gap:10px;font-size:12.5px;padding:5px 0;border-top:1px solid var(--line)}
+.saldo-ficha__sub{display:block;font-size:11px;font-weight:700;color:var(--ink-mute);text-transform:uppercase;letter-spacing:.04em;margin:6px 0 2px}
+@media(max-width:560px){
+  .saldos__form .input,.saldos__form .select{flex:1;min-width:0}
+}

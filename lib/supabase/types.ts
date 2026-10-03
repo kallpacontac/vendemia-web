@@ -391,6 +391,27 @@ export interface AppointmentRow {
   metodo_pago?: string | null;
 }
 
+/**
+ * Un pago verificado (0001). Lo escribe el bot al verificar un voucher, o al
+ * aplicar `registrar_pago` desde el panel. `amount` puede llegar como texto
+ * (numeric de Postgres): se pasa por Number() al leerlo.
+ *
+ * `appointment_id` y `order_id` pueden venir VACÍOS: un voucher que no se pudo
+ * atribuir. Para el saldo de una inscripción esos cuentan igual (lib/panel/saldo.ts).
+ */
+export interface PendingPaymentRow {
+  id: string;
+  lead_id: string;
+  company_id: string;
+  amount: number;
+  operation_id: string | null;
+  verified: Bool01 | null;
+  /** epoch en segundos */
+  created_at: number | null;
+  order_id: string | null;
+  appointment_id: string | null;
+}
+
 export interface AppointmentServiceRow {
   id: string;
   appointment_id: string;
