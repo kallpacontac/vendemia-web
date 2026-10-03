@@ -9,6 +9,7 @@ del panel. Si buscas dónde tocar algo, es aquí.
 |---|---|---|
 | **La landing** | `app/(landing)/`, `components/`, `lib/content.ts` | React + Tailwind. Todo el copy está en `lib/content.ts`, nada suelto en el JSX. |
 | **El panel** | `app/(panel)/panel/*`, `app/(acceso)/login`, `components/panel/`, `app/panel.css` | React. Los datos salen de Supabase (`lib/supabase/`). |
+| **Fideliza** (tarjetas, placas NFC/QR, Google Wallet) | `modules/fideliza/` (todo el módulo; en `app/` solo quedan rutas que lo re-exportan) | Sus tablas NO son espejo del bot: escribe por RPC, no por `commands`. Empieza por [modules/fideliza/README.md](modules/fideliza/README.md). |
 | **El contrato con el bot** | `docs/contrato-backend.md` | **Copia**, sincronizada el 2026-08-19. El original vive en el repo del bot y gana siempre. Ya está desfasada en un punto: recomienda `sync_state.last_mirror_at`, y esa tabla se eliminó — ver la regla 3 más abajo. |
 | **El sitio publicado** | `out/` | **Generado**, y solo la landing. El sitio de verdad se despliega en Vercel. |
 

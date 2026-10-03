@@ -1,0 +1,38 @@
+/* La tarjeta web de Fideliza. Ligera a propósito: no carga panel.css.
+   --marca la pone el componente con el color (validado) del negocio. */
+.fz{--marca:#FF4900;--tinta:#0A0A0A;--suave:#5C5C5C;max-width:460px;margin:0 auto;padding:0 16px 40px;min-height:100vh;background:#F9F9F6;color:var(--tinta);font-family:'Plus Jakarta Sans',system-ui,sans-serif}
+.fz-cab{background:var(--marca);margin:0 -16px 16px;padding:28px 16px 24px;text-align:center;color:#1A0A00}
+.fz-cab h1{font-size:22px;font-weight:800;line-height:1.2;background:#fff;display:inline-block;padding:4px 12px;border-radius:12px}
+.fz-cab p{margin-top:8px;font-weight:600;background:rgba(255,255,255,.88);display:inline-block;padding:2px 10px;border-radius:10px}
+.fz-logo{width:72px;height:72px;border-radius:50%;object-fit:cover;border:3px solid #fff;background:#fff;display:block;margin:0 auto 10px}
+.fz-caja{background:#fff;border-radius:20px;box-shadow:0 6px 24px rgba(10,10,10,.06);padding:18px;margin-bottom:14px}
+.fz-centro{text-align:center}
+.fz-ok{border-left:5px solid #0FA968}
+.fz-alerta{border-left:5px solid #B26B00;background:#FFF8EC}
+.fz-grande{font-size:18px;font-weight:700;margin-bottom:6px}
+.fz-saldo{font-size:44px;font-weight:800;letter-spacing:-.02em;line-height:1.1}
+.fz-saldo span{font-size:18px;font-weight:700;color:var(--suave)}
+.fz-barra{height:12px;border-radius:99px;background:#EAEAE6;overflow:hidden;margin:12px 0 6px}
+.fz-barra i{display:block;height:100%;background:var(--marca);border-radius:99px}
+.fz-premio{margin:12px 0;padding:12px;border-radius:14px;background:#F1FBF6;border:1.5px solid #0FA968}
+.fz-qr{width:220px;max-width:70vw;margin:16px auto 4px;background:#fff;padding:6px;border-radius:12px;border:1px solid #EAEAE6}
+.fz-qr svg{display:block;width:100%;height:auto}
+.fz-codigo{font:800 22px ui-monospace,Consolas,monospace;letter-spacing:.08em;margin-top:4px}
+.fz-nota{color:var(--suave);font-size:14px;margin-top:6px}
+.fz-mini{color:#93938C;font-size:12.5px;margin-top:8px}
+.fz-link{background:none;border:none;color:#CC3A00;font:700 12.5px inherit;text-decoration:underline;cursor:pointer;padding:6px 2px}
+.fz-wallet{display:block;background:none;border:none;padding:8px 0;margin:0 auto;cursor:pointer;min-height:48px}
+.fz-wallet img{height:50px;width:auto;display:block}
+.fz-btn{display:flex;align-items:center;justify-content:center;width:100%;min-height:50px;margin-top:12px;border-radius:14px;border:1.5px solid #DEDED9;background:#fff;font:700 15px inherit;color:var(--tinta);cursor:pointer}
+.fz-btn:disabled{opacity:.55;cursor:default}
+.fz-peligro{color:#B4232A;border-color:#F3C7C9}
+.fz-check{display:flex;gap:10px;align-items:flex-start;font-size:14.5px;line-height:1.4}
+.fz-check input{width:22px;height:22px;flex-shrink:0;margin-top:2px}
+.fz-label{display:block;font-weight:700;font-size:13.5px;margin:14px 0 6px}
+.fz-input{width:100%;min-height:48px;border:1.5px solid #DEDED9;border-radius:12px;padding:10px 12px;font:500 16px inherit}
+.fz h2{font-size:16px;font-weight:800;margin-bottom:8px}
+.fz-movs{list-style:none;padding:0}
+.fz-movs li{display:grid;grid-template-columns:1fr auto auto;gap:10px;align-items:center;padding:10px 0;border-bottom:1px solid #EAEAE6;font-size:14px}
+.fz-movs li .fz-nota{margin:0;font-size:12.5px}
+.fz summary{font-weight:700;cursor:pointer;min-height:32px}
+.fz :focus-visible{outline:3px solid #0A0A0A;outline-offset:2px}

@@ -20,6 +20,8 @@
  * completos). La variable la pone el script de publicación, así que el modo de
  * desarrollo se queda exactamente como estaba.
  */
+import { cabecerasFideliza } from './modules/fideliza/cabeceras.mjs';
+
 const exportando = process.env.EXPORTAR_ESTATICO === '1';
 
 /**
@@ -89,6 +91,8 @@ async function cabeceras() {
     { source: '/login', headers: CABECERAS_PRIVADAS },
     { source: '/nueva-clave', headers: CABECERAS_PRIVADAS },
     { source: '/callback', headers: CABECERAS_PRIVADAS },
+    // Fideliza: tarjeta /m/, service worker y cámara en /panel. Ver el módulo.
+    ...cabecerasFideliza(CABECERAS_PRIVADAS),
   ];
 }
 

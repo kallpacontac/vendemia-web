@@ -460,3 +460,22 @@ exactamente lo que uno espera ver. Arreglado poniendo el Site URL en
 `https://vendemias.com` y las cuatro rutas exactas de 2.6.
 
 Cuando se active Google, la vuelta del login se habría roto por la misma causa.
+
+---
+
+## 6 · Fideliza: dos excepciones a lo de arriba, a propósito
+
+Fideliza (`/panel/fideliza`, `fideliza.vendemias.com`) no es espejo del bot:
+Postgres es la fuente de verdad del saldo. Detalle en
+[`modules/fideliza/sql/README.md`](modules/fideliza/sql/README.md).
+
+| Regla general | En Fideliza | Por qué es seguro |
+|---|---|---|
+| Toda escritura va por `commands` | Va por RPC `loyalty_*` (`SECURITY DEFINER`) llamadas desde `/api/fideliza/panel/*` con el JWT del usuario | Cada RPC empieza por `loyalty_require()` (membresía + rol + sucursal). `authenticated` sigue sin `INSERT/UPDATE/DELETE` en las tablas: el `REVOKE` de 0002 quita los grants por defecto de Supabase |
+| Sin servidor con privilegios | Las rutas públicas y el worker usan `loyalty_srv_*` con la cabecera `x-fideliza-key` | Esa clave solo abre esas funciones, que validan cada argumento; en la base solo está su SHA-256. **No es la `service_role`**, que sigue fuera de Vercel |
+| El panel no inyecta HTML | Los QR (`modules/fideliza/ui/Estados.tsx`, la tarjeta `/m/…`) se pintan con `dangerouslySetInnerHTML` | El SVG lo genera la librería `qrcode` a partir de un token nuestro de caracteres `[A-Za-z0-9_-]`. No entra texto de usuarios |
+
+Además: la cámara se permite en `/panel` (`camera=(self)`, para escanear en la
+caja); `/m/*` lleva `noindex`, `no-referrer` y `frame-ancestors 'none'`; y
+`npm run test:fideliza` falla si el nombre de un secreto aparece en
+`.next/static`.

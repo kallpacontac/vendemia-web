@@ -11,6 +11,7 @@ import { usePathname } from 'next/navigation';
 import {
   BarChart2,
   CalendarDays,
+  Gift,
   LayoutDashboard,
   LogOut,
   MessageCircle,
@@ -51,6 +52,9 @@ const NAV = [
   { href: '/panel/pedidos', icon: Receipt, label: 'Pedidos', sirveA: esEcommerce },
   { href: '/panel/caja', icon: Wallet, label: 'Caja' },
   { href: '/panel/catalogo', icon: Package, label: 'Catálogo' },
+  // Tarjetas de cliente, placas NFC/QR y Google Wallet. Tiene sus pestañas
+  // dentro (app/(panel)/panel/fideliza/layout.tsx). En el móvil va en «Más».
+  { href: '/panel/fideliza', icon: Gift, label: 'Fideliza' },
   { href: '/panel/metricas', icon: BarChart2, label: 'Métricas' },
   { href: '/panel/configuracion', icon: Settings, label: 'Ajustes' },
 ];

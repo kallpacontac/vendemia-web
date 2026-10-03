@@ -1,0 +1,43 @@
+/* Fideliza dentro del panel. Usa los tokens de panel.css (--brand, --line…);
+   aquí solo lo que el panel no tenía: pestañas, caja de una mano y avisos. */
+.fz-tabs{display:flex;gap:6px;overflow-x:auto;margin:0 0 18px;padding-bottom:4px;scrollbar-width:none}
+.fz-tabs a{flex-shrink:0;padding:9px 15px;border-radius:var(--r-full);font:700 13px 'Plus Jakarta Sans';color:var(--ink-soft);background:#fff;border:1.5px solid var(--line)}
+.fz-tabs a.active{background:var(--brand);border-color:var(--brand);color:var(--on-brand)}
+.fz-tabs a:focus-visible,.fz-gran:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
+.fz-panel-aviso{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:12px 14px;border-radius:14px;margin-bottom:14px;font-size:13.5px;background:#FFF8EC;border:1.5px solid #F4D9A8}
+.fz-panel-aviso--error{background:#FDEEEE;border-color:#F3C7C9}
+.fz-panel-aviso--ok{background:#ECF9F3;border-color:#BFE8D4}
+.fz-panel-aviso--info{background:var(--bg-soft);border-color:var(--line)}
+.fz-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;margin-bottom:16px}
+.fz-col2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.fz-fila{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.fz-campo{margin-bottom:14px}
+.fz-campo small{display:block;color:var(--ink-mute);font-size:12px;margin-top:5px}
+.fz-num{font-size:28px;font-weight:800;letter-spacing:-.02em}
+.fz-def{font-size:12px;color:var(--ink-mute);margin-top:6px;line-height:1.4}
+.fz-qr-panel{display:flex;flex-direction:column;align-items:center;gap:10px}
+.fz-qr-panel svg{width:100%;height:100%}
+.fz-lista{list-style:none;padding:0}
+.fz-lista li{display:flex;gap:12px;justify-content:space-between;align-items:center;padding:11px 0;border-bottom:1px solid var(--line);font-size:13.5px}
+.fz-lista li:last-child{border-bottom:none}
+.fz-mono{font-family:ui-monospace,Consolas,monospace;letter-spacing:.04em}
+.fz-pasos{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px}
+.fz-pasos button{border:1.5px solid var(--line);background:#fff;border-radius:var(--r-full);padding:8px 14px;font:700 12.5px 'Plus Jakarta Sans';color:var(--ink-soft);cursor:pointer}
+.fz-pasos button.active{border-color:var(--brand);color:var(--brand-txt);background:var(--brand-soft)}
+.fz-pasos button.done{color:#0A7A4B}
+.fz-prev{border-radius:18px;padding:18px;color:#1A0A00;max-width:340px}
+.fz-prev__logo{width:56px;height:56px;border-radius:50%;background:#fff;object-fit:cover;border:2px solid #fff}
+/* La caja: pensada para una mano, en el móvil. */
+.fz-caja{max-width:560px}
+.fz-gran{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;min-height:60px;border-radius:16px;border:none;font:800 17px 'Plus Jakarta Sans';cursor:pointer}
+.fz-gran:disabled{opacity:.5;cursor:default}
+.fz-gran--prim{background:var(--brand);color:var(--on-brand)}
+.fz-gran--sec{background:var(--ink);color:#fff}
+.fz-gran--ghost{background:#fff;border:1.5px solid var(--line-2);color:var(--ink)}
+.fz-video{width:100%;max-height:300px;border-radius:16px;background:#000;object-fit:cover}
+.fz-miembro{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
+.fz-saldo{font-size:40px;font-weight:800;letter-spacing:-.02em;line-height:1}
+.fz-barra{height:10px;border-radius:99px;background:var(--line);overflow:hidden;margin:10px 0 4px}
+.fz-barra i{display:block;height:100%;background:var(--brand)}
+.fz-input-gran{font-size:22px!important;font-weight:700;padding:14px!important;text-align:center}
+@media(max-width:820px){.fz-col2{grid-template-columns:1fr}.fz-tabs{margin-left:-4px;margin-right:-4px}}

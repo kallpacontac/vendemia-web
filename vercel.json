@@ -1,0 +1,3 @@
+{
+  "crons": [{ "path": "/api/fideliza/cron", "schedule": "0 14 * * *" }]
+}
