@@ -12,6 +12,7 @@ import {
   BarChart2,
   CalendarDays,
   Gift,
+  GraduationCap,
   LayoutDashboard,
   LogOut,
   MessageCircle,
@@ -28,7 +29,7 @@ import {
 import { useSesion } from './Sesion';
 import { useCargar } from './useCargar';
 import { esRutaGlobal } from '@/lib/panel/rutas';
-import { esAppointmentFamily, esCita, esEcommerce } from '@/lib/panel/modo';
+import { esAppointmentFamily, esCita, esEcommerce, esRecurrente } from '@/lib/panel/modo';
 import { vocabulario } from '@/lib/panel/vocabulario';
 import { estadoConsumo } from '@/lib/panel/consumo';
 import { PLANES, miles } from '@/lib/planes';
@@ -42,6 +43,8 @@ const NAV = [
   { href: '/panel/retargeting', icon: Send, label: 'Retargeting' },
   // Agenda es de todo negocio que agenda: citas Y grupos recurrentes.
   { href: '/panel/agenda', icon: CalendarDays, label: 'Agenda', sirveA: esAppointmentFamily },
+  // Alumnos es de la academia: quién está inscrito, hasta cuándo y si debe.
+  { href: '/panel/alumnos', icon: GraduationCap, label: 'Alumnos', sirveA: esRecurrente },
   // Equipo es solo de `appointment`, no de toda la familia: es donde Mia
   // reparte reservas entre profesionales (ask_employee), y eso no existe en
   // recurring_appointment — sus grupos van por schedule_slots, sin asignar
@@ -74,7 +77,8 @@ const NAV = [
  *
  * La tercera es Agenda o, en una tienda (que no tiene agenda), Pedidos.
  */
-const FIJAS_MOVIL = ['/panel', '/panel/mensajes', '/panel/agenda', '/panel/pedidos', '/panel/caja'];
+// En una academia, Alumnos va antes que Caja: es lo que se mira a diario.
+const FIJAS_MOVIL = ['/panel', '/panel/mensajes', '/panel/agenda', '/panel/pedidos', '/panel/alumnos', '/panel/caja'];
 const MAX_FIJAS_MOVIL = 4;
 
 type Entrada = (typeof NAV)[number];

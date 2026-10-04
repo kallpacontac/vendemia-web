@@ -79,3 +79,66 @@ export const cobradoSinConstancia = (m: MovimientoRow): boolean =>
 /** Suma de importes. En un solo sitio porque `importe` puede llegar como texto. */
 export const suma = (movimientos: MovimientoRow[]): number =>
   movimientos.reduce((t, m) => t + (Number(m.importe) || 0), 0);
+
+/* ── La caja cuenta lo que ENTRA, no lo que podría entrar (3-oct-2026) ───── */
+
+/**
+ * El dinero que entró un día, de dos fuentes que no se pisan:
+ *
+ *   1. LOS PAGOS CON IMPORTE (`pending_payments`): cada comprobante que
+ *      verificó Mia y cada `registrar_pago` del panel. Cuentan POR SU IMPORTE y
+ *      en el DÍA EN QUE SE PAGÓ. Una seña de S/ 50 es S/ 50 hoy, aunque la
+ *      inscripción valga 120: desde que la seña reserva el cupo, la inscripción
+ *      queda `confirmed` con `pagado_por` puesto y, contada por su precio, la
+ *      caja enseñaba dinero que no había entrado.
+ *
+ *   2. LOS COBROS SIN IMPORTE: «Cobrada» en una barbería (`marcar_pagado`) no
+ *      deja fila de pago, y ahí el cobro es el precio entero. Cuentan por su
+ *      precio y en el día de la cita, como antes — no hay fecha de cobro.
+ *
+ * Una cita o pedido que tiene AL MENOS UN pago con importe ya no suma su
+ * precio: su dinero entra por (1), en las fechas de cada pago. Si sumara las
+ * dos cosas, el mismo dinero contaría dos veces.
+ */
+export interface PagoConImporte {
+  id: string;
+  amount: number;
+  appointment_id: string | null;
+  order_id: string | null;
+}
+
+export interface EntradaCaja {
+  /** El pago o el movimiento del que sale. */
+  id: string;
+  fuente: 'pago' | 'appointment' | 'order';
+  importe: number;
+  /** yape · plin · cash… o '' si no consta. */
+  metodo: string;
+}
+
+export function entradasDelDia(
+  movimientosDelDia: MovimientoRow[],
+  pagosDelDia: PagoConImporte[],
+  /**
+   * Citas/pedidos con algún pago con importe, de CUALQUIER día, como
+   * `appointment:<id>` / `order:<id>` — el id solo no es único entre fuentes.
+   */
+  conPagoConImporte: Set<string>,
+  metodoDe: (fuente: 'appointment' | 'order', id: string) => string,
+): EntradaCaja[] {
+  const pagos: EntradaCaja[] = pagosDelDia.map((p) => ({
+    id: p.id,
+    fuente: 'pago',
+    importe: Number(p.amount) || 0,
+    metodo: p.order_id ? metodoDe('order', p.order_id) : p.appointment_id ? metodoDe('appointment', p.appointment_id) : '',
+  }));
+  const sinImporte: EntradaCaja[] = movimientosDelDia
+    .filter((m) => entroEnCaja(m) && !conPagoConImporte.has(`${m.fuente}:${m.movimiento_id}`))
+    .map((m) => ({
+      id: m.movimiento_id,
+      fuente: m.fuente === 'order' ? 'order' : 'appointment',
+      importe: Number(m.importe) || 0,
+      metodo: metodoDe(m.fuente === 'order' ? 'order' : 'appointment', m.movimiento_id),
+    }));
+  return [...pagos, ...sinImporte];
+}

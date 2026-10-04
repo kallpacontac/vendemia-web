@@ -15,10 +15,11 @@
  * hasta que se apunte su cobro: por eso la sección «Sin cobro apuntado», con
  * el botón para hacerlo. Ver lib/panel/dinero.ts.
  *
- * ── El día de qué ────────────────────────────────────────────────────────
- * El día en que se presta el servicio (`fecha_servicio` de v_movimientos), o
- * el de creación si no se sabe. No hay «fecha de cobro» guardada: una cita de
- * hoy pagada por Yape ayer entra en la caja de hoy. La pantalla lo dice.
+ * ── Lo que entró, no lo que podría entrar (3-oct-2026) ───────────────────
+ * Los pagos con importe (vouchers y registrar_pago) cuentan por su importe y
+ * en el día en que se pagaron: una seña de S/ 50 es S/ 50. Los cobros sin
+ * importe («Cobrada», marcar_pagado) cuentan por su precio, el día del
+ * servicio, porque no hay fecha de cobro guardada. Ver entradasDelDia.
  *
  * ── Los gastos ───────────────────────────────────────────────────────────
  * Van por `upsert_gasto` / `delete_gasto`: el bot es el único que escribe, y
@@ -37,7 +38,7 @@ import { useVocabulario } from '@/components/panel/useVocabulario';
 import { BotonCobrar } from '@/components/panel/BotonCobrar';
 import { SaldosPendientes } from '@/components/panel/Saldos';
 import { diaMes, hora, isoLocal, soles, telefono } from '@/lib/panel/format';
-import { cobradoSinConstancia, entroEnCaja, suma } from '@/lib/panel/dinero';
+import { cobradoSinConstancia, entradasDelDia, suma } from '@/lib/panel/dinero';
 import { cobroPorApuntar, etiquetaMetodo, type MetodoPago } from '@/lib/panel/metodosPago';
 import { cap } from '@/lib/panel/vocabulario';
 import {
@@ -45,6 +46,7 @@ import {
   getGastos,
   getLeads,
   getMovimientos,
+  getPagosCaja,
   getPedidos,
   type Cita,
 } from '@/lib/supabase/queries';
@@ -77,24 +79,33 @@ export default function Caja() {
       getGastos(companyId, dia),
       getLeads(companyId, 500),
     ]);
-    return { movimientos, citas, pedidos, gastos, leads };
+    const pagos = await getPagosCaja(companyId, dia, movimientos);
+    return { movimientos, citas, pedidos, gastos, leads, pagos };
   }, [companyId, dia]);
 
   const calculo = useMemo(() => {
     if (!datos) return null;
     const metodoCita = new Map(datos.citas.map((c) => [c.id, c.metodo_pago ?? '']));
     const metodoPedido = new Map(datos.pedidos.map((p) => [p.id, p.payment_method ?? '']));
+    for (const [id, m] of datos.pagos.metodoCita) if (!metodoCita.has(id)) metodoCita.set(id, m);
+    for (const [id, m] of datos.pagos.metodoPedido) if (!metodoPedido.has(id)) metodoPedido.set(id, m);
     const importe = new Map(
       datos.movimientos.filter((m) => m.fuente === 'appointment').map((m) => [m.movimiento_id, Number(m.importe)]),
     );
 
-    const cobrados = datos.movimientos.filter(entroEnCaja);
+    // Lo que ENTRÓ este día: cada pago por su importe y su fecha, y los cobros
+    // sin importe (barbería) por su precio. Una seña de S/ 50 es S/ 50. Ver
+    // entradasDelDia en lib/panel/dinero.ts.
+    const entradas = entradasDelDia(
+      datos.movimientos,
+      datos.pagos.pagosDelDia,
+      datos.pagos.conPagoConImporte,
+      (fuente, id) => (fuente === 'appointment' ? metodoCita.get(id) : metodoPedido.get(id)) ?? '',
+    );
     const porMetodo = new Map<string, number>();
-    for (const m of cobrados) {
-      const metodo =
-        (m.fuente === 'appointment' ? metodoCita.get(m.movimiento_id) : metodoPedido.get(m.movimiento_id)) ?? '';
-      const etiqueta = etiquetaMetodo(metodo);
-      porMetodo.set(etiqueta, (porMetodo.get(etiqueta) ?? 0) + Number(m.importe));
+    for (const e of entradas) {
+      const etiqueta = etiquetaMetodo(e.metodo);
+      porMetodo.set(etiqueta, (porMetodo.get(etiqueta) ?? 0) + e.importe);
     }
 
     const porCobrar = datos.citas
@@ -102,7 +113,7 @@ export default function Caja() {
       .map((c) => ({ cita: c, importe: importe.get(c.id) ?? 0 }));
     const pedidosSinConstancia = datos.movimientos.filter((m) => m.fuente === 'order' && cobradoSinConstancia(m));
 
-    const cobrado = suma(cobrados);
+    const cobrado = entradas.reduce((t, e) => t + e.importe, 0);
     const gastado = datos.gastos.reduce((t, g) => t + g.importe, 0);
     return {
       cobrado,
@@ -278,9 +289,10 @@ export default function Caja() {
         )}
 
         <p className="muted" style={{ fontSize: 12.5, lineHeight: 1.7, marginTop: 14 }}>
-          <b>Qué día cuenta:</b> el de la {v.sesion}, no el del pago: {v.una} {v.sesion} de hoy que se pagó ayer por
-          Yape entra en la caja de hoy. <b>Cobrado</b> es lo que se apuntó como cobrado —por Mia al verificar un
-          comprobante, o desde el panel—, no todo lo confirmado.
+          <b>Cobrado es lo que entró, no lo que podría entrar.</b> Cada comprobante que verificó Mia y cada pago
+          registrado cuentan por su importe y el día en que se pagaron: una seña de S/ 50 es S/ 50, aunque la
+          inscripción valga más. Lo que se marcó «Cobrada» sin importe cuenta por su precio, el día de la {v.sesion}.
+          Lo que falta por cobrar está arriba, en «Saldos por cobrar».
         </p>
       </div>
     </main>

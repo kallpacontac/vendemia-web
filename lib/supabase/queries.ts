@@ -632,6 +632,71 @@ export async function getVentas(
   return ventasPorLead(vivas, lineas, filas);
 }
 
+/**
+ * El dinero con importe de un día para la Caja (ver entradasDelDia en
+ * lib/panel/dinero.ts): los pagos hechos ESE día (hora de Lima), cuáles de las
+ * citas/pedidos del día tienen algún pago con importe —de cualquier día, para
+ * no sumar también su precio— y el método de cada pago.
+ *
+ * `pending_payments` no guarda método: se toma de la cita (`metodo_pago`) o del
+ * pedido (`payment_method`) al que va enganchado.
+ */
+export async function getPagosCaja(
+  companyId: string,
+  dia: string,
+  movimientos: Pick<MovimientoRow, 'fuente' | 'movimiento_id'>[],
+): Promise<{
+  pagosDelDia: PendingPaymentRow[];
+  conPagoConImporte: Set<string>;
+  metodoCita: Map<string, string>;
+  metodoPedido: Map<string, string>;
+}> {
+  const vacio = { pagosDelDia: [], conPagoConImporte: new Set<string>(), metodoCita: new Map(), metodoPedido: new Map() };
+  if (demoActivo()) return vacio;
+  const sb = supabase();
+  // El día en hora de Lima (UTC-5, sin horario de verano), en epoch segundos.
+  const desde = Math.floor(new Date(`${dia}T00:00:00-05:00`).getTime() / 1000);
+  const hasta = desde + 86400;
+  const citas = movimientos.filter((m) => m.fuente === 'appointment').map((m) => m.movimiento_id);
+  const pedidos = movimientos.filter((m) => m.fuente === 'order').map((m) => m.movimiento_id);
+  const columnas = 'id, lead_id, company_id, amount, operation_id, verified, created_at, order_id, appointment_id';
+
+  const [delDia, deCitas, dePedidos] = await Promise.all([
+    sb.from('pending_payments').select(columnas).eq('company_id', companyId).gte('created_at', desde).lt('created_at', hasta),
+    citas.length
+      ? sb.from('pending_payments').select('appointment_id').eq('company_id', companyId).in('appointment_id', citas.slice(0, 300))
+      : Promise.resolve({ data: [], error: null }),
+    pedidos.length
+      ? sb.from('pending_payments').select('order_id').eq('company_id', companyId).in('order_id', pedidos.slice(0, 300))
+      : Promise.resolve({ data: [], error: null }),
+  ]);
+  for (const r of [delDia, deCitas, dePedidos]) if (r.error) throw r.error;
+
+  const pagosDelDia = ((delDia.data ?? []) as PendingPaymentRow[]).map((p) => ({ ...p, amount: Number(p.amount ?? 0) }));
+  const conPagoConImporte = new Set<string>([
+    ...((deCitas.data ?? []) as { appointment_id: string }[]).map((p) => `appointment:${p.appointment_id}`),
+    ...((dePedidos.data ?? []) as { order_id: string }[]).map((p) => `order:${p.order_id}`),
+  ]);
+
+  // El método de cada pago del día, de su cita o su pedido.
+  const idsCita = [...new Set(pagosDelDia.map((p) => p.appointment_id).filter((x): x is string => !!x))];
+  const idsPedido = [...new Set(pagosDelDia.map((p) => p.order_id).filter((x): x is string => !!x))];
+  const [mc, mp] = await Promise.all([
+    idsCita.length
+      ? sb.from('appointments').select('id, metodo_pago').in('id', idsCita)
+      : Promise.resolve({ data: [], error: null }),
+    idsPedido.length
+      ? sb.from('orders').select('id, payment_method').in('id', idsPedido)
+      : Promise.resolve({ data: [], error: null }),
+  ]);
+  return {
+    pagosDelDia,
+    conPagoConImporte,
+    metodoCita: new Map(((mc.data ?? []) as { id: string; metodo_pago: string | null }[]).map((c) => [c.id, c.metodo_pago ?? ''])),
+    metodoPedido: new Map(((mp.data ?? []) as { id: string; payment_method: string | null }[]).map((o) => [o.id, o.payment_method ?? ''])),
+  };
+}
+
 /** Los gastos apuntados un día, para la caja. `importe` pasa por Number(): puede llegar como texto. */
 export async function getGastos(companyId: string, fecha: string): Promise<GastoRow[]> {
   if (demoActivo()) return [];

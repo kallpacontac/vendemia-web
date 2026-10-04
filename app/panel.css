@@ -1426,3 +1426,27 @@ body:has(.demo-banda) .sidebar{padding-top:44px}
 @media(max-width:560px){
   .saldos__form .input,.saldos__form .select{flex:1;min-width:0}
 }
+
+/* ── Alumnos · ver app/(panel)/panel/alumnos ─────────────────────────────── */
+.familias{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:14px;align-items:start}
+.familia{padding:16px 18px}
+.familia__cabeza{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
+.familia__quien{min-width:0}
+.familia__quien b{display:block;font-size:15px}
+.familia__quien small{font-size:12px}
+.familia__cabeza .badge-pill{display:inline-flex;align-items:center;gap:4px;white-space:nowrap}
+.familia__cuenta{font-size:12.5px;margin:6px 0 0}
+.familia__alumnos{list-style:none;margin:10px 0 0;padding:0}
+.familia__alumnos li{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;padding:9px 0;border-top:1px solid var(--line)}
+.familia__alumnos li b{display:block;font-size:13.5px}
+.familia__alumnos li small{display:block;font-size:12px}
+.familia__alumnos li b small{display:inline}
+.familia__cubre{font-size:12px;font-weight:600;color:var(--ink-soft);text-align:right;display:flex;flex-direction:column;align-items:flex-end;gap:4px}
+.familia__cubre.sin{color:#B26B00}
+.familia__renovar{color:#3D5AF1;background:#EEF1FE}
+.familia__acciones{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.familia__acciones .saldos__form{flex-basis:100%}
+@media(max-width:560px){
+  .familias{grid-template-columns:minmax(0,1fr)}
+  .familia__acciones .btn{flex:1;justify-content:center}
+}

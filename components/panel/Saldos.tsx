@@ -102,7 +102,7 @@ function FilaSaldo({ v, nombre, alGuardar }: { v: VentaLead; nombre: string; alG
  * porque es lo más habitual («vino a pagar lo que faltaba»), pero se edita: una
  * segunda seña también vale.
  */
-function RegistrarPago({ v, alCerrar, alGuardar }: { v: VentaLead; alCerrar: () => void; alGuardar: () => void }) {
+export function RegistrarPago({ v, alCerrar, alGuardar }: { v: VentaLead; alCerrar: () => void; alGuardar: () => void }) {
   const comando = useComando();
   const [monto, setMonto] = useState(String(v.saldo.saldo));
   const [metodo, setMetodo] = useState<MetodoPago>('cash');
