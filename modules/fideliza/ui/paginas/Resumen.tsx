@@ -11,14 +11,26 @@ import Link from 'next/link';
 import { AlertTriangle, ExternalLink } from 'lucide-react';
 import { useFideliza } from '@/modules/fideliza/ui/Contexto';
 import { Cargando, Fallo, Vacio } from '@/modules/fideliza/ui/Estados';
+import LinkPublico from '@/modules/fideliza/ui/LinkPublico';
+import PrimerosPasos, { type Paso } from '@/modules/fideliza/ui/PrimerosPasos';
 import { useCargar } from '@/components/panel/useCargar';
-import { accion, lecturas } from '@/modules/fideliza/cliente/api';
+import { accion, lecturas, type Enlace } from '@/modules/fideliza/cliente/api';
 import { urlNegocio } from '@/modules/fideliza/dominio/config';
 import { fechaHora, soles, ESTADO_PLACA } from '@/modules/fideliza/dominio/formato';
 import { DEFINICIONES, pct, type Metricas } from '@/modules/fideliza/dominio/metricas';
 
 const hoyLima = () => new Date().toLocaleDateString('sv-SE', { timeZone: 'America/Lima' });
 const haceDias = (n: number) => new Date(Date.now() - n * 86400000).toLocaleDateString('sv-SE', { timeZone: 'America/Lima' });
+
+/** Los botones que se ven HOY en la página: visibles, dentro de fechas, y el de alta solo con programa activo. */
+const vigentes = (links: Enlace[], programaActivo: boolean) =>
+  links.filter(
+    (l) =>
+      l.is_active &&
+      (!l.starts_at || new Date(l.starts_at) <= new Date()) &&
+      (!l.ends_at || new Date(l.ends_at) > new Date()) &&
+      (l.kind !== 'join' || programaActivo),
+  ).length;
 
 const ESTADO_PROGRAMA: Record<string, [string, string]> = {
   draft: ['Borrador', 'b-mute'],
@@ -51,14 +63,64 @@ export default function Resumen() {
         : Promise.resolve(null),
     ]);
     const vivo = programas.find((p) => p.status === 'active' || p.status === 'paused') ?? programas[0] ?? null;
-    const versiones = vivo?.current_version_id ? await lecturas.versiones(companyId, vivo.id) : [];
-    return { programas, vivo, version: versiones[0] ?? null, config, m };
-  }, [companyId, dias]);
+    const [versiones, perfiles, placas] = await Promise.all([
+      vivo?.current_version_id ? lecturas.versiones(companyId, vivo.id) : Promise.resolve([]),
+      lecturas.perfiles(companyId),
+      lecturas.placas(companyId),
+    ]);
+    const principal = perfiles.find((p) => p.id === ajustes?.default_profile_id) ?? null;
+    const [publicada] = principal?.published_version_id
+      ? await lecturas.publicadas(companyId, [principal.published_version_id])
+      : [];
+    return { programas, vivo, version: versiones[0] ?? null, config, m, publicada: publicada ?? null, placas };
+  }, [companyId, dias, ajustes?.default_profile_id]);
 
   if (cargando && !datos) return <Cargando texto="Calculando el resumen…" />;
   if (error) return <Fallo texto={error} reintentar={releer} />;
   if (!datos) return null;
-  const { vivo, version, config, m } = datos;
+  const { vivo, version, config, m, publicada, placas } = datos;
+  const programaActivo = vivo?.status === 'active';
+  const botones = publicada ? vigentes(publicada.links, programaActivo) : 0;
+
+  const pasos: Paso[] = [
+    {
+      titulo: 'Datos de tu negocio',
+      que: 'El nombre que verán tus clientes y la dirección de tu link (ej. fideliza.vendemias.com/n/tu-negocio).',
+      hecho: Boolean(ajustes),
+      href: '/panel/fideliza/programa?paso=0',
+      boton: 'Empezar',
+    },
+    {
+      titulo: 'Tu programa de premios',
+      que: 'Cuántos sellos, puntos o visitas hacen falta y qué premio se gana. Al publicarlo, la gente ya puede crear su tarjeta.',
+      hecho: vivo?.status === 'active' || vivo?.status === 'paused',
+      href: vivo ? '/panel/fideliza/programa?paso=5' : '/panel/fideliza/programa?paso=1',
+      boton: vivo ? 'Publicar' : 'Crear',
+    },
+    {
+      titulo: 'Tu marca: color y logo',
+      que: 'Para que la tarjeta y tu página se vean con tus colores. El logo, en PNG cuadrado.',
+      hecho: Boolean(ajustes?.logo_url && ajustes.logo_checked?.ok),
+      opcional: true,
+      href: '/panel/fideliza/programa?paso=4',
+      boton: 'Personalizar',
+    },
+    {
+      titulo: 'Los botones de tu página',
+      que: 'WhatsApp, reseñas, cómo llegar, «Mi tarjeta»… Lo que verán al abrir tu link.',
+      hecho: botones > 0,
+      href: '/panel/fideliza/enlaces',
+      boton: 'Añadir botones',
+    },
+    {
+      titulo: 'Placa o QR para el local',
+      que: 'Un QR (o placa NFC) en el mostrador para que se unan al pagar.',
+      hecho: placas.some((d) => d.status === 'active'),
+      opcional: true,
+      href: '/panel/fideliza/placas?nueva=1',
+      boton: 'Crear placa',
+    },
+  ];
 
   const alertas: { texto: string; enlace?: string }[] = [];
   if (!config.servidor) alertas.push({ texto: 'Falta la clave del servidor de Fideliza: las páginas públicas y Wallet no funcionan (ver modules/fideliza/sql/README.md).' });
@@ -80,6 +142,11 @@ export default function Resumen() {
 
   return (
     <>
+      {puede('program.edit') && <PrimerosPasos pasos={pasos} />}
+      {ajustes && (
+        <LinkPublico slug={ajustes.slug} nombre={ajustes.display_name} programaActivo={programaActivo} hayEnlaces={botones > 0} />
+      )}
+
       <div className="card" style={{ marginBottom: 16 }}>
         <div className="fz-fila" style={{ justifyContent: 'space-between' }}>
           <div>
