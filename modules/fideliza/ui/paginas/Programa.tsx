@@ -7,7 +7,8 @@
  * Publicar crea una versión nueva con vigencia desde ese momento; las
  * operaciones anteriores siguen con la regla con la que se hicieron.
  */
-import { useEffect, useMemo, useState } from 'react';
+import { Suspense, useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { Check, Plus } from 'lucide-react';
 import { useFideliza } from '@/modules/fideliza/ui/Contexto';
 import { Cargando, Fallo, SinPermiso } from '@/modules/fideliza/ui/Estados';
@@ -32,10 +33,16 @@ const REGLAS: { v: TipoRegla; t: string; d: string }[] = [
 
 type Borrador = Programa['draft'];
 
-export default function ProgramaPagina() {
+function ProgramaPagina() {
   const { companyId, ajustes, puede, recargar: recargarCtx } = useFideliza();
   const avisar = useAvisar();
   const [paso, setPaso] = useState(0);
+  // Desde «Primeros pasos» se llega directo al paso que falta (?paso=0…5).
+  const params = useSearchParams();
+  useEffect(() => {
+    const n = Number(params.get('paso'));
+    if (params.get('paso') !== null && Number.isInteger(n) && n >= 0 && n <= 5) setPaso(n);
+  }, [params]);
   const [ocupado, setOcupado] = useState(false);
 
   const { datos, cargando, error, releer } = useCargar(async () => {
@@ -457,5 +464,13 @@ export default function ProgramaPagina() {
         )}
       </div>
     </>
+  );
+}
+
+export default function Programa() {
+  return (
+    <Suspense fallback={null}>
+      <ProgramaPagina />
+    </Suspense>
   );
 }

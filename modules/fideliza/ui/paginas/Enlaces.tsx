@@ -12,6 +12,7 @@ import { useEffect, useState } from 'react';
 import { ArrowDown, ArrowUp, ExternalLink, Plus, Trash2 } from 'lucide-react';
 import { useFideliza } from '@/modules/fideliza/ui/Contexto';
 import { Cargando, Fallo, Vacio } from '@/modules/fideliza/ui/Estados';
+import LinkPublico from '@/modules/fideliza/ui/LinkPublico';
 import { useAvisar } from '@/components/panel/Avisos';
 import { useCargar } from '@/components/panel/useCargar';
 import { accion, ErrorFideliza, lecturas, mensaje, type Enlace } from '@/modules/fideliza/cliente/api';
@@ -35,9 +36,14 @@ export default function Enlaces() {
 
   const { datos, cargando, error, releer } = useCargar(async () => {
     if (!companyId) return null;
-    const [perfiles, enlaces, placas] = await Promise.all([lecturas.perfiles(companyId), lecturas.enlaces(companyId), lecturas.placas(companyId)]);
+    const [perfiles, enlaces, placas, programas] = await Promise.all([
+      lecturas.perfiles(companyId),
+      lecturas.enlaces(companyId),
+      lecturas.placas(companyId),
+      lecturas.programas(companyId),
+    ]);
     const publicadas = await lecturas.publicadas(companyId, perfiles.map((p) => p.published_version_id).filter(Boolean) as string[]);
-    return { perfiles, enlaces, placas, publicadas };
+    return { perfiles, enlaces, placas, publicadas, programaActivo: programas.some((p) => p.status === 'active') };
   }, [companyId]);
 
   useEffect(() => {
@@ -142,8 +148,24 @@ export default function Enlaces() {
     }
   }
 
+  const publicadaPrincipal = datos.publicadas.find(
+    (v) => v.id === datos.perfiles.find((p) => p.id === ajustes.default_profile_id)?.published_version_id,
+  );
+
   return (
     <>
+      <LinkPublico
+        slug={ajustes.slug}
+        nombre={ajustes.display_name}
+        programaActivo={datos.programaActivo}
+        hayEnlaces={Boolean(publicadaPrincipal?.links.some(vigente))}
+      />
+      <div className="fz-panel-aviso fz-panel-aviso--info">
+        <span>
+          <b>Cómo funciona:</b> 1) añade tus botones abajo · 2) pulsa <b>Publicar</b> · 3) copia tu link de arriba y compártelo.
+          Hasta que publiques, tus clientes no ven los cambios.
+        </span>
+      </div>
       <div className="toolbar">
         <select className="select" value={elegido ?? ''} onChange={(e) => setElegido(e.target.value)} aria-label="Perfil">
           {datos.perfiles.map((p) => (
