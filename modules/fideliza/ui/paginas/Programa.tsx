@@ -33,6 +33,26 @@ const REGLAS: { v: TipoRegla; t: string; d: string }[] = [
 
 type Borrador = Programa['draft'];
 
+/** Qué es cada paso, en palabras del dueño, y si lo ven sus clientes al momento. */
+const TEXTO_PASO = [
+  { d: 'Cómo te verán tus clientes y la dirección de tu link público.', vivo: true },
+  { d: 'Ponle nombre a tu programa y elige qué quieres conseguir.', vivo: false },
+  { d: '¿Qué suma para el premio: cada compra, lo que gastan o cada visita?', vivo: false },
+  { d: 'Cuánto hace falta para ganar el premio y cuál es.', vivo: false },
+  { d: 'Tu color y tu logo, para tu página y la tarjeta de Google Wallet. Puedes saltarlo y hacerlo luego.', vivo: true },
+  { d: 'Revisa cómo queda y publícalo. Hasta publicar, nadie puede crear su tarjeta.', vivo: false },
+];
+
+/** Los campos de la regla: los del borrador contra los de la versión publicada. */
+const CLAVES_REGLA = [
+  'rule_type', 'stamps_per_purchase', 'points_per_unit', 'unit_cents', 'rounding', 'min_purchase_cents',
+  'reward_threshold', 'reward_description', 'reward_valid_days', 'valid_to', 'location_ids',
+] as const;
+const mismoValor = (k: string, a: unknown, b: unknown) => {
+  if (k === 'valid_to') return (a ? new Date(String(a)).getTime() : null) === (b ? new Date(String(b)).getTime() : null);
+  return JSON.stringify(a ?? null) === JSON.stringify(b ?? null);
+};
+
 function ProgramaPagina() {
   const { companyId, ajustes, puede, recargar: recargarCtx } = useFideliza();
   const avisar = useAvisar();
@@ -88,7 +108,40 @@ function ProgramaPagina() {
     }));
   }, [datos?.programa, datos?.versiones]);
 
+  /**
+   * ¿Hay cambios sin guardar? Se compara lo que hay en pantalla con una foto
+   * tomada al cargar y después de cada guardado. `tomarBase` espera un render
+   * para que la foto salga con los valores ya puestos, no con los anteriores.
+   */
+  const huella = JSON.stringify({ negocio, marca, prog, b, min: textos.min, unidad: textos.unidad });
+  const [base, setBase] = useState<string | null>(null);
+  const [tomarBase, setTomarBase] = useState(false);
+  useEffect(() => {
+    if (datos) setTomarBase(true);
+  }, [datos, ajustes]);
+  useEffect(() => {
+    if (!tomarBase) return;
+    setBase(huella);
+    setTomarBase(false);
+  }, [tomarBase, huella]);
+  const sucio = puede('program.edit') && base !== null && huella !== base;
+  useEffect(() => {
+    if (!sucio) return;
+    const aviso = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = '';
+    };
+    window.addEventListener('beforeunload', aviso);
+    return () => window.removeEventListener('beforeunload', aviso);
+  }, [sucio]);
+
   const publicada = datos?.versiones[0] ?? null;
+  const borradorGuardado = (datos?.programa?.draft ?? {}) as Record<string, unknown>;
+  const sinPublicar = Boolean(
+    publicada &&
+      Object.keys(borradorGuardado).length &&
+      CLAVES_REGLA.some((k) => !mismoValor(k, borradorGuardado[k], (publicada as unknown as Record<string, unknown>)[k])),
+  );
   const tipoBloqueado = Boolean(publicada);
   const ejemploCent = aCentimos(textos.ejemplo) ?? 0;
   const ejemplo = useMemo(() => {
@@ -106,42 +159,48 @@ function ProgramaPagina() {
   if (error) return <Fallo texto={error} reintentar={releer} />;
   const editable = puede('program.edit');
 
-  async function guardarNegocio() {
-    setOcupado(true);
+  async function guardarNegocio(): Promise<boolean> {
+    if (!negocio.display_name.trim() || negocio.slug.length < 3) {
+      avisar('Escribe el nombre y una dirección de al menos 3 letras.', 'error');
+      return false;
+    }
     try {
       await accion('ajustes.guardar', { companyId, datos: { display_name: negocio.display_name, slug: negocio.slug, tagline: negocio.tagline } });
       avisar('Datos del negocio guardados');
       recargarCtx();
-      setPaso(1);
+      setTomarBase(true);
+      return true;
     } catch (e) {
       avisar(mensaje(e), 'error');
-    } finally {
-      setOcupado(false);
+      return false;
     }
   }
 
-  async function guardarMarca() {
-    setOcupado(true);
+  /** 'logo' = guardado, pero el logo no sirve para Wallet (se enseña por qué). */
+  async function guardarMarca(): Promise<'ok' | 'logo' | false> {
     try {
       const r = await accion<{ logo: { ok: boolean; errores: string[]; avisos: string[] } | null }>('ajustes.guardar', {
         companyId,
         datos: { bg_color: marca.bg_color, logo_url: marca.logo_url, support_url: marca.support_url, require_external_ref: marca.require_external_ref },
       });
       setLogo(r.logo);
-      avisar(r.logo && !r.logo.ok ? 'Guardado. El logo no sirve para Google Wallet: se usará el de Vendemia hasta corregirlo.' : 'Marca guardada', r.logo && !r.logo.ok ? 'espera' : 'ok');
+      const malo = Boolean(r.logo && !r.logo.ok);
+      avisar(malo ? 'Guardado. El logo no sirve para Google Wallet: mira el motivo abajo.' : 'Marca guardada', malo ? 'espera' : 'ok');
       recargarCtx();
       sincronizarEnSegundoPlano(companyId!);
-      if (!r.logo || r.logo.ok) setPaso(5);
+      setTomarBase(true);
+      return malo ? 'logo' : 'ok';
     } catch (e) {
       avisar(mensaje(e), 'error');
-    } finally {
-      setOcupado(false);
+      return false;
     }
   }
 
-  async function guardarPrograma(siguiente: number) {
-    if (!prog.name.trim()) return avisar('Ponle nombre al programa.', 'error');
-    setOcupado(true);
+  async function guardarPrograma(): Promise<boolean> {
+    if (!prog.name.trim()) {
+      avisar('Ponle nombre al programa (paso 2).', 'error');
+      return false;
+    }
     try {
       const draft: Borrador = {
         ...b,
@@ -149,11 +208,7 @@ function ProgramaPagina() {
         unit_cents: aCentimos(textos.unidad) ?? 100,
       };
       // Solo los campos que la base conoce: el resto de la versión no es borrador.
-      const limpio = Object.fromEntries(
-        Object.entries(draft).filter(([k]) =>
-          ['rule_type', 'stamps_per_purchase', 'points_per_unit', 'unit_cents', 'rounding', 'min_purchase_cents', 'reward_threshold', 'reward_description', 'reward_valid_days', 'valid_to', 'location_ids'].includes(k),
-        ),
-      );
+      const limpio = Object.fromEntries(Object.entries(draft).filter(([k]) => (CLAVES_REGLA as readonly string[]).includes(k)));
       if (ajustes && marca.require_external_ref !== ajustes.require_external_ref) {
         await accion('ajustes.guardar', { companyId, datos: { require_external_ref: marca.require_external_ref } });
         recargarCtx();
@@ -166,13 +221,45 @@ function ProgramaPagina() {
         objective: prog.objective,
         draft: limpio,
       });
+      avisar(publicada ? 'Guardado como borrador. Publícalo en el paso 6 para que lo vean tus clientes.' : 'Guardado');
       releer();
-      setPaso(siguiente);
+      setTomarBase(true);
+      return true;
     } catch (e) {
       avisar(mensaje(e), 'error');
-    } finally {
-      setOcupado(false);
+      return false;
     }
+  }
+
+  const guardarPaso = async (n: number): Promise<boolean> =>
+    n === 0 ? guardarNegocio() : n <= 3 ? guardarPrograma() : n === 4 ? (await guardarMarca()) !== false : true;
+
+  /** Cambiar de paso guarda ANTES lo que haya cambiado. Si falla, no se mueve. */
+  async function irA(n: number) {
+    if (n === paso || n < 0 || n > 5) return;
+    if (sucio) {
+      setOcupado(true);
+      const ok = await guardarPaso(paso);
+      setOcupado(false);
+      if (!ok) return;
+    }
+    setPaso(n);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  /** «Guardar y seguir». En la marca, si el logo no sirve, se queda para enseñar por qué. */
+  async function siguiente() {
+    if (paso === 4 && sucio) {
+      setOcupado(true);
+      const r = await guardarMarca();
+      setOcupado(false);
+      if (r === 'ok') {
+        setPaso(5);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+      return;
+    }
+    await irA(paso + 1);
   }
 
   async function publicar() {
@@ -180,7 +267,7 @@ function ProgramaPagina() {
     if (publicada && !window.confirm('Se creará una versión nueva de la regla, vigente desde ahora. Las operaciones anteriores no cambian. ¿Publicar?')) return;
     setOcupado(true);
     try {
-      await guardarPrograma(5);
+      if (!(await guardarPrograma())) return;
       const v = await accion<Version>('programa.publicar', { companyId, programId: datos.programa.id });
       avisar(`Publicada la versión ${v.version}. La tarjeta de Google Wallet se está creando.`);
       sincronizarEnSegundoPlano(companyId!);
@@ -247,13 +334,48 @@ function ProgramaPagina() {
 
       <div className="fz-pasos" role="tablist">
         {PASOS.map((t, i) => (
-          <button key={t} role="tab" aria-selected={paso === i} className={paso === i ? 'active' : i < paso ? 'done' : ''} onClick={() => setPaso(i)}>
+          <button key={t} role="tab" aria-selected={paso === i} className={paso === i ? 'active' : i < paso ? 'done' : ''} onClick={() => void irA(i)}>
             {i < paso && <Check size={12} />} {i + 1}. {t}
           </button>
         ))}
       </div>
 
+      {sinPublicar && (
+        <div className="fz-panel-aviso" role="status">
+          <span style={{ flex: 1 }}>
+            <b>Tienes cambios guardados que tus clientes todavía no ven.</b> Publícalos para que empiecen a contar.
+          </span>
+          {paso !== 5 && (
+            <button className="btn btn-primary btn-sm" onClick={() => void irA(5)}>
+              Ir a publicar
+            </button>
+          )}
+        </div>
+      )}
+
       <div className="card fz-caja" style={{ maxWidth: 720 }}>
+        <div className="fz-paso-cab">
+          <div>
+            <small className="fz-def">Paso {paso + 1} de 6</small>
+            <h3>{PASOS[paso]}</h3>
+            <p className="fz-def">{TEXTO_PASO[paso].d}</p>
+            {editable && paso < 5 && (
+              <p className="fz-def">
+                {TEXTO_PASO[paso].vivo
+                  ? 'Se aplica al momento al guardar.'
+                  : publicada
+                    ? 'Se guarda como borrador: tus clientes no ven el cambio hasta que publiques en el paso 6.'
+                    : 'Se guarda como borrador hasta que publiques en el paso 6.'}
+              </p>
+            )}
+          </div>
+          {editable && (
+            <span className={`fz-guardado ${ocupado ? 'fz-guardado--en-curso' : sucio ? 'fz-guardado--pendiente' : 'fz-guardado--ok'}`} role="status">
+              {ocupado ? 'Guardando…' : sucio ? '● Cambios sin guardar' : base !== null ? '✓ Guardado' : ''}
+            </span>
+          )}
+        </div>
+
         {paso === 0 && (
           <>
             {campo('Nombre visible del negocio', <input className="input" maxLength={60} value={negocio.display_name} disabled={!editable} onChange={(e) => setNegocio({ ...negocio, display_name: e.target.value })} />)}
@@ -281,11 +403,6 @@ function ProgramaPagina() {
                 </button>
               </div>
             )}
-            {editable && (
-              <button className="btn btn-primary" style={{ marginTop: 18 }} disabled={ocupado || !negocio.display_name || negocio.slug.length < 3} onClick={() => void guardarNegocio()}>
-                Guardar y seguir
-              </button>
-            )}
           </>
         )}
 
@@ -302,7 +419,6 @@ function ProgramaPagina() {
                 </button>
               ))}
             </div>
-            {editable && <button className="btn btn-primary" disabled={ocupado} onClick={() => void guardarPrograma(2)}>Guardar y seguir</button>}
           </>
         )}
 
@@ -321,7 +437,6 @@ function ProgramaPagina() {
                 </button>
               ))}
             </div>
-            {editable && <button className="btn btn-primary" disabled={ocupado} onClick={() => void guardarPrograma(3)}>Guardar y seguir</button>}
           </>
         )}
 
@@ -377,11 +492,6 @@ function ProgramaPagina() {
             <label className="check-inline" style={{ display: 'block', margin: '6px 0 14px' }}>
               <input type="checkbox" checked={marca.require_external_ref} disabled={!editable} onChange={(e) => setMarca({ ...marca, require_external_ref: e.target.checked })} /> Exigir número de comprobante en cada compra (evita registrar dos veces la misma venta)
             </label>
-            {editable && (
-              <button className="btn btn-primary" disabled={ocupado || !b.reward_threshold || !b.reward_description} onClick={() => void guardarPrograma(4)}>
-                Guardar y seguir
-              </button>
-            )}
           </>
         )}
 
@@ -396,11 +506,7 @@ function ProgramaPagina() {
                 </div>
               )}
               {campo('Web o ayuda (opcional)', <input className="input" value={marca.support_url} disabled={!editable} onChange={(e) => setMarca({ ...marca, support_url: e.target.value.trim() })} placeholder="https://wa.me/51…" />)}
-              {editable && (
-                <button className="btn btn-primary" disabled={ocupado} onClick={() => void guardarMarca()}>
-                  Guardar y comprobar logo
-                </button>
-              )}
+              <small className="fz-def">Al pulsar «Guardar y seguir» comprobamos si el logo sirve para Google Wallet.</small>
             </div>
             <div>
               <label className="field-label">Vista previa</label>
@@ -461,6 +567,32 @@ function ProgramaPagina() {
               </>
             )}
           </>
+        )}
+
+        {editable && (
+          <div className="fz-paso-pie">
+            {paso > 0 ? (
+              <button className="btn btn-ghost" disabled={ocupado} onClick={() => void irA(paso - 1)}>
+                ← Atrás
+              </button>
+            ) : (
+              <span />
+            )}
+            {paso < 5 && (
+              <button
+                className="btn btn-primary"
+                disabled={
+                  ocupado ||
+                  (paso === 0 && (!negocio.display_name.trim() || negocio.slug.length < 3)) ||
+                  (paso === 1 && !prog.name.trim()) ||
+                  (paso === 3 && (!b.reward_threshold || !b.reward_description))
+                }
+                onClick={() => void siguiente()}
+              >
+                {ocupado ? 'Guardando…' : sucio ? 'Guardar y seguir →' : 'Seguir →'}
+              </button>
+            )}
+          </div>
         )}
       </div>
     </>

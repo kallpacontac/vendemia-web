@@ -59,3 +59,14 @@
 .fz-copia__fila{display:flex;gap:8px}
 .fz-copia__fila .input{flex:1;min-width:0;font-size:13px}
 @media(max-width:820px){.fz-copia-card{flex-direction:column}.fz-copia-card__qr{align-self:center}.fz-pasos-lista li{flex-wrap:wrap}}
+
+/* Asistente del programa: cabecera de cada paso, estado de guardado y pie. */
+.fz-paso-cab{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;padding-bottom:14px;margin-bottom:16px;border-bottom:1px solid var(--line)}
+.fz-paso-cab h3{font-size:18px;font-weight:800;margin:2px 0 4px}
+.fz-paso-cab .fz-def{margin-top:2px}
+.fz-guardado{flex-shrink:0;font-size:12.5px;font-weight:700;padding:5px 10px;border-radius:var(--r-full);white-space:nowrap}
+.fz-guardado--ok{color:#0A7A4B;background:#ECF9F3}
+.fz-guardado--pendiente{color:#B26B00;background:#FFF4E0}
+.fz-guardado--en-curso{color:var(--ink-soft);background:var(--bg-soft)}
+.fz-paso-pie{display:flex;justify-content:space-between;gap:12px;margin-top:22px;padding-top:16px;border-top:1px solid var(--line)}
+@media(max-width:820px){.fz-paso-cab{flex-direction:column}.fz-paso-pie .btn{flex:1}}
