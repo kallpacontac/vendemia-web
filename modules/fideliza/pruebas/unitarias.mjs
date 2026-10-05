@@ -206,3 +206,35 @@ test('15 · botones: redes nuevas y enlaces de Google desde el place_id', () => 
   assert.equal(botones.deUrl(botones.urlResenas('ChIJ123'), 'url').tipo, 'resenas');
   assert.equal(botones.deUrl(botones.urlMapa('ChIJ123', 'Barbería'), 'url').tipo, 'maps');
 });
+
+test('16 · el avatar abre historias sin aceptar destinos falsos', () => {
+  const base = {
+    nombre: 'Negocio',
+    logo: 'https://res.cloudinary.com/demo/image/upload/logo.png',
+    color: '#FF4900',
+    botones: [],
+  };
+  const instagram = pagina.htmlPagina({
+    ...base,
+    estilo: { plantilla: 'clasica', historia: 'instagram' },
+    redes: [{ tipo: 'instagram', url: 'https://instagram.com/barberia.centro' }],
+  });
+  assert.ok(instagram.includes('href="https://www.instagram.com/stories/barberia.centro/"'));
+  assert.ok(instagram.includes('av--historia av--instagram'));
+  assert.ok(instagram.includes('story-badge'));
+
+  const tiktok = pagina.htmlPagina({
+    ...base,
+    estilo: { plantilla: 'clasica', historia: 'tiktok' },
+    redes: [{ tipo: 'tiktok', url: 'https://www.tiktok.com/@barberia' }],
+  });
+  assert.ok(tiktok.includes('href="https://www.tiktok.com/@barberia"'));
+  assert.ok(tiktok.includes('aria-label="Abrir TikTok"'));
+
+  const falso = pagina.htmlPagina({
+    ...base,
+    estilo: { plantilla: 'clasica', historia: 'instagram' },
+    redes: [{ tipo: 'instagram', url: 'https://example.com/barberia' }],
+  });
+  assert.ok(!falso.includes('<a class="av av--historia'));
+});

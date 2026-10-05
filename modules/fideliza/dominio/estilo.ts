@@ -15,6 +15,7 @@ export type Plantilla = 'clasica' | 'oscura' | 'vidrio' | 'foto' | 'marco' | 'co
 export type EstiloBotones = 'auto' | 'relleno' | 'contorno' | 'vidrio';
 export type Forma = 'auto' | 'pildora' | 'redondeado' | 'recto';
 export type PosicionRedes = 'auto' | 'arriba' | 'abajo';
+export type RedHistoria = 'instagram' | 'tiktok';
 
 export interface Estilo {
   plantilla: Plantilla;
@@ -28,6 +29,8 @@ export interface Estilo {
   /** El negocio elegido en Google (para reseñas y cómo llegar). */
   place_id?: string;
   place_nombre?: string;
+  /** Red que se abre al tocar el avatar. Vacío = el avatar no es enlace. */
+  historia?: RedHistoria | '';
 }
 
 export const PLANTILLAS: { id: Plantilla; nombre: string; describe: string }[] = [
@@ -62,6 +65,7 @@ export function resolverEstilo(e: Partial<Estilo> | null | undefined) {
     forma: e?.forma && e.forma !== 'auto' ? e.forma : b.forma,
     redes: e?.redes && e.redes !== 'auto' ? e.redes : b.redes,
     categoria: e?.categoria ?? '',
+    historia: e?.historia === 'instagram' || e?.historia === 'tiktok' ? e.historia : '',
   };
 }
 export type EstiloResuelto = ReturnType<typeof resolverEstilo>;

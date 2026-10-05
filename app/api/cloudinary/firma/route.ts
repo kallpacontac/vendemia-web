@@ -117,13 +117,29 @@ export async function POST(req: Request) {
    * `chat/` para lo que se manda por WhatsApp desde el buzón, aparte del
    * catálogo: son ficheros de conversaciones, no fotos de producto, y
    * mezclados en la misma carpeta no hay forma de limpiar unos sin tocar los
-   * otros. Solo dos valores posibles — el destino no llega nunca a la ruta tal
-   * cual viene.
+   * otros. `brand/` guarda logos y fotos de perfil ya normalizados. Solo estos
+   * tres valores son posibles: el destino no llega nunca a la ruta tal cual.
    */
-  const folder = `${destino === 'chat' ? 'chat' : 'catalog'}/${companyId}`;
-  const signature = createHash('sha1')
-    .update(`folder=${folder}&timestamp=${timestamp}${SECRET}`)
-    .digest('hex');
+  const clase = destino === 'chat' ? 'chat' : destino === 'brand' ? 'brand' : 'catalog';
+  const folder = `${clase}/${companyId}`;
 
-  return Response.json({ timestamp, signature, folder, apiKey: KEY, cloudName: CLOUD });
+  /**
+   * La imagen de marca se normaliza durante la subida. `c_fit` conserva todo
+   * el logo o la foto y `c_pad` completa un lienzo cuadrado, en vez de cortar
+   * bordes como haría `c_fill`. PNG mantiene la transparencia y los 1.000 px
+   * dejan margen de sobra para Google Wallet (mínimo 660×660).
+   */
+  const transformation =
+    clase === 'brand' ? 'c_fit,h_880,w_880/c_pad,b_transparent,h_1000,w_1000' : undefined;
+  const format = clase === 'brand' ? 'png' : undefined;
+  const firmados: Record<string, string | number> = { folder, timestamp };
+  if (format) firmados.format = format;
+  if (transformation) firmados.transformation = transformation;
+  const cadena = Object.entries(firmados)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([k, v]) => `${k}=${v}`)
+    .join('&');
+  const signature = createHash('sha1').update(`${cadena}${SECRET}`).digest('hex');
+
+  return Response.json({ timestamp, signature, folder, format, transformation, apiKey: KEY, cloudName: CLOUD });
 }

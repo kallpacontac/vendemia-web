@@ -16,14 +16,15 @@
  * «Guardar y publicar» guarda datos, estilo y enlaces, y publica una versión
  * nueva: lo ven los clientes al momento y el historial queda.
  */
-import { useEffect, useMemo, useState } from 'react';
-import { ArrowDown, ArrowUp, Eye, EyeOff, Plus, Search, Star, Trash2 } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { ArrowDown, ArrowUp, Eye, EyeOff, ImagePlus, Plus, Search, Star, Trash2 } from 'lucide-react';
 import { useFideliza } from '@/modules/fideliza/ui/Contexto';
 import { Cargando, Fallo, SinPermiso } from '@/modules/fideliza/ui/Estados';
 import LinkPublico from '@/modules/fideliza/ui/LinkPublico';
 import { useAvisar } from '@/components/panel/Avisos';
 import { useCargar } from '@/components/panel/useCargar';
 import { accion, ErrorFideliza, lecturas, mensaje } from '@/modules/fideliza/cliente/api';
+import { subirImagenMarca } from '@/modules/fideliza/cliente/imagenMarca';
 import { FIDELIZA_URL } from '@/modules/fideliza/dominio/config';
 import {
   BOTONES,
@@ -85,7 +86,9 @@ export default function MiPagina() {
   const [slugTocado, setSlugTocado] = useState(false);
   const [menu, setMenu] = useState(false);
   const [ocupado, setOcupado] = useState(false);
+  const [subiendoLogo, setSubiendoLogo] = useState(false);
   const [aviso, setAviso] = useState<string | null>(null);
+  const archivoLogo = useRef<HTMLInputElement>(null);
   const [google, setGoogle] = useState<{ q: string; buscando: boolean; res: { id: string; nombre: string; direccion: string }[] | null; error: string | null }>({
     q: '',
     buscando: false,
@@ -219,6 +222,24 @@ export default function MiPagina() {
     ponerBoton('maps', urlMapa(l.id, l.nombre), l.direccion.split(',').slice(0, 2).join(','));
     setGoogle((g) => ({ ...g, res: null }));
     avisar('Listo: botones de reseñas y de «Cómo llegar» creados. Revisa la vista previa.');
+  }
+
+  async function subirLogo(file: File) {
+    if (!companyId) return;
+    setAviso(null);
+    setSubiendoLogo(true);
+    try {
+      const url = await subirImagenMarca(file, companyId);
+      setNegocio((n) => ({ ...n, logo: url }));
+      avisar('Foto subida. Revisa la vista previa y publica cuando esté lista.');
+    } catch (e) {
+      const texto = mensaje(e);
+      setAviso(texto);
+      avisar(texto, 'error');
+    } finally {
+      setSubiendoLogo(false);
+      if (archivoLogo.current) archivoLogo.current.value = '';
+    }
   }
 
   async function publicar() {
@@ -369,9 +390,57 @@ export default function MiPagina() {
               <input id="frase" className="input" maxLength={120} value={negocio.frase} disabled={!editable} placeholder="Cortes clásicos y modernos desde 2015" onChange={(ev) => setNegocio({ ...negocio, frase: ev.target.value })} />
             </div>
             <div className="fz-campo">
-              <label className="field-label" htmlFor="logo">Tu foto o logo (opcional)</label>
-              <input id="logo" className="input" value={negocio.logo} disabled={!editable} placeholder="https://…/logo.png" onChange={(ev) => setNegocio({ ...negocio, logo: ev.target.value.trim() })} />
-              <small>Dirección https de la imagen, mejor cuadrada. Sin foto, se muestra la inicial.</small>
+              <label className="field-label">Tu foto o logo (opcional)</label>
+              <div className="fz-logo-editor">
+                <span className="fz-logo-editor__vista" aria-hidden="true">
+                  {negocio.logo ? <img src={negocio.logo} alt="" /> : (negocio.nombre || '?').trim().slice(0, 1).toUpperCase()}
+                </span>
+                <div className="fz-logo-editor__acciones">
+                  <button
+                    type="button"
+                    className="btn btn-ghost btn-sm"
+                    disabled={!editable || subiendoLogo}
+                    onClick={() => archivoLogo.current?.click()}
+                  >
+                    {subiendoLogo ? <span className="spin" /> : <ImagePlus size={16} />}
+                    {subiendoLogo ? 'Subiendo…' : negocio.logo ? 'Cambiar imagen' : 'Subir imagen'}
+                  </button>
+                  {negocio.logo && editable && (
+                    <button type="button" className="btn btn-ghost btn-sm" disabled={subiendoLogo} onClick={() => setNegocio((n) => ({ ...n, logo: '' }))}>
+                      <Trash2 size={15} /> Quitar
+                    </button>
+                  )}
+                </div>
+              </div>
+              <input
+                ref={archivoLogo}
+                type="file"
+                accept="image/*"
+                hidden
+                disabled={!editable || subiendoLogo}
+                onChange={(ev) => {
+                  const file = ev.target.files?.[0];
+                  if (file) void subirLogo(file);
+                }}
+              />
+              <small>Elige una foto desde tu celular o computadora. La dejamos cuadrada sin recortarla; ya no necesitas conseguir un enlace.</small>
+            </div>
+            <div className="fz-campo">
+              <label className="field-label" htmlFor="historia">Al tocar tu foto</label>
+              <select
+                id="historia"
+                className="select"
+                value={estilo.historia ?? ''}
+                disabled={!editable}
+                onChange={(ev) => setEstilo({ ...estilo, historia: ev.target.value as Estilo['historia'] })}
+              >
+                <option value="">No abrir nada</option>
+                <option value="instagram">Ver historias de Instagram</option>
+                <option value="tiktok">Abrir TikTok</option>
+              </select>
+              <small>
+                Activa esa red y escribe tu usuario en «Tus redes». Instagram abre sus historias; TikTok abre el perfil porque no ofrece un enlace web estable a la historia activa.
+              </small>
             </div>
             <div className="fz-campo">
               <label className="field-label" htmlFor="slug">Tu link</label>

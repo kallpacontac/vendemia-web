@@ -38,6 +38,26 @@ export const escHtml = (s: unknown) =>
 const esc = escHtml;
 const https = (u: string | null | undefined) => (u && /^https:\/\/[^\s"'<>]+$/.test(u) ? u : '');
 
+/**
+ * Instagram sí tiene una ruta web para abrir las historias activas de un
+ * perfil. TikTok no expone una ruta web estable a la Story actual: allí se
+ * abre el perfil y la app enseña el aro si hay una historia disponible.
+ */
+function urlHistoria(tipo: string, perfil: string): string {
+  const segura = https(perfil);
+  if (!segura) return '';
+  if (tipo !== 'instagram' && tipo !== 'tiktok') return '';
+  if (tipo === 'tiktok') return segura;
+  try {
+    const u = new URL(segura);
+    if (!/(^|\.)instagram\.com$/i.test(u.hostname)) return '';
+    const usuario = u.pathname.split('/').filter(Boolean)[0] ?? '';
+    return /^[A-Za-z0-9._]+$/.test(usuario) ? `https://www.instagram.com/stories/${usuario}/` : '';
+  } catch {
+    return '';
+  }
+}
+
 /** Variables de color de cada plantilla, a partir del color principal. */
 function paleta(plantilla: string, acc: string, conFondo: boolean) {
   const accInk = tintaSobre(acc);
@@ -140,10 +160,16 @@ export function htmlPagina(d: DatosPagina, o: { vista?: boolean; indexable?: boo
   const destBg = e.plantilla === 'color' ? (tintaSobre(acc) === '#FFFFFF' ? '#14110F' : '#FFFFFF') : acc;
   const sinAvatar = e.plantilla === 'foto' && Boolean(fondo);
   const inicial = esc((d.nombre || '?').trim().slice(0, 1).toUpperCase());
+  const redHistoria = e.historia ? d.redes.find((r) => r.tipo === e.historia) : undefined;
+  const historiaUrl = redHistoria && e.historia ? urlHistoria(e.historia, redHistoria.url) : '';
+  const contenidoAvatar = logo ? `<img src="${esc(logo)}" alt="">` : `<span class="av-inicial">${inicial}</span>`;
+  const claseAvatar = `av${e.plantilla === 'marco' ? ' av--marco' : ''}${historiaUrl ? ` av--historia av--${e.historia}` : ''}`;
 
   const avatar = sinAvatar
     ? ''
-    : `<div class="av${e.plantilla === 'marco' ? ' av--marco' : ''}">${logo ? `<img src="${esc(logo)}" alt="">` : `<span>${inicial}</span>`}</div>`;
+    : historiaUrl && e.historia
+      ? `<a class="${claseAvatar}" href="${esc(historiaUrl)}" rel="noopener" aria-label="${e.historia === 'instagram' ? 'Ver historias de Instagram' : 'Abrir TikTok'}">${contenidoAvatar}<i class="story-badge" aria-hidden="true">${icono(e.historia)}</i></a>`
+      : `<div class="${claseAvatar}">${contenidoAvatar}</div>`;
 
   const redes = d.redes.length
     ? `<nav class="redes" aria-label="Redes sociales">${d.redes
@@ -173,10 +199,16 @@ body{min-height:100vh;font:15px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sa
 .pg{max-width:480px;margin:0 auto;padding:0 18px 28px;min-height:100vh;display:flex;flex-direction:column}
 .portada{height:${portada ? '150px' : '40px'};margin:0 -18px;background:${portada || 'transparent'};${e.plantilla === 'oscura' && fondo ? 'opacity:.55;' : ''}}
 .cab{display:flex;flex-direction:column;align-items:center;text-align:center;gap:6px;margin-top:${portada ? '-56px' : sinAvatar ? '38vh' : '22px'}}
-.av{width:112px;height:112px;border-radius:50%;padding:4px;background:${p.anillo};box-shadow:0 8px 28px rgba(0,0,0,.18)}
-.av img,.av span{width:100%;height:100%;border-radius:50%;object-fit:cover;display:grid;place-items:center;background:#fff;border:3px solid ${e.plantilla === 'oscura' ? '#0B0C0D' : '#fff'};font:800 40px system-ui;color:#14110F}
+.av{width:112px;height:112px;border-radius:50%;padding:4px;background:${p.anillo};box-shadow:0 8px 28px rgba(0,0,0,.18);display:block;position:relative;color:inherit;text-decoration:none}
+.av>img,.av>.av-inicial{width:100%;height:100%;border-radius:50%;object-fit:cover;display:grid;place-items:center;background:#fff;border:3px solid ${e.plantilla === 'oscura' ? '#0B0C0D' : '#fff'};font:800 40px system-ui;color:#14110F}
 .av--marco{border-radius:4px;padding:6px;background:#fff;width:132px;height:150px}
-.av--marco img,.av--marco span{border-radius:2px;border:0}
+.av--marco>img,.av--marco>.av-inicial{border-radius:2px;border:0}
+.av--historia{padding:5px;transition:transform .15s}
+.av--historia:active{transform:scale(.96)}
+.av--instagram{background:linear-gradient(135deg,#FEDA75,#FA7E1E 30%,#D62976 62%,#4F5BD5)}
+.av--tiktok{background:linear-gradient(135deg,#25F4EE 0 33%,#111 33% 66%,#FE2C55 66%)}
+.story-badge{position:absolute;right:-4px;bottom:3px;width:31px;height:31px;border-radius:50%;display:grid;place-items:center;background:#111;color:#fff;border:3px solid #fff;box-shadow:0 3px 9px rgba(0,0,0,.24)}
+.story-badge svg{width:16px;height:16px}
 h1{font-size:${serif ? '28px' : '24px'};font-weight:${serif ? '500' : '800'};margin-top:6px;${serif ? 'font-family:Georgia,"Times New Roman",serif;text-transform:uppercase;letter-spacing:.08em;' : ''}${sinAvatar ? 'text-shadow:0 2px 12px rgba(0,0,0,.45);' : ''}}
 .cat{font-size:14px;font-weight:600;color:${e.plantilla === 'oscura' ? mezcla(acc, '#FFFFFF', 0.25) : p.muted}}
 .bio{font-size:14px;color:${p.muted};max-width:340px}
