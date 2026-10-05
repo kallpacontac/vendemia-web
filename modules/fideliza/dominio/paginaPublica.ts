@@ -233,7 +233,8 @@ h1{font-size:${serif ? '28px' : '24px'};font-weight:${serif ? '500' : '800'};mar
 .bt--dest{background:${destBg};color:${tintaSobre(destBg)};border-color:${destBg}}
 .bt--dest .tile{background:rgba(255,255,255,.2);color:${tintaSobre(destBg)}}
 ${fondoVidrio}
-.pie{margin-top:auto;padding-top:28px;text-align:center;font-size:11.5px;color:${p.muted};opacity:.8}
+.pie{margin-top:auto;padding-top:28px;text-align:center;font-size:11.5px;color:${p.muted};opacity:.8;text-decoration:none}
+.pie:hover{opacity:1;text-decoration:underline}
 .vacio{text-align:center;color:${p.muted};font-size:14px;margin-top:20px}
 a:focus-visible{outline:3px solid ${p.ink};outline-offset:2px}
 ${o.vista ? 'a{pointer-events:none}' : ''}
@@ -242,6 +243,6 @@ ${o.vista ? 'a{pointer-events:none}' : ''}
 <header class="cab">${avatar}<h1>${esc(d.nombre || 'Tu negocio')}</h1>${e.categoria ? `<p class="cat">${esc(e.categoria)}</p>` : ''}${d.bio ? `<p class="bio">${esc(d.bio)}</p>` : ''}${e.redes === 'arriba' ? redes : ''}</header>
 <section class="lista">${botones || (o.vista ? '<p class="vacio">Aquí aparecerán tus botones</p>' : '')}</section>
 ${e.redes === 'abajo' ? redes : ''}
-<p class="pie">Creado con Vendemia</p>
+<a class="pie" href="https://vendemias.com" rel="noopener" aria-label="Visitar Vendemia">Creado con Vendemia</a>
 </main></body></html>`;
 }

@@ -238,3 +238,14 @@ test('16 · el avatar abre historias sin aceptar destinos falsos', () => {
   });
   assert.ok(!falso.includes('<a class="av av--historia'));
 });
+
+test('17 · la firma de Vendemia lleva a la web oficial', () => {
+  const html = pagina.htmlPagina({
+    nombre: 'Negocio',
+    color: '#FF4900',
+    redes: [],
+    botones: [],
+  });
+  assert.ok(html.includes('<a class="pie" href="https://vendemias.com"'));
+  assert.ok(html.includes('>Creado con Vendemia</a>'));
+});
