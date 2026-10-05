@@ -166,10 +166,10 @@ function Lista() {
               <option value="nfc_qr">NFC + QR</option>
             </select>
             <select className="select" value={nueva.profileId} onChange={(e) => setNueva({ ...nueva, profileId: e.target.value })}>
-              <option value="">— Perfil de enlaces —</option>
+              <option value="">— ¿A dónde lleva? —</option>
               {datos.perfiles.map((p) => (
                 <option key={p.id} value={p.id}>
-                  {p.name}
+                  {p.id === ajustes?.default_profile_id ? `${p.name} (tu página)` : p.name}
                 </option>
               ))}
             </select>
@@ -184,6 +184,13 @@ function Lista() {
               </select>
             )}
           </div>
+          <ul className="fz-ayudas">
+            <li><b>Nombre:</b> para reconocerla tú. Ej.: «Mostrador», «Mesa 4». El cliente no lo ve.</li>
+            <li><b>Solo QR impreso:</b> un código para imprimir en un cartel, la mesa o el mostrador. Lo escanean con la cámara.</li>
+            <li><b>NFC + QR:</b> una placa física con chip: acercan el móvil y se abre, o escanean su QR.</li>
+            <li><b>¿A dónde lleva?:</b> lo que se abre al usarla. Normalmente, tu página. Puedes cambiarlo cuando quieras sin reimprimir nada.</li>
+            {datos.sucursales.length > 0 && <li><b>Sucursal:</b> en qué local está, para contar sus aperturas aparte.</li>}
+          </ul>
           <div className="fz-fila" style={{ marginTop: 10 }}>
             <button className="btn btn-primary btn-sm" onClick={() => void crear()}>
               Crear

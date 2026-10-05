@@ -71,6 +71,10 @@ export default function MiPagina() {
   const [menu, setMenu] = useState(false);
   const [ocupado, setOcupado] = useState(false);
   const [aviso, setAviso] = useState<string | null>(null);
+  /** Dónde está el dueño: esa parte del móvil se resalta. */
+  const [foco, setFoco] = useState<string | null>(null);
+  const zona = (z: string) => (foco === z ? 'fz-zona fz-zona--foco' : 'fz-zona');
+  const enfoca = (z: string) => ({ onFocusCapture: () => setFoco(z), onMouseEnter: () => setFoco(z) });
 
   useEffect(() => {
     if (!ajustes) return;
@@ -196,7 +200,7 @@ export default function MiPagina() {
         <div className="fz-editor__form">
           <section className="card">
             <h3 className="fz-sec">1 · Tu negocio</h3>
-            <div className="fz-campo">
+            <div className="fz-campo" {...enfoca('negocio')}>
               <label className="field-label" htmlFor="nombre">Nombre</label>
               <input
                 id="nombre"
@@ -210,7 +214,7 @@ export default function MiPagina() {
                 }
               />
             </div>
-            <div className="fz-campo">
+            <div className="fz-campo" {...enfoca('link')}>
               <label className="field-label" htmlFor="slug">Tu link</label>
               <div className="fz-slug">
                 <span>{FIDELIZA_URL.replace(/^https?:\/\//, '')}/n/</span>
@@ -227,20 +231,22 @@ export default function MiPagina() {
                   }}
                 />
               </div>
+              <small>La dirección que compartes en Instagram, WhatsApp o en tu QR. Solo minúsculas, números y guiones.</small>
               {ajustes && negocio.slug !== ajustes.slug && (
                 <small>Ojo: si ya compartiste tu link, el anterior dejará de funcionar. Tus placas NO cambian.</small>
               )}
             </div>
-            <div className="fz-campo">
+            <div className="fz-campo" {...enfoca('frase')}>
               <label className="field-label" htmlFor="frase">Frase corta (opcional)</label>
               <input id="frase" className="input" maxLength={120} value={negocio.frase} disabled={!editable} placeholder="Cortes clásicos y modernos en Miraflores" onChange={(e) => setNegocio({ ...negocio, frase: e.target.value })} />
+              <small>Una línea debajo del nombre que dice qué haces o dónde estás.</small>
             </div>
           </section>
 
           <section className="card">
             <h3 className="fz-sec">2 · Diseño</h3>
             <label className="field-label">Color</label>
-            <div className="fz-paletas">
+            <div className="fz-paletas" {...enfoca('color')}>
               {PALETAS.map((c) => (
                 <button
                   key={c}
@@ -257,7 +263,8 @@ export default function MiPagina() {
                 <input type="color" value={negocio.color} disabled={!editable} onChange={(e) => setNegocio({ ...negocio, color: e.target.value.toUpperCase() })} />
               </label>
             </div>
-            <div className="fz-campo" style={{ marginTop: 14 }}>
+            <small className="fz-def" style={{ display: 'block', marginTop: 6 }}>El fondo de la parte de arriba de tu página.</small>
+            <div className="fz-campo" style={{ marginTop: 14 }} {...enfoca('logo')}>
               <label className="field-label" htmlFor="logo">Logo (opcional)</label>
               <input id="logo" className="input" value={negocio.logo} disabled={!editable} placeholder="https://…/logo.png" onChange={(e) => setNegocio({ ...negocio, logo: e.target.value.trim() })} />
               <small>Dirección https de tu logo, mejor cuadrado (PNG). Puedes copiarla de tu foto de perfil de Instagram o Facebook.</small>
@@ -271,7 +278,7 @@ export default function MiPagina() {
               const d = defDe(b.tipo);
               const url = b.tipo === 'tarjeta' ? '' : aUrl(b.tipo, b.valor);
               return (
-                <div key={b.clave} className={`fz-boton ${b.visible ? '' : 'oculto'}`}>
+                <div key={b.clave} className={`fz-boton ${b.visible ? '' : 'oculto'} ${foco === 'boton:' + b.clave ? 'fz-boton--foco' : ''}`} {...enfoca('boton:' + b.clave)}>
                   <div className="fz-fila" style={{ justifyContent: 'space-between' }}>
                     <span className="badge-pill b-mute">{d.nombre}</span>
                     {editable && (
@@ -294,11 +301,13 @@ export default function MiPagina() {
                   <div className="fz-col2" style={{ marginTop: 8 }}>
                     <div>
                       <label className="field-label">Texto del botón</label>
+                      <small className="fz-def" style={{ display: 'block', marginTop: -4, marginBottom: 6 }}>Lo que lee el cliente en el botón.</small>
                       <input className="input" maxLength={40} value={b.label} disabled={!editable} onChange={(e) => cambiar(b.clave, { label: e.target.value })} />
                     </div>
                     {b.tipo !== 'tarjeta' && (
                       <div>
                         <label className="field-label">{d.pide}</label>
+                        <small className="fz-def" style={{ display: 'block', marginTop: -4, marginBottom: 6 }}>A dónde lleva al pulsarlo.</small>
                         <input
                           className="input"
                           value={b.valor}
@@ -341,25 +350,34 @@ export default function MiPagina() {
 
         <aside className="fz-editor__vista" aria-label="Vista previa">
           <div className="fz-movil">
-            <div className="fz-movil__cab" style={{ background: negocio.color, color: tinta }}>
+            <div className={`fz-movil__cab ${zona('color')}`} style={{ background: negocio.color, color: tinta }}>
+              <span className={zona('logo')}>
               {negocio.logo ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={negocio.logo} alt="" />
               ) : (
                 <span className="fz-movil__logo">{(negocio.nombre || '?').slice(0, 1).toUpperCase()}</span>
               )}
-              <b>{negocio.nombre || 'Tu negocio'}</b>
-              {negocio.frase && <small>{negocio.frase}</small>}
+              </span>
+              <b className={zona('negocio')}>{negocio.nombre || 'Tu negocio'}</b>
+              {negocio.frase && <small className={zona('frase')}>{negocio.frase}</small>}
             </div>
+            {foco === 'link' && (
+              <p className="fz-movil__url">{FIDELIZA_URL.replace(/^https?:\/\//, '')}/n/{negocio.slug || 'tu-negocio'}</p>
+            )}
             <div className="fz-movil__botones">
               {visibles.length === 0 ? (
                 <p className="muted" style={{ fontSize: 12.5, textAlign: 'center' }}>Aquí aparecerán tus botones</p>
               ) : (
-                visibles.map((b) => <span key={b.clave}>{b.label || defDe(b.tipo).label}</span>)
+                visibles.map((b) => (
+                  <span key={b.clave} className={foco === 'boton:' + b.clave ? 'fz-zona--foco' : ''}>
+                    {b.label || defDe(b.tipo).label}
+                  </span>
+                ))
               )}
             </div>
           </div>
-          <small className="fz-def" style={{ textAlign: 'center', display: 'block' }}>Así la verán tus clientes en el móvil</small>
+          <small className="fz-def" style={{ textAlign: 'center', display: 'block' }}>Así la verán tus clientes en el móvil. Lo resaltado es lo que estás editando.</small>
         </aside>
       </div>
 

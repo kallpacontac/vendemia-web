@@ -211,6 +211,12 @@ export default function Enlaces() {
               <input type="checkbox" checked={borrador.makeDefault} disabled={!editable} onChange={(e) => setBorrador({ ...borrador, makeDefault: e.target.checked })} /> Usarlo también como página del negocio ({urlNegocio(ajustes.slug)})
             </label>
 
+            <ul className="fz-ayudas" style={{ marginBottom: 12 }}>
+              <li><b>Nombre interno:</b> para reconocer este perfil tú (ej. «Caja», «Mesas»). El cliente no lo ve.</li>
+              <li><b>Título visible y frase:</b> lo que sale arriba de la página. Vacío = el nombre de tu negocio.</li>
+              <li><b>Página del negocio:</b> si lo marcas, este perfil es también el de tu link fideliza.vendemias.com/n/…</li>
+              <li><b>Visible:</b> desmárcalo para esconder un botón sin borrarlo. <b>Destacado:</b> va primero y en tu color. <b>Hasta:</b> el botón desaparece solo después de esa fecha (para promociones).</li>
+            </ul>
             <h3 style={{ fontSize: 15, margin: '6px 0 8px' }}>Enlaces (borrador)</h3>
             {borrador.links.map((l, i) => (
               <div key={i} className="card" style={{ boxShadow: 'none', border: '1.5px solid var(--line)', padding: 12, marginBottom: 10 }}>

@@ -11,6 +11,7 @@ import { Suspense, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Check, Plus } from 'lucide-react';
 import { useFideliza } from '@/modules/fideliza/ui/Contexto';
+import VistaTarjeta from '@/modules/fideliza/ui/VistaTarjeta';
 import { Cargando, Fallo, SinPermiso } from '@/modules/fideliza/ui/Estados';
 import { useAvisar } from '@/components/panel/Avisos';
 import { useCargar } from '@/components/panel/useCargar';
@@ -43,6 +44,32 @@ const TEXTO_PASO = [
   { d: 'Revisa cómo queda y publícalo. Hasta publicar, nadie puede crear su tarjeta.', vivo: false },
 ];
 
+/**
+ * Para qué sirve cada campo, con un ejemplo, y qué parte de la tarjeta del
+ * cliente toca (zona de VistaTarjeta). Se busca por el texto de la etiqueta.
+ */
+const GUIA: [string, string | null, string | null][] = [
+  ['Nombre visible del negocio', 'negocio', 'Lo que verán tus clientes arriba de su tarjeta y de tu página.'],
+  ['Dirección pública', null, null],
+  ['Frase corta', 'frase', 'Una línea debajo del nombre. Ej.: «Cortes clásicos en Miraflores». Opcional.'],
+  ['Nombre del programa', 'programa', 'Cómo se llama tu tarjeta. Ej.: «Club El Centro». Mejor 20 letras o menos: Google Wallet corta lo largo.'],
+  ['Descripción corta', 'descripcion', 'Una línea que explica el beneficio. Ej.: «Junta 10 sellos y el corte 11 es gratis».'],
+  ['Sellos por compra', 'regla', 'Cuántos sellos gana el cliente cada vez que compra. Lo normal es 1.'],
+  ['Puntos', 'regla', 'Cuántos puntos da cada tramo de gasto (el tramo va en el campo de al lado).'],
+  ['…por cada (S/)', 'regla', 'El tramo de gasto. Con 1 punto por cada S/ 1, una compra de S/ 35 da 35 puntos.'],
+  ['Redondeo', 'regla', 'Qué hacer con los decimales. Ej.: 1 punto por cada S/ 10 y una compra de S/ 25 = 2,5 puntos → hacia abajo: 2 · al más cercano: 3 · hacia arriba: 3.'],
+  ['Compra mínima', 'minimo', 'Las compras por debajo de este importe se registran, pero no suman. Déjalo vacío para que toda compra sume.'],
+  ['Premio al llegar a', 'umbral', 'Cuántos hacen falta para ganar el premio. Ej.: 10. Al llegar, el premio aparece en su tarjeta para canjearlo en caja.'],
+  ['Días para canjear', 'vence', 'Cuántos días tiene el cliente para usar el premio desde que lo gana. Vacío = no caduca.'],
+  ['Premio', 'premio', 'Lo que gana, en pocas palabras. Ej.: «Un corte gratis», «Café de regalo».'],
+  ['El programa termina', null, 'Solo para promociones con fecha de fin: después ya no se suma. Vacío = sin fin.'],
+  ['Sucursales que participan', null, 'Marca los locales donde suma. Si en algún local no aplica, desmárcalo.'],
+  ['Color de fondo', 'color', 'El fondo de la tarjeta (también en Google Wallet) y de tu página.'],
+  ['Logo cuadrado', 'logo', 'Dirección https de tu logo, cuadrado (PNG, mínimo 660×660). Google lo recorta en círculo: deja margen alrededor.'],
+  ['Web o ayuda', 'ayuda', 'Un enlace de contacto (tu WhatsApp o tu web) que sale como «Ayuda» en la tarjeta de Google Wallet. Opcional.'],
+];
+const guia = (label: string) => GUIA.find(([t]) => label === t) ?? GUIA.find(([t]) => label.startsWith(t));
+
 /** Los campos de la regla: los del borrador contra los de la versión publicada. */
 const CLAVES_REGLA = [
   'rule_type', 'stamps_per_purchase', 'points_per_unit', 'unit_cents', 'rounding', 'min_purchase_cents',
@@ -57,6 +84,8 @@ function ProgramaPagina() {
   const { companyId, ajustes, puede, recargar: recargarCtx } = useFideliza();
   const avisar = useAvisar();
   const [paso, setPaso] = useState(0);
+  /** El campo en el que está el dueño: su parte de la tarjeta se resalta. */
+  const [foco, setFoco] = useState<string | null>(null);
   // Desde «Primeros pasos» se llega directo al paso que falta (?paso=0…5).
   const params = useSearchParams();
   useEffect(() => {
@@ -304,13 +333,20 @@ function ProgramaPagina() {
     }
   }
 
-  const campo = (label: string, hijo: React.ReactNode, ayuda?: string) => (
-    <div className="fz-campo">
-      <label className="field-label">{label}</label>
-      {hijo}
-      {ayuda && <small>{ayuda}</small>}
-    </div>
-  );
+  const campo = (label: string, hijo: React.ReactNode, ayuda?: string) => {
+    const [, zona, texto] = guia(label) ?? [label, null, null];
+    return (
+      <div
+        className={`fz-campo ${zona && foco === zona ? 'fz-campo--foco' : ''}`}
+        onFocusCapture={() => setFoco(zona)}
+        onMouseEnter={() => zona && setFoco(zona)}
+      >
+        <label className="field-label">{label}</label>
+        {hijo}
+        {(texto ?? ayuda) && <small>{texto ?? ayuda}</small>}
+      </div>
+    );
+  };
 
   const p = datos?.programa;
   return (
@@ -355,7 +391,8 @@ function ProgramaPagina() {
         </div>
       )}
 
-      <div className="card fz-caja" style={{ maxWidth: 720 }}>
+      <div className="fz-editor fz-editor--asistente">
+      <div className="card fz-caja" style={{ maxWidth: 'none' }}>
         <div className="fz-paso-cab">
           <div>
             <small className="fz-def">Paso {paso + 1} de 6</small>
@@ -387,7 +424,10 @@ function ProgramaPagina() {
               negocio.slug ? `Quedará en ${urlNegocio(negocio.slug)}. Cambiarla rompe los enlaces a la página, NO las placas.` : 'Minúsculas, números y guiones. Ej.: barberia-el-centro',
             )}
             {campo('Frase corta', <input className="input" maxLength={120} value={negocio.tagline} disabled={!editable} onChange={(e) => setNegocio({ ...negocio, tagline: e.target.value })} />)}
-            <h3 style={{ fontSize: 15, margin: '18px 0 8px' }}>Sucursales</h3>
+            <h3 style={{ fontSize: 15, margin: '18px 0 4px' }}>Sucursales</h3>
+            <p className="fz-def" style={{ marginBottom: 8 }}>
+              Solo si tienes más de un local: sirve para saber dónde se registró cada compra y para que cada cajero opere solo en el suyo. Con un solo local, no añadas nada.
+            </p>
             {datos!.sucursales.length === 0 && <p className="muted" style={{ fontSize: 13 }}>Sin sucursales: todo cuenta como el local principal.</p>}
             <ul className="fz-lista">
               {datos!.sucursales.map((s) => (
@@ -413,6 +453,7 @@ function ProgramaPagina() {
             {campo('Nombre del programa', <input className="input" maxLength={40} value={prog.name} disabled={!editable} onChange={(e) => setProg({ ...prog, name: e.target.value })} placeholder="Club El Centro" />, 'Lo verá el cliente en su tarjeta y en Google Wallet (mejor 20 letras o menos).')}
             {campo('Descripción corta', <input className="input" maxLength={120} value={prog.description} disabled={!editable} onChange={(e) => setProg({ ...prog, description: e.target.value })} />)}
             <label className="field-label">¿Qué quieres conseguir?</label>
+            <small className="fz-def" style={{ display: 'block', marginBottom: 8 }}>Solo te orienta para los siguientes pasos: no cambia cómo funciona el programa.</small>
             <div className="fz-grid">
               {OBJETIVOS.map((o) => (
                 <button key={o.v} type="button" disabled={!editable} className={`card ${prog.objective === o.v ? 'fz-elegido' : ''}`} style={{ textAlign: 'left', cursor: 'pointer', border: prog.objective === o.v ? '2px solid var(--brand)' : '2px solid transparent' }} onClick={() => setProg({ ...prog, objective: o.v })}>
@@ -433,7 +474,7 @@ function ProgramaPagina() {
             )}
             <div className="fz-grid">
               {REGLAS.map((r) => (
-                <button key={r.v} type="button" disabled={!editable || tipoBloqueado} className="card" style={{ textAlign: 'left', cursor: 'pointer', border: b.rule_type === r.v ? '2px solid var(--brand)' : '2px solid transparent' }} onClick={() => setB({ ...b, rule_type: r.v })}>
+                <button key={r.v} type="button" onMouseEnter={() => setFoco('regla')} disabled={!editable || tipoBloqueado} className="card" style={{ textAlign: 'left', cursor: 'pointer', border: b.rule_type === r.v ? '2px solid var(--brand)' : '2px solid transparent' }} onClick={() => setB({ ...b, rule_type: r.v })}>
                   <b>{r.t}</b>
                   <p className="fz-def">{r.d}</p>
                 </button>
@@ -492,8 +533,11 @@ function ProgramaPagina() {
                 </div>,
               )}
             <label className="check-inline" style={{ display: 'block', margin: '6px 0 14px' }}>
-              <input type="checkbox" checked={marca.require_external_ref} disabled={!editable} onChange={(e) => setMarca({ ...marca, require_external_ref: e.target.checked })} /> Exigir número de comprobante en cada compra (evita registrar dos veces la misma venta)
+              <input type="checkbox" checked={marca.require_external_ref} disabled={!editable} onChange={(e) => setMarca({ ...marca, require_external_ref: e.target.checked })} /> Pedir el número de boleta o ticket en cada compra
             </label>
+            <small className="fz-def" style={{ display: 'block', marginTop: -8, marginBottom: 14 }}>
+              En caja tendrán que escribir el número de la boleta. Así la misma venta no puede sumar dos veces. Si no emites boleta en cada venta, déjalo sin marcar.
+            </small>
           </>
         )}
 
@@ -596,6 +640,29 @@ function ProgramaPagina() {
             )}
           </div>
         )}
+      </div>
+      <aside className="fz-editor__vista" aria-label="Vista previa de la tarjeta del cliente">
+        <VistaTarjeta
+          foco={foco}
+          d={{
+            negocio: negocio.display_name,
+            frase: negocio.tagline,
+            color: marca.bg_color,
+            logo: marca.logo_url,
+            programa: prog.name,
+            descripcion: prog.description,
+            tipo: b.rule_type,
+            umbral: b.reward_threshold,
+            premio: b.reward_description ?? '',
+            sellosPorCompra: b.stamps_per_purchase,
+            puntosPorUnidad: b.points_per_unit,
+            unidadCentimos: aCentimos(textos.unidad) ?? 100,
+            minimoCentimos: textos.min ? aCentimos(textos.min) ?? 0 : 0,
+            diasPremio: b.reward_valid_days,
+            ayuda: marca.support_url,
+          }}
+        />
+      </aside>
       </div>
     </>
   );
