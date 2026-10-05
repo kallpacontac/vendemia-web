@@ -598,9 +598,9 @@ function ProgramaPagina() {
         )}
 
         {paso === 5 && (
-          <>
+          <div className="fz-publicacion">
             {b.rule_type && b.reward_threshold && b.reward_description ? (
-              <p style={{ fontSize: 16, fontWeight: 700 }}>{fraseRegla({ ...b, rule_type: b.rule_type, threshold: b.reward_threshold, reward: b.reward_description, min_purchase_cents: aCentimos(textos.min || '0') ?? 0, unit_cents: aCentimos(textos.unidad) ?? 100 })}</p>
+              <p className="fz-publicacion__regla">{fraseRegla({ ...b, rule_type: b.rule_type, threshold: b.reward_threshold, reward: b.reward_description, min_purchase_cents: aCentimos(textos.min || '0') ?? 0, unit_cents: aCentimos(textos.unidad) ?? 100 })}</p>
             ) : (
               <div className="fz-panel-aviso">Falta completar la regla (paso 4).</div>
             )}
@@ -613,13 +613,15 @@ function ProgramaPagina() {
             )}
             {!ajustes && <div className="fz-panel-aviso">Falta el paso 1 (datos del negocio).</div>}
             {editable && (
-              <button className="btn btn-primary" disabled={ocupado || !ajustes || !p || !b.reward_threshold || !b.reward_description} onClick={() => void publicar()}>
-                {publicada ? 'Publicar nueva versión' : 'Publicar programa'}
-              </button>
+              <div className="fz-publicacion__acciones">
+                <button className="btn btn-primary" disabled={ocupado || !ajustes || !p || !b.reward_threshold || !b.reward_description} onClick={() => void publicar()}>
+                  {publicada ? 'Publicar nueva versión' : 'Publicar programa'}
+                </button>
+              </div>
             )}
             {datos!.versiones.length > 0 && (
-              <>
-                <h3 style={{ fontSize: 15, margin: '20px 0 8px' }}>Versiones publicadas</h3>
+              <section className="fz-publicacion__versiones">
+                <h3>Versiones publicadas</h3>
                 <ul className="fz-lista">
                   {datos!.versiones.map((v) => (
                     <li key={v.id}>
@@ -632,9 +634,9 @@ function ProgramaPagina() {
                     </li>
                   ))}
                 </ul>
-              </>
+              </section>
             )}
-          </>
+          </div>
         )}
 
         {editable && (
