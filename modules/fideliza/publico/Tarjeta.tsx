@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { Wallet } from 'lucide-react';
 import { UNIDAD, fechaHora, type TipoRegla } from '@/modules/fideliza/dominio/formato';
 
 export interface DatosTarjeta {
@@ -238,6 +239,49 @@ export default function Tarjeta(props: {
         </div>
       )}
 
+      {d.member.status === 'active' && (
+        <section className="fz-caja fz-caja--flujo fz-wallet-caja" aria-label="Guardar la tarjeta">
+          {plataforma !== 'ios' && props.walletDisponible && (
+            <>
+              <div>
+                <p className="fz-grande">Lleva tu tarjeta siempre contigo</p>
+                <p className="fz-nota">Agrégala a tu teléfono para encontrarla rápido cuando visites el local.</p>
+              </div>
+              <button
+                type="button"
+                className="fz-wallet"
+                onClick={() => void wallet()}
+                disabled={ocupado === 'wallet'}
+                aria-label="Agregar a Google Wallet"
+              >
+                <Wallet aria-hidden="true" />
+                <span>{ocupado === 'wallet' ? 'Preparando…' : 'Agregar a Google Wallet'}</span>
+              </button>
+              {d.wallet && (
+                <p className="fz-nota">
+                  {d.wallet.state === 'error'
+                    ? 'Estamos actualizando tu tarjeta de Google Wallet. Tu saldo de aquí es el bueno.'
+                    : d.wallet.pending
+                      ? 'Tu tarjeta de Google Wallet se está poniendo al día.'
+                      : 'Tu tarjeta de Google Wallet está al día.'}
+                </p>
+              )}
+              {props.walletDemo && (
+                <p className="fz-mini">Google Wallet está en pruebas: por ahora solo funciona con cuentas de prueba autorizadas.</p>
+              )}
+            </>
+          )}
+          {plataforma === 'ios' && (
+            <p className="fz-nota">
+              <b>Guárdala en tu iPhone:</b> pulsa <b>Compartir</b> y luego <b>Añadir a pantalla de inicio</b>. Tu tarjeta quedará como una app.
+            </p>
+          )}
+          {plataforma === 'otra' && !props.walletDisponible && (
+            <p className="fz-nota">Guarda esta página en tus favoritos o en la pantalla de inicio.</p>
+          )}
+        </section>
+      )}
+
       <section className="fz-caja fz-centro" aria-label="Tu tarjeta">
         {d.member.alias && <p className="fz-nota">Hola, {d.member.alias}</p>}
         <p className="fz-saldo">
@@ -279,48 +323,8 @@ export default function Tarjeta(props: {
         </p>
       </section>
 
-      {d.member.status === 'active' && (
-        <section className="fz-caja" aria-label="Guardar la tarjeta">
-          {plataforma !== 'ios' && props.walletDisponible && (
-            <>
-              <button
-                type="button"
-                className="fz-wallet"
-                onClick={() => void wallet()}
-                disabled={ocupado === 'wallet'}
-                aria-label="Agregar a Google Wallet"
-              >
-                {/* Recurso oficial de Google, sin modificar (public/wallet). */}
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src="/wallet/es419_add_to_google_wallet_wallet-button.svg" alt="Agregar a Google Wallet" height={50} />
-              </button>
-              {d.wallet && (
-                <p className="fz-nota">
-                  {d.wallet.state === 'error'
-                    ? 'Estamos actualizando tu tarjeta de Google Wallet. Tu saldo de aquí es el bueno.'
-                    : d.wallet.pending
-                      ? 'Tu tarjeta de Google Wallet se está poniendo al día.'
-                      : 'Tu tarjeta de Google Wallet está al día.'}
-                </p>
-              )}
-              {props.walletDemo && (
-                <p className="fz-mini">Google Wallet está en pruebas: por ahora solo funciona con cuentas de prueba autorizadas.</p>
-              )}
-            </>
-          )}
-          {plataforma === 'ios' && (
-            <p className="fz-nota">
-              <b>En iPhone:</b> pulsa <b>Compartir</b> y luego <b>Añadir a pantalla de inicio</b>. Tu tarjeta quedará como una app.
-            </p>
-          )}
-          {plataforma === 'otra' && !props.walletDisponible && (
-            <p className="fz-nota">Guarda esta página en tus favoritos o en la pantalla de inicio.</p>
-          )}
-        </section>
-      )}
-
       {pushPosible && d.member.status === 'active' && (
-        <section className="fz-caja" aria-label="Avisos">
+        <section className="fz-caja fz-caja--flujo" aria-label="Avisos">
           {d.push.consent && d.push.devices > 0 ? (
             <>
               <p className="fz-nota">Recibes avisos de {d.brand.display_name} en este teléfono.</p>
