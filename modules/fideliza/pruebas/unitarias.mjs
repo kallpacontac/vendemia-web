@@ -147,6 +147,10 @@ test('10 · botones: el dato del dueño se convierte en la URL correcta', () => 
   assert.equal(botones.aUrl('web', 'http://barberia.pe'), 'https://barberia.pe');
   assert.equal(botones.aUrl('whatsapp', '123'), '');
   assert.equal(botones.aUrl('instagram', ''), '');
+  assert.equal(botones.urlAyuda('987 654 321'), 'https://wa.me/51987654321');
+  assert.equal(botones.urlAyuda('+51 987 654 321'), 'https://wa.me/51987654321');
+  assert.equal(botones.urlAyuda('barberia.pe'), 'https://barberia.pe');
+  assert.equal(botones.urlAyuda('123'), '');
 });
 
 test('11 · botones: al volver a editar se reconoce el tipo y el dato', () => {

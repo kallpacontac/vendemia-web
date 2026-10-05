@@ -140,6 +140,17 @@ export function aUrl(tipo: TipoBoton, valor: string): string {
   }
 }
 
+/**
+ * El campo «Web o ayuda» acepta tanto una web como un teléfono. Si parece un
+ * número, se convierte en el enlace de WhatsApp que espera Google Wallet.
+ */
+export function urlAyuda(valor: string): string {
+  const v = valor.trim();
+  if (!v) return '';
+  if (/^\+?[\d\s().-]+$/.test(v)) return aUrl('whatsapp', v);
+  return aUrl('web', v);
+}
+
 /** Al revés: de la URL guardada al tipo y al dato que se enseña al editar. */
 export function deUrl(url: string | null, kind: 'url' | 'join'): { tipo: TipoBoton; valor: string } {
   if (kind === 'join') return { tipo: 'tarjeta', valor: '' };

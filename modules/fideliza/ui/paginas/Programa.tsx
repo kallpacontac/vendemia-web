@@ -16,6 +16,7 @@ import { Cargando, Fallo, SinPermiso } from '@/modules/fideliza/ui/Estados';
 import { useAvisar } from '@/components/panel/Avisos';
 import { useCargar } from '@/components/panel/useCargar';
 import { accion, lecturas, mensaje, sincronizarEnSegundoPlano, type Programa, type Version } from '@/modules/fideliza/cliente/api';
+import { urlAyuda } from '@/modules/fideliza/dominio/botones';
 import { urlNegocio } from '@/modules/fideliza/dominio/config';
 import { aCentimos, fecha, fraseRegla, soles, unidades, type TipoRegla } from '@/modules/fideliza/dominio/formato';
 
@@ -66,7 +67,7 @@ const GUIA: [string, string | null, string | null][] = [
   ['Sucursales que participan', null, 'Marca los locales donde suma. Si en algún local no aplica, desmárcalo.'],
   ['Color de fondo', 'color', 'El fondo de la tarjeta (también en Google Wallet) y de tu página.'],
   ['Logo cuadrado', 'logo', 'Dirección https de tu logo, cuadrado (PNG, mínimo 660×660). Google lo recorta en círculo: deja margen alrededor.'],
-  ['Web o ayuda', 'ayuda', 'Un enlace de contacto (tu WhatsApp o tu web) que sale como «Ayuda» en la tarjeta de Google Wallet. Opcional.'],
+  ['Web o ayuda', 'ayuda', 'Escribe tu número de WhatsApp y completamos el enlace automáticamente. También puedes poner tu web. Sale como «Ayuda» en Google Wallet. Opcional.'],
 ];
 const guia = (label: string) => GUIA.find(([t]) => label === t) ?? GUIA.find(([t]) => label.startsWith(t));
 
@@ -207,11 +208,17 @@ function ProgramaPagina() {
 
   /** 'logo' = guardado, pero el logo no sirve para Wallet (se enseña por qué). */
   async function guardarMarca(): Promise<'ok' | 'logo' | false> {
+    const supportUrl = urlAyuda(marca.support_url);
+    if (marca.support_url.trim() && !supportUrl) {
+      avisar('Escribe un número de WhatsApp válido o una dirección web.', 'error');
+      return false;
+    }
     try {
       const r = await accion<{ logo: { ok: boolean; errores: string[]; avisos: string[] } | null }>('ajustes.guardar', {
         companyId,
-        datos: { bg_color: marca.bg_color, logo_url: marca.logo_url, support_url: marca.support_url, require_external_ref: marca.require_external_ref },
+        datos: { bg_color: marca.bg_color, logo_url: marca.logo_url, support_url: supportUrl, require_external_ref: marca.require_external_ref },
       });
+      setMarca((actual) => ({ ...actual, support_url: supportUrl }));
       setLogo(r.logo);
       const malo = Boolean(r.logo && !r.logo.ok);
       avisar(malo ? 'Guardado. El logo no sirve para Google Wallet: mira el motivo abajo.' : 'Marca guardada', malo ? 'espera' : 'ok');
@@ -551,7 +558,22 @@ function ProgramaPagina() {
                   <span>{logo.ok ? 'El logo sirve para Google Wallet.' : logo.errores.join(' ')} {logo.avisos.join(' ')}</span>
                 </div>
               )}
-              {campo('Web o ayuda (opcional)', <input className="input" value={marca.support_url} disabled={!editable} onChange={(e) => setMarca({ ...marca, support_url: e.target.value.trim() })} placeholder="https://wa.me/51…" />)}
+              {campo(
+                'Web o ayuda (opcional)',
+                <input
+                  className="input"
+                  value={marca.support_url}
+                  disabled={!editable}
+                  onChange={(e) => setMarca({ ...marca, support_url: e.target.value })}
+                  onBlur={() =>
+                    setMarca((actual) => ({
+                      ...actual,
+                      support_url: urlAyuda(actual.support_url) || actual.support_url.trim(),
+                    }))
+                  }
+                  placeholder="987 654 321 o tunegocio.com"
+                />,
+              )}
               <small className="fz-def">Al pulsar «Guardar y seguir» comprobamos si el logo sirve para Google Wallet.</small>
             </div>
             <div>

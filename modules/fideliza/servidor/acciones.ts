@@ -6,6 +6,7 @@ import { rpc, servidor } from './supabase';
 import { comprobarLogo } from './logo';
 import { buscarLugares } from './lugares';
 import { drenar } from './worker';
+import { urlAyuda } from '../dominio/botones';
 
 /**
  * ══════════════════════════════════════════════════════════════════════════
@@ -84,7 +85,12 @@ export const ACCIONES = {
           tagline: textoCorto(120).optional(),
           logo_url: urlHttps.or(z.literal('')).optional(),
           bg_color: z.string().regex(/^#[0-9A-Fa-f]{6}$/).optional(),
-          support_url: urlHttps.or(z.literal('')).optional(),
+          support_url: z
+            .preprocess((v) => {
+              if (typeof v !== 'string' || !v.trim()) return v;
+              return urlAyuda(v) || v.trim();
+            }, urlHttps.or(z.literal('')))
+            .optional(),
           require_external_ref: z.boolean().optional(),
           wallet_use_demo_class: z.boolean().optional(),
         })
