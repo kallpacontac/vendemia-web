@@ -2,6 +2,7 @@ import 'server-only';
 import { NO_CACHE } from './http';
 import { htmlPagina, type BotonPagina } from '../dominio/paginaPublica';
 import { deUrl } from '../dominio/botones';
+import { resolverEstilo, type Estilo } from '../dominio/estilo';
 import { fraseRegla } from '../dominio/formato';
 import type { TipoRegla } from '../dominio/formato';
 
@@ -122,7 +123,7 @@ export function noDisponible(marca: MarcaPublica | null, status = 200) {
 /** Lo que devuelve loyalty_srv_business. */
 export interface Negocio {
   status: 'ok' | 'not_found';
-  brand: MarcaPublica & { slug: string; style?: Record<string, unknown> | null };
+  brand: MarcaPublica & { slug: string; style?: Record<string, unknown> | string | null };
   title: string | null;
   tagline: string | null;
   links: EnlacePublico[];
@@ -146,7 +147,7 @@ export interface Negocio {
  * puso el botón de alta, se añade uno destacado.
  */
 export function paginaDeEnlaces(o: {
-  marca: MarcaPublica & { slug: string; style?: Record<string, unknown> | null };
+  marca: MarcaPublica & { slug: string; style?: Record<string, unknown> | string | null };
   titulo?: string | null;
   frase?: string | null;
   links: EnlacePublico[];
@@ -155,6 +156,23 @@ export function paginaDeEnlaces(o: {
   placa?: string;
   indexable?: boolean;
 }) {
+  /**
+   * Resuelve aquí, en el límite entre Supabase y el HTML, además de hacerlo en
+   * `htmlPagina`. Así una respuesta JSONB serializada o incompleta nunca hace
+   * que la página pública vuelva silenciosamente a «Clásica».
+   */
+  let estiloEntrada: Partial<Estilo> | null = null;
+  if (o.marca.style && typeof o.marca.style === 'object' && !Array.isArray(o.marca.style)) {
+    estiloEntrada = o.marca.style as Partial<Estilo>;
+  } else if (typeof o.marca.style === 'string') {
+    try {
+      const leido = JSON.parse(o.marca.style) as unknown;
+      if (leido && typeof leido === 'object' && !Array.isArray(leido)) estiloEntrada = leido as Partial<Estilo>;
+    } catch {
+      estiloEntrada = null;
+    }
+  }
+  const estilo = resolverEstilo(estiloEntrada);
   const tipoDe = (l: EnlacePublico) => l.icon || deUrl(l.url, l.kind).tipo;
   const botones: BotonPagina[] = o.links
     .filter((l) => l.placement !== 'social')
@@ -180,7 +198,7 @@ export function paginaDeEnlaces(o: {
       bio: o.frase || o.marca.tagline,
       logo: o.marca.logo_url,
       color: o.marca.bg_color,
-      estilo: o.marca.style ?? null,
+      estilo,
       redes: o.links.filter((l) => l.placement === 'social' && l.url).map((l) => ({ tipo: tipoDe(l), url: l.url! })),
       botones,
     },
@@ -189,6 +207,7 @@ export function paginaDeEnlaces(o: {
   return new Response(html, {
     headers: {
       'Content-Type': 'text/html; charset=utf-8',
+      'X-Vendemia-Template': estilo.plantilla,
       ...NO_CACHE,
       'X-Frame-Options': 'DENY',
       'Content-Security-Policy': "frame-ancestors 'none'",

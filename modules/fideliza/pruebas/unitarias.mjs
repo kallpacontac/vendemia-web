@@ -256,3 +256,11 @@ test('18 · guardar el acceso a historias pasa la validación sin enseñar detal
   assert.match(acciones, /historia:\s*z\.enum\(\['instagram', 'tiktok', ''\]\)\.optional\(\)/);
   assert.ok(!editor.includes('falta aplicar la migración 0008'));
 });
+
+test('19 · la ruta pública resuelve el estilo guardado y nunca usa caché de página', () => {
+  const servidor = readFileSync(join(raiz, 'modules/fideliza/servidor/html.ts'), 'utf8');
+  const ruta = readFileSync(join(raiz, 'app/(fideliza)/n/[slug]/route.ts'), 'utf8');
+  assert.match(servidor, /const estilo = resolverEstilo\(estiloEntrada\)/);
+  assert.match(servidor, /'X-Vendemia-Template': estilo\.plantilla/);
+  assert.match(ruta, /export const revalidate = 0/);
+});

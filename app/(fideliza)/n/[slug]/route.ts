@@ -2,4 +2,5 @@
 // que Next exige leer en este fichero.
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 export { GET } from '@/modules/fideliza/servidor/rutas/negocio';

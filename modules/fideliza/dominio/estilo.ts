@@ -58,6 +58,7 @@ export const PLANTILLA_POR_DEFECTO: Plantilla = 'clasica';
 export function resolverEstilo(e: Partial<Estilo> | null | undefined) {
   const plantilla = PLANTILLAS.some((p) => p.id === e?.plantilla) ? (e!.plantilla as Plantilla) : PLANTILLA_POR_DEFECTO;
   const b = BASE[plantilla];
+  const historia: RedHistoria | '' = e?.historia === 'instagram' || e?.historia === 'tiktok' ? e.historia : '';
   return {
     plantilla,
     fondo: e?.fondo && /^https:\/\/\S+$/.test(e.fondo) ? e.fondo : '',
@@ -65,7 +66,7 @@ export function resolverEstilo(e: Partial<Estilo> | null | undefined) {
     forma: e?.forma && e.forma !== 'auto' ? e.forma : b.forma,
     redes: e?.redes && e.redes !== 'auto' ? e.redes : b.redes,
     categoria: e?.categoria ?? '',
-    historia: e?.historia === 'instagram' || e?.historia === 'tiktok' ? e.historia : '',
+    historia,
   };
 }
 export type EstiloResuelto = ReturnType<typeof resolverEstilo>;
