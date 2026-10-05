@@ -23,6 +23,7 @@ const payload = cargar('modules/fideliza/dominio/wallet-payload.ts');
 const formato = cargar('modules/fideliza/dominio/formato.ts');
 const errores = cargar('modules/fideliza/dominio/errores.ts');
 const botones = cargar('modules/fideliza/dominio/botones.ts');
+const pagina = cargar('modules/fideliza/dominio/paginaPublica.ts');
 
 const MIEMBRO_ID = '9f1c2d3e-4b5a-4c6d-8e7f-001122334455';
 const marca = { slug: 'barberia-centro', display_name: 'Barbería Centro', logo_url: 'https://x.com/l.png', bg_color: '#112233', support_url: null };
@@ -166,4 +167,42 @@ test('11 · botones: al volver a editar se reconoce el tipo y el dato', () => {
 test('12 · botones: la dirección se sugiere a partir del nombre', () => {
   assert.equal(botones.slugDe('Barbería El Centro'), 'barberia-el-centro');
   assert.equal(botones.slugDe('  Café & Té  '), 'cafe-te');
+});
+
+test('13 · página pública: nada de lo que escribe el dueño se ejecuta', () => {
+  const html = pagina.htmlPagina({
+    nombre: '<script>alert(1)</script>',
+    bio: '"><img src=x onerror=alert(1)>',
+    logo: 'javascript:alert(1)',
+    color: 'red;}body{display:none',
+    estilo: { plantilla: 'vidrio', fondo: 'http://inseguro.com/a.jpg', categoria: '<b>x</b>' },
+    redes: [{ tipo: 'instagram', url: 'https://instagram.com/a' }],
+    botones: [{ tipo: 'web', label: '<i>hola</i>', url: 'https://a.pe' }],
+  });
+  assert.ok(!html.includes('<script>alert'));
+  assert.ok(!html.includes('<img src=x'));
+  assert.ok(!html.includes('javascript:'));
+  assert.ok(!html.includes('http://inseguro.com'), 'solo imágenes https');
+  assert.ok(!html.includes('display:none'), 'el color se valida antes de llegar al CSS');
+  assert.ok(html.includes('&lt;i&gt;hola&lt;/i&gt;'));
+});
+
+test('14 · página pública: cada plantilla pinta redes con logo y la vista previa no navega', () => {
+  for (const plantilla of ['clasica', 'oscura', 'vidrio', 'foto', 'marco', 'color']) {
+    const html = pagina.htmlPagina(
+      { nombre: 'Negocio', color: '#FF4900', estilo: { plantilla }, redes: [{ tipo: 'instagram', url: 'https://instagram.com/a' }], botones: [] },
+      { vista: true },
+    );
+    assert.match(html, /<nav class="redes"[^>]*>.*<svg viewBox="0 0 24 24" fill="currentColor"/s);
+    assert.ok(html.includes('a{pointer-events:none}'));
+  }
+});
+
+test('15 · botones: redes nuevas y enlaces de Google desde el place_id', () => {
+  assert.equal(botones.aUrl('youtube', '@canal'), 'https://www.youtube.com/@canal');
+  assert.equal(botones.aUrl('x', '@cuenta'), 'https://x.com/cuenta');
+  assert.equal(botones.aUrl('telegram', 'grupo'), 'https://t.me/grupo');
+  assert.equal(botones.urlResenas('ChIJ123'), 'https://search.google.com/local/writereview?placeid=ChIJ123');
+  assert.equal(botones.deUrl(botones.urlResenas('ChIJ123'), 'url').tipo, 'resenas');
+  assert.equal(botones.deUrl(botones.urlMapa('ChIJ123', 'Barbería'), 'url').tipo, 'maps');
 });

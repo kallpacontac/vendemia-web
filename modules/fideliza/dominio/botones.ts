@@ -15,6 +15,10 @@ export type TipoBoton =
   | 'instagram'
   | 'tiktok'
   | 'facebook'
+  | 'youtube'
+  | 'x'
+  | 'telegram'
+  | 'spotify'
   | 'resenas'
   | 'maps'
   | 'carta'
@@ -59,6 +63,21 @@ export const BOTONES: DefBoton[] = [
   { tipo: 'enlace', nombre: 'Otro enlace', label: 'Más información', pide: 'El enlace', placeholder: 'https://…' },
 ];
 
+/**
+ * Las redes que van como fila de iconos (con su logo oficial). El dueño marca
+ * las que usa y escribe solo su @, su número o su enlace.
+ */
+export const REDES: DefBoton[] = [
+  { tipo: 'instagram', nombre: 'Instagram', label: 'Instagram', pide: 'Tu usuario', placeholder: '@tunegocio' },
+  { tipo: 'tiktok', nombre: 'TikTok', label: 'TikTok', pide: 'Tu usuario', placeholder: '@tunegocio' },
+  { tipo: 'facebook', nombre: 'Facebook', label: 'Facebook', pide: 'Tu página', placeholder: 'tunegocio' },
+  { tipo: 'whatsapp', nombre: 'WhatsApp', label: 'WhatsApp', pide: 'Tu número', placeholder: '987 654 321' },
+  { tipo: 'youtube', nombre: 'YouTube', label: 'YouTube', pide: 'Tu canal', placeholder: '@tucanal' },
+  { tipo: 'x', nombre: 'X', label: 'X', pide: 'Tu usuario', placeholder: '@tunegocio' },
+  { tipo: 'telegram', nombre: 'Telegram', label: 'Telegram', pide: 'Tu usuario', placeholder: '@tunegocio' },
+  { tipo: 'spotify', nombre: 'Spotify', label: 'Spotify', pide: 'Enlace a tu perfil o lista', placeholder: 'https://open.spotify.com/…' },
+];
+
 /** El alta en la tarjeta de puntos: no pide nada, va a /n/<slug>/unirse. */
 export const BOTON_TARJETA: DefBoton = {
   tipo: 'tarjeta',
@@ -68,7 +87,14 @@ export const BOTON_TARJETA: DefBoton = {
   placeholder: '',
 };
 
-export const defDe = (t: TipoBoton) => (t === 'tarjeta' ? BOTON_TARJETA : BOTONES.find((b) => b.tipo === t)!);
+export const defDe = (t: TipoBoton) =>
+  t === 'tarjeta' ? BOTON_TARJETA : BOTONES.find((b) => b.tipo === t) ?? REDES.find((b) => b.tipo === t) ?? BOTONES[BOTONES.length - 1];
+
+/** Con el negocio elegido en Google: la ventana de «escribir reseña», directa. */
+export const urlResenas = (placeId: string) => `https://search.google.com/local/writereview?placeid=${encodeURIComponent(placeId)}`;
+/** Y «cómo llegar» a ese mismo lugar (formato oficial de enlaces de Maps). */
+export const urlMapa = (placeId: string, nombre: string) =>
+  `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(nombre || 'negocio')}&query_place_id=${encodeURIComponent(placeId)}`;
 
 const sinArroba = (v: string) => v.trim().replace(/^@+/, '').replace(/\s+/g, '');
 
@@ -103,6 +129,12 @@ export function aUrl(tipo: TipoBoton, valor: string): string {
       return /tiktok\.com/i.test(v) ? urlSuelta(v) : sinArroba(v) ? `https://www.tiktok.com/@${sinArroba(v)}` : '';
     case 'facebook':
       return /facebook\.com|fb\.com/i.test(v) ? urlSuelta(v) : sinArroba(v) ? `https://facebook.com/${sinArroba(v)}` : '';
+    case 'youtube':
+      return /youtube\.com|youtu\.be/i.test(v) ? urlSuelta(v) : sinArroba(v) ? `https://www.youtube.com/@${sinArroba(v)}` : '';
+    case 'x':
+      return /(^|\/\/)(www\.)?(x|twitter)\.com/i.test(v) ? urlSuelta(v) : sinArroba(v) ? `https://x.com/${sinArroba(v)}` : '';
+    case 'telegram':
+      return /t\.me\//i.test(v) ? urlSuelta(v) : sinArroba(v) ? `https://t.me/${sinArroba(v)}` : '';
     default:
       return urlSuelta(v);
   }
@@ -120,6 +152,11 @@ export function deUrl(url: string | null, kind: 'url' | 'join'): { tipo: TipoBot
   if ((m = u.match(/^https:\/\/(?:www\.)?instagram\.com\/([A-Za-z0-9._]+)\/?$/i))) return { tipo: 'instagram', valor: '@' + m[1] };
   if ((m = u.match(/^https:\/\/(?:www\.)?tiktok\.com\/@([A-Za-z0-9._]+)\/?$/i))) return { tipo: 'tiktok', valor: '@' + m[1] };
   if (/^https:\/\/(?:www\.|m\.)?(facebook\.com|fb\.com)\//i.test(u)) return { tipo: 'facebook', valor: u };
+  if ((m = u.match(/^https:\/\/(?:www\.)?youtube\.com\/@([A-Za-z0-9._-]+)\/?$/i))) return { tipo: 'youtube', valor: '@' + m[1] };
+  if (/youtube\.com|youtu\.be/i.test(u)) return { tipo: 'youtube', valor: u };
+  if ((m = u.match(/^https:\/\/(?:www\.)?(?:x|twitter)\.com\/([A-Za-z0-9_]+)\/?$/i))) return { tipo: 'x', valor: '@' + m[1] };
+  if ((m = u.match(/^https:\/\/t\.me\/([A-Za-z0-9_]+)\/?$/i))) return { tipo: 'telegram', valor: '@' + m[1] };
+  if (/open\.spotify\.com/i.test(u)) return { tipo: 'spotify', valor: u };
   if (/g\.page\/r\/|search\.google\.com\/local\/writereview|\/review\b/i.test(u)) return { tipo: 'resenas', valor: u };
   if (/maps\.app\.goo\.gl|goo\.gl\/maps|google\.[a-z.]+\/maps/i.test(u)) return { tipo: 'maps', valor: u };
   return { tipo: 'enlace', valor: u };

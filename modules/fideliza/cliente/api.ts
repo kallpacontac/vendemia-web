@@ -73,6 +73,8 @@ export interface Ajustes {
   bg_color: string;
   support_url: string | null;
   default_profile_id: string | null;
+  /** sql/0008. Puede no venir si la migración aún no se aplicó. */
+  page_style?: Record<string, unknown> | null;
   require_external_ref: boolean;
   wallet_use_demo_class: boolean;
 }
@@ -140,6 +142,9 @@ export interface Enlace {
   position?: number;
   is_active: boolean;
   is_primary: boolean;
+  icon?: string | null;
+  subtitle?: string | null;
+  placement?: 'button' | 'social';
   starts_at: string | null;
   ends_at: string | null;
 }

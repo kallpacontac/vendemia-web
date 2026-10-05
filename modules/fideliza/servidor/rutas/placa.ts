@@ -15,14 +15,14 @@
  * parámetro se cuenta como NFC/directo (no se puede distinguir más).
  */
 import { FIDELIZA_URL } from '@/modules/fideliza/dominio/config';
-import { destino, esc, listaEnlaces, noDisponible, pagina, type EnlacePublico, type MarcaPublica } from '@/modules/fideliza/servidor/html';
+import { destino, esc, noDisponible, pagina, paginaDeEnlaces, type EnlacePublico, type MarcaPublica } from '@/modules/fideliza/servidor/html';
 import { huellaIp, limitar, log, NO_CACHE } from '@/modules/fideliza/servidor/http';
 import { rpc, servidor } from '@/modules/fideliza/servidor/supabase';
 
 
 interface Resuelto {
   status: 'ok' | 'unavailable' | 'not_found' | 'unclaimed';
-  brand?: MarcaPublica & { slug: string };
+  brand?: MarcaPublica & { slug: string; style?: Record<string, unknown> | null };
   title?: string;
   tagline?: string;
   links?: EnlacePublico[];
@@ -46,10 +46,13 @@ export async function GET(req: Request, { params }: { params: { token: string } 
       const url = destino(r.links[0], r.brand.slug, FIDELIZA_URL, token);
       return new Response(null, { status: 302, headers: { Location: url, ...NO_CACHE, 'Referrer-Policy': 'no-referrer' } });
     }
-    return pagina({
-      titulo: r.title || r.brand.display_name,
-      marca: { ...r.brand, tagline: r.tagline || r.brand.tagline },
-      cuerpo: listaEnlaces(r.links, r.brand.slug, FIDELIZA_URL, token),
+    return paginaDeEnlaces({
+      marca: r.brand,
+      titulo: r.title,
+      frase: r.tagline,
+      links: r.links,
+      base: FIDELIZA_URL,
+      placa: token,
     });
   } catch (e) {
     log('resolver_error', { mensaje: e instanceof Error ? e.message.slice(0, 120) : 'x' });

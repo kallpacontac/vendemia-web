@@ -29,7 +29,10 @@ export function log(evento: string, datos: Record<string, unknown> = {}) {
 export function desdeError(e: unknown, ruta: string) {
   if (e instanceof FaltaConfiguracion) {
     log('config_missing', { ruta, variable: e.variable });
-    return fallo(e.variable === 'FIDELIZA_SERVER_KEY' ? 'server_key' : 'wallet_not_configured', 503);
+    return fallo(
+      e.variable === 'FIDELIZA_SERVER_KEY' ? 'server_key' : e.variable === 'GOOGLE_PLACES_API_KEY' ? 'places_not_configured' : 'wallet_not_configured',
+      503,
+    );
   }
   const mensaje = e instanceof Error ? e.message : String(e);
   const codigo = codigoDe(mensaje);

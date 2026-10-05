@@ -1,5 +1,8 @@
 import 'server-only';
 import { NO_CACHE } from './http';
+import { htmlPagina, type BotonPagina } from '../dominio/paginaPublica';
+import { deUrl } from '../dominio/botones';
+import { fraseRegla } from '../dominio/formato';
 import type { TipoRegla } from '../dominio/formato';
 
 /**
@@ -85,6 +88,10 @@ export interface EnlacePublico {
   kind: 'url' | 'join';
   url: string | null;
   is_primary?: boolean;
+  /** sql/0008: las versiones publicadas antes no los traen. */
+  icon?: string | null;
+  subtitle?: string | null;
+  placement?: 'button' | 'social';
 }
 
 /** El destino real de un enlace publicado. «join» es el alta del propio negocio. */
@@ -115,7 +122,7 @@ export function noDisponible(marca: MarcaPublica | null, status = 200) {
 /** Lo que devuelve loyalty_srv_business. */
 export interface Negocio {
   status: 'ok' | 'not_found';
-  brand: MarcaPublica & { slug: string };
+  brand: MarcaPublica & { slug: string; style?: Record<string, unknown> | null };
   title: string | null;
   tagline: string | null;
   links: EnlacePublico[];
@@ -130,4 +137,62 @@ export interface Negocio {
     unit_cents: number;
     min_purchase_cents: number;
   } | null;
+}
+
+/**
+ * La página de enlaces con su plantilla (dominio/paginaPublica): la de
+ * /n/<negocio> y la de una placa con varios enlaces. Las redes van como fila
+ * de iconos; el resto, como botones. Si hay programa de puntos y el dueño no
+ * puso el botón de alta, se añade uno destacado.
+ */
+export function paginaDeEnlaces(o: {
+  marca: MarcaPublica & { slug: string; style?: Record<string, unknown> | null };
+  titulo?: string | null;
+  frase?: string | null;
+  links: EnlacePublico[];
+  programa?: Negocio['program'];
+  base: string;
+  placa?: string;
+  indexable?: boolean;
+}) {
+  const tipoDe = (l: EnlacePublico) => l.icon || deUrl(l.url, l.kind).tipo;
+  const botones: BotonPagina[] = o.links
+    .filter((l) => l.placement !== 'social')
+    .map((l) => ({
+      tipo: tipoDe(l),
+      label: l.label,
+      url: destino(l, o.marca.slug, o.base, o.placa),
+      subtitulo: l.subtitle ?? undefined,
+      destacado: Boolean(l.is_primary),
+    }));
+  if (o.programa && !o.links.some((l) => l.kind === 'join')) {
+    botones.unshift({
+      tipo: 'tarjeta',
+      label: 'Crear mi tarjeta de puntos',
+      url: destino({ label: '', kind: 'join', url: null }, o.marca.slug, o.base, o.placa),
+      subtitulo: fraseRegla(o.programa),
+      destacado: true,
+    });
+  }
+  const html = htmlPagina(
+    {
+      nombre: o.titulo || o.marca.display_name,
+      bio: o.frase || o.marca.tagline,
+      logo: o.marca.logo_url,
+      color: o.marca.bg_color,
+      estilo: o.marca.style ?? null,
+      redes: o.links.filter((l) => l.placement === 'social' && l.url).map((l) => ({ tipo: tipoDe(l), url: l.url! })),
+      botones,
+    },
+    { indexable: o.indexable },
+  );
+  return new Response(html, {
+    headers: {
+      'Content-Type': 'text/html; charset=utf-8',
+      ...NO_CACHE,
+      'X-Frame-Options': 'DENY',
+      'Content-Security-Policy': "frame-ancestors 'none'",
+      ...(o.indexable ? {} : { 'X-Robots-Tag': 'noindex, nofollow' }),
+    },
+  });
 }

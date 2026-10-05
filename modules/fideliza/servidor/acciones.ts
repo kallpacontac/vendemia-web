@@ -4,6 +4,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { estadoConfiguracion } from './entorno';
 import { rpc, servidor } from './supabase';
 import { comprobarLogo } from './logo';
+import { buscarLugares } from './lugares';
 import { drenar } from './worker';
 
 /**
@@ -44,6 +45,9 @@ const enlace = z
     url: urlHttps.nullable().optional(),
     is_active: z.boolean().default(true),
     is_primary: z.boolean().default(false),
+    icon: z.string().regex(/^[a-z_]{1,20}$/).nullable().optional(),
+    subtitle: textoCorto(60).nullable().optional(),
+    placement: z.enum(['button', 'social']).default('button'),
     starts_at: z.string().datetime({ offset: true }).nullable().optional(),
     ends_at: z.string().datetime({ offset: true }).nullable().optional(),
   })
@@ -102,6 +106,31 @@ export const ACCIONES = {
       }
       return { ajustes: guardado, logo };
     },
+  }),
+  /** Plantilla, foto de fondo, botones… de la página pública (sql/0008). */
+  'estilo.guardar': accion({
+    esquema: z.object({
+      companyId: compania,
+      estilo: z
+        .object({
+          plantilla: z.enum(['clasica', 'oscura', 'vidrio', 'foto', 'marco', 'color']),
+          fondo: urlHttps.or(z.literal('')).optional(),
+          botones: z.enum(['auto', 'relleno', 'contorno', 'vidrio']).optional(),
+          forma: z.enum(['auto', 'pildora', 'redondeado', 'recto']).optional(),
+          redes: z.enum(['auto', 'arriba', 'abajo']).optional(),
+          categoria: textoCorto(60).optional(),
+          place_id: z.string().max(200).regex(/^[A-Za-z0-9_-]*$/).optional(),
+          place_nombre: textoCorto(120).optional(),
+        })
+        .strict(),
+    }),
+    ejecutar: (d, { sb }) => rpc(sb, 'loyalty_page_style_save', { p_company: d.companyId, p_style: d.estilo }),
+  }),
+  /** Buscar el negocio en Google para armar solos los enlaces de reseñas y mapa. */
+  'lugar.buscar': accion({
+    esquema: z.object({ q: textoCorto(120).min(3) }),
+    limite: ['lugar', 20],
+    ejecutar: (d) => buscarLugares(d.q),
   }),
   'sucursal.guardar': accion({
     esquema: z.object({ companyId: compania, id: uuid.nullable(), name: textoCorto(60).min(1), active: z.boolean() }),
@@ -365,7 +394,7 @@ export const ACCIONES = {
       name: textoCorto(60).min(1),
       title: textoCorto(60),
       tagline: textoCorto(120),
-      links: z.array(enlace).max(30),
+      links: z.array(enlace).max(40),
       makeDefault: z.boolean(),
     }),
     ejecutar: (d, { sb }) =>

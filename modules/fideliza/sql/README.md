@@ -34,8 +34,9 @@ tocar ese repositorio. No chocan: todo usa el prefijo `loyalty_`.
 | `0005_metricas.sql` | `loyalty_metrics()` |
 | `0006_grants.sql` | Quién puede ejecutar qué. **Contiene el paso manual de la clave** |
 | `0007_placa_sin_activar.sql` | La placa nueva sin dueño responde «aún no está activada» (con camino al panel) en vez de «no disponible» |
+| `0008_estilo_y_redes.sql` | Plantillas de la página (`page_style`) y, en cada enlace, icono, subtítulo y si es red social o botón |
 
-**Aplicar:** SQL Editor de Supabase, en orden (0001 → 0007), cada fichero entero. Primero en
+**Aplicar:** SQL Editor de Supabase, en orden (0001 → 0008), cada fichero entero. Primero en
 staging, y allí pegar `tests/pruebas.sql` (no deja nada escrito: acaba en
 `ROLLBACK`). Tiene que terminar con «TODAS LAS PRUEBAS PASARON».
 
@@ -76,6 +77,7 @@ drop table if exists public.loyalty_server_keys, public.loyalty_settings, public
 | `CRON_SECRET` | **sí** | 16+ caracteres; Vercel lo manda solo al cron |
 | `WEB_PUSH_VAPID_PUBLIC_KEY` / `_PRIVATE_KEY` | la privada **sí** | `npx web-push generate-vapid-keys` |
 | `WEB_PUSH_SUBJECT` | no | `mailto:contacto@vendemias.com` |
+| `GOOGLE_PLACES_API_KEY` | **sí** | Places API (New), restringida a esa API. Sin ella, «Tu negocio en Google» pide pegar el enlace a mano |
 | `FIDELIZA_IP_SALT` | sí (opcional) | sal para el hash de IP de los límites; si falta, usa la clave del servidor |
 
 Para la credencial de Google, en tu máquina: `base64 -w0 clave.json` (Linux) o
