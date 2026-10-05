@@ -33,8 +33,9 @@ tocar ese repositorio. No chocan: todo usa el prefijo `loyalty_`.
 | `0004_servidor.sql` | RPC `loyalty_srv_*`: resolutor, alta, tarjeta, Wallet, outbox, push, mantenimiento |
 | `0005_metricas.sql` | `loyalty_metrics()` |
 | `0006_grants.sql` | Quién puede ejecutar qué. **Contiene el paso manual de la clave** |
+| `0007_placa_sin_activar.sql` | La placa nueva sin dueño responde «aún no está activada» (con camino al panel) en vez de «no disponible» |
 
-**Aplicar:** SQL Editor de Supabase, en orden, cada fichero entero. Primero en
+**Aplicar:** SQL Editor de Supabase, en orden (0001 → 0007), cada fichero entero. Primero en
 staging, y allí pegar `tests/pruebas.sql` (no deja nada escrito: acaba en
 `ROLLBACK`). Tiene que terminar con «TODAS LAS PRUEBAS PASARON».
 

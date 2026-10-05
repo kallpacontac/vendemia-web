@@ -50,7 +50,7 @@ function Cifra({ titulo, valor, def }: { titulo: string; valor: React.ReactNode;
 }
 
 export default function Resumen() {
-  const { companyId, ajustes, puede } = useFideliza();
+  const { companyId, ajustes, puede, modo } = useFideliza();
   const [dias, setDias] = useState(30);
 
   const { datos, cargando, error, releer } = useCargar(async () => {
@@ -72,9 +72,18 @@ export default function Resumen() {
     const [publicada] = principal?.published_version_id
       ? await lecturas.publicadas(companyId, [principal.published_version_id])
       : [];
-    return { programas, vivo, version: versiones[0] ?? null, config, m, publicada: publicada ?? null, placas };
-  }, [companyId, dias, ajustes?.default_profile_id]);
+    const visitas =
+      modo === 'enlaces' && puede('metrics.read')
+        ? await lecturas.contarEventos(companyId, ['links_view'], new Date(Date.now() - 30 * 86400000).toISOString())
+        : null;
+    const aperturas =
+      modo === 'enlaces' && puede('metrics.read')
+        ? await lecturas.contarEventos(companyId, ['device_open'], new Date(Date.now() - 30 * 86400000).toISOString())
+        : null;
+    return { programas, vivo, version: versiones[0] ?? null, config, m, publicada: publicada ?? null, placas, visitas, aperturas };
+  }, [companyId, dias, ajustes?.default_profile_id, modo]);
 
+  if (modo === 'nuevo' && puede('program.edit')) return <Bienvenida />;
   if (cargando && !datos) return <Cargando texto="Calculando el resumen…" />;
   if (error) return <Fallo texto={error} reintentar={releer} />;
   if (!datos) return null;
@@ -109,7 +118,7 @@ export default function Resumen() {
       titulo: 'Los botones de tu página',
       que: 'WhatsApp, reseñas, cómo llegar, «Mi tarjeta»… Lo que verán al abrir tu link.',
       hecho: botones > 0,
-      href: '/panel/fideliza/enlaces',
+      href: '/panel/fideliza/mi-pagina',
       boton: 'Añadir botones',
     },
     {
@@ -139,6 +148,58 @@ export default function Resumen() {
   const [estado, clase] = ESTADO_PROGRAMA[vivo?.status ?? 'draft'];
   const ops = m?.operations;
   const ventasNetas = ops ? ops.gross_cents - ops.refund_cents : 0;
+
+  if (modo === 'enlaces') {
+    const pasosEnlaces: Paso[] = [
+      {
+        titulo: 'Tu página: nombre y link',
+        que: 'Cómo se llama tu negocio y la dirección de tu link.',
+        hecho: Boolean(ajustes),
+        href: '/panel/fideliza/mi-pagina',
+        boton: 'Empezar',
+      },
+      {
+        titulo: 'Tus botones',
+        que: 'WhatsApp, reseñas de Google, Instagram, cómo llegar… y pulsa «Guardar y publicar».',
+        hecho: botones > 0,
+        href: '/panel/fideliza/mi-pagina',
+        boton: 'Añadir botones',
+      },
+      {
+        titulo: 'QR o placa en el local',
+        que: 'Para que te encuentren al acercar el móvil o escanear en el mostrador.',
+        hecho: placas.some((d) => d.status === 'active'),
+        opcional: true,
+        href: '/panel/fideliza/placas?nueva=1',
+        boton: 'Crear QR',
+      },
+    ];
+    return (
+      <>
+        {puede('program.edit') && <PrimerosPasos pasos={pasosEnlaces} />}
+        {ajustes && <LinkPublico slug={ajustes.slug} nombre={ajustes.display_name} programaActivo={false} hayEnlaces={botones > 0} />}
+        {datos.visitas !== null && (
+          <div className="fz-grid">
+            <Cifra titulo="Visitas a tu página" valor={datos.visitas ?? 0} def="Últimos 30 días. Cada vez que alguien abre tu link." />
+            <Cifra titulo="Aperturas de tus placas y QR" valor={datos.aperturas ?? 0} def="Últimos 30 días. Al acercar el móvil a la placa o escanear su QR." />
+          </div>
+        )}
+        {puede('program.edit') && (
+          <div className="card fz-cta">
+            <div>
+              <b>¿Quieres premiar a tus clientes?</b>
+              <p className="fz-def">
+                Activa una tarjeta de puntos: sellos por compra, puntos por gasto o visitas, con premio. Tus clientes la guardan en el móvil o en Google Wallet.
+              </p>
+            </div>
+            <Link className="btn btn-primary" href="/panel/fideliza/programa?paso=1">
+              Activar tarjeta de puntos
+            </Link>
+          </div>
+        )}
+      </>
+    );
+  }
 
   return (
     <>
@@ -275,5 +336,27 @@ export default function Resumen() {
         </>
       )}
     </>
+  );
+}
+
+/** Lo primero que ve un negocio nuevo: una sola pregunta. */
+function Bienvenida() {
+  return (
+    <div className="fz-bienvenida">
+      <h2>¿Qué quieres hacer?</h2>
+      <p className="fz-def">Puedes empezar por lo simple y activar lo demás cuando quieras.</p>
+      <div className="fz-bienvenida__opciones">
+        <Link href="/panel/fideliza/mi-pagina" className="card fz-opcion">
+          <b>Mi página de enlaces</b>
+          <span>Un solo link con tus botones: WhatsApp, reseñas de Google, Instagram, cómo llegar… Y un QR o placa NFC para el local.</span>
+          <em>Listo en 3 minutos →</em>
+        </Link>
+        <Link href="/panel/fideliza/programa?paso=0" className="card fz-opcion">
+          <b>Tarjeta de puntos para mis clientes</b>
+          <span>Sellos, puntos o visitas con premio, caja para registrar compras y Google Wallet. Incluye también tu página de enlaces.</span>
+          <em>Configurar →</em>
+        </Link>
+      </div>
+    </div>
   );
 }

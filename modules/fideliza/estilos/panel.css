@@ -70,3 +70,43 @@
 .fz-guardado--en-curso{color:var(--ink-soft);background:var(--bg-soft)}
 .fz-paso-pie{display:flex;justify-content:space-between;gap:12px;margin-top:22px;padding-top:16px;border-top:1px solid var(--line)}
 @media(max-width:820px){.fz-paso-cab{flex-direction:column}.fz-paso-pie .btn{flex:1}}
+/* Bienvenida: la única pregunta del principio. */
+.fz-bienvenida{max-width:760px;margin:10px auto 0;text-align:center}
+.fz-bienvenida h2{font-size:24px;font-weight:800}
+.fz-bienvenida__opciones{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:20px;text-align:left}
+.fz-opcion{display:flex;flex-direction:column;gap:8px;border:2px solid transparent;transition:.15s}
+.fz-opcion:hover,.fz-opcion:focus-visible{border-color:var(--brand)}
+.fz-opcion b{font-size:17px}
+.fz-opcion span{color:var(--ink-soft);font-size:14px;line-height:1.45}
+.fz-opcion em{font-style:normal;font-weight:700;color:var(--brand-txt);margin-top:auto}
+.fz-cta{display:flex;gap:16px;align-items:center;justify-content:space-between;margin-top:16px}
+/* Editor «Mi página»: formulario + móvil de vista previa. */
+.fz-editor{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:20px;align-items:start;padding-bottom:90px}
+.fz-editor__form{display:flex;flex-direction:column;gap:16px}
+.fz-editor__vista{position:sticky;top:20px}
+.fz-sec{font-size:15px;font-weight:800;margin-bottom:12px}
+.fz-slug{display:flex;align-items:center;border:1.5px solid var(--line-2);border-radius:var(--r-sm);background:var(--bg-input);overflow:hidden}
+.fz-slug span{padding:0 4px 0 12px;font-size:13px;color:var(--ink-mute);white-space:nowrap}
+.fz-slug .input{border:none;border-radius:0;padding-left:2px}
+.fz-paletas{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.fz-paletas button{width:34px;height:34px;border-radius:50%;border:3px solid #fff;box-shadow:0 0 0 1.5px var(--line-2);cursor:pointer}
+.fz-paletas button.activa{box-shadow:0 0 0 3px var(--ink)}
+.fz-paletas__otro{display:flex;align-items:center;gap:6px;font-size:12.5px;font-weight:700;color:var(--ink-soft)}
+.fz-paletas__otro input{width:34px;height:34px;border:none;background:none;padding:0;cursor:pointer}
+.fz-boton{border:1.5px solid var(--line);border-radius:14px;padding:12px;margin-bottom:10px}
+.fz-boton.oculto{opacity:.55}
+.fz-menu-botones{position:absolute;z-index:20;top:46px;left:0;background:#fff;border-radius:14px;box-shadow:var(--sh-lg);padding:6px;display:grid;grid-template-columns:1fr 1fr;gap:4px;min-width:300px}
+.fz-menu-botones button{border:none;background:none;text-align:left;padding:10px 12px;border-radius:10px;font:600 13.5px 'Plus Jakarta Sans';cursor:pointer;color:var(--ink)}
+.fz-menu-botones button:hover{background:var(--bg-soft)}
+.fz-movil{width:100%;max-width:300px;margin:0 auto 8px;border:10px solid #111;border-radius:36px;overflow:hidden;background:#F9F9F6;min-height:520px}
+.fz-movil__cab{display:flex;flex-direction:column;align-items:center;gap:6px;padding:26px 14px 22px;text-align:center}
+.fz-movil__cab img,.fz-movil__logo{width:64px;height:64px;border-radius:50%;object-fit:cover;background:#fff;border:3px solid #fff}
+.fz-movil__logo{display:grid;place-items:center;font-weight:800;font-size:24px;color:#111}
+.fz-movil__cab b{font-size:17px}
+.fz-movil__cab small{font-size:12px;opacity:.9}
+.fz-movil__botones{display:flex;flex-direction:column;gap:9px;padding:16px 14px}
+.fz-movil__botones span{display:block;background:#fff;border:1.5px solid #DEDED9;border-radius:12px;padding:12px;text-align:center;font-weight:600;font-size:13.5px}
+.fz-barra-publicar{position:fixed;left:var(--content-x);right:26px;bottom:16px;z-index:50;display:flex;gap:12px;align-items:center;justify-content:flex-end;background:#fff;border-radius:18px;box-shadow:var(--sh-lg);padding:12px 16px}
+.fz-barra-publicar__aviso{flex:1;color:#B4232A;font-size:13px;font-weight:600}
+@media(max-width:1100px){.fz-editor{grid-template-columns:1fr}.fz-editor__vista{position:static}}
+@media(max-width:820px){.fz-bienvenida__opciones{grid-template-columns:1fr}.fz-cta{flex-direction:column;align-items:stretch}.fz-barra-publicar{left:12px;right:12px;bottom:84px}.fz-menu-botones{grid-template-columns:1fr;min-width:240px}}

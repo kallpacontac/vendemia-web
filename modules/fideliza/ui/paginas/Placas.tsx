@@ -5,7 +5,7 @@
  * (lo que se graba en el chip). Lo que cambia es el perfil de enlaces que
  * tiene detrás.
  */
-import { Suspense, useEffect, useState } from 'react';
+import { Suspense, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { Plus } from 'lucide-react';
@@ -18,12 +18,14 @@ import { ESTADO_PLACA, fecha } from '@/modules/fideliza/dominio/formato';
 import { urlPlaca } from '@/modules/fideliza/dominio/config';
 
 function Lista() {
-  const { companyId, puede, rol } = useFideliza();
+  const { companyId, puede, rol, ajustes } = useFideliza();
   const avisar = useAvisar();
   const params = useSearchParams();
   const [nueva, setNueva] = useState<null | { label: string; kind: 'nfc_qr' | 'qr'; profileId: string; locationId: string }>(null);
   const [codigo, setCodigo] = useState('');
   const [lote, setLote] = useState<null | { id: string; public_token: string; activation_code: string }[]>(null);
+  const [activando, setActivando] = useState(false);
+  const campoCodigo = useRef<HTMLInputElement>(null);
 
   const { datos, cargando, error, releer } = useCargar(async () => {
     if (!companyId) return null;
@@ -32,8 +34,13 @@ function Lista() {
   }, [companyId]);
 
   useEffect(() => {
-    if (params.get('nueva')) setNueva({ label: '', kind: 'qr', profileId: '', locationId: '' });
-  }, [params]);
+    if (params.get('nueva')) setNueva({ label: '', kind: 'qr', profileId: ajustes?.default_profile_id ?? '', locationId: '' });
+    // Viene de acercar el móvil a una placa nueva («Activar mi placa»).
+    if (params.get('activar')) {
+      setActivando(true);
+      setTimeout(() => campoCodigo.current?.focus(), 300);
+    }
+  }, [params, ajustes?.default_profile_id]);
 
   if (cargando && !datos) return <Cargando texto="Cargando placas…" />;
   if (error) return <Fallo texto={error} reintentar={releer} />;
@@ -41,17 +48,34 @@ function Lista() {
   const editable = puede('devices.manage');
   const nombrePerfil = (id: string | null) => datos.perfiles.find((p) => p.id === id)?.name ?? '—';
 
+  /**
+   * Deja la placa lista sin más pasos: apuntando a tu página y activa. Si tu
+   * página todavía no tiene botones publicados, se queda asignada y se dice
+   * qué falta, en vez de fallar.
+   */
+  async function dejarLista(deviceId: string, perfil: string | null, label = '', locationId: string | null = null): Promise<boolean> {
+    if (!perfil) return false;
+    try {
+      await accion('placa.editar', { companyId, deviceId, label, profileId: perfil, locationId });
+      await accion('placa.estado', { companyId, deviceId, status: 'active' });
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
   async function crear() {
     if (!nueva) return;
     try {
-      await accion('placa.crear', {
+      const r = await accion<{ id: string }>('placa.crear', {
         companyId,
         label: nueva.label,
         kind: nueva.kind,
         profileId: nueva.profileId || null,
         locationId: nueva.locationId || null,
       });
-      avisar('Placa creada. Ábrela para descargar su QR y activarla.');
+      const lista = nueva.profileId ? await dejarLista(r.id, nueva.profileId, nueva.label, nueva.locationId || null) : false;
+      avisar(lista ? 'Listo: tu QR ya lleva a tu página. Ábrelo para descargarlo.' : 'Creado. Publica los botones de tu página para activarlo.');
       setNueva(null);
       releer();
     } catch (e) {
@@ -61,9 +85,11 @@ function Lista() {
 
   async function reclamar() {
     try {
-      await accion('placa.reclamar', { companyId, code: codigo });
-      avisar('Placa añadida a tu negocio. Asígnale un perfil y actívala.');
+      const r = await accion<{ id: string }>('placa.reclamar', { companyId, code: codigo });
+      const lista = await dejarLista(r.id, ajustes?.default_profile_id ?? null);
+      avisar(lista ? '¡Placa activada! Acércale el móvil: ya abre tu página.' : 'Placa añadida. Publica los botones de tu página y actívala desde aquí.');
       setCodigo('');
+      setActivando(false);
       releer();
     } catch (e) {
       avisar(mensaje(e), 'error');
@@ -98,7 +124,7 @@ function Lista() {
             <Plus size={14} /> Crear placa
           </button>
           <div className="search" style={{ minWidth: 260 }}>
-            <input placeholder="Código de activación (XXXXX-XXXXX)" value={codigo} onChange={(e) => setCodigo(e.target.value.toUpperCase())} aria-label="Código de activación" />
+            <input ref={campoCodigo} placeholder="Código de activación (XXXXX-XXXXX)" value={codigo} onChange={(e) => setCodigo(e.target.value.toUpperCase())} aria-label="Código de activación" />
           </div>
           <button className="btn btn-ghost btn-sm" disabled={codigo.replace(/[^A-Z0-9]/g, '').length < 10} onClick={() => void reclamar()}>
             Añadir placa recibida
@@ -108,6 +134,14 @@ function Lista() {
               Fabricar lote (admin)
             </button>
           )}
+        </div>
+      )}
+
+      {activando && (
+        <div className="fz-panel-aviso fz-panel-aviso--info" role="status">
+          <span style={{ flex: 1 }}>
+            <b>Activa tu placa:</b> escribe abajo el código de activación que viene con ella (formato XXXXX-XXXXX) y pulsa «Añadir placa recibida». Quedará apuntando a tu página.
+          </span>
         </div>
       )}
 

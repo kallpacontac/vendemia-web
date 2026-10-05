@@ -254,6 +254,17 @@ export const lecturas = {
         .order('created_at', { ascending: false })
         .limit(50),
     ),
+  /** Cuántos eventos públicos de un tipo desde una fecha. Solo cuenta: no trae filas. */
+  contarEventos: async (companyId: string, kinds: string[], desde: string) => {
+    const { count, error } = await sb()
+      .from('loyalty_public_events')
+      .select('id', { count: 'exact', head: true })
+      .eq('company_id', companyId)
+      .in('kind', kinds)
+      .gte('created_at', desde);
+    if (error) throw new Error(error.message);
+    return count ?? 0;
+  },
   campanas: (companyId: string) => lista<Campana>(sb().from('loyalty_campaigns').select('*').eq('company_id', companyId)),
   cola: (companyId: string) =>
     lista<TrabajoCola>(

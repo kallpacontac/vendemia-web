@@ -221,6 +221,8 @@ function ProgramaPagina() {
         objective: prog.objective,
         draft: limpio,
       });
+      // Crear el programa cambia el modo del negocio (pestañas de caja, clientes…).
+      if (!datos?.programa) recargarCtx();
       avisar(publicada ? 'Guardado como borrador. Publícalo en el paso 6 para que lo vean tus clientes.' : 'Guardado');
       releer();
       setTomarBase(true);

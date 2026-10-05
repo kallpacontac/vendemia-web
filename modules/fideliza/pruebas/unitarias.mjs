@@ -22,6 +22,7 @@ const cargar = (p) => jiti(join(raiz, p));
 const payload = cargar('modules/fideliza/dominio/wallet-payload.ts');
 const formato = cargar('modules/fideliza/dominio/formato.ts');
 const errores = cargar('modules/fideliza/dominio/errores.ts');
+const botones = cargar('modules/fideliza/dominio/botones.ts');
 
 const MIEMBRO_ID = '9f1c2d3e-4b5a-4c6d-8e7f-001122334455';
 const marca = { slug: 'barberia-centro', display_name: 'Barbería Centro', logo_url: 'https://x.com/l.png', bg_color: '#112233', support_url: null };
@@ -134,4 +135,35 @@ test('9 · el código del panel nunca usa la service_role', () => {
     }
   }
   assert.deepEqual(malos, []);
+});
+
+test('10 · botones: el dato del dueño se convierte en la URL correcta', () => {
+  assert.equal(botones.aUrl('whatsapp', '987 654 321'), 'https://wa.me/51987654321');
+  assert.equal(botones.aUrl('whatsapp', '+51 987654321'), 'https://wa.me/51987654321');
+  assert.equal(botones.aUrl('instagram', '@barberia.centro'), 'https://instagram.com/barberia.centro');
+  assert.equal(botones.aUrl('tiktok', 'barberia'), 'https://www.tiktok.com/@barberia');
+  assert.equal(botones.aUrl('web', 'barberia.pe'), 'https://barberia.pe');
+  assert.equal(botones.aUrl('web', 'http://barberia.pe'), 'https://barberia.pe');
+  assert.equal(botones.aUrl('whatsapp', '123'), '');
+  assert.equal(botones.aUrl('instagram', ''), '');
+});
+
+test('11 · botones: al volver a editar se reconoce el tipo y el dato', () => {
+  assert.deepEqual(botones.deUrl('https://wa.me/51987654321', 'url'), { tipo: 'whatsapp', valor: '987654321' });
+  assert.deepEqual(botones.deUrl('https://instagram.com/barberia.centro', 'url'), { tipo: 'instagram', valor: '@barberia.centro' });
+  assert.deepEqual(botones.deUrl('https://www.tiktok.com/@barberia', 'url'), { tipo: 'tiktok', valor: '@barberia' });
+  assert.equal(botones.deUrl('https://g.page/r/abc123/review', 'url').tipo, 'resenas');
+  assert.equal(botones.deUrl('https://maps.app.goo.gl/xyz', 'url').tipo, 'maps');
+  assert.equal(botones.deUrl(null, 'join').tipo, 'tarjeta');
+  // Ida y vuelta: lo que se guarda vuelve a dar la misma URL.
+  for (const [t, v] of [['whatsapp', '987654321'], ['instagram', '@a.b'], ['tiktok', '@x']]) {
+    const url = botones.aUrl(t, v);
+    const d = botones.deUrl(url, 'url');
+    assert.equal(botones.aUrl(d.tipo, d.valor), url);
+  }
+});
+
+test('12 · botones: la dirección se sugiere a partir del nombre', () => {
+  assert.equal(botones.slugDe('Barbería El Centro'), 'barberia-el-centro');
+  assert.equal(botones.slugDe('  Café & Té  '), 'cafe-te');
 });

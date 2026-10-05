@@ -24,8 +24,17 @@ const PERMISOS: Record<Rol, string[] | '*'> = {
   analyst: ['program.read', 'metrics.read'],
 };
 
+/**
+ * Qué usa el negocio, deducido de sus datos (sin columna nueva):
+ *   nuevo         → no ha configurado nada: se le pregunta qué quiere.
+ *   enlaces       → tiene su página y ningún programa: solo ve lo de la página.
+ *   fidelizacion  → creó un programa de puntos: ve caja, clientes, campañas…
+ */
+export type Modo = 'nuevo' | 'enlaces' | 'fidelizacion';
+
 interface Estado {
   companyId: string | null;
+  modo: Modo;
   rol: Rol | null;
   puede: (permiso: string) => boolean;
   ajustes: Ajustes | null;
@@ -40,13 +49,18 @@ export function ProveedorFideliza({ children }: { children: React.ReactNode }) {
   const { companyId } = useSesion();
   const { datos, cargando, error, releer } = useCargar(async () => {
     if (!companyId) return null;
-    const [rol, ajustes] = await Promise.all([lecturas.rol(companyId), lecturas.ajustes(companyId)]);
-    return { rol: rol as Rol | null, ajustes };
+    const [rol, ajustes, programas] = await Promise.all([
+      lecturas.rol(companyId),
+      lecturas.ajustes(companyId),
+      lecturas.programas(companyId).catch(() => []),
+    ]);
+    return { rol: rol as Rol | null, ajustes, hayPrograma: programas.length > 0 };
   }, [companyId]);
 
   const rol = datos?.rol ?? null;
   const valor: Estado = {
     companyId,
+    modo: datos?.hayPrograma ? 'fidelizacion' : datos?.ajustes ? 'enlaces' : 'nuevo',
     rol,
     puede: (p) => {
       if (!rol) return false;
