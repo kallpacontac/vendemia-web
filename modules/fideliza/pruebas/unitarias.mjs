@@ -249,3 +249,10 @@ test('17 · la firma de Vendemia lleva a la web oficial', () => {
   assert.ok(html.includes('<a class="pie" href="https://vendemias.com"'));
   assert.ok(html.includes('>Creado con Vendemia</a>'));
 });
+
+test('18 · guardar el acceso a historias pasa la validación sin enseñar detalles internos', () => {
+  const acciones = readFileSync(join(raiz, 'modules/fideliza/servidor/acciones.ts'), 'utf8');
+  const editor = readFileSync(join(raiz, 'modules/fideliza/ui/paginas/MiPagina.tsx'), 'utf8');
+  assert.match(acciones, /historia:\s*z\.enum\(\['instagram', 'tiktok', ''\]\)\.optional\(\)/);
+  assert.ok(!editor.includes('falta aplicar la migración 0008'));
+});

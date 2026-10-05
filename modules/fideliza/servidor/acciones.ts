@@ -121,6 +121,7 @@ export const ACCIONES = {
           categoria: textoCorto(60).optional(),
           place_id: z.string().max(200).regex(/^[A-Za-z0-9_-]*$/).optional(),
           place_nombre: textoCorto(120).optional(),
+          historia: z.enum(['instagram', 'tiktok', '']).optional(),
         })
         .strict(),
     }),

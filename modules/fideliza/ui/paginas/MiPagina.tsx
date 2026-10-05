@@ -282,8 +282,12 @@ export default function MiPagina() {
       let sinEstilo = false;
       try {
         await accion('estilo.guardar', { companyId, estilo: { ...estilo, categoria: estilo.categoria?.trim() ?? '' } });
-      } catch {
-        sinEstilo = true; // sql/0008 sin aplicar: se publica igual, con la plantilla por defecto.
+      } catch (e) {
+        // Una instalación anterior puede no tener el RPC de sql/0008. Cualquier
+        // otro fallo se conserva para no diagnosticar una migración inexistente.
+        const detalle = mensaje(e);
+        if (/loyalty_page_style_save|schema cache|could not find the function/i.test(detalle)) sinEstilo = true;
+        else throw e;
       }
       const perfilId = await accion<string>('perfil.guardar', {
         companyId,
@@ -296,7 +300,7 @@ export default function MiPagina() {
       });
       await accion('perfil.publicar', { companyId, profileId: perfilId, allowEmpty: true });
       avisar('¡Publicado! Tus clientes ya ven los cambios.');
-      if (sinEstilo) setAviso('Publicado, pero la plantilla no se guardó: falta aplicar la migración 0008 en la base.');
+      if (sinEstilo) setAviso('La página se publicó, pero no pudimos guardar el diseño. Inténtalo otra vez; si continúa, contacta a soporte.');
       else if (r.logo && !r.logo.ok) setAviso(`Publicado, pero el logo no se puede usar: ${r.logo.errores.join(' ')}`);
       recargarCtx();
       releer();
