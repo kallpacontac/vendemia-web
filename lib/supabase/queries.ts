@@ -717,6 +717,22 @@ export interface Pedido extends OrderRow {
   creado: Date | null;
 }
 
+/** Conteo completo para el dashboard; no depende del límite de las listas. */
+export async function getPendientesDePago(companyId: string, conCitas: boolean): Promise<number> {
+  if (demoActivo()) {
+    return conCitas
+      ? citasDemo(companyId).filter((c) => c.status === 'pending_payment').length
+      : pedidosDemo(companyId).filter((p) => p.status === 'pending').length;
+  }
+  const { count, error } = await supabase()
+    .from(conCitas ? 'appointments' : 'orders')
+    .select('id', { count: 'exact', head: true })
+    .eq('company_id', companyId)
+    .eq('status', conCitas ? 'pending_payment' : 'pending');
+  if (error) throw error;
+  return count ?? 0;
+}
+
 export async function getPedidos(companyId: string, limite = 500): Promise<Pedido[]> {
   if (demoActivo()) return pedidosDemo(companyId).slice(0, limite);
   const { data, error } = await supabase()

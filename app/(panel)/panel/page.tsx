@@ -1,609 +1,292 @@
 'use client';
 
-/**
- * ══════════════════════════════════════════════════════════════════════════
- * DASHBOARD
- * ══════════════════════════════════════════════════════════════════════════
- *
- * Todas las cifras salen de las vistas ya calculadas (`v_daily_metrics`,
- * `v_orders_by_day`) o de las tablas espejadas. Las que el panel de muestra
- * traía inventadas —meta del día, meta mensual de 200 citas, "98% resueltas",
- * "2.4 s de respuesta"— NO están: no hay ninguna columna detrás de ellas, y un
- * número que no se puede sostener es peor que un hueco.
- *
- * ⚠️ Las métricas se agrupan en HORA DE LIMA, no UTC. Entre las 19:00 y las
- * 23:59 las cifras no cuadran al dedillo con las del bot.
- */
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import {
   CalendarDays,
-  Check,
-  ChevronLeft,
   ChevronRight,
   MessageCircle,
   Scissors,
+  Sparkles,
   TrendingUp,
   User,
 } from 'lucide-react';
-import Consumo from '@/components/panel/Consumo';
 import Topbar from '@/components/panel/Topbar';
+import ResumenNegocio from '@/components/panel/ResumenNegocio';
 import { useSesion } from '@/components/panel/Sesion';
 import { useCargar } from '@/components/panel/useCargar';
 import { useSondeo } from '@/components/panel/useSondeo';
-import { areaPath, seriesPts, smoothPath } from '@/lib/panel/charts';
-import { conversionDeHoy } from '@/lib/panel/conversion';
-import { cuando, hora, intent, isoLocal, hace, soles } from '@/lib/panel/format';
+import { cuando, hora, intent, isoLocal, soles } from '@/lib/panel/format';
 import { esAppointmentFamily } from '@/lib/panel/modo';
+import { anterior, rangoDe, total } from '@/lib/panel/serie';
 import { cap, vocabulario } from '@/lib/panel/vocabulario';
 import {
   getCitas,
   getCompania,
-  getIngresosPorProducto,
   getConversaciones,
+  getIngresosPorProducto,
   getMetricasDiarias,
-  getPedidos,
+  getPendientesDePago,
   getSerie,
 } from '@/lib/supabase/queries';
-import { delta, rangoDe, total } from '@/lib/panel/serie';
+import type { GranoSerie } from '@/lib/supabase/types';
 
-/** Cada cuánto se relee el dashboard con la pestaña a la vista. Ver useSondeo. */
 const SONDEO_DASHBOARD_MS = 60000;
-
-const DIAS_CORTOS = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
-const COLORES_SERVICIO = ['#FF4900', '#0E7C86', '#FBB040', '#0FA968', '#7C5CFF'];
+const COLORES_SERVICIO = ['#FF5A1F', '#1F8A83', '#E7A62A', '#4F7CFF', '#8B63E6'];
 const ICONOS_CITA = [
-  ['#FDEBE4', '#F26B45', Scissors],
-  ['#FFEFE7', '#FF4900', CalendarDays],
-  ['#FFE9EE', '#FF5B79', User],
-  ['#E8FBF2', '#0FA968', Check],
+  ['#FFF0E8', '#D8430B', Scissors],
+  ['#EAF7F5', '#14756F', CalendarDays],
+  ['#F1EDFF', '#7654D8', User],
 ] as const;
+
+type ClavePeriodo = 'hoy' | 'semana' | 'mes' | 'anio';
+
+const PERIODOS: Record<ClavePeriodo, { label: string; dias: number; grano: GranoSerie; frase: string }> = {
+  hoy: { label: 'Hoy', dias: 1, grano: 'day', frase: 'hoy' },
+  semana: { label: 'Semana', dias: 7, grano: 'day', frase: 'en los últimos 7 días' },
+  mes: { label: 'Mes', dias: 30, grano: 'day', frase: 'en los últimos 30 días' },
+  anio: { label: 'Año', dias: 365, grano: 'month', frase: 'en los últimos 12 meses' },
+};
+
+function saludo() {
+  const h = new Date().getHours();
+  if (h < 12) return 'Buenos días';
+  if (h < 19) return 'Buenas tardes';
+  return 'Buenas noches';
+}
 
 export default function Dashboard() {
   const { companyId, compania } = useSesion();
-  const [mesOffset, setMesOffset] = useState(0);
-  const [tip, setTip] = useState<{ x: number; y: number; texto: string } | null>(null);
+  const [periodo, setPeriodo] = useState<ClavePeriodo>('semana');
+  const seleccion = PERIODOS[periodo];
 
-  const { datos, cargando, releer } = useCargar(async () => {
+  const { datos, cargando, error, releer } = useCargar(async () => {
     if (!companyId) return null;
-    const desde = isoLocal(hace(29));
-    const hasta = isoLocal(new Date());
-    /**
-     * 60 días en una sola llamada: los 30 últimos son lo que se pinta y los 30
-     * anteriores son la línea base del «frente a los 30 días anteriores». Sale
-     * de `analytics_serie`, la misma fuente que Métricas — las dos pantallas
-     * tienen que contar la misma historia.
-     */
-    const largo = rangoDe(60);
-    // El estado del bot NO se pide aquí: lo sirve <ProveedorSalud> para todo el
-    // panel, y se refresca cada 60 s por su cuenta. Pedirlo también en esta
-    // pantalla haría dos consultas que pueden contradecirse entre sí.
-    const [metricas, serie, citas, leads, pedidos, productos, empresa] = await Promise.all([
-      getMetricasDiarias(companyId, desde, hasta),
-      getSerie(companyId, largo.desde, largo.hasta, 'day'),
+    const actual = rangoDe(seleccion.dias);
+    const previo = anterior(seleccion.dias);
+    const hoy = isoLocal(new Date());
+
+    const [metricas, serie, serieAnterior, citas, leads, productos, empresa] = await Promise.all([
+      getMetricasDiarias(companyId, hoy, hoy),
+      getSerie(companyId, actual.desde, actual.hasta, seleccion.grano),
+      getSerie(companyId, previo.desde, previo.hasta, seleccion.grano),
       getCitas(companyId),
-      // 500 y no 200: el denominador de la conversión sale de estas filas, así
-      // que un límite corto no "pierde leads viejos", falsea el porcentaje de hoy.
-      // getConversaciones y no getLeads: son los mismos leads, más su último
-      // mensaje, que es lo que pinta «Conversaciones recientes». Ver queries.ts.
       getConversaciones(companyId, 500),
-      getPedidos(companyId),
-      getIngresosPorProducto(companyId, desde, hasta).catch(() => []),
+      getIngresosPorProducto(companyId, actual.desde, actual.hasta).catch(() => null),
       getCompania(companyId),
     ]);
-    return { metricas, serie, citas, leads, pedidos, productos, empresa };
-  }, [companyId]);
+    const porPagar = await getPendientesDePago(companyId, esAppointmentFamily(empresa?.business_mode));
+    return { metricas, serie, serieAnterior, citas, leads, productos, empresa, porPagar };
+  }, [companyId, periodo]);
 
-  /**
-   * El dashboard se cargaba UNA vez al abrirlo. Una conversación, un lead o
-   * una cita que llegaba después —por el espejo, con el bot atendiendo— no
-   * aparecía hasta recargar a mano, y un dashboard que se deja abierto en el
-   * mostrador todo el día enseñaba la mañana a media tarde.
-   *
-   * Cada 60 s y no más a menudo: son siete consultas, y aquí nadie espera una
-   * respuesta al segundo como en el chat. Solo con la pestaña a la vista, y
-   * al volver a ella se relee al momento (ver useSondeo).
-   */
   useSondeo(releer, SONDEO_DASHBOARD_MS, !!companyId);
 
-  /** Los 30 días que se pintan, y los 30 de antes con los que se comparan. */
-  const ultimos30 = useMemo(() => (datos?.serie ?? []).slice(-30), [datos]);
-  const previos30 = useMemo(() => (datos?.serie ?? []).slice(0, -30), [datos]);
-  const deltaLeads = useMemo(
-    () => delta(total(ultimos30, 'leads'), total(previos30, 'leads')),
-    [ultimos30, previos30],
-  );
-
   const hoy = isoLocal(new Date());
+  const modo = compania?.business_mode ?? datos?.empresa?.business_mode;
+  const v = vocabulario(modo);
+  const conCitas = esAppointmentFamily(modo);
+  const serie = datos?.serie ?? [];
+  const serieAnterior = datos?.serieAnterior ?? [];
+  const actividad = total(serie, conCitas ? 'citas' : 'pedidos');
+  const metricaHoy = datos?.metricas[0];
+  const pendientes = metricaHoy?.escalations_pending ?? 0;
+  const porPagar = datos?.porPagar ?? 0;
 
-  /**
-   * Los últimos 7 días SIEMPRE, con ceros incluidos: una vista solo trae los
-   * días que tuvieron algo.
-   *
-   * ⚠️ Sale de `v_revenue_by_day`, NO de `v_orders_by_day`. Un negocio de citas
-   * no tiene pedidos: con la vista de pedidos, la barbería veía siete barras a
-   * cero teniendo la agenda llena. Ver getIngresosPorDia().
-   */
-  const semana = useMemo(
+  const agendaHoy = useMemo(
     () =>
-      ultimos30.slice(-7).map((p) => ({
-        iso: p.periodo,
-        // 'YYYY-MM-DD' a mediodía: a medianoche, un desfase de zona horaria
-        // cambia el día de la semana.
-        dia: DIAS_CORTOS[new Date(`${p.periodo}T12:00:00`).getDay()],
-        ingresos: p.ingresos,
-      })),
-    [ultimos30],
+      (datos?.citas ?? [])
+        .filter((c) => c.inicio && isoLocal(c.inicio) === hoy && c.status !== 'cancelled')
+        .sort((a, b) => (a.inicio?.getTime() ?? 0) - (b.inicio?.getTime() ?? 0)),
+    [datos, hoy],
   );
-
-  const metricaHoy = datos?.metricas.find((m) => m.date === hoy);
-  const leadsHoy = metricaHoy?.leads ?? 0;
-  const citasHoy = metricaHoy?.appointments ?? 0;
-  const ingresosHoy = metricaHoy?.revenue ?? 0;
-  /** Cita puntual o grupo recurrente: los dos negocios que tienen citas que enseñar. */
-  const conCitas = esAppointmentFamily(datos?.empresa?.business_mode);
-  /** «citas» en una barbería, «reservas»/«clases» en una academia. Ver lib/panel/vocabulario. */
-  const v = vocabulario(compania?.business_mode ?? datos?.empresa?.business_mode);
-
-  /**
-   * ⚠️ NO es `paid_orders ÷ leads`. Eso daba 0 % en negocios de citas y, con
-   * datos reales de barberia-01, llegó a dar 2787,5 % — las citas de hoy venían
-   * de leads de otros días. Ver lib/panel/conversion.ts.
-   */
-  const conversion = useMemo(
-    () => conversionDeHoy(datos?.leads ?? [], datos?.citas ?? [], datos?.pedidos ?? []),
-    [datos],
-  );
-
-  /** Sparkline de leads: los 30 días de la serie, con los vacíos incluidos. */
-  const chispa = useMemo(
-    () => (ultimos30.length > 1 ? seriesPts(ultimos30.map((p) => p.leads), 300, 52, 6) : []),
-    [ultimos30],
-  );
-
-  /** Citas del mes en curso, y cuántas acabaron bien. Es el anillo. */
-  const anillo = useMemo(() => {
-    const ahora = new Date();
-    const delMes = (datos?.citas ?? []).filter(
-      (c) => c.inicio && c.inicio.getMonth() === ahora.getMonth() && c.inicio.getFullYear() === ahora.getFullYear(),
-    );
-    const hechas = delMes.filter((c) => c.status === 'completed' || c.status === 'confirmed').length;
-    const pct = delMes.length ? Math.round((hechas / delMes.length) * 100) : 0;
-    return { total: delMes.length, hechas, pct };
-  }, [datos]);
-
-  const proximas = useMemo(() => {
-    const ahora = Date.now();
-    return (datos?.citas ?? [])
-      .filter((c) => c.status === 'confirmed' && c.inicio && c.inicio.getTime() >= ahora)
-      .slice(0, 4);
-  }, [datos]);
 
   const nombrePorLead = useMemo(
     () => new Map((datos?.leads ?? []).map((l) => [l.id, l.name || l.phone])),
     [datos],
   );
 
-  // Ya vienen ordenadas por el último mensaje. Antes filtraba por
-  // `last_message`, que no existe en Supabase: la tarjeta salía siempre vacía.
   const recientes = (datos?.leads ?? []).filter((l) => l.ultimoMensaje).slice(0, 4);
-  const maxIngreso = Math.max(...semana.map((s) => s.ingresos), 1);
   const productos = (datos?.productos ?? []).slice(0, 5);
   const maxProducto = Math.max(...productos.map((p) => p.revenue), 1);
-
-  /* ── Calendario del carril derecho ──────────────────────────────────── */
-  const cal = useMemo(() => {
-    const base = new Date();
-    base.setDate(1);
-    base.setMonth(base.getMonth() + mesOffset);
-    const y = base.getFullYear();
-    const m = base.getMonth();
-    const hoyD = new Date();
-    const esMesActual = y === hoyD.getFullYear() && m === hoyD.getMonth();
-
-    const marcas = new Set(
-      (datos?.citas ?? [])
-        .filter((c) => c.inicio && c.inicio.getFullYear() === y && c.inicio.getMonth() === m)
-        .map((c) => c.inicio!.getDate()),
-    );
-
-    return {
-      titulo: base.toLocaleDateString('es-PE', { month: 'long', year: 'numeric' }).replace(/^./, (c) => c.toUpperCase()),
-      primero: new Date(y, m, 1).getDay(),
-      dias: new Date(y, m + 1, 0).getDate(),
-      hoy: esMesActual ? hoyD.getDate() : -1,
-      marcas,
-    };
-  }, [mesOffset, datos]);
+  const fechaLarga = new Date().toLocaleDateString('es-PE', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+  });
 
   if (cargando && !datos) {
     return (
-      <main className="main">
+      <main className="main main--dashboard">
         <div className="cargando">
           <div className="spin" />
-          Cargando tu panel…
+          Preparando el resumen…
         </div>
       </main>
     );
   }
 
+
   return (
-    <main className="main">
-      <div className="wrap">
-        <Topbar titulo="Dashboard" sub={compania?.nombre ?? undefined} />
-
-        <div className="dash">
-          <div className="mgrid">
-            {/* ── Ingresos ── */}
-            <div className="card goal">
-              <div className="card-mini-head">
-                <h3>Ingresos de hoy</h3>
-                <Link href="/panel/metricas" className="arr">
-                  <ChevronRight size={15} />
-                </Link>
-              </div>
-              {/*
-                ⚠️ Esta línea explica una cifra, así que tiene que decir
-                exactamente lo que la cifra cuenta. Decía "Solo cuentan los
-                pedidos pagados", y desde la migración 0019 también entran los
-                entregados: una etiqueta que explica mal un número es peor que
-                no tener ninguna, porque el dueño deja de contrastarla.
-
-                Lo que hay que comunicar es lo que NO entra: un pedido abierto
-                no es dinero, por muy avanzada que esté la conversación.
-              */}
-              {/*
-                ⚠️ Esta línea explica una cifra, así que tiene que decir
-                exactamente lo que cuenta. Decía "Solo cuentan los pedidos
-                pagados", que era falso por partida doble: ni son solo pedidos
-                —las citas con servicio también—, ni solo los pagados.
-
-                Lo que hay que comunicar es lo que NO entra: un pedido abierto
-                no es dinero, por muy avanzada que esté la conversación.
-              */}
-              <div className="big">
-                {v.reserva === 'pedido' ? 'Pedidos cobrados' : `Pedidos cobrados y ${v.reservas}`} · no cuentan los pendientes
-              </div>
-              <div className="num">{soles(ingresosHoy)}</div>
-              <div className="bars-legend">
-                <span>
-                  <i style={{ background: '#FF4900' }} />
-                  Ingresos · últimos 7 días
-                </span>
-              </div>
-              <div className="bars">
-                {semana.map((d, i) => (
-                  <div
-                    key={d.iso}
-                    className="b"
-                    onMouseEnter={(e) => {
-                      const caja = e.currentTarget.closest('.goal')!.getBoundingClientRect();
-                      const barra = e.currentTarget.getBoundingClientRect();
-                      setTip({
-                        x: barra.left - caja.left + barra.width / 2,
-                        y: barra.top - caja.top - 6,
-                        texto: `${d.dia} · ${soles(d.ingresos)}`,
-                      });
-                    }}
-                    onMouseLeave={() => setTip(null)}
-                  >
-                    <i
-                      style={{
-                        height: `${(d.ingresos / maxIngreso) * 100}%`,
-                        background: i === 6 ? '#FF4900' : '#FFB08A',
-                      }}
-                    />
-                  </div>
-                ))}
-              </div>
-              <div
-                className={`bar-tip ${tip ? 'show' : ''}`}
-                style={tip ? { left: tip.x, top: tip.y } : undefined}
+    <main className="main main--dashboard">
+      <div className="wrap dashboard-v2">
+        <Topbar
+          titulo={`${saludo()}, ${compania?.nombre ?? 'bienvenido'}`}
+          sub={`${fechaLarga.charAt(0).toUpperCase()}${fechaLarga.slice(1)} · Esto es lo importante del negocio`}
+          accionesTitulo={
+          <div className="period-switch" role="group" aria-label="Cambiar periodo">
+            {(Object.entries(PERIODOS) as [ClavePeriodo, (typeof PERIODOS)[ClavePeriodo]][]).map(([clave, p]) => (
+              <button
+                key={clave}
+                type="button"
+                className={periodo === clave ? 'active' : ''}
+                aria-pressed={periodo === clave}
+                onClick={() => setPeriodo(clave)}
               >
-                {tip?.texto}
-              </div>
-              <div className="tiles">
-                <div className="tile">
-                  <div className="ic" style={{ background: 'var(--brand-soft)', color: 'var(--brand)' }}>
-                    <MessageCircle size={16} />
-                  </div>
-                  <b>{leadsHoy}</b>
-                  <small>Leads</small>
-                </div>
-                {conCitas && (
-                  <div className="tile">
-                    <div className="ic" style={{ background: '#FDEBE4', color: '#F26B45' }}>
-                      <CalendarDays size={16} />
-                    </div>
-                    <b>{citasHoy}</b>
-                    <small>{cap(v.reservas)}</small>
-                  </div>
-                )}
-                <div className="tile">
-                  <div className="ic" style={{ background: '#FFE9EE', color: '#FF5B79' }}>
-                    <TrendingUp size={16} />
-                  </div>
-                  {/* El "x de y" no es adorno: un 50 % de dos leads y un 50 %
-                      de doscientos son cosas distintas, y sin el crudo al lado
-                      el porcentaje invita a leerlos igual. */}
-                  <b>{conversion.pct}%</b>
-                  <small title={`${conversion.cerrados} de ${conversion.total} leads de hoy`}>
-                    Conv. {conversion.total > 0 ? `${conversion.cerrados}/${conversion.total}` : ''}
-                  </small>
-                </div>
-              </div>
-            </div>
-
-            {/* ── Consumo del plan ── Se esconde sola si aún no hay datos. */}
-            <Consumo companyId={companyId} negocio={compania?.nombre ?? undefined} />
-
-            {/*
-              ── Leads de los últimos 30 días ──
-
-              Aquí había una tarjeta "Estado del bot" con dos chips —Proceso:
-              En línea/Apagado, WhatsApp: Vinculado/Caído— y el diagnóstico de
-              `v_instance_health` pintado tal cual, que dice cosas como «La
-              instancia no da señales».
-
-              Se quitó entera. Que el proceso esté encendido es problema
-              nuestro: corre en un portátil nuestro y lo arreglamos nosotros.
-              Poner "Apagado" en rojo en la primera pantalla que ve el dueño
-              cada mañana no le da ninguna acción que tomar, le hace dudar de
-              que su negocio esté funcionando y nos genera una llamada por
-              algo que ya estamos resolviendo.
-
-              Lo único que sí es asunto suyo —re-emparejar el WhatsApp, que
-              necesita su teléfono— vive ahora en la barra de arriba, en
-              pequeño y solo cuando toca. Ver components/panel/Salud.tsx.
-
-              La gráfica se queda porque son SUS leads, no nuestra máquina.
-            */}
-            <div className="card">
-              <div className="card-mini-head">
-                <h3>Leads</h3>
-                {/* El total no dice nada solo: al lado va cómo fueron los 30
-                    días anteriores. Ver lib/panel/serie.ts. */}
-                <span className={`delta ${deltaLeads.clase}`} title="Frente a los 30 días anteriores">
-                  {deltaLeads.texto}
-                </span>
-              </div>
-              <div className="spark">
-                {chispa.length > 0 && (
-                  <svg viewBox="0 0 300 52" preserveAspectRatio="none">
-                    <defs>
-                      <linearGradient id="gS" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0" stopColor="#FF4900" stopOpacity=".2" />
-                        <stop offset="1" stopColor="#FF4900" stopOpacity="0" />
-                      </linearGradient>
-                    </defs>
-                    <path d={areaPath(chispa, 300, 52)} fill="url(#gS)" />
-                    <path
-                      d={smoothPath(chispa)}
-                      fill="none"
-                      stroke="#FF4900"
-                      strokeWidth="2.5"
-                      strokeLinecap="round"
-                    />
-                  </svg>
-                )}
-              </div>
-              <p className="muted" style={{ fontSize: 12 }}>
-                {chispa.length > 0
-                  ? 'Conversaciones nuevas de los últimos 30 días.'
-                  : 'Todavía no hay suficientes días con datos para dibujar la curva.'}
-              </p>
-            </div>
-
-            {/* ── Citas del mes ── */}
-            {conCitas && (
-              <div className="card">
-                <div className="card-mini-head">
-                  <h3>{cap(v.reservas)} de este mes</h3>
-                </div>
-                <div className="ring-wrap">
-                  <div className="ring">
-                    <svg viewBox="0 0 36 36">
-                      <circle cx="18" cy="18" r="15.9" fill="none" stroke="#EEF0F6" strokeWidth="3.5" />
-                      <circle
-                        cx="18"
-                        cy="18"
-                        r="15.9"
-                        fill="none"
-                        stroke="#FF4900"
-                        strokeWidth="3.5"
-                        strokeLinecap="round"
-                        strokeDasharray={`${anillo.pct} ${100 - anillo.pct}`}
-                        strokeDashoffset="25"
-                        transform="rotate(-90 18 18)"
-                      />
-                    </svg>
-                    <div className="c">{anillo.pct}%</div>
-                  </div>
-                  <div className="ring-txt">
-                    <b>
-                      {anillo.hechas} / {anillo.total} {v.reservas}
-                    </b>
-                    <p>
-                      {anillo.total === 0
-                        ? `Todavía no hay ${v.reservas} este mes.`
-                        : 'Confirmadas o ya atendidas sobre el total del mes.'}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* ── Servicios top ── */}
-            <div className="card">
-              <div className="card-mini-head">
-                <h3>{cap(v.items)} más vendid{v.aItem}s</h3>
-              </div>
-              {productos.length === 0 ? (
-                <p className="vacio">Sin ventas registradas en los últimos 30 días.</p>
-              ) : (
-                productos.map((p, i) => (
-                  <div className="svc-bar" key={p.name}>
-                    <div className="l">
-                      <b>{p.name}</b>
-                      <span>
-                        {soles(p.revenue)} · {p.units}u
-                      </span>
-                    </div>
-                    <div className="svc-track">
-                      <i
-                        style={{
-                          width: `${(p.revenue / maxProducto) * 100}%`,
-                          background: COLORES_SERVICIO[i % COLORES_SERVICIO.length],
-                        }}
-                      />
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-
-            {/* ── Mensajes recientes ── */}
-            <div className="card span2">
-              <div className="card-mini-head">
-                <h3>Conversaciones recientes</h3>
-                <Link
-                  href="/panel/mensajes"
-                  style={{ fontSize: 13, color: 'var(--brand)', fontWeight: 700 }}
-                >
-                  Ver todas
-                </Link>
-              </div>
-              {recientes.length === 0 ? (
-                <p className="vacio">Todavía no hay conversaciones.</p>
-              ) : (
-                recientes.map((l) => {
-                  const it = intent(l.intent);
-                  return (
-                    <Link key={l.id} href={`/panel/mensajes?lead=${l.id}`} className="msg-row">
-                      <div className="ava-ini" style={{ background: it.color }}>
-                        {(l.name || l.phone).slice(0, 2).toUpperCase()}
-                      </div>
-                      <div className="info">
-                        <b>{l.name || l.phone}</b>
-                        <p>{l.ultimoMensaje}</p>
-                      </div>
-                      <div className="r">
-                        <span className={`badge-pill ${it.cls}`}>{it.short}</span>
-                        <br />
-                        <small>{cuando(l.ultimoAt)}</small>
-                      </div>
-                    </Link>
-                  );
-                })
-              )}
-            </div>
+                {p.label}
+              </button>
+            ))}
           </div>
+          }
+        />
 
-          {/* ── Carril derecho ── */}
-          <div className="stack">
-            <div className="rail">
-              <div className="cal-head">
-                <b>{cal.titulo}</b>
-                <div className="cal-nav">
-                  <div onClick={() => setMesOffset((m) => m - 1)}>
-                    <ChevronLeft size={13} />
-                  </div>
-                  <div onClick={() => setMesOffset((m) => m + 1)}>
-                    <ChevronRight size={13} />
-                  </div>
-                </div>
+        {error && <div className="dashboard-error" role="alert">No se pudo actualizar el resumen. {datos ? 'Mostramos la última lectura disponible.' : 'Reintenta para consultar las cifras.'}<button type="button" onClick={releer}>Reintentar</button></div>}
+
+        {datos && <>
+        <ResumenNegocio
+          serie={serie}
+          anterior={serieAnterior}
+          grano={seleccion.grano}
+          periodo={seleccion.frase}
+          reservas={cap(v.reservas)}
+          conCitas={conCitas}
+          academia={v.sesion === 'clase'}
+          pendientes={pendientes}
+          porPagar={porPagar}
+        />
+
+        <section className="dash-lower-grid">
+          <article className="card dash-agenda-card">
+            <div className="dash-section-head">
+              <div>
+                <span className="dash-eyebrow">Operación</span>
+                <h3>{conCitas ? `${cap(v.agenda)} de hoy` : 'Pedidos del negocio'}</h3>
               </div>
-              <div className="cal">
-                {['D', 'L', 'M', 'M', 'J', 'V', 'S'].map((d, i) => (
-                  <div className="dow" key={i}>
-                    {d}
-                  </div>
-                ))}
-                {Array.from({ length: cal.primero }, (_, i) => (
-                  <div className="day muted" key={`h${i}`} />
-                ))}
-                {Array.from({ length: cal.dias }, (_, i) => {
-                  const d = i + 1;
-                  const clases = ['day'];
-                  if (d === cal.hoy) clases.push('today');
-                  if (cal.marcas.has(d)) clases.push('mark');
+              <Link className="round-link" href={conCitas ? '/panel/agenda' : '/panel/pedidos'} aria-label={`Abrir ${conCitas ? v.agenda.toLowerCase() : 'pedidos'}`}>
+                <ChevronRight size={17} />
+              </Link>
+            </div>
+
+            {conCitas && agendaHoy.length > 0 ? (
+              <div className="today-list">
+                {agendaHoy.slice(0, 5).map((c, i) => {
+                  const [fondo, color, Icono] = ICONOS_CITA[i % ICONOS_CITA.length];
                   return (
-                    <div className={clases.join(' ')} key={d}>
-                      {d}
+                    <div className="today-row" key={c.id}>
+                      <div className="today-row__time">{c.inicio ? hora(c.inicio) : '—'}</div>
+                      <div className="today-row__icon" style={{ background: fondo, color }}><Icono size={17} /></div>
+                      <div className="today-row__info">
+                        <b>{c.service || cap(v.sesion)}</b>
+                        <span>{nombrePorLead.get(c.lead_id) ?? cap(v.persona)}</span>
+                      </div>
                     </div>
                   );
                 })}
               </div>
-            </div>
-
-            {/*
-              En una academia solo si hay algo: la lista son reservas con hora, y
-              las de grupo no la tienen (su slot es "sched:…"), así que saldría
-              «Sin reservas confirmadas por delante» siempre.
-            */}
-            {conCitas && (v.sesion !== 'clase' || proximas.length > 0) && (
-              <div className="rail">
-                <div className="card-mini-head">
-                  <h3>Próximas {v.sesiones}</h3>
-                  <Link href="/panel/agenda" style={{ fontSize: 12, color: 'var(--brand)', fontWeight: 700 }}>
-                    Agenda
-                  </Link>
-                </div>
-                {proximas.length === 0 ? (
-                  <p className="vacio">Sin {v.reservas} confirmadas por delante.</p>
-                ) : (
-                  proximas.map((c, i) => {
-                    const [fondo, color, Icono] = ICONOS_CITA[i % ICONOS_CITA.length];
-                    const esHoy = c.inicio && isoLocal(c.inicio) === hoy;
-                    return (
-                      <div className="appt-row" key={c.id}>
-                        <div className="appt-ic" style={{ background: fondo, color }}>
-                          <Icono size={18} />
-                        </div>
-                        <div className="info">
-                          <b>{c.service || cap(v.sesion)}</b>
-                          <small>
-                            {c.inicio ? hora(c.inicio) : '—'} · {nombrePorLead.get(c.lead_id) ?? 'Cliente'}
-                          </small>
-                        </div>
-                        <span className="date">
-                          {esHoy ? 'Hoy' : c.inicio ? c.inicio.toLocaleDateString('es-PE', { day: 'numeric', month: 'short' }) : ''}
-                        </span>
-                      </div>
-                    );
-                  })
-                )}
+            ) : (
+              <div className="dash-empty">
+                <span><CalendarDays size={22} /></span>
+                <b>{v.sesion === 'clase' ? 'Tus clases viven en el calendario' : conCitas ? `No hay ${v.reservas} para hoy` : 'Gestiona los pedidos del negocio'}</b>
+                <p>{v.sesion === 'clase' ? 'Revisa grupos, horarios y cupos desde Clases.' : 'Puedes aprovechar el espacio para contactar clientes pendientes.'}</p>
               </div>
             )}
-
-            <div className="rail">
-              <div className="prof">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src="/assets/logos/logo-mia.webp" alt="perfil" />
-                <div className="who">
-                  <b>{datos?.empresa?.name ?? compania?.nombre}</b>
-                  <small>{datos?.empresa?.location || 'Sin ubicación configurada'}</small>
-                </div>
+            <Link className="dash-card-link" href={conCitas ? '/panel/agenda' : '/panel/pedidos'}>
+              Ver {conCitas ? v.agenda.toLowerCase() : 'pedidos'} <ChevronRight size={14} />
+            </Link>
+          </article>
+          <article className="card dash-conversations-card">
+            <div className="dash-section-head">
+              <div>
+                <span className="dash-eyebrow">Clientes</span>
+                <h3>Conversaciones recientes</h3>
               </div>
-              <div className="prof-stats">
-                <div>
-                  <b style={{ color: 'var(--brand)' }}>{datos?.leads.length ?? 0}</b>
-                  <small>Clientes</small>
-                </div>
-                {conCitas && (
-                  <div>
-                    <b style={{ color: '#0FA968' }}>{citasHoy}</b>
-                    <small>{cap(v.reservas)} hoy</small>
-                  </div>
-                )}
-                <div>
-                  <b style={{ color: '#FBB040' }}>{metricaHoy?.escalations_pending ?? 0}</b>
-                  <small>Pendientes</small>
-                </div>
-              </div>
+              <Link className="dash-text-link" href="/panel/mensajes">Ver todas</Link>
             </div>
-          </div>
-        </div>
+            {recientes.length === 0 ? (
+              <div className="dash-empty dash-empty--small"><p>Todavía no hay conversaciones.</p></div>
+            ) : (
+              <div className="conversation-grid">
+                {recientes.map((l) => {
+                  const it = intent(l.intent);
+                  return (
+                    <Link key={l.id} href={`/panel/mensajes?lead=${l.id}`} className="conversation-row">
+                      <span className="conversation-avatar" style={{ background: it.color }}>{(l.name || l.phone).slice(0, 2).toUpperCase()}</span>
+                      <span className="conversation-info"><b>{l.name || l.phone}</b><small>{l.ultimoMensaje}</small></span>
+                      <span className="conversation-meta"><em className={`badge-pill ${it.cls}`}>{it.short}</em><small>{cuando(l.ultimoAt)}</small></span>
+                    </Link>
+                  );
+                })}
+              </div>
+            )}
+          </article>
+
+          <article className="card dash-action-card">
+            <div className="dash-section-head">
+              <div>
+                <span className="dash-eyebrow">Prioridades</span>
+                <h3>Lo que necesita atención</h3>
+              </div>
+              <Sparkles size={18} className="section-icon" />
+            </div>
+            <div className="action-list">
+              <Link href="/panel/mensajes" className="action-row">
+                <span className="action-row__icon action-row__icon--orange"><MessageCircle size={17} /></span>
+                <span><b>{pendientes} conversaciones pendientes</b><small>Consultas que necesitan intervención</small></span>
+                <ChevronRight size={16} />
+              </Link>
+              <Link href="/panel/retargeting" className="action-row">
+                <span className="action-row__icon action-row__icon--teal"><TrendingUp size={17} /></span>
+                <span><b>Seguimiento de clientes</b><small>Revisa oportunidades para volver a contactar</small></span>
+                <ChevronRight size={16} />
+              </Link>
+              <Link href={conCitas ? '/panel/agenda' : '/panel/pedidos'} className="action-row">
+                <span className="action-row__icon action-row__icon--violet"><CalendarDays size={17} /></span>
+                <span>
+                  <b>{conCitas ? v.sesion === 'clase' ? 'Organiza tus clases' : `${agendaHoy.length} atenciones programadas hoy` : `${actividad} pedidos ${seleccion.frase}`}</b>
+                  <small>{conCitas ? 'Organiza la jornada antes de empezar' : 'Revisa preparación, cobro y entrega'}</small>
+                </span>
+                <ChevronRight size={16} />
+              </Link>
+            </div>
+          </article>
+
+          <article className="card dash-services-card">
+            <div className="dash-section-head">
+              <div>
+                <span className="dash-eyebrow">Preferencias</span>
+                <h3>{cap(v.items)} más vendid{v.aItem}s</h3>
+              </div>
+              <Link className="round-link" href="/panel/catalogo" aria-label="Abrir catálogo"><ChevronRight size={17} /></Link>
+            </div>
+            {datos.productos === null ? (
+              <div className="dash-empty dash-empty--small" role="status"><p>No se pudo cargar el detalle de ventas.</p><button className="dash-text-link" type="button" onClick={releer}>Reintentar</button></div>
+            ) : productos.length === 0 ? (
+              <div className="dash-empty dash-empty--small"><p>Sin ventas registradas en este período.</p></div>
+            ) : (
+              <div className="service-list">
+                {productos.map((p, i) => (
+                  <div className="service-row" key={p.name}>
+                    <span className="service-row__rank">{String(i + 1).padStart(2, '0')}</span>
+                    <div><b>{p.name}</b><small>{p.units} ventas · {soles(p.revenue)}</small></div>
+                    <span className="service-row__bar"><i style={{ width: `${(p.revenue / maxProducto) * 100}%`, background: COLORES_SERVICIO[i % COLORES_SERVICIO.length] }} /></span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </article>
+
+
+        </section>
+        </>}
       </div>
     </main>
   );

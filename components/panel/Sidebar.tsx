@@ -27,6 +27,7 @@ import {
   Wallet,
 } from 'lucide-react';
 import { useSesion } from './Sesion';
+import MarcaMia from './MarcaMia';
 import { useCargar } from './useCargar';
 import { esRutaGlobal } from '@/lib/panel/rutas';
 import { esAppointmentFamily, esCita, esEcommerce, esRecurrente } from '@/lib/panel/modo';
@@ -130,6 +131,13 @@ export default function Sidebar({
   // barra del teléfono no se vería dónde estás.
   const extraActiva = extra.some((n) => esActivo(n.href));
 
+  const rutaOperacion = esEcommerce(modo) ? '/panel/pedidos' : '/panel/agenda';
+  const rail = nav.filter((n) =>
+    ['/panel', '/panel/mensajes', rutaOperacion, '/panel/leads', '/panel/caja', '/panel/configuracion'].includes(n.href),
+  );
+  const railExtra = nav.filter((n) => !rail.some((r) => r.href === n.href));
+  const railExtraActiva = railExtra.some((n) => esActivo(n.href));
+
   const pintar = ({ href, icon: Icono, label: fijo }: Entrada, enHoja = false) => {
     // «Agenda» en una barbería, «Clases» en una academia. Ver lib/panel/vocabulario.
     const label = href === '/panel/agenda' ? vocabulario(modo).agenda : fijo;
@@ -142,7 +150,7 @@ export default function Sidebar({
       .filter(Boolean)
       .join(' ');
     return (
-      <Link key={href} href={href} className={clases}>
+      <Link key={href} href={href} className={clases} title={label}>
         <span className="ico">
           <Icono size={18} />
         </span>
@@ -154,12 +162,28 @@ export default function Sidebar({
 
   return (
     <aside className="sidebar">
-      <div className="sidebar__brand">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/assets/logos/logo-naranja.webp" alt="Vendemia" />
-      </div>
+      <Link href="/panel" className="sidebar__brand sidebar__brand--mia" aria-label="Mia · Ir al resumen">
+        <MarcaMia />
+      </Link>
 
-      <nav className="sidebar__nav">
+      <nav className="sidebar__nav sidebar__nav--desktop" aria-label="Navegación principal">
+        {rail.map((n) => pintar(n))}
+        {railExtra.length > 0 && (
+          <button
+            type="button"
+            className={`nav-item nav-mas nav-mas--desktop ${railExtraActiva || masAbierto ? 'active' : ''}`}
+            aria-expanded={masAbierto}
+            aria-controls="nav-hoja"
+            title="Más módulos"
+            onClick={() => setMasAbierto((v) => !v)}
+          >
+            <span className="ico"><MoreHorizontal size={18} /></span>
+            <span>Más</span>
+          </button>
+        )}
+      </nav>
+
+      <nav className="sidebar__nav sidebar__nav--mobile" aria-label="Navegación móvil">
         {nav.map((n) => pintar(n))}
         {extra.length > 0 && (
           <button
@@ -189,9 +213,9 @@ export default function Sidebar({
       <div className="sidebar__foot">
         {/* El admin de plataforma no tiene plan propio: no se le enseña. */}
         {!soloGlobal && <TuPlan />}
-        <div className="sidebar__logout" onClick={() => void salir()}>
-          <LogOut size={18} /> Cerrar sesión
-        </div>
+        <button type="button" className="sidebar__logout" title="Cerrar sesión" aria-label="Cerrar sesión" onClick={() => void salir()}>
+          <LogOut size={18} /><span>Cerrar sesión</span>
+        </button>
       </div>
     </aside>
   );

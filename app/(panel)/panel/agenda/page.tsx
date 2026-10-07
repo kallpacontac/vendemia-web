@@ -21,13 +21,11 @@
  */
 import { useMemo, useState } from 'react';
 import {
-  Briefcase,
   CalendarCheck,
   CalendarOff,
   CalendarPlus,
   Check,
   CheckCircle,
-  ChevronLeft,
   ChevronRight,
   Clock,
   Flame,
@@ -37,6 +35,7 @@ import {
   X,
 } from 'lucide-react';
 import Topbar from '@/components/panel/Topbar';
+import AgendaControles from '@/components/panel/AgendaControles';
 import AvisarCliente from '@/components/panel/AvisarCliente';
 import NuevaCita from '@/components/panel/NuevaCita';
 import Confirmar from '@/components/panel/Confirmar';
@@ -311,18 +310,22 @@ export default function Agenda() {
   const diaCerrado = Boolean(dia) && dia!.huecos.length > 0 && dia!.huecos.every((h) => h.cerrado);
 
   return (
-    <main className="main">
+    <main className="main main--agenda">
       <div className="wrap">
-        <Topbar titulo={v.agenda} sub="Disponibilidad y reservas" />
+        <Topbar titulo={v.agenda} sub={esRecurrente ? "Grupos e inscripciones" : "Disponibilidad y reservas"} accionesTitulo={!esRecurrente ? (
+          <button type="button" className="btn btn-primary" aria-expanded={creando} aria-controls="agenda-nueva-cita" onClick={() => setCreando((v) => !v)}>
+            <CalendarPlus size={17} /> {creando ? "Cerrar formulario" : "Nueva cita"}
+          </button>
+        ) : undefined} />
 
-        <div className="summary">
+        {!esRecurrente && <div className="summary">
           <div className="sm">
             <div className="ic" style={{ background: 'var(--brand-soft)', color: 'var(--brand)' }}>
               <CalendarCheck size={18} />
             </div>
             <div>
               <b>{semana?.totales.reservado ?? 0}</b>
-              <small>Reservas esta semana</small>
+              <small>Reservas de la semana</small>
             </div>
           </div>
           <div className="sm">
@@ -343,88 +346,29 @@ export default function Agenda() {
               <small>Ocupación</small>
             </div>
           </div>
-        </div>
+        </div>}
 
-        {/*
-          El número va en la pestaña a propósito: lo que no se ve, se olvida.
-          «Ya pasaron» enseña las que PIDEN algo, no todas — el resto es
-          historial y no hay nada que hacer con él.
-        */}
-        <div className="view-toggle tabs-agenda">
-          <button className={tab === 'semana' ? 'active' : ''} onClick={() => setTab('semana')}>
-            <CalendarCheck size={15} /> {esRecurrente ? 'Grupos' : 'Semana'}
-          </button>
-          {/*
-            En una academia estas dos pestañas solo salen si tienen algo: listan
-            reservas con hora (porVenir / yaPasaron excluyen las de grupo, que no
-            tienen una hora que pase), y una academia casi nunca tiene de esas.
-            Dos pestañas vacías para siempre solo confunden.
-          */}
-          {(!esRecurrente || nProximas > 0) && (
-            <button className={tab === 'proximas' ? 'active' : ''} onClick={() => setTab('proximas')}>
-              <Clock size={15} /> Próximas{nProximas > 0 ? ` (${nProximas})` : ''}
-            </button>
-          )}
-          {(!esRecurrente || nPendientes > 0) && (
-            <button
-              className={tab === 'pasadas' ? 'active' : ''}
-              onClick={() => setTab('pasadas')}
-              title={`${cap(v.sesiones)} que ya pasaron y siguen sin confirmar o sin cobrar`}
-            >
-              <CheckCircle size={15} /> Ya pasaron{nPendientes > 0 ? ` (${nPendientes})` : ''}
-            </button>
-          )}
-        </div>
-
-        {/*
-          ⚠️ El filtro cambia lo que SIGNIFICA la rejilla, no solo lo que enseña.
-          Con un profesional elegido es SU agenda: cabe una cita a la vez y sus
-          ausencias sí cierran la franja. Con «todo el equipo», lo que cabe a la
-          vez es lo menor entre las sillas y la gente que hay para atender.
-        */}
-        {(!esRecurrente || (datos?.trabajadores.length ?? 0) > 0) && (
-          <div className="filtro-fila">
-            {/* En un negocio recurrente no se agenda por hora: se inscribe en un
-                grupo, y de eso se encarga el bot al vender. */}
-            {!esRecurrente && (
-              <button className="btn btn-primary btn-sm" onClick={() => setCreando((v) => !v)}>
-                <CalendarPlus size={15} /> Nueva cita
-              </button>
-            )}
-            {(datos?.trabajadores.length ?? 0) > 0 && (
-              <>
-                <select
-                  className="select"
-                  style={{ maxWidth: 220 }}
-                  value={fEmpleado}
-                  onChange={(e) => setFEmpleado(e.target.value)}
-                >
-                  <option value="">Todo el equipo</option>
-                  {(datos?.trabajadores ?? []).map((t) => (
-                    <option key={t.id} value={t.id}>
-                      {t.name}
-                      {t.activo ? '' : ' · dado de baja'}
-                    </option>
-                  ))}
-                </select>
-                {fEmpleado && (
-                  <span className="muted" style={{ fontSize: 12 }}>
-                    Su agenda: una cita a la vez, y sus ausencias cierran la franja.
-                  </span>
-                )}
-              </>
-            )}
-          </div>
-        )}
+        <AgendaControles
+          recurrente={esRecurrente} movil={esMovil} tab={tab} alTab={setTab}
+          proximas={nProximas} pendientes={nPendientes}
+          profesionales={datos?.trabajadores ?? []} profesional={fEmpleado} alProfesional={setFEmpleado}
+          fecha={esMovil
+            ? `${dia?.esHoy ? 'Hoy · ' : ''}${dia ? `${dia.weekday.replace('.', '')} ${diaMes(dia.fecha)}` : '—'}`
+            : `${offset === 0 ? 'Esta semana · ' : ''}${diaMes(lunesDe(offset))} – ${diaMes(new Date(lunesDe(offset).getTime() + 6 * 864e5))}`}
+          vista={vista} alVista={setVista}
+          anterior={() => esMovil ? irDia(-1) : setOffset((o) => o - 1)}
+          siguiente={() => esMovil ? irDia(1) : setOffset((o) => o + 1)}
+          hoy={() => { setOffset(0); setDiaSel((new Date().getDay() + 6) % 7); }}
+        />
 
         {creando && !esRecurrente && (
-          <NuevaCita
+          <div id="agenda-nueva-cita"><NuevaCita
             leads={datos?.leads ?? []}
             catalogo={datos?.catalogo ?? []}
             trabajadores={datos?.trabajadores ?? []}
             alCerrar={() => setCreando(false)}
             alCambiar={recargar}
-          />
+          /></div>
         )}
 
         {/* El mensaje para el cliente de lo que se acaba de mover arrastrando. */}
@@ -478,40 +422,6 @@ export default function Agenda() {
           />
         ) : (
           <>
-            <div className="agenda-head">
-              {/* Las flechas del móvil pasan de día y ruedan de semana solas, así
-                  que la navegación por semanas sobra ahí: serían dos parejas de
-                  flechas casi iguales, una encima de otra, en la parte más
-                  estrecha de la pantalla. */}
-              <div className="week-nav">
-                <div className="nb" onClick={() => (esMovil ? irDia(-1) : setOffset((o) => o - 1))}>
-                  <ChevronLeft size={16} />
-                </div>
-                {esMovil ? (
-                  <b>
-                    {dia?.esHoy && 'Hoy · '}
-                    {dia ? `${dia.weekday.replace('.', '')} ${diaMes(dia.fecha)}` : '—'}
-                  </b>
-                ) : (
-                  <b>
-                    {offset === 0 && 'Esta semana · '}
-                    {diaMes(lunesDe(offset))} – {diaMes(new Date(lunesDe(offset).getTime() + 6 * 864e5))}
-                  </b>
-                )}
-                <div className="nb" onClick={() => (esMovil ? irDia(1) : setOffset((o) => o + 1))}>
-                  <ChevronRight size={16} />
-                </div>
-              </div>
-              <div className="view-toggle">
-                <button className={vista === 'negocio' ? 'active' : ''} onClick={() => setVista('negocio')}>
-                  <Briefcase size={15} /> Vista negocio
-                </button>
-                <button className={vista === 'cliente' ? 'active' : ''} onClick={() => setVista('cliente')}>
-                  <User size={15} /> Vista cliente
-                </button>
-              </div>
-            </div>
-
             <div className="legend2">
               {vista === 'negocio' ? (
                 <>

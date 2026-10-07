@@ -225,11 +225,11 @@ export default function Metricas() {
   return (
     <main className="main">
       <div className="wrap">
-        <Topbar titulo="Métricas" sub="Cómo trabaja Mia para tu negocio">
+        <Topbar titulo="Métricas" sub="Cómo trabaja Mia para tu negocio" accionesTitulo={
           <button className="btn btn-primary btn-sm" onClick={resumenWhatsApp}>
             <Send size={16} /> Resumen por WhatsApp
           </button>
-        </Topbar>
+        } />
 
         {/*
           El periodo, el grano y con qué fecha se agrupa.

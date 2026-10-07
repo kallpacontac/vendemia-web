@@ -1,6 +1,7 @@
 'use client';
 
 import '../panel.css';
+import '../panel-shared.css';
 import { useEffect } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
