@@ -14,13 +14,17 @@
  * en la base: loyalty_admin_device_batch/order exigen loyalty_es_admin().
  *
  * Los códigos solo existen en la respuesta (en la base queda su hash): las
- * hojas y el CSV se descargan ahora o se pierden.
+ * tarjetas de activación se descargan ahora o se pierden. Los ENLACES no son
+ * secretos (van impresos en la placa): la lista de lotes de abajo los deja
+ * copiar o grabar en el chip cuando haga falta, también desde el móvil.
  */
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Topbar from '@/components/panel/Topbar';
 import { useSesion } from '@/components/panel/Sesion';
 import { useAvisar } from '@/components/panel/Avisos';
-import { accion, mensaje } from '@/modules/fideliza/cliente/api';
+import { useCargar } from '@/components/panel/useCargar';
+import { accion, lecturas, mensaje, type PlacaStock } from '@/modules/fideliza/cliente/api';
+import EnlacesPlacas, { ordenLote } from '@/modules/fideliza/ui/EnlacesPlacas';
 import { urlPlaca, urlPlacaQr } from '@/modules/fideliza/dominio/config';
 import { descargarHtml, hojaActivacion, hojaFrentes } from '@/modules/fideliza/ui/hojaLote';
 
@@ -31,6 +35,7 @@ interface PlacaFabricada {
 }
 interface Lote {
   nombre: string;
+  kind: 'qr' | 'nfc_qr';
   codigoPedido: string | null;
   placas: PlacaFabricada[];
 }
@@ -55,6 +60,25 @@ export default function Fabrica() {
     return () => window.removeEventListener('beforeunload', aviso);
   }, [lote]);
 
+  // Los lotes ya fabricados, con sus enlaces. Se relee al fabricar uno nuevo.
+  const { datos: stock, releer: releerStock } = useCargar(
+    async () => (esAdminPlataforma ? lecturas.stock() : ([] as PlacaStock[])),
+    [esAdminPlataforma],
+  );
+  const lotes = useMemo(() => {
+    const porLote = new Map<string, PlacaStock[]>();
+    for (const p of stock ?? []) porLote.set(p.batch ?? '', [...(porLote.get(p.batch ?? '') ?? []), p]);
+    return [...porLote.entries()]
+      .map(([nombre, ps]) => ({
+        nombre,
+        placas: ordenLote(ps),
+        kind: ps.some((p) => p.kind === 'nfc_qr') ? ('nfc_qr' as const) : ('qr' as const),
+        libres: ps.filter((p) => !p.company_id).length,
+        fecha: ps.reduce((m, p) => (p.created_at > m ? p.created_at : m), ''),
+      }))
+      .sort((a, b) => (a.fecha < b.fecha ? 1 : -1));
+  }, [stock]);
+
   if (!esAdminPlataforma) {
     return (
       <main className="main">
@@ -73,11 +97,12 @@ export default function Fabrica() {
     try {
       if (pedido) {
         const r = await accion<{ order_code: string; devices: PlacaFabricada[] }>('placa.pedido', { count: cantidad, batch: limpio, kind });
-        setLote({ nombre: limpio, codigoPedido: r.order_code, placas: r.devices });
+        setLote({ nombre: limpio, kind, codigoPedido: r.order_code, placas: ordenLote(r.devices) });
       } else {
         const placas = await accion<PlacaFabricada[]>('placa.lote', { count: cantidad, batch: limpio, kind });
-        setLote({ nombre: limpio, codigoPedido: null, placas });
+        setLote({ nombre: limpio, kind, codigoPedido: null, placas: ordenLote(placas) });
       }
+      releerStock();
     } catch (e) {
       avisar(mensaje(e), 'error');
     } finally {
@@ -99,6 +124,16 @@ export default function Fabrica() {
     a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
     a.download = `placas-${l.nombre}.csv`;
     a.click();
+  }
+
+  /** La hoja de QR no lleva nada secreto: se puede volver a sacar de cualquier lote. */
+  async function reimprimirFrentes(nombreLote: string, placas: PlacaStock[]) {
+    try {
+      const html = await hojaFrentes(placas.map((p) => ({ public_token: p.public_token, activation_code: '' })), nombreLote);
+      descargarHtml(html, `placas-${nombreLote}-frentes.html`);
+    } catch (e) {
+      avisar(mensaje(e), 'error');
+    }
   }
 
   async function imprimir(l: Lote, cual: 'frentes' | 'activacion') {
@@ -134,7 +169,7 @@ export default function Fabrica() {
           )}
           <div className="fz-panel-aviso" style={{ marginTop: 12 }}>
             <span>
-              Los códigos <b>solo se ven ahora</b>. Descarga las dos hojas y el CSV antes de salir de esta pantalla: después no se pueden recuperar.
+              Los <b>códigos de activación</b> solo se ven ahora: descarga las tarjetas (y el CSV si quieres respaldo) antes de salir. Los enlaces sí quedan abajo, en «Lotes fabricados».
             </span>
           </div>
           <div className="fz-fila" style={{ marginTop: 12, flexWrap: 'wrap' }}>
@@ -151,12 +186,15 @@ export default function Fabrica() {
           <ul className="fz-ayudas">
             <li><b>Hoja de QR:</b> el frente de cada placa, numerado #01, #02… Se puede mandar a la imprenta: no lleva nada secreto.</li>
             <li><b>Tarjetas de activación:</b> cada una va DENTRO del sobre de la placa con el mismo número. Quien tenga el código se queda la placa.</li>
-            <li><b>CSV:</b> tu respaldo, y las URL para grabar los chips NFC (columna url_nfc).</li>
+            <li><b>CSV:</b> respaldo con todo, códigos incluidos. Al proveedor de NFC, solo la columna url_nfc.</li>
           </ul>
+
+          <h4 style={{ marginTop: 18, marginBottom: 8 }}>Enlaces de cada placa</h4>
+          <EnlacesPlacas placas={lote.placas} nfc={lote.kind === 'nfc_qr'} />
           <button
             className="btn btn-ghost btn-sm"
             style={{ marginTop: 12 }}
-            onClick={() => window.confirm('¿Ya descargaste las hojas y el CSV? Los códigos no se vuelven a mostrar.') && setLote(null)}
+            onClick={() => window.confirm('¿Ya descargaste las tarjetas de activación? Los códigos no se vuelven a mostrar.') && setLote(null)}
           >
             Fabricar otro lote
           </button>
@@ -206,6 +244,34 @@ export default function Fabrica() {
           </ul>
         </div>
       )}
+
+      <div className="card" style={{ maxWidth: 720, marginTop: 16 }}>
+        <b style={{ fontSize: 16 }}>Lotes fabricados</b>
+        <p className="fz-def">
+          Para grabar los chips o pasarle los enlaces a la imprenta. El número de cada placa es el mismo que el de su hoja de QR. Los códigos de activación no
+          están aquí: solo existen en las tarjetas que descargaste.
+        </p>
+        {!stock ? (
+          <p className="fz-def">Cargando…</p>
+        ) : !lotes.length ? (
+          <p className="fz-def">Todavía no hay lotes.</p>
+        ) : (
+          lotes.map((g) => (
+            <details key={g.nombre} className="fz-lote">
+              <summary>
+                <b>{g.nombre || 'sin nombre'}</b>
+                <small>
+                  {g.placas.length} placas · {g.kind === 'nfc_qr' ? 'NFC + QR' : 'solo QR'} · {g.libres} sin activar
+                </small>
+              </summary>
+              <button className="btn btn-ghost btn-sm" style={{ marginBottom: 10 }} onClick={() => void reimprimirFrentes(g.nombre, g.placas)}>
+                Hoja de QR (imprenta)
+              </button>
+              <EnlacesPlacas placas={g.placas} nfc={g.kind === 'nfc_qr'} />
+            </details>
+          ))
+        )}
+      </div>
     </main>
   );
 }

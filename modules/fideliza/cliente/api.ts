@@ -157,6 +157,16 @@ export interface VersionPublicada {
   published_at: string;
 }
 
+export interface PlacaStock {
+  id: string;
+  public_token: string;
+  kind: 'nfc_qr' | 'qr';
+  batch: string | null;
+  /** null = sigue sin dueño. */
+  company_id: string | null;
+  created_at: string;
+}
+
 export interface Placa {
   id: string;
   label: string;
@@ -232,6 +242,21 @@ export const lecturas = {
     ids.length
       ? lista<VersionPublicada>(sb().from('loyalty_published_link_versions').select('*').eq('company_id', companyId).in('id', ids))
       : Promise.resolve([] as VersionPublicada[]),
+  /**
+   * Placas fabricadas en lote (Fábrica, solo superadmin: el RLS de
+   * loyalty_devices deja verlas a loyalty_es_admin()). Todas, también las ya
+   * activadas: si no, al activarse una, las demás cambiarían de número.
+   * Sin códigos: en la base solo queda su hash.
+   */
+  stock: () =>
+    lista<PlacaStock>(
+      sb()
+        .from('loyalty_devices')
+        .select('id, public_token, kind, batch, company_id, created_at')
+        .not('batch', 'is', null)
+        .order('created_at', { ascending: false })
+        .limit(2000),
+    ),
   placas: (companyId: string) =>
     lista<Placa>(sb().from('loyalty_devices').select('*').eq('company_id', companyId).order('created_at', { ascending: false })),
   placa: async (companyId: string, id: string) => {
