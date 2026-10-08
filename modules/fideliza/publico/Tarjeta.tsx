@@ -61,6 +61,10 @@ export default function Tarjeta(props: {
   const [quiereAvisos, setQuiereAvisos] = useState(false);
   const [alias, setAlias] = useState(props.inicial.member.alias ?? '');
   const [borrado, setBorrado] = useState(false);
+  // El «Instalar» de Android llega una sola vez al cargar: se guarda para el botón.
+  const [instalar, setInstalar] = useState<{ prompt: () => Promise<void> } | null>(null);
+  // Abierta desde el icono (ya instalada): no se vuelve a explicar cómo instalarla.
+  const [enApp, setEnApp] = useState(false);
 
   const tipo = d.program?.rule_type ?? 'stamps';
   const umbral = d.program?.threshold ?? 0;
@@ -87,6 +91,17 @@ export default function Tarjeta(props: {
         .then((reg) => (reg.active ?? reg.waiting ?? reg.installing)?.postMessage({ tipo: 'tarjeta', url: url.pathname }))
         .catch(() => {});
     }
+    setEnApp(
+      window.matchMedia?.('(display-mode: standalone)').matches ||
+        (navigator as unknown as { standalone?: boolean }).standalone === true,
+    );
+    const alPoder = (e: Event) => {
+      e.preventDefault();
+      setInstalar(e as unknown as { prompt: () => Promise<void> });
+    };
+    const alInstalar = () => setInstalar(null);
+    window.addEventListener('beforeinstallprompt', alPoder);
+    window.addEventListener('appinstalled', alInstalar);
     const on = () => setEnLinea(true);
     const off = () => setEnLinea(false);
     setEnLinea(navigator.onLine);
@@ -95,6 +110,8 @@ export default function Tarjeta(props: {
     return () => {
       window.removeEventListener('online', on);
       window.removeEventListener('offline', off);
+      window.removeEventListener('beforeinstallprompt', alPoder);
+      window.removeEventListener('appinstalled', alInstalar);
     };
   }, [token, props.vapid, props.inicial.brand.slug]);
 
@@ -271,10 +288,20 @@ export default function Tarjeta(props: {
               )}
             </>
           )}
-          {plataforma === 'ios' && (
+          {plataforma === 'ios' && !enApp && (
             <p className="fz-nota">
-              <b>Guárdala en tu iPhone:</b> pulsa <b>Compartir</b> y luego <b>Añadir a pantalla de inicio</b>. Tu tarjeta quedará como una app.
+              <b>Guárdala en tu iPhone:</b> pulsa <b>Compartir</b> y luego <b>Añadir a pantalla de inicio</b>. Tu tarjeta quedará como una app
+              {props.vapid ? ' y, desde ahí, podrás recibir avisos de tus premios' : ''}.
             </p>
+          )}
+          {plataforma !== 'ios' && !enApp && instalar && (
+            <button
+              type="button"
+              className="fz-btn"
+              onClick={() => void instalar.prompt().finally(() => setInstalar(null))}
+            >
+              Instalar mi tarjeta como app
+            </button>
           )}
           {plataforma === 'otra' && !props.walletDisponible && (
             <p className="fz-nota">Guarda esta página en tus favoritos o en la pantalla de inicio.</p>

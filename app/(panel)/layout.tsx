@@ -12,6 +12,7 @@ import { BandaDemo } from '@/components/panel/Demo';
 import { RUTA_GLOBAL_POR_DEFECTO, esRutaGlobal } from '@/lib/panel/rutas';
 import { guardarDestino, rutaActual } from '@/lib/panel/destino';
 import AltaNegocio from '@/components/panel/AltaNegocio';
+import Instalable from '@/components/panel/Instalable';
 
 /**
  * ══════════════════════════════════════════════════════════════════════════
@@ -123,6 +124,8 @@ function Guardia({ children }: { children: React.ReactNode }) {
 export default function PanelLayout({ children }: { children: React.ReactNode }) {
   return (
     <ProveedorSesion>
+      {/* Manifest, service worker y el «Instalar» de Android: el panel como app. */}
+      <Instalable />
       {/* Salud va DENTRO de Sesión (necesita la compañía activa) y FUERA de la
           guardia, para que la píldora de la barra superior y el aviso flotante
           lean la misma consulta en vez de hacer una cada uno.

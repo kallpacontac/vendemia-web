@@ -1898,3 +1898,26 @@ body{background:var(--bg-app)}
   .revenue-bar__track i{width:min(44%,14px)}
   .revenue-bar>span{font-size:9px}
 }
+
+/* ── Avisos en este celular · components/panel/AvisosCelular.tsx ─────────── */
+.avisos-celular{margin-top:18px}
+.avisos-celular h3{display:flex;align-items:center;gap:8px}
+.avisos-celular__paso{padding:12px 0;border-top:1px solid var(--line)}
+.avisos-celular__paso:first-of-type{border-top:none}
+.avisos-celular__paso b{display:block;font-size:14px}
+.avisos-celular__paso p{font-size:13px;line-height:1.5;margin:4px 0 10px}
+.avisos-celular__paso svg{vertical-align:-2px}
+.avisos-celular__tipos{list-style:none;margin:0;padding:0}
+.avisos-celular__tipos .toggle-row{padding:10px 0;border-top:1px solid var(--line)}
+.avisos-celular__silencio{padding:12px 0;border-top:1px solid var(--line)}
+.avisos-celular__silencio b{display:block;font-size:14px}
+.avisos-celular__silencio small{display:block;font-size:12px;margin-bottom:8px}
+.avisos-celular__silencio .input{width:auto;display:inline-block;padding:6px 10px}
+.avisos-celular__acciones{display:flex;flex-wrap:wrap;gap:8px;padding-top:12px;border-top:1px solid var(--line)}
+@media(max-width:560px){.avisos-celular__acciones .btn{flex:1;justify-content:center}}
+.invitacion-avisos{display:flex;align-items:center;gap:12px;padding:12px 16px;margin-bottom:16px;position:relative}
+.invitacion-avisos>svg{color:var(--brand);flex:none}
+.invitacion-avisos>div{flex:1;min-width:0}
+.invitacion-avisos b{display:block;font-size:14px}
+.invitacion-avisos small{font-size:12.5px}
+.invitacion-avisos__cerrar{border:none;background:none;color:var(--ink-mute);cursor:pointer;padding:4px;display:grid;place-items:center}

@@ -34,6 +34,7 @@
 import { Suspense, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
+import AvisosCelular from '@/components/panel/AvisosCelular';
 import {
   ArrowLeft,
   ArrowRight,
@@ -1071,6 +1072,10 @@ function Configuracion() {
             </button>
           </div>
         </div>
+
+        {/* Fuera del asistente: no es configuración del bot sino de ESTE
+            celular, y se guarda sola (no pasa por la barra de guardar). */}
+        <AvisosCelular />
       </div>
 
       {/*
