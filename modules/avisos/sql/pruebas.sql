@@ -1,6 +1,6 @@
 -- Pruebas de 0001_avisos_panel.sql. Todo dentro de BEGIN … ROLLBACK: no deja
--- nada. Si una falla, se corta con su motivo; si todas pasan, el último NOTICE
--- dice «TODAS LAS PRUEBAS PASARON».
+-- nada. Si una falla, se corta con su motivo en rojo; si todas pasan, la última
+-- fila dice «TODAS LAS PRUEBAS PASARON».
 begin;
 
 do $$
@@ -65,3 +65,7 @@ begin
 end $$;
 
 rollback;
+
+-- El editor de Supabase no enseña los NOTICE. Si alguna prueba falla, el DO de
+-- arriba corta con un error en rojo y esta línea no llega a ejecutarse.
+select 'TODAS LAS PRUEBAS PASARON' as resultado;
