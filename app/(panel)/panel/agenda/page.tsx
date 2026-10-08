@@ -21,14 +21,11 @@
  */
 import { useMemo, useState } from 'react';
 import {
-  CalendarCheck,
   CalendarOff,
   CalendarPlus,
   Check,
-  CheckCircle,
   ChevronRight,
   Clock,
-  Flame,
   Pencil,
   User,
   Wallet,
@@ -318,39 +315,10 @@ export default function Agenda() {
           </button>
         ) : undefined} />
 
-        {!esRecurrente && <div className="summary">
-          <div className="sm">
-            <div className="ic" style={{ background: 'var(--brand-soft)', color: 'var(--brand)' }}>
-              <CalendarCheck size={18} />
-            </div>
-            <div>
-              <b>{semana?.totales.reservado ?? 0}</b>
-              <small>Reservas de la semana</small>
-            </div>
-          </div>
-          <div className="sm">
-            <div className="ic" style={{ background: '#E8FBF2', color: '#0FA968' }}>
-              <CheckCircle size={18} />
-            </div>
-            <div>
-              <b>{semana?.totales.libre ?? 0}</b>
-              <small>Cupos libres</small>
-            </div>
-          </div>
-          <div className="sm">
-            <div className="ic" style={{ background: '#FFECEF', color: '#FF5B79' }}>
-              <Flame size={18} />
-            </div>
-            <div>
-              <b>{ocupacion}%</b>
-              <small>Ocupación</small>
-            </div>
-          </div>
-        </div>}
-
         <AgendaControles
           recurrente={esRecurrente} movil={esMovil} tab={tab} alTab={setTab}
           proximas={nProximas} pendientes={nPendientes}
+          resumen={!esRecurrente ? { reservas: semana?.totales.reservado ?? 0, libres: semana?.totales.libre ?? 0, ocupacion } : undefined}
           profesionales={datos?.trabajadores ?? []} profesional={fEmpleado} alProfesional={setFEmpleado}
           fecha={esMovil
             ? `${dia?.esHoy ? 'Hoy · ' : ''}${dia ? `${dia.weekday.replace('.', '')} ${diaMes(dia.fecha)}` : '—'}`

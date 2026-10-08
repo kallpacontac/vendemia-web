@@ -444,33 +444,33 @@ function Configuracion() {
   }
 
   return (
-    <main className="main">
+    <main className="main main--configuracion">
       {/* El padding extra evita que la barra fija tape el último control de la
           pantalla, que en el paso 4 es un botón de borrar pregunta. */}
       <div className={`cfg-wrap ${hayCambios ? 'cfg-wrap--barra' : ''}`}>
-        <Topbar titulo="Configuración del bot" sub={`Personaliza a ${form.bot_name || 'Mia'}`} />
+        <Topbar titulo="Configura tu negocio" sub={`Prepara lo esencial para que ${form.bot_name || 'Mia'} atienda bien. Los detalles opcionales están en cada paso.`} />
 
         <div className="stepper-card">
-          <div className="stepper">
+          <nav className="stepper" aria-label="Pasos de configuración">
             {[
-              'Mi negocio',
-              // «Servicios» en una barbería, «Clases» en una academia. Ver lib/panel/vocabulario.
-              `${cap(vocabulario(form?.business_mode).items)}, horario y pagos`,
-              'Personalidad y reglas',
-              'Preguntas obligatorias',
+              'Negocio',
+              `${cap(vocabulario(form?.business_mode).items)} y cobros`,
+              'Cómo responde',
+              'Preguntas extra',
             ].map((txt, i) => (
-              <div key={txt} style={{ display: 'contents' }}>
-                {i > 0 && <div className={`step__line ${paso > i ? 'done' : ''}`} />}
-                <div
+                <button
+                  key={txt}
+                  type="button"
                   className={`step ${paso === i + 1 ? 'active' : ''} ${paso > i + 1 ? 'done' : ''}`}
                   onClick={() => setPaso(i + 1)}
+                  aria-current={paso === i + 1 ? 'step' : undefined}
+                  aria-label={`Paso ${i + 1} de 4: ${txt}`}
                 >
                   <div className="step__dot">{i + 1}</div>
                   <div className="step__lbl">{txt}</div>
-                </div>
-              </div>
+                </button>
             ))}
-          </div>
+          </nav>
         </div>
 
         {/* ══ PASO 1 · MI NEGOCIO ══ */}
@@ -479,11 +479,12 @@ function Configuracion() {
             <h4>
               <Store /> Datos del negocio
             </h4>
+            <p className="cfg-guide">Paso 1 de 4 · Identifica tu negocio y el número desde el que atenderá el asistente.</p>
             <div className="grid-form">
               <Campo etiqueta="Nombre del negocio" valor={form.name} alCambiar={(v) => set('name', v)} />
-              <Campo etiqueta="Nombre del bot" valor={form.bot_name} alCambiar={(v) => set('bot_name', v)} />
+              <Campo etiqueta="Nombre del asistente" valor={form.bot_name} alCambiar={(v) => set('bot_name', v)} />
               <div>
-                <label className="field-label">Modo de negocio</label>
+                <label className="field-label">Tipo de negocio</label>
                 <select
                   className="select"
                   value={form.business_mode}
@@ -493,10 +494,7 @@ function Configuracion() {
                   <option value="recurring_appointment">Grupos recurrentes (cursos, clases)</option>
                   <option value="ecommerce">E-commerce (productos)</option>
                 </select>
-                <small className="muted" style={{ fontSize: 11.5 }}>
-                  Cambia las herramientas que Mia puede usar. Un negocio de citas no sabe crear
-                  pedidos, y al revés.
-                </small>
+                <small className="muted" style={{ fontSize: 11.5 }}>Define si gestionas citas, clases o productos.</small>
               </div>
               {esEcommerce(form.business_mode) && (
                 <div>
@@ -518,26 +516,19 @@ function Configuracion() {
                 alCambiar={(v) => set('whatsapp_phone', v)}
                 pista="Sin +, así: 51987654321"
               />
-              <Campo
-                etiqueta="Teléfono del dueño"
-                valor={form.owner_phone}
-                alCambiar={(v) => set('owner_phone', v)}
-              />
-              <Campo
-                etiqueta="Teléfono admin (comandos)"
-                valor={form.admin_phone}
-                alCambiar={(v) => set('admin_phone', v)}
-              />
               <Campo etiqueta="Ubicación / distrito" valor={form.location} alCambiar={(v) => set('location', v)} />
-              <div className="full">
-                <label className="field-label">Descripción del negocio</label>
-                <textarea
-                  className="textarea"
-                  value={form.business_description}
-                  onChange={(e) => set('business_description', e.target.value)}
-                />
-              </div>
             </div>
+            <details className="cfg-advanced">
+              <summary>Opciones avanzadas de contacto y presentación</summary>
+              <div className="grid-form">
+                <Campo etiqueta="Teléfono del dueño" valor={form.owner_phone} alCambiar={(v) => set('owner_phone', v)} />
+                <Campo etiqueta="Teléfono admin (comandos)" valor={form.admin_phone} alCambiar={(v) => set('admin_phone', v)} />
+                <div className="full">
+                  <label className="field-label">Descripción del negocio</label>
+                  <textarea className="textarea" value={form.business_description} onChange={(e) => set('business_description', e.target.value)} />
+                </div>
+              </div>
+            </details>
           </div>
 
           <div className="nav-btns">
@@ -568,6 +559,7 @@ function Configuracion() {
                 ? 'Productos'
                 : `${cap(vocabulario(form?.business_mode).items)} y productos`}
             </h4>
+            <p className="cfg-guide">Paso 2 de 4 · Revisa qué ofreces, cuándo atiendes y cómo cobras.</p>
             <div className="cfg-enlace">
               <div>
                 <b>
@@ -636,7 +628,9 @@ function Configuracion() {
                 citas puntuales: un grupo recurrente no tiene una hora que pase.
               */}
               {form.business_mode === 'appointment' && (
-                <div className="toggle-row" style={{ marginTop: 12 }}>
+                <details className="cfg-advanced">
+                  <summary>Automatización avanzada de asistencia</summary>
+                  <div className="toggle-row" style={{ marginTop: 12 }}>
                   <div className="t">
                     <b>Dar por atendida la cita si nadie dice lo contrario</b>
                     <small>
@@ -651,7 +645,8 @@ function Configuracion() {
                     role="switch"
                     aria-checked={form.asumir_asistencia}
                   />
-                </div>
+                  </div>
+                </details>
               )}
             </div>
           )}
@@ -888,6 +883,7 @@ function Configuracion() {
             <h4>
               <MessageSquare /> Personalidad
             </h4>
+            <p className="cfg-guide">Paso 3 de 4 · Define el tono. Si necesitas mensajes específicos, despliega las opciones avanzadas.</p>
             <label className="field-label">Tono del bot</label>
             <textarea
               className="textarea"
@@ -896,7 +892,9 @@ function Configuracion() {
               value={form.bot_tone}
               onChange={(e) => set('bot_tone', e.target.value)}
             />
-            <div className="grid-form" style={{ marginTop: 14 }}>
+            <details className="cfg-advanced">
+              <summary>Mensajes personalizados (opcional)</summary>
+              <div className="grid-form">
               <div>
                 <label className="field-label">Pregunta de enganche</label>
                 <input
@@ -921,10 +919,13 @@ function Configuracion() {
                   onChange={(e) => set('closing_note', e.target.value)}
                 />
               </div>
-            </div>
+              </div>
+            </details>
           </div>
 
-          <div className="sec">
+          <details className="cfg-advanced cfg-advanced--section">
+            <summary>Reglas y políticas personalizadas (opcional)</summary>
+            <div className="sec">
             <h4>
               <FileText /> Reglas y política
             </h4>
@@ -952,7 +953,8 @@ function Configuracion() {
                 />
               </div>
             </div>
-          </div>
+            </div>
+          </details>
 
           <div className="sec">
             <h4>
@@ -989,7 +991,7 @@ function Configuracion() {
             </div>
           </div>
 
-          {esDueno && <Usuarios cuantos={datos?.miembros.length ?? 0} />}
+          {esDueno && <details className="cfg-advanced cfg-advanced--section"><summary>Acceso del equipo</summary><Usuarios cuantos={datos?.miembros.length ?? 0} /></details>}
 
           <div className="nav-btns">
             <button className="btn btn-ghost" onClick={() => setPaso(2)}>
@@ -1007,6 +1009,7 @@ function Configuracion() {
             <h4>
               <ListChecks /> Preguntas obligatorias
             </h4>
+            <p className="cfg-guide">Paso 4 de 4 · Opcional. Añade solo los datos que realmente necesitas antes de cerrar una reserva.</p>
             <p className="muted" style={{ fontSize: 13, marginTop: -4, marginBottom: 12 }}>
               Mia las hace <b>siempre</b>, en este orden, antes de cerrar. No son un guion de
               conversación: son un filtro. Cada una puede descalificar al cliente, guardar un dato

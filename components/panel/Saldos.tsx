@@ -21,7 +21,8 @@
  * al cliente; eso, si hace falta, lo manda una persona desde Mensajes.
  */
 import { useState } from 'react';
-import { Wallet } from 'lucide-react';
+import { ChevronDown, Wallet } from 'lucide-react';
+import Paginacion, { usePaginacion } from './Paginacion';
 import { useSesion } from './Sesion';
 import { useComando } from './Avisos';
 import { useCargar } from './useCargar';
@@ -42,34 +43,46 @@ function haceDias(epoch: number): string {
 /** Quién recibe el servicio: el beneficiario si lo hay, si no, el propio cliente. */
 const alumnosDe = (v: VentaLead) => v.inscripciones.length;
 
-export function SaldosPendientes() {
+export function SaldosPendientes({ alCambiar }: { alCambiar?: () => void } = {}) {
   const { companyId } = useSesion();
-  const { datos, releer } = useCargar(async () => {
+  const { datos, error, recargar } = useCargar(async () => {
     if (!companyId) return null;
     const [citas, leads] = await Promise.all([getCitas(companyId), getLeads(companyId, 1000)]);
     const ventas = await getVentas(companyId, citas);
     return { deudas: conSaldo(ventas), nombre: new Map(leads.map((l) => [l.id, l.name || l.phone])) };
   }, [companyId]);
 
+  if (error) return <p className="vacio">No se pudieron cargar los saldos. <button className="btn btn-ghost btn-sm" onClick={recargar}>Reintentar</button></p>;
   // Sin deudas no se pinta nada: en una barbería esta tarjeta nunca existe.
   if (!datos || datos.deudas.length === 0) return null;
-  const total = datos.deudas.reduce((t, v) => t + v.saldo.saldo, 0);
+  return <ListaSaldos deudas={datos.deudas} nombre={datos.nombre} alGuardar={() => { recargar(); alCambiar?.(); }} />;
+}
 
+export function ListaSaldos({ deudas, nombre, alGuardar }: {
+  deudas: VentaLead[]; nombre: Map<string,string>; alGuardar: () => void;
+}) {
+  const [busqueda, setBusqueda] = useState('');
+  const filtradas = deudas.filter((v) => (nombre.get(v.leadId) ?? 'Cliente').toLocaleLowerCase('es').includes(busqueda.trim().toLocaleLowerCase('es')));
+  const paginas = usePaginacion(filtradas, 5);
+  const total = deudas.reduce((t, v) => t + v.saldo.saldo, 0);
   return (
-    <div className="card saldos">
-      <div className="card-mini-head">
-        <h3>Saldos por cobrar</h3>
-        <b className="saldos__total">{soles(total)}</b>
-      </div>
-      <p className="muted" style={{ fontSize: 12.5, margin: '-6px 0 10px' }}>
-        Tienen el cupo porque pusieron una seña, y deben el resto. De la deuda más antigua a la más nueva.
+    <details className="card saldos saldos--compactos">
+      <summary className="saldos__resumen">
+        <span><strong>Saldos por cobrar</strong><small>{deudas.length} {deudas.length === 1 ? 'cliente' : 'clientes'} · sin filtro de fecha</small></span>
+        <b className="saldos__total">{soles(total)}</b><ChevronDown size={18}/>
+      </summary>
+      <p className="muted saldos__ayuda">
+        De la deuda más antigua a la más nueva. Estos saldos no cambian con la fecha de caja.
       </p>
+      <input className="input" aria-label="Buscar cliente con saldo" placeholder="Buscar cliente…" value={busqueda} onChange={(e) => { setBusqueda(e.target.value); paginas.irA(1); }} />
       <ul className="saldos__lista">
-        {datos.deudas.map((v) => (
-          <FilaSaldo key={v.leadId} v={v} nombre={datos.nombre.get(v.leadId) ?? 'Cliente'} alGuardar={releer} />
+        {paginas.visibles.map((v) => (
+          <FilaSaldo key={v.leadId} v={v} nombre={nombre.get(v.leadId) ?? 'Cliente'} alGuardar={alGuardar} />
         ))}
       </ul>
-    </div>
+      <p className="muted saldos__recuento" aria-live="polite">{filtradas.length ? `${(paginas.pagina - 1) * 5 + 1}–${Math.min(paginas.pagina * 5, filtradas.length)} de ${filtradas.length} clientes` : 'No hay coincidencias.'}</p>
+      <Paginacion {...paginas} />
+    </details>
   );
 }
 

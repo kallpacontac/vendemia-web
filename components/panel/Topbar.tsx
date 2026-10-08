@@ -14,8 +14,9 @@
  * puede arreglar: hay que re-emparejar el WhatsApp y eso se hace con su
  * teléfono delante.
  */
-import { useEffect, useRef, useState } from 'react';
-import { Bell, ChevronDown, FlaskConical, LogOut } from 'lucide-react';
+import { Bell } from 'lucide-react';
+import CuentaPanel from './CuentaPanel';
+import ComboPanel from './ComboPanel';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useSesion } from './Sesion';
@@ -49,20 +50,9 @@ function SelectorCompania() {
   const { companias, companyId, elegirCompania } = useSesion();
   // Con una sola compañía el selector es ruido: casi todos los clientes tienen una.
   if (companias.length < 2) return null;
-  return (
-    <select
-      className="select"
-      style={{ maxWidth: 200 }}
-      value={companyId ?? ''}
-      onChange={(e) => elegirCompania(e.target.value)}
-    >
-      {companias.map((c) => (
-        <option key={c.id} value={c.id}>
-          {c.nombre}
-        </option>
-      ))}
-    </select>
-  );
+  return <ComboPanel className="topbar__company panel-combo--header" tipo="negocio"
+    etiqueta="Negocio activo" tituloMenu="Cambiar negocio" value={companyId ?? ''}
+    opciones={companias.map((c) => ({ value: c.id, label: c.nombre }))} alCambiar={elegirCompania} />;
 }
 
 function NavegacionPanel() {
@@ -115,86 +105,8 @@ function NavegacionPanel() {
  */
 function MenuCuenta({ email, pie }: { email: string; pie: string }) {
   const { salir } = useSesion();
-  const [abierto, setAbierto] = useState(false);
-  const caja = useRef<HTMLDivElement>(null);
   const demo = useDemo();
-
-  /* Se cierra al pulsar fuera o con Escape: un menú que solo se cierra con su
-     propio botón se queda abierto encima de lo que quieras mirar después. */
-  useEffect(() => {
-    if (!abierto) return;
-    const fuera = (e: PointerEvent) => {
-      if (caja.current && !caja.current.contains(e.target as Node)) setAbierto(false);
-    };
-    const tecla = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setAbierto(false);
-    };
-    document.addEventListener('pointerdown', fuera);
-    document.addEventListener('keydown', tecla);
-    return () => {
-      document.removeEventListener('pointerdown', fuera);
-      document.removeEventListener('keydown', tecla);
-    };
-  }, [abierto]);
-
-  return (
-    <div className="profile-wrap" ref={caja}>
-      <button
-        type="button"
-        className="profile"
-        aria-haspopup="menu"
-        aria-expanded={abierto}
-        onClick={() => setAbierto((v) => !v)}
-      >
-        <div className="avatar">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/assets/logos/logo-mia.webp" alt="" />
-        </div>
-        <div>
-          <b>{email.split('@')[0] || 'Cuenta'}</b>
-          <small>{pie}</small>
-        </div>
-        <ChevronDown size={15} className="profile__flecha" />
-      </button>
-
-      {abierto && (
-        <div className="menu-cuenta" role="menu">
-          {/* El correo entero, que es lo que resuelve la duda de «¿con qué
-              cuenta estoy?» cuando alguien lleva varias. */}
-          <div className="menu-cuenta__quien">
-            <b>{email || 'Cuenta'}</b>
-            <small>{pie}</small>
-          </div>
-          {/* El interruptor de la demo vive aquí y no en la cabecera: es de
-              quien enseña el panel, no del día a día del dueño. Encendida, la
-              cabecera enseña además «Salir de demo» (BotonDemo). */}
-          <button
-            type="button"
-            role="menuitem"
-            className="menu-cuenta__item"
-            title="Llena el panel con datos de ejemplo para enseñarlo. No toca la base de datos."
-            onClick={() => {
-              setAbierto(false);
-              alternarDemo();
-            }}
-          >
-            <FlaskConical size={16} /> {demo ? 'Salir del modo demo' : 'Modo demo'}
-          </button>
-          <button
-            type="button"
-            role="menuitem"
-            className="menu-cuenta__salir"
-            onClick={() => {
-              setAbierto(false);
-              void salir();
-            }}
-          >
-            <LogOut size={16} /> Cerrar sesión
-          </button>
-        </div>
-      )}
-    </div>
-  );
+  return <CuentaPanel email={email} pie={pie} demo={demo ?? false} alDemo={alternarDemo} alSalir={() => void salir()} />;
 }
 
 export default function Topbar({
@@ -215,25 +127,28 @@ export default function Topbar({
   const pie = compania?.nombre ?? (esAdminPlataforma ? 'Todos los negocios' : '—');
 
   return (
+    <CabeceraPanel titulo={titulo} sub={sub} accionesTitulo={accionesTitulo}
+      navegacion={<NavegacionPanel />}
+      avisos={<>{children}<BotonDemo /><AvisoWhatsApp /></>}
+      cuenta={<><SelectorCompania /><div className="icon-btn" aria-hidden="true"><Bell size={18} /></div><MenuCuenta email={email} pie={pie} /></>}
+    />
+  );
+}
+
+/** Estructura única para todas las rutas, independiente de sesión y consultas. */
+export function CabeceraPanel({ titulo, sub, accionesTitulo, navegacion, cuenta, avisos }: {
+  titulo: string; sub?: string; accionesTitulo?: React.ReactNode;
+  navegacion: React.ReactNode; cuenta: React.ReactNode; avisos?: React.ReactNode;
+}) {
+  return (
     <header className="panel-header">
       <div className="topbar">
-        <NavegacionPanel />
-        <div className="topbar__actions">
-          {children}
-          <BotonDemo />
-          <SelectorCompania />
-          <AvisoWhatsApp />
-          <div className="icon-btn">
-            <Bell size={18} />
-          </div>
-          <MenuCuenta email={email} pie={pie} />
-        </div>
+        {navegacion}
+        <div className="topbar__actions">{cuenta}</div>
       </div>
+      <div className="topbar__notices">{avisos}</div>
       <div className={`topbar__title${accionesTitulo ? ' topbar__title--with-actions' : ''}`}>
-        <div>
-          <h1>{titulo}</h1>
-          {sub && <p>{sub}</p>}
-        </div>
+        <div><h1>{titulo}</h1>{sub && <p>{sub}</p>}</div>
         {accionesTitulo}
       </div>
     </header>

@@ -21,8 +21,9 @@
  */
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
-import { CheckCircle, Download, Flame, MessageCircle, Search, Users } from 'lucide-react';
+import { Download, MessageCircle, Search } from 'lucide-react';
 import Topbar from '@/components/panel/Topbar';
+import ComboPanel from '@/components/panel/ComboPanel';
 import { useSesion } from '@/components/panel/Sesion';
 import { useCargar } from '@/components/panel/useCargar';
 import { getConversaciones } from '@/lib/supabase/queries';
@@ -106,91 +107,54 @@ export default function Leads() {
   }
 
   return (
-    <main className="main">
+    <main className="main main--leads">
       <div className="wrap">
-        <Topbar titulo="Leads" sub="Todos tus contactos de WhatsApp" />
-
-        <div className="mini-row">
-          <div className="mini">
-            <div className="ic" style={{ background: '#FFF1E6', color: '#F58220' }}>
-              <Users size={20} />
-            </div>
-            <div>
-              <b>{leads.length}</b>
-              <small>Total leads</small>
-            </div>
-          </div>
-          <div className="mini">
-            <div className="ic" style={{ background: '#FFECEC', color: '#FF4757' }}>
-              <Flame size={20} />
-            </div>
-            <div>
-              <b>{calientes}</b>
-              <small>Calientes 🔥</small>
-            </div>
-          </div>
-          <div className="mini">
-            <div className="ic" style={{ background: '#E9FBF3', color: '#00C48C' }}>
-              <CheckCircle size={20} />
-            </div>
-            <div>
-              <b>{convertidos}</b>
-              <small>Clientes ✓</small>
-            </div>
-          </div>
-        </div>
-
-        <div className="toolbar">
-          <div className="search">
-            <Search size={16} />
-            <input
-              placeholder="Buscar por nombre o teléfono…"
-              value={busqueda}
-              onChange={(e) => {
-                setBusqueda(e.target.value);
-                setPagina(1);
-              }}
-            />
-          </div>
-          {/* La intención la rellena el bot desde el 9-sep-2026, y solo hacia
-              adelante: los leads anteriores no tienen, y ningún filtro de
-              intención los va a sacar. */}
-          <select
-            className="select"
-            title="Mia clasifica la intención desde el 9 de septiembre de 2026. Los leads anteriores no la tienen."
-            value={fIntent}
-            onChange={(e) => {
-              setFIntent(e.target.value);
-              setPagina(1);
-            }}
-          >
-            <option value="">Toda intención</option>
-            <option value="purchase_ready">Listo p/ comprar</option>
-            <option value="quote">Cotizando</option>
-            <option value="inquiry">Consulta</option>
-            <option value="support">Soporte</option>
-            <option value="other">Otro</option>
-          </select>
-          <select
-            className="select"
-            value={fStatus}
-            onChange={(e) => {
-              setFStatus(e.target.value);
-              setPagina(1);
-            }}
-          >
-            <option value="">Todo estado</option>
-            {/* En el orden del embudo, y con los rótulos de Retargeting. */}
-            {ESTADOS.map((k) => (
-              <option key={k} value={k}>
-                {STATUS[k].label}
-              </option>
-            ))}
-          </select>
-          <div className="spacer" />
-          <button className="btn btn-ghost" onClick={exportarCsv} disabled={!filtrados.length}>
+        <Topbar titulo="Leads" sub="Todos tus contactos de WhatsApp" accionesTitulo={
+          <button type="button" className="btn btn-ghost leads-exportar" onClick={exportarCsv} disabled={!filtrados.length}>
             <Download size={16} /> Exportar
           </button>
+        } />
+
+        <div className="leads-herramientas">
+          <div className="leads-pulsos" role="group" aria-label="Vistas rápidas de clientes">
+            <button type="button" className={!fIntent && !fStatus ? 'active' : ''} aria-pressed={!fIntent && !fStatus}
+              onClick={() => { setFIntent(''); setFStatus(''); setPagina(1); }}>Todos <b>{leads.length}</b></button>
+            <button type="button" className={fIntent === 'purchase_ready' && !fStatus ? 'active' : ''} aria-pressed={fIntent === 'purchase_ready' && !fStatus}
+              onClick={() => { setFIntent('purchase_ready'); setFStatus(''); setPagina(1); }}>Listos <b>{calientes}</b></button>
+            <button type="button" className={fStatus === 'customer' && !fIntent ? 'active' : ''} aria-pressed={fStatus === 'customer' && !fIntent}
+              onClick={() => { setFIntent(''); setFStatus('customer'); setPagina(1); }}>Clientes <b>{convertidos}</b></button>
+          </div>
+          <div className="leads-filtros">
+            <div className="search">
+              <Search size={16} />
+              <input
+                aria-label="Buscar contacto"
+                placeholder="Buscar por nombre o teléfono…"
+                value={busqueda}
+                onChange={(e) => {
+                  setBusqueda(e.target.value);
+                  setPagina(1);
+                }}
+              />
+            </div>
+            {/* La intención la rellena el bot desde el 9-sep-2026, y solo hacia
+                adelante: los leads anteriores no tienen, y ningún filtro de
+                intención los va a sacar. */}
+            <ComboPanel tipo="filtro" etiqueta="Filtrar intención" tituloMenu="Intención detectada por Mia"
+              value={fIntent} alCambiar={(v) => { setFIntent(v); setPagina(1); }} opciones={[
+                { value: '', label: 'Toda intención' },
+                { value: 'purchase_ready', label: 'Listo p/ comprar' },
+                { value: 'quote', label: 'Cotizando' },
+                { value: 'inquiry', label: 'Consulta' },
+                { value: 'support', label: 'Soporte' },
+                { value: 'other', label: 'Otro' },
+              ]} />
+            <ComboPanel tipo="filtro" etiqueta="Filtrar estado" tituloMenu="Estado del cliente"
+              value={fStatus} alCambiar={(v) => { setFStatus(v); setPagina(1); }} opciones={[
+                { value: '', label: 'Todo estado' },
+                ...ESTADOS.map((k) => ({ value: k, label: STATUS[k].label })),
+              ]} />
+          </div>
         </div>
 
         <div className="table-card">

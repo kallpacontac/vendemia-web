@@ -23,6 +23,7 @@
 import { useMemo, useState } from 'react';
 import { CalendarPlus, Check, Search, UserPlus, X } from 'lucide-react';
 import AvisarCliente from './AvisarCliente';
+import ComboPanel from './ComboPanel';
 import { useAvisar, useComando } from './Avisos';
 import { hoyLima } from '@/lib/panel/inscripciones';
 import { soles, telefono as comoTelefono } from '@/lib/panel/format';
@@ -249,15 +250,8 @@ export default function NuevaCita({
 
         <div>
           <label className="field-label">Servicio</label>
-          <select className="select" value={itemId} onChange={(e) => setItemId(e.target.value)}>
-            <option value="">Elige el servicio</option>
-            {servicios.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.name}
-                {s.price != null ? ` · ${soles(s.price)}` : ''}
-              </option>
-            ))}
-          </select>
+          <ComboPanel tipo="servicio" etiqueta="Servicio" value={itemId} alCambiar={setItemId}
+            opciones={[{ value:'', label:'Elige el servicio' }, ...servicios.map((s) => ({ value:s.id, label:s.name, detalle:s.price != null ? soles(s.price) : undefined }))]} />
           <small className="muted" style={{ fontSize: 11.5 }}>
             De él salen el precio y la duración: no se teclean.
           </small>
@@ -266,14 +260,8 @@ export default function NuevaCita({
         {activos.length > 0 && (
           <div>
             <label className="field-label">Profesional</label>
-            <select className="select" value={empId} onChange={(e) => setEmpId(e.target.value)}>
-              <option value="">Da igual</option>
-              {activos.map((t) => (
-                <option key={t.id} value={t.id}>
-                  {t.name}
-                </option>
-              ))}
-            </select>
+            <ComboPanel tipo="persona" etiqueta="Profesional" value={empId} alCambiar={setEmpId}
+              opciones={[{ value:'', label:'Da igual' }, ...activos.map((t) => ({ value:t.id, label:t.name }))]} />
           </div>
         )}
 

@@ -215,6 +215,7 @@ export default function Catalogo() {
    * ocultado por error queda inalcanzable y no hay manera de recuperarlo.
    */
   const [verOcultos, setVerOcultos] = useState(false);
+  const [soloSinFoto, setSoloSinFoto] = useState(false);
   const [abierto, setAbierto] = useState<string | null>(null);
   const [creando, setCreando] = useState(false);
   const [nombreNuevo, setNombreNuevo] = useState('');
@@ -276,10 +277,11 @@ export default function Catalogo() {
     const q = busqueda.trim().toLowerCase();
     return items.filter((i) => {
       if (!verOcultos && !i.activo) return false;
+      if (soloSinFoto && (!i.activo || vista.medios[i.id]?.length)) return false;
       if (!q) return true;
       return i.name.toLowerCase().includes(q) || (i.description ?? '').toLowerCase().includes(q);
     });
-  }, [items, busqueda, verOcultos]);
+  }, [items, busqueda, verOcultos, soloSinFoto, vista.medios]);
 
   const activos = items.filter((i) => i.activo).length;
   const sinFoto = items.filter((i) => i.activo && !(vista.medios[i.id]?.length)).length;
@@ -362,23 +364,41 @@ export default function Catalogo() {
   }
 
   return (
-    <main className="main">
+    <main className="main main--catalogo">
       <div className="wrap">
-        <Topbar titulo="Catálogo" sub="Lo único que Mia puede vender" />
+        <Topbar titulo="Catálogo" sub={items.length ? `${activos} de ${items.length} visibles para Mia` : 'Lo único que Mia puede vender'}
+          accionesTitulo={tab === 'catalogo' ? <button type="button" className="btn btn-primary catalogo-add" aria-expanded={creando} onClick={() => setCreando((v) => !v)}>
+            <Plus size={17} /> Añadir <span className="catalogo-add__noun">{v.item}</span>
+          </button> : undefined} />
 
         {/*
           El número va en la pestaña a propósito, igual que en Agenda: lo que
           no se ve, se olvida. Va aparte de la lista de productos porque crece
           con cada conversación — ver el aviso de arriba.
         */}
-        <div className="view-toggle tabs-agenda">
+        <div className="catalogo-tools"><div className="view-toggle tabs-agenda catalogo-tabs">
           <button className={tab === 'catalogo' ? 'active' : ''} onClick={() => setTab('catalogo')}>
-            <Package size={15} /> Catálogo
+            <Package size={15} /> Catálogo {items.length > 0 ? `(${items.length})` : ''}
           </button>
           <button className={tab === 'huecos' ? 'active' : ''} onClick={() => setTab('huecos')}>
-            <HelpCircle size={15} /> Lo que no supe contestar
+            <HelpCircle size={15} /> <span className="catalogo-tab__long">Lo que no supe contestar</span><span className="catalogo-tab__short">Dudas de Mia</span>
             {(huecos?.length ?? 0) > 0 ? ` (${huecos?.length})` : ''}
           </button>
+        </div>
+
+        {tab === 'catalogo' && <div className="catalogo-filtros">
+          <div className="search">
+            <Search size={16} />
+            <input aria-label="Buscar en catálogo" placeholder="Buscar servicio o producto…" value={busqueda} onChange={(e) => setBusqueda(e.target.value)} />
+          </div>
+          {(sinFoto > 0 || soloSinFoto) && <button type="button" className={`btn btn-sm ${soloSinFoto ? 'btn-primary' : 'btn-ghost'}`} aria-pressed={soloSinFoto} onClick={() => { setSoloSinFoto((v) => !v); setVerOcultos(false); }}>
+            <ImagePlus size={15} /> Sin foto ({sinFoto})
+          </button>}
+          {ocultos > 0 && <button type="button" className={`btn btn-sm ${verOcultos ? 'btn-primary' : 'btn-ghost'}`} aria-pressed={verOcultos} onClick={() => { setVerOcultos((v) => !v); setSoloSinFoto(false); }}>
+            {verOcultos ? <EyeOff size={15} /> : <Eye size={15} />}
+            {verOcultos ? 'Esconder ocultos' : `Ocultos (${ocultos})`}
+          </button>}
+        </div>}
         </div>
 
         {tab === 'huecos' ? (
@@ -391,64 +411,6 @@ export default function Catalogo() {
           />
         ) : (
           <>
-            <div className="mini-row">
-              <div className="mini">
-                <div className="ic" style={{ background: 'var(--brand-soft)', color: 'var(--brand-txt)' }}>
-                  <Package size={20} />
-                </div>
-                <div>
-                  <b>{items.length}</b>
-                  <small>En el catálogo</small>
-                </div>
-              </div>
-              <div className="mini">
-                <div className="ic" style={{ background: '#E8FBF2', color: 'var(--new)' }}>
-                  <Check size={20} />
-                </div>
-                <div>
-                  <b>{activos}</b>
-                  <small>Visibles para Mia</small>
-                </div>
-              </div>
-              {/* Sin foto no es un error, pero es la razón número uno de que un
-                  producto se venda peor. Se cuenta solo entre los activos: avisar
-                  de que un producto oculto no tiene foto no sirve de nada. */}
-              <div className="mini">
-                <div className="ic" style={{ background: '#FEF6E7', color: 'var(--warm)' }}>
-                  <ImagePlus size={20} />
-                </div>
-                <div>
-                  <b>{sinFoto}</b>
-                  <small>Activos sin foto</small>
-                </div>
-              </div>
-            </div>
-    
-            <div className="toolbar">
-              <div className="search">
-                <Search size={16} />
-                <input
-                  placeholder="Buscar por nombre o descripción…"
-                  value={busqueda}
-                  onChange={(e) => setBusqueda(e.target.value)}
-                />
-              </div>
-              {/* Solo aparece si hay alguno oculto: un interruptor que nunca cambia
-                  nada es ruido en la barra. */}
-              {ocultos > 0 && (
-                <button
-                  className={`btn btn-sm ${verOcultos ? 'btn-primary' : 'btn-ghost'}`}
-                  onClick={() => setVerOcultos((v) => !v)}
-                >
-                  {verOcultos ? <EyeOff size={15} /> : <Eye size={15} />}
-                  {verOcultos ? 'Esconder ocultos' : `Ver ocultos (${ocultos})`}
-                </button>
-              )}
-              <button className="btn btn-primary btn-sm" onClick={() => setCreando((v) => !v)}>
-                <Plus size={15} /> Añadir {v.item}
-              </button>
-            </div>
-    
             {creando && (
               <div className="card" style={{ padding: 18, marginBottom: 16 }}>
                 <label className="field-label">
@@ -490,12 +452,16 @@ export default function Catalogo() {
                     ? 'El catálogo está vacío'
                     : ocultos === items.length && !verOcultos
                       ? 'Todo está oculto para Mia'
+                      : soloSinFoto && !busqueda.trim()
+                        ? 'Todos los visibles tienen foto'
                       : 'Sin resultados'}
                 </b>
                 {!items.length
                   ? `Mia no puede vender lo que no está aquí: añade tus ${v.item === 'producto' ? 'productos' : v.items + ' o productos'}.`
                   : ocultos === items.length && !verOcultos
                     ? `Tienes ${ocultos} ${ocultos === 1 ? v.item : v.items}, pero ningun${v.aItem} visible. Mia no puede vender nada ahora mismo.`
+                    : soloSinFoto && !busqueda.trim()
+                      ? 'Desactiva el filtro «Sin foto» para ver todo el catálogo.'
                     : 'Prueba con otra búsqueda.'}
               </p>
             )}

@@ -29,7 +29,8 @@
  */
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
-import { ChevronLeft, ChevronRight, Plus, Receipt, Trash2, TrendingDown, Wallet } from 'lucide-react';
+import { Plus, Trash2 } from 'lucide-react';
+import CajaResumen from '@/components/panel/CajaResumen';
 import Topbar from '@/components/panel/Topbar';
 import { useSesion } from '@/components/panel/Sesion';
 import { useAvisar, useComando } from '@/components/panel/Avisos';
@@ -55,12 +56,6 @@ import type { ResultadoMarcarPagado } from '@/lib/supabase/commands';
 /** Sugerencias para la categoría. Texto libre: el negocio puede escribir otra. */
 const CATEGORIAS = ['Adelanto', 'Insumos', 'Alquiler', 'Servicios (luz, agua, internet)', 'Sueldos', 'Otros'];
 
-const correr = (dia: string, n: number) => {
-  const d = new Date(`${dia}T12:00`);
-  d.setDate(d.getDate() + n);
-  return isoLocal(d);
-};
-
 export default function Caja() {
   const { companyId } = useSesion();
   const v = useVocabulario();
@@ -80,11 +75,11 @@ export default function Caja() {
       getLeads(companyId, 500),
     ]);
     const pagos = await getPagosCaja(companyId, dia, movimientos);
-    return { movimientos, citas, pedidos, gastos, leads, pagos };
+    return { dia, movimientos, citas, pedidos, gastos, leads, pagos };
   }, [companyId, dia]);
 
   const calculo = useMemo(() => {
-    if (!datos) return null;
+    if (!datos || datos.dia !== dia) return null;
     const metodoCita = new Map(datos.citas.map((c) => [c.id, c.metodo_pago ?? '']));
     const metodoPedido = new Map(datos.pedidos.map((p) => [p.id, p.payment_method ?? '']));
     for (const [id, m] of datos.pagos.metodoCita) if (!metodoCita.has(id)) metodoCita.set(id, m);
@@ -124,7 +119,7 @@ export default function Caja() {
       gastado,
       neto: cobrado - gastado,
     };
-  }, [datos]);
+  }, [datos, dia]);
 
   const nombrePorLead = useMemo(
     () => new Map((datos?.leads ?? []).map((l) => [l.id, l.name || telefono(l.phone)])),
@@ -144,66 +139,11 @@ export default function Caja() {
   }
 
   return (
-    <main className="main">
+    <main className="main main--caja">
       <div className="wrap">
         <Topbar titulo="Caja" sub="Lo que entró, con qué, y lo que salió" />
 
-        {/* Encima del día y no dentro: un saldo no es de ningún día, es lo que
-            falta por entrar. Solo existe con inscripciones pagadas a medias. */}
-        <SaldosPendientes />
-
-        <div className="filters" style={{ marginBottom: 16, alignItems: 'center' }}>
-          <button type="button" className="btn btn-ghost btn-sm" onClick={() => setDia((d) => correr(d, -1))}>
-            <ChevronLeft size={15} />
-          </button>
-          <b style={{ minWidth: 120, textAlign: 'center' }}>
-            {dia === hoy ? 'Hoy' : dia === correr(hoy, -1) ? 'Ayer' : ''}{' '}
-            {diaMes(new Date(`${dia}T12:00`))}
-          </b>
-          <button
-            type="button"
-            className="btn btn-ghost btn-sm"
-            disabled={dia >= hoy}
-            onClick={() => setDia((d) => correr(d, 1))}
-          >
-            <ChevronRight size={15} />
-          </button>
-          {dia !== hoy && (
-            <button type="button" className="btn btn-ghost btn-sm" onClick={() => setDia(hoy)}>
-              Volver a hoy
-            </button>
-          )}
-        </div>
-
-        <div className="mini-row">
-          <div className="mini">
-            <div className="ic" style={{ background: '#E8FBF2', color: '#0FA968' }}>
-              <Wallet size={20} />
-            </div>
-            <div>
-              <b>{soles(calculo?.cobrado ?? 0)}</b>
-              <small>Cobrado</small>
-            </div>
-          </div>
-          <div className="mini">
-            <div className="ic" style={{ background: '#FFECEF', color: '#E5484D' }}>
-              <TrendingDown size={20} />
-            </div>
-            <div>
-              <b>{soles(calculo?.gastado ?? 0)}</b>
-              <small>Gastos</small>
-            </div>
-          </div>
-          <div className="mini">
-            <div className="ic" style={{ background: 'var(--brand-soft)', color: 'var(--brand-txt)' }}>
-              <Receipt size={20} />
-            </div>
-            <div>
-              <b>{soles(calculo?.neto ?? 0)}</b>
-              <small>Neto del día</small>
-            </div>
-          </div>
-        </div>
+        <CajaResumen dia={dia} hoy={hoy} alDia={setDia} calculo={calculo} />
 
         {error && <p className="vacio">No se pudo cargar la caja: {error}</p>}
         {cargando && !datos && <p className="vacio">Cargando la caja…</p>}
@@ -288,11 +228,13 @@ export default function Caja() {
           </div>
         )}
 
+        <SaldosPendientes key={companyId} alCambiar={releer} />
+
         <p className="muted" style={{ fontSize: 12.5, lineHeight: 1.7, marginTop: 14 }}>
           <b>Cobrado es lo que entró, no lo que podría entrar.</b> Cada comprobante que verificó Mia y cada pago
           registrado cuentan por su importe y el día en que se pagaron: una seña de S/ 50 es S/ 50, aunque la
           inscripción valga más. Lo que se marcó «Cobrada» sin importe cuenta por su precio, el día de la {v.sesion}.
-          Lo que falta por cobrar está arriba, en «Saldos por cobrar».
+          Las deudas de otros períodos se consultan en «Saldos por cobrar», sin depender de la fecha seleccionada.
         </p>
       </div>
     </main>
@@ -311,6 +253,7 @@ function Gastos({
   alCambiar: () => void;
 }) {
   const comando = useComando();
+  const [creando, setCreando] = useState(false);
   const [concepto, setConcepto] = useState('');
   const [categoria, setCategoria] = useState('');
   const [importe, setImporte] = useState('');
@@ -334,6 +277,7 @@ function Gastos({
       setConcepto('');
       setCategoria('');
       setImporte('');
+      setCreando(false);
     }
   }
 
@@ -348,6 +292,7 @@ function Gastos({
     <div className="card">
       <div className="card-mini-head">
         <h3>Gastos</h3>
+        <button type="button" className="btn btn-ghost btn-sm" aria-expanded={creando} onClick={() => setCreando((v) => !v)}><Plus size={15}/> {creando ? 'Cerrar' : 'Nuevo gasto'}</button>
       </div>
       {gastos.length === 0 ? (
         <p className="vacio">Sin gastos apuntados este día.</p>
@@ -374,16 +319,20 @@ function Gastos({
         ))
       )}
 
+      {creando && <>
+      <p className="muted caja-gasto-fecha">Registrar gasto del {diaMes(new Date(`${dia}T12:00:00`))}</p>
       <div className="gasto-form">
         <input
           className="input"
           placeholder="Concepto (p. ej. adelanto a Ana)"
+          aria-label="Concepto del gasto"
           value={concepto}
           onChange={(e) => setConcepto(e.target.value)}
         />
         <input
           className="input"
           placeholder="Categoría"
+          aria-label="Categoría del gasto"
           list="categorias-gasto"
           value={categoria}
           onChange={(e) => setCategoria(e.target.value)}
@@ -396,6 +345,7 @@ function Gastos({
         <input
           className="input"
           placeholder="Importe"
+          aria-label="Importe del gasto"
           inputMode="decimal"
           value={importe}
           onChange={(e) => setImporte(e.target.value)}
@@ -410,6 +360,7 @@ function Gastos({
       <p className="muted" style={{ fontSize: 11.5, marginTop: 6 }}>
         Un adelanto de sueldo va aquí, con la categoría «Adelanto».
       </p>
+      </>}
     </div>
   );
 }

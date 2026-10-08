@@ -469,18 +469,20 @@ function Mensajes() {
             {(
               [
                 ['all', 'Todos'],
-                ['hot', '🔥 Calientes'],
+                ['hot', 'Listos'],
                 ['new', 'Nuevos'],
-                ['manual', '👤 Manual'],
+                ['manual', 'Manual'],
               ] as [Filtro, string][]
             ).map(([k, txt]) => (
-              <div
+              <button
+                type="button"
                 key={k}
                 className={`fpill ${filtro === k ? 'active' : ''}`}
+                aria-pressed={filtro === k}
                 onClick={() => setFiltro(k)}
               >
                 {txt}
-              </div>
+              </button>
             ))}
           </div>
           <div className="convos">
