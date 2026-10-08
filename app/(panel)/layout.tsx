@@ -4,13 +4,14 @@ import '../panel.css';
 import '../panel-shared.css';
 import { useEffect } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import Link from 'next/link';
 import { ProveedorSesion, useSesion } from '@/components/panel/Sesion';
 import { ProveedorAvisos } from '@/components/panel/Avisos';
 import Sidebar from '@/components/panel/Sidebar';
 import { ProveedorSalud } from '@/components/panel/Salud';
 import { BandaDemo } from '@/components/panel/Demo';
 import { RUTA_GLOBAL_POR_DEFECTO, esRutaGlobal } from '@/lib/panel/rutas';
+import { guardarDestino, rutaActual } from '@/lib/panel/destino';
+import AltaNegocio from '@/components/panel/AltaNegocio';
 
 /**
  * ══════════════════════════════════════════════════════════════════════════
@@ -31,7 +32,7 @@ import { RUTA_GLOBAL_POR_DEFECTO, esRutaGlobal } from '@/lib/panel/rutas';
 function Guardia({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const ruta = usePathname();
-  const { session, cargando, reconectando, companias, companyId, esAdminPlataforma, compania } = useSesion();
+  const { session, cargando, reconectando, companias, companyId, esAdminPlataforma, compania, salir } = useSesion();
 
   /** Sin compañía activa: o es una cuenta recién creada, o es el admin de plataforma. */
   const sinCompania = !companias.length || !companyId;
@@ -49,7 +50,11 @@ function Guardia({ children }: { children: React.ReactNode }) {
    * había fallado por la red y luego funcionó. Ver Sesion.tsx.
    */
   useEffect(() => {
-    if (!cargando && !reconectando && !session) router.replace('/login');
+    if (!cargando && !reconectando && !session) {
+      // Al volver del login (o de Google) se retoma esta pantalla. Ver lib/panel/destino.ts.
+      guardarDestino(rutaActual());
+      router.replace('/login');
+    }
   }, [cargando, reconectando, session, router]);
 
   /**
@@ -74,27 +79,12 @@ function Guardia({ children }: { children: React.ReactNode }) {
   }
 
   /**
-   * Cuenta sin membresía. Pasa siempre que alguien se da de alta por su cuenta
-   * desde la landing: signUp() crea el usuario, pero la compañía la crea Alvaro
-   * con `npm run onboard`. Sin este mensaje, el panel sería una pantalla en
-   * blanco sin explicación — y las consultas devolverían cero filas, que es
-   * exactamente lo que el RLS tiene que hacer.
+   * Cuenta sin membresía: se da de alta desde la landing, con Google o desde
+   * una placa nueva. Ya no es un «escríbenos»: crea su negocio aquí mismo
+   * (AltaNegocio → loyalty_business_create) y entra.
    */
   if (sinCompania && !esAdminPlataforma) {
-    return (
-      <div className="cargando">
-        <div className="vacio">
-          <b>Tu cuenta todavía no tiene un negocio asignado</b>
-          Ya está creada y la contraseña funciona. Falta que demos de alta tu negocio y te
-          demos acceso; escríbenos y lo dejamos listo.
-          <br />
-          <br />
-          <Link href="/" className="btn btn-ghost btn-sm">
-            Volver a la web
-          </Link>
-        </div>
-      </div>
-    );
+    return <AltaNegocio salir={salir} />;
   }
 
   /*

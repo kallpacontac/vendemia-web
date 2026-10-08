@@ -17,6 +17,7 @@
  * nueva: lo ven los clientes al momento y el historial queda.
  */
 import { useEffect, useMemo, useRef, useState } from 'react';
+import Link from 'next/link';
 import { ArrowDown, ArrowUp, Eye, EyeOff, ImagePlus, Plus, Search, Star, Trash2 } from 'lucide-react';
 import { useFideliza } from '@/modules/fideliza/ui/Contexto';
 import { Cargando, Fallo, SinPermiso } from '@/modules/fideliza/ui/Estados';
@@ -33,6 +34,7 @@ import {
   aUrl,
   defDe,
   deUrl,
+  esDirecto,
   slugDe,
   urlMapa,
   urlResenas,
@@ -71,7 +73,7 @@ export default function MiPagina() {
       lecturas.enlaces(companyId),
       lecturas.programas(companyId),
     ]);
-    const perfil = perfiles.find((p) => p.id === ajustes?.default_profile_id) ?? perfiles[0] ?? null;
+    const perfil = perfiles.find((p) => p.id === ajustes?.default_profile_id) ?? perfiles.find((p) => !esDirecto(p.name)) ?? null;
     return {
       perfil,
       enlaces: enlaces.filter((l) => l.profile_id === perfil?.id).sort((a, b) => (a.position ?? 0) - (b.position ?? 0)),
@@ -88,6 +90,19 @@ export default function MiPagina() {
   const [ocupado, setOcupado] = useState(false);
   const [subiendoLogo, setSubiendoLogo] = useState(false);
   const [aviso, setAviso] = useState<string | null>(null);
+  /**
+   * Viene de activar placas que todavía no tienen a dónde llevar (Placas.tsx
+   * las manda aquí con ?placa=<id>&n=<cuántas>). Al publicar, activarPendientes
+   * las deja funcionando y el aviso se va.
+   */
+  const [placaEspera, setPlacaEspera] = useState<{ id: string; n: number } | null>(null);
+  useEffect(() => {
+    const q = new URLSearchParams(window.location.search);
+    const id = q.get('placa');
+    if (!id || !/^[0-9a-f-]{36}$/i.test(id)) return;
+    setPlacaEspera({ id, n: Math.max(1, Number(q.get('n')) || 1) });
+    history.replaceState(null, '', window.location.pathname);
+  }, []);
   const archivoLogo = useRef<HTMLInputElement>(null);
   const [google, setGoogle] = useState<{ q: string; buscando: boolean; res: { id: string; nombre: string; direccion: string }[] | null; error: string | null }>({
     q: '',
@@ -242,6 +257,31 @@ export default function MiPagina() {
     }
   }
 
+  /**
+   * Placas canjeadas antes de tener página: quedaron «asignadas» esperando.
+   * Al publicar se activan apuntando aquí. Las que ya llevan a otro sitio
+   * (un enlace directo) no se tocan.
+   */
+  async function activarPendientes(perfilId: string): Promise<number> {
+    if (!puede('devices.manage')) return 0;
+    let n = 0;
+    try {
+      const placas = await lecturas.placas(companyId!);
+      for (const p of placas.filter((x) => x.status === 'assigned' && (!x.profile_id || x.profile_id === perfilId))) {
+        try {
+          await accion('placa.editar', { companyId, deviceId: p.id, label: p.label, profileId: perfilId, locationId: p.location_id });
+          await accion('placa.estado', { companyId, deviceId: p.id, status: 'active' });
+          n++;
+        } catch {
+          /* p. ej. la página se publicó vacía: la placa sigue esperando */
+        }
+      }
+    } catch {
+      /* sin lectura de placas: no bloquea la publicación */
+    }
+    return n;
+  }
+
   async function publicar() {
     setAviso(null);
     if (!negocio.nombre.trim()) return setAviso('Escribe el nombre de tu negocio.');
@@ -299,7 +339,13 @@ export default function MiPagina() {
         makeDefault: true,
       });
       await accion('perfil.publicar', { companyId, profileId: perfilId, allowEmpty: true });
-      avisar('¡Publicado! Tus clientes ya ven los cambios.');
+      const activadas = await activarPendientes(perfilId);
+      if (activadas) setPlacaEspera(null);
+      avisar(
+        activadas
+          ? `¡Publicado! Y ${activadas === 1 ? 'tu placa ya abre' : `tus ${activadas} placas ya abren`} esta página.`
+          : '¡Publicado! Tus clientes ya ven los cambios.',
+      );
       if (sinEstilo) setAviso('La página se publicó, pero no pudimos guardar el diseño. Inténtalo otra vez; si continúa, contacta a soporte.');
       else if (r.logo && !r.logo.ok) setAviso(`Publicado, pero el logo no se puede usar: ${r.logo.errores.join(' ')}`);
       recargarCtx();
@@ -317,6 +363,17 @@ export default function MiPagina() {
 
   return (
     <>
+      {placaEspera && (
+        <div className="fz-panel-aviso fz-panel-aviso--info" role="status">
+          <span style={{ flex: 1 }}>
+            <b>{placaEspera.n > 1 ? `Tus ${placaEspera.n} placas ya son tuyas.` : 'Tu placa ya es tuya.'}</b> Añade tus botones (WhatsApp, Instagram,
+            reseñas…) y pulsa <b>Publicar</b>: desde ese momento, al escanearla se abre esta página.
+          </span>
+          <Link className="btn btn-ghost btn-sm" href={`/panel/fideliza/placas/${placaEspera.id}`}>
+            Prefiero un solo enlace
+          </Link>
+        </div>
+      )}
       {ajustes && (
         <LinkPublico slug={ajustes.slug} nombre={ajustes.display_name} programaActivo={Boolean(datos?.programaActivo)} hayEnlaces={botones.some((b) => b.visible)} />
       )}

@@ -30,13 +30,15 @@ import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useSesionDeLaUrl } from '@/components/panel/useSesionDeLaUrl';
+import { tomarDestino } from '@/lib/panel/destino';
 
 export default function Callback() {
   const router = useRouter();
   const { estado, error } = useSesionDeLaUrl();
 
   useEffect(() => {
-    if (estado === 'con-sesion') router.replace('/panel');
+    // Vuelta de Google o del correo de confirmación: retoma lo que se pidió. Ver lib/panel/destino.ts.
+    if (estado === 'con-sesion') router.replace(tomarDestino() ?? '/panel');
   }, [estado, router]);
 
   if (estado === 'sin-sesion') {

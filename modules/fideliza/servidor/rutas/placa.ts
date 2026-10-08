@@ -71,7 +71,7 @@ function sinActivar() {
     titulo: 'Placa sin activar',
     marca: null,
     cuerpo: `<div class="caja"><p class="premio">Esta placa aún no está activada.</p>
-<p class="nota">¿Es tuya? Actívala en un minuto: entra en tu panel de Vendemia y escribe el código de activación que viene con la placa.</p>
+<p class="nota">¿Es tuya? Actívala en un minuto: entra con Google o con tu correo (si no tienes cuenta, la creas ahí mismo) y escribe el código de la tarjeta que vino en la caja. O escanea el QR de esa tarjeta y se activa sola.</p>
 <a class="btn prim" href="${esc(panel)}">Activar mi placa</a>
 <p class="nota">Si no es tuya, pregunta en el local: todavía no lleva a ninguna parte.</p></div>`,
   });

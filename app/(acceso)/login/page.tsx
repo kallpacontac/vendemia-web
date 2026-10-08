@@ -32,6 +32,7 @@ import { ArrowRight, Eye, EyeOff } from 'lucide-react';
 import { FALTAN_CLAVES, supabase } from '@/lib/supabase/client';
 import BotonGoogle from '@/components/panel/BotonGoogle';
 import { MENSAJE_CADUCIDAD } from '@/lib/panel/caducidad';
+import { tomarDestino, verDestino } from '@/lib/panel/destino';
 
 type Modo = 'entrar' | 'crear' | 'recuperar';
 
@@ -59,6 +60,14 @@ export default function Login() {
   useEffect(() => {
     const motivo = new URLSearchParams(window.location.search).get('caducada');
     if (motivo === 'inactividad' || motivo === 'tope') setAviso(MENSAJE_CADUCIDAD[motivo]);
+    /**
+     * Viene de acercar el móvil a una placa nueva. Casi siempre es alguien sin
+     * cuenta todavía: se le dice que puede crearla aquí mismo, y al terminar
+     * vuelve solo a «Activar placa» (lib/panel/destino.ts).
+     */
+    else if (verDestino()?.includes('activar=')) {
+      setAviso('Para activar tu placa, entra con Google o con tu correo. ¿Aún no tienes cuenta? Créala aquí: al terminar vuelves solo a tu placa.');
+    }
   }, []);
 
   // Si ya hay sesión, no tiene sentido enseñar el formulario.
@@ -67,7 +76,7 @@ export default function Login() {
     void supabase()
       .auth.getSession()
       .then(({ data }) => {
-        if (data.session) router.replace('/panel');
+        if (data.session) router.replace(tomarDestino() ?? '/panel');
       });
   }, [router]);
 
@@ -83,7 +92,7 @@ export default function Login() {
       if (modo === 'entrar') {
         const { error } = await sb.auth.signInWithPassword({ email, password: clave });
         if (error) throw error;
-        router.replace('/panel');
+        router.replace(tomarDestino() ?? '/panel');
       } else if (modo === 'recuperar') {
         /**
          * `redirectTo` tiene que estar en la lista blanca de Supabase
@@ -119,8 +128,24 @@ export default function Login() {
         );
         setModo('entrar');
       } else {
-        const { error } = await sb.auth.signUp({ email, password: clave });
+        /**
+         * `emailRedirectTo` = /callback, el mismo que ya usa Google (ya está en
+         * la lista blanca de Supabase). De ahí el panel retoma el destino.
+         */
+        const { data, error } = await sb.auth.signUp({
+          email,
+          password: clave,
+          options: { emailRedirectTo: `${window.location.origin}/callback` },
+        });
         if (error) throw error;
+        /**
+         * Con «Confirm email» apagado en Supabase, signUp ya trae sesión: se
+         * entra directo, sin esperar ningún correo. Es el alta más rápida.
+         */
+        if (data.session) {
+          router.replace(tomarDestino() ?? '/panel');
+          return;
+        }
         /**
          * ⚠️ NO digas "cuenta creada". No sabes si lo está.
          *
@@ -136,7 +161,7 @@ export default function Login() {
          */
         setOk(
           'Revisa tu correo (y la carpeta de spam) para confirmar la cuenta. Si ese correo ya tenía una, ' +
-            'entra con tu contraseña de siempre. Después damos de alta tu negocio y ya ves datos.',
+            'entra con tu contraseña de siempre. Al confirmar, creas tu negocio en un paso.',
         );
         setModo('entrar');
       }

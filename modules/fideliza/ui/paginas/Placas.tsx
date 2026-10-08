@@ -7,7 +7,7 @@
  */
 import { Suspense, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
-import { useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Plus } from 'lucide-react';
 import { useFideliza } from '@/modules/fideliza/ui/Contexto';
 import { Cargando, Fallo, Vacio } from '@/modules/fideliza/ui/Estados';
@@ -15,16 +15,19 @@ import { useAvisar } from '@/components/panel/Avisos';
 import { useCargar } from '@/components/panel/useCargar';
 import { accion, lecturas, mensaje } from '@/modules/fideliza/cliente/api';
 import { ESTADO_PLACA, fecha } from '@/modules/fideliza/dominio/formato';
-import { urlPlaca } from '@/modules/fideliza/dominio/config';
+import { esDirecto } from '@/modules/fideliza/dominio/botones';
 
 function Lista() {
-  const { companyId, puede, rol, ajustes } = useFideliza();
+  const { companyId, puede, ajustes } = useFideliza();
   const avisar = useAvisar();
   const params = useSearchParams();
+  const router = useRouter();
   const [nueva, setNueva] = useState<null | { label: string; kind: 'nfc_qr' | 'qr'; profileId: string; locationId: string }>(null);
   const [codigo, setCodigo] = useState('');
-  const [lote, setLote] = useState<null | { id: string; public_token: string; activation_code: string }[]>(null);
+  /** El código que llega en el enlace de activación solo se intenta una vez. */
+  const autoReclamo = useRef(false);
   const [activando, setActivando] = useState(false);
+  /** Placas recién canjeadas que todavía no llevan a ningún sitio. */
   const campoCodigo = useRef<HTMLInputElement>(null);
 
   const { datos, cargando, error, releer } = useCargar(async () => {
@@ -42,11 +45,34 @@ function Lista() {
     }
   }, [params, ajustes?.default_profile_id]);
 
+  /**
+   * Enlace de activación de la tarjeta de la caja:
+   * /panel/fideliza/placas?activar=1#codigo=XXXXX-XXXXX
+   * El código va en el FRAGMENTO para que no quede en los logs del servidor.
+   * Se rellena y se activa solo, una vez, cuando el panel ya cargó.
+   */
+  useEffect(() => {
+    if (autoReclamo.current || !companyId || !datos || !puede('devices.manage')) return;
+    const desdeHash = new URLSearchParams(window.location.hash.replace(/^#/, '')).get('codigo');
+    const leido = (desdeHash ?? '').toUpperCase().replace(/[^A-Z0-9-]/g, '').slice(0, 13);
+    if (leido.replace(/-/g, '').length < 10) return;
+    autoReclamo.current = true;
+    history.replaceState(null, '', `${window.location.pathname}${window.location.search}`);
+    setCodigo(leido);
+    void reclamar(leido);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [companyId, datos]);
+
   if (cargando && !datos) return <Cargando texto="Cargando placas…" />;
   if (error) return <Fallo texto={error} reintentar={releer} />;
   if (!datos) return null;
   const editable = puede('devices.manage');
-  const nombrePerfil = (id: string | null) => datos.perfiles.find((p) => p.id === id)?.name ?? '—';
+  const nombrePerfil = (id: string | null) => {
+    const perfil = datos.perfiles.find((p) => p.id === id);
+    if (!perfil) return '—';
+    if (esDirecto(perfil.name)) return 'Enlace directo';
+    return perfil.id === ajustes?.default_profile_id ? 'Mi página' : perfil.name;
+  };
 
   /**
    * Deja la placa lista sin más pasos: apuntando a tu página y activa. Si tu
@@ -83,37 +109,34 @@ function Lista() {
     }
   }
 
-  async function reclamar() {
+  async function reclamar(code = codigo) {
     try {
-      const r = await accion<{ id: string }>('placa.reclamar', { companyId, code: codigo });
-      const lista = await dejarLista(r.id, ajustes?.default_profile_id ?? null);
-      avisar(lista ? '¡Placa activada! Acércale el móvil: ya abre tu página.' : 'Placa añadida. Publica los botones de tu página y actívala desde aquí.');
+      // Con el código de un PEDIDO llegan varias placas a la vez (0009).
+      const r = await accion<{ id: string; ids?: string[]; count?: number }>('placa.reclamar', { companyId, code });
+      const ids = r.ids?.length ? r.ids : [r.id];
+      const pendientes: string[] = [];
+      for (const id of ids) {
+        if (!(await dejarLista(id, ajustes?.default_profile_id ?? null))) pendientes.push(id);
+      }
+      const n = ids.length;
+      /**
+       * Su página aún no tiene botones publicados (lo normal en un negocio
+       * recién creado): directo a montarla. Al publicar, Mi página activa
+       * las placas que esperan (activarPendientes) y allí mismo puede elegir
+       * un enlace directo en vez de la página.
+       */
+      if (pendientes.length) {
+        avisar(n > 1 ? `¡${n} placas ya son tuyas! Ahora monta tu página.` : '¡La placa ya es tuya! Ahora monta tu página.');
+        router.push(`/panel/fideliza/mi-pagina?placa=${pendientes[0]}&n=${pendientes.length}`);
+        return;
+      }
+      avisar(n > 1 ? `¡${n} placas activadas! Acércales el móvil: ya abren tu página.` : '¡Placa activada! Acércale el móvil: ya abre tu página.');
       setCodigo('');
       setActivando(false);
       releer();
     } catch (e) {
       avisar(mensaje(e), 'error');
     }
-  }
-
-  async function fabricar() {
-    const n = Number(window.prompt('¿Cuántas placas de inventario? (1–500)') ?? 0);
-    const nombre = window.prompt('Nombre del lote (ej. lote-2026-10)') ?? '';
-    if (!n || !nombre) return;
-    try {
-      setLote(await accion('placa.lote', { count: n, batch: nombre, kind: 'nfc_qr' }));
-    } catch (e) {
-      avisar(mensaje(e), 'error');
-    }
-  }
-
-  function bajarLote() {
-    if (!lote) return;
-    const csv = ['id,token,url,codigo_activacion', ...lote.map((l) => `${l.id},${l.public_token},${urlPlaca(l.public_token)},${l.activation_code}`)].join('\n');
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
-    a.download = 'placas-lote.csv';
-    a.click();
   }
 
   return (
@@ -129,30 +152,14 @@ function Lista() {
           <button className="btn btn-ghost btn-sm" disabled={codigo.replace(/[^A-Z0-9]/g, '').length < 10} onClick={() => void reclamar()}>
             Añadir placa recibida
           </button>
-          {rol === 'platform_admin' && (
-            <button className="btn btn-ghost btn-sm" onClick={() => void fabricar()}>
-              Fabricar lote (admin)
-            </button>
-          )}
         </div>
       )}
 
       {activando && (
         <div className="fz-panel-aviso fz-panel-aviso--info" role="status">
           <span style={{ flex: 1 }}>
-            <b>Activa tu placa:</b> escribe abajo el código de activación que viene con ella (formato XXXXX-XXXXX) y pulsa «Añadir placa recibida». Quedará apuntando a tu página.
+            <b>Activa tu placa:</b> escribe abajo el código que viene en la tarjeta de la caja (XXXXX-XXXXX) y pulsa «Añadir placa recibida». Si es el código del pedido, se activan todas las placas de una vez. Quedarán apuntando a tu página.
           </span>
-        </div>
-      )}
-
-      {lote && (
-        <div className="fz-panel-aviso">
-          <span style={{ flex: 1 }}>
-            {lote.length} placas de inventario creadas. Los códigos de activación <b>solo se muestran ahora</b>: descarga el CSV y guárdalo en un sitio privado.
-          </span>
-          <button className="btn btn-primary btn-sm" onClick={bajarLote}>
-            Descargar CSV
-          </button>
         </div>
       )}
 
@@ -230,7 +237,15 @@ function Lista() {
                   <td>
                     <span className={`badge-pill ${d.status === 'active' ? 'b-new' : d.status === 'suspended' ? 'b-hot' : 'b-mute'}`}>{ESTADO_PLACA[d.status] ?? d.status}</span>
                   </td>
-                  <td>{nombrePerfil(d.profile_id)}</td>
+                  <td>
+                    {d.profile_id ? (
+                      nombrePerfil(d.profile_id)
+                    ) : d.status === 'retired' ? (
+                      '—'
+                    ) : (
+                      <Link href={`/panel/fideliza/placas/${d.id}`}>Elegir destino</Link>
+                    )}
+                  </td>
                   <td>{datos.sucursales.find((s) => s.id === d.location_id)?.name ?? '—'}</td>
                   <td>{fecha(d.created_at)}</td>
                 </tr>

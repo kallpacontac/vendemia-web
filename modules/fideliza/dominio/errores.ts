@@ -57,7 +57,7 @@ export const MENSAJES: Record<string, string> = {
   invalid_activation_code: 'Ese código de activación no es válido o ya se usó.',
   device_no_destination: 'La placa necesita un perfil con al menos un enlace publicado.',
   device_retired: 'Esa placa está retirada.',
-  invalid_count: 'Cantidad no válida (1 a 500).',
+  invalid_count: 'Cantidad no válida (1 a 500; 1 a 200 si es un pedido con código común).',
   invalid_campaign: 'Revisa el título y el texto del mensaje.',
   invalid_campaign_config: 'Revisa los días y el tope de mensajes.',
   invalid_range: 'Rango de fechas no válido.',
@@ -71,6 +71,9 @@ export const MENSAJES: Record<string, string> = {
   places_not_configured: 'La búsqueda en Google no está activada todavía: pega tu enlace a mano.',
   invalid_input: 'Faltan datos o alguno no es válido.',
   unauthenticated: 'Tu sesión caducó. Vuelve a entrar.',
+  not_authenticated: 'Tu sesión caducó. Vuelve a entrar.',
+  invalid_name: 'Escribe el nombre del negocio (de 2 a 60 letras).',
+  already_has_business: 'Tu cuenta ya tiene un negocio. Si quieres otro, escríbenos y lo damos de alta.',
 };
 
 export function codigoDe(mensaje: string | undefined | null): string | null {

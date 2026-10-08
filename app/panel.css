@@ -1070,6 +1070,13 @@ body:has(.demo-banda) .sidebar{padding-top:44px}
 .acceso__aviso{background:#FEF6E7;color:#8A5300;border-radius:12px;padding:11px 14px;
   font-size:13px;font-weight:600;margin-top:16px;line-height:1.5}
 
+/* Alta del negocio (AltaNegocio.tsx): el enlace que le toca, mientras escribe,
+   y la confirmación de «es otro negocio» cuando el natural ya está ocupado. */
+.acceso__enlace{margin:8px 0 0;font-size:12.5px;color:var(--ink-soft);word-break:break-all}
+.acceso__enlace b{color:var(--ink)}
+.acceso__check{display:flex;align-items:flex-start;gap:8px;margin-top:10px;cursor:pointer;font-weight:700}
+.acceso__check input{margin-top:3px;flex:none}
+
 /* Agenda recurrente: lo que va debajo de la barra de cada grupo. */
 .grupo-extra{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:7px}
 .grupo-alumnos{list-style:none;margin:8px 0 4px;padding:0;border-top:1px solid var(--line)}

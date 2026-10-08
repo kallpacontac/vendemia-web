@@ -8,6 +8,10 @@
 -- Conserva: la fila de `companies`, la membresía, `loyalty_settings` (slug y
 -- nombre; el estilo de la página vuelve a '{}'), sucursales y equipo.
 --
+-- Solo clientes: con v_solo_clientes = true borra únicamente los suscritos y
+-- lo suyo (saldos, premios, canjes, pases de Wallet, push, envíos pendientes).
+-- Página, programa, clase de Wallet, campañas y placas quedan intactos.
+--
 -- Placas: con v_liberar_placas = true vuelven al inventario sin dueño y el
 -- MISMO código de la tarjeta (individual o de pedido) las vuelve a activar.
 -- Con false siguen siendo del negocio, pero sin página asignada.
@@ -30,11 +34,22 @@ alter table public.loyalty_ledger disable trigger tr_loyalty_ledger_inmutable;
 do $$
 declare
     v_slug            text    := 'kallpa';   -- ← slug del negocio
+    v_solo_clientes   boolean := false;
     v_liberar_placas  boolean := true;
     c                 text;
 begin
     select company_id into c from public.loyalty_settings where slug = v_slug;
-    if c is null then raise exception 'No hay negocio con slug %', v_slug; end if;
+    if c is null then
+        -- Sin slug exacto: vale si UN solo negocio lo contiene en slug o nombre
+        select min(company_id) into c from public.loyalty_settings
+         where slug ilike '%' || v_slug || '%' or display_name ilike '%' || v_slug || '%'
+        having count(*) = 1;
+    end if;
+    if c is null then
+        raise exception 'No hay un negocio claro para «%». Hay: %', v_slug,
+            (select string_agg(slug || ' = ' || display_name, ' · ' order by created_at) from public.loyalty_settings);
+    end if;
+    select slug into v_slug from public.loyalty_settings where company_id = c;
 
     -- Clientes y todo lo que cuelga de ellos
     delete from public.loyalty_ledger             where company_id = c;
@@ -48,6 +63,15 @@ begin
     delete from public.loyalty_contacts           where company_id = c;
     delete from public.loyalty_consents           where company_id = c;
     delete from public.loyalty_members            where company_id = c;
+
+    if v_solo_clientes then
+        -- Lo que el worker intentaría enviar a clientes que ya no existen
+        delete from public.loyalty_outbox
+         where company_id = c and kind in ('wallet.object.sync', 'push.send');
+        delete from public.loyalty_public_events where company_id = c and member_id is not null;
+        raise notice 'Clientes de % (%) borrados; página y programa intactos', v_slug, c;
+        return;
+    end if;
 
     -- Programa y Wallet
     delete from public.loyalty_wallet_classes     where company_id = c;

@@ -31,3 +31,6 @@ desktop.ini
 # Copia temporal de app/api mientras corre `npm run publicar` (ver scripts/publicar.mjs).
 # Si aparece aquí de forma permanente, es que un build se interrumpió a lo bruto.
 .api-apartada/
+
+# Enlace local con el proyecto de Vercel (vercel link).
+.vercel

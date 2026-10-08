@@ -12,6 +12,10 @@ import { useCargar } from '@/components/panel/useCargar';
 import { accion, lecturas, mensaje } from '@/modules/fideliza/cliente/api';
 import { urlPlaca, urlPlacaQr } from '@/modules/fideliza/dominio/config';
 import { ESTADO_PLACA, fechaHora } from '@/modules/fideliza/dominio/formato';
+import { aUrl, defDe, deUrl, DIRECTOS, esDirecto, nombreDirecto, type TipoBoton } from '@/modules/fideliza/dominio/botones';
+
+/** A dónde lleva la placa: tu página, un solo enlace, u otro perfil (avanzado). */
+type Destino = 'pagina' | 'directo' | 'perfil';
 
 const ACCION: Record<string, string> = {
   'device.create': 'Creada',
@@ -22,26 +26,37 @@ const ACCION: Record<string, string> = {
 
 export default function FichaPlaca() {
   const { deviceId } = useParams<{ deviceId: string }>();
-  const { companyId, puede } = useFideliza();
+  const { companyId, puede, ajustes, recargar: recargarCtx } = useFideliza();
   const avisar = useAvisar();
   const [form, setForm] = useState({ label: '', profileId: '', locationId: '' });
+  const [destino, setDestino] = useState<Destino>('pagina');
+  const [directo, setDirecto] = useState<{ tipo: TipoBoton; valor: string }>({ tipo: 'whatsapp', valor: '' });
+  const [ocupado, setOcupado] = useState(false);
 
   const { datos, cargando, error, releer } = useCargar(async () => {
     if (!companyId) return null;
-    const [placa, perfiles, sucursales, aperturas, historial] = await Promise.all([
+    const [placa, perfiles, enlaces, sucursales, aperturas, historial] = await Promise.all([
       lecturas.placa(companyId, deviceId),
       lecturas.perfiles(companyId),
+      lecturas.enlaces(companyId),
       lecturas.sucursales(companyId),
       puede('metrics.read') ? lecturas.aperturasPlaca(companyId, deviceId) : Promise.resolve([]),
       puede('team.manage') ? lecturas.historialPlaca(companyId, deviceId) : Promise.resolve([]),
     ]);
-    return { placa, perfiles, sucursales, aperturas, historial };
+    return { placa, perfiles, enlaces, sucursales, aperturas, historial };
   }, [companyId, deviceId]);
 
   useEffect(() => {
     const p = datos?.placa;
-    if (p) setForm({ label: p.label, profileId: p.profile_id ?? '', locationId: p.location_id ?? '' });
-  }, [datos?.placa]);
+    if (!p) return;
+    setForm({ label: p.label, profileId: p.profile_id ?? '', locationId: p.location_id ?? '' });
+    const perfil = datos!.perfiles.find((x) => x.id === p.profile_id);
+    if (esDirecto(perfil?.name)) {
+      const l = datos!.enlaces.find((x) => x.profile_id === perfil!.id);
+      if (l) setDirecto(deUrl(l.url, l.kind));
+      setDestino('directo');
+    } else setDestino(!p.profile_id || p.profile_id === ajustes?.default_profile_id ? 'pagina' : 'perfil');
+  }, [datos, ajustes?.default_profile_id]);
 
   if (cargando && !datos) return <Cargando texto="Cargando la placa…" />;
   if (error) return <Fallo texto={error} reintentar={releer} />;
@@ -49,13 +64,68 @@ export default function FichaPlaca() {
   if (!p) return <Fallo texto="Esa placa no existe en este negocio." />;
   const editable = puede('devices.manage') && p.status !== 'retired';
 
+  /** El perfil de un solo enlace de ESTA placa, creado o actualizado y publicado. */
+  async function guardarDirecto(): Promise<string | null> {
+    const url = aUrl(directo.tipo, directo.valor);
+    if (!url) {
+      avisar(`Escribe ${defDe(directo.tipo).pide.toLowerCase()}.`, 'error');
+      return null;
+    }
+    // Sin página principal todavía, el primer perfil guardado pasaría a serlo
+    // (sql 0008). Se crea antes la principal, vacía, para que «Mi página» siga
+    // siendo la página y no este enlace.
+    if (!ajustes?.default_profile_id) {
+      await accion('perfil.guardar', { companyId, profileId: null, name: 'Principal', title: '', tagline: '', links: [], makeDefault: true });
+      recargarCtx();
+    }
+    const actual = datos!.perfiles.find((x) => x.id === p!.profile_id && esDirecto(x.name));
+    const id = await accion<string>('perfil.guardar', {
+      companyId,
+      profileId: actual?.id ?? null,
+      name: nombreDirecto(deviceId),
+      title: '',
+      tagline: '',
+      links: [
+        { label: defDe(directo.tipo).nombre, kind: 'url', url, is_active: true, is_primary: true, icon: directo.tipo, subtitle: null, placement: 'button', starts_at: null, ends_at: null },
+      ],
+      makeDefault: false,
+    });
+    await accion('perfil.publicar', { companyId, profileId: id, allowEmpty: false });
+    return id;
+  }
+
   async function guardar() {
+    setOcupado(true);
     try {
-      await accion('placa.editar', { companyId, deviceId, label: form.label, profileId: form.profileId || null, locationId: form.locationId || null });
-      avisar('Guardado. La URL de la placa no cambia.');
+      let profileId: string | null;
+      if (destino === 'pagina') {
+        profileId = ajustes?.default_profile_id ?? null;
+        if (!profileId) {
+          avisar('Aún no tienes página. Créala en «Mi página» o elige «Un enlace directo».', 'error');
+          return;
+        }
+      } else if (destino === 'directo') {
+        profileId = await guardarDirecto();
+        if (!profileId) return;
+      } else profileId = form.profileId || null;
+
+      await accion('placa.editar', { companyId, deviceId, label: form.label, profileId, locationId: form.locationId || null });
+      // Recién canjeada: con destino ya puede abrir algo.
+      let activada = false;
+      if (profileId && p!.status === 'assigned') {
+        try {
+          await accion('placa.estado', { companyId, deviceId, status: 'active' });
+          activada = true;
+        } catch {
+          /* p. ej. «Mi página» publicada sin botones: se queda asignada */
+        }
+      }
+      avisar(activada ? '¡Listo! La placa ya está activa.' : 'Guardado. La URL de la placa no cambia.');
       releer();
     } catch (e) {
       avisar(mensaje(e), 'error');
+    } finally {
+      setOcupado(false);
     }
   }
 
@@ -117,18 +187,71 @@ export default function FichaPlaca() {
             <input className="input" maxLength={60} value={form.label} disabled={!editable} onChange={(e) => setForm({ ...form, label: e.target.value })} />
           </div>
           <div className="fz-campo">
-            <label className="field-label">Perfil de enlaces</label>
-            <select className="select" value={form.profileId} disabled={!editable} onChange={(e) => setForm({ ...form, profileId: e.target.value })}>
-              <option value="">— Sin perfil —</option>
-              {datos!.perfiles.map((x) => (
-                <option key={x.id} value={x.id}>
-                  {x.name}
-                  {x.published_version_id ? '' : ' (sin publicar)'}
-                </option>
-              ))}
-            </select>
-            <small>Cambiar el perfil cambia a dónde lleva la placa al momento, sin regrabar el chip.</small>
+            <label className="field-label">¿A dónde lleva al escanearla?</label>
+            <label className="fz-fila" style={{ gap: 8 }}>
+              <input type="radio" name="destino" checked={destino === 'pagina'} disabled={!editable} onChange={() => setDestino('pagina')} />
+              <span>
+                <b>Mi página</b> · tus botones y redes{!ajustes?.default_profile_id && <> (aún no la tienes: <Link href="/panel/fideliza/mi-pagina">créala</Link>)</>}
+              </span>
+            </label>
+            <label className="fz-fila" style={{ gap: 8 }}>
+              <input type="radio" name="destino" checked={destino === 'directo'} disabled={!editable} onChange={() => setDestino('directo')} />
+              <span>
+                <b>Un enlace directo</b> · abre WhatsApp, Instagram, tus reseñas… sin página de por medio
+              </span>
+            </label>
+            {datos!.perfiles.some((x) => !esDirecto(x.name) && x.id !== ajustes?.default_profile_id) && (
+              <label className="fz-fila" style={{ gap: 8 }}>
+                <input type="radio" name="destino" checked={destino === 'perfil'} disabled={!editable} onChange={() => setDestino('perfil')} />
+                <span>
+                  <b>Otro perfil</b> · uno de tus «Perfiles de placas»
+                </span>
+              </label>
+            )}
           </div>
+          {destino === 'directo' && (
+            <div className="fz-campo">
+              <div className="fz-fila">
+                <select className="select" style={{ maxWidth: 190 }} value={directo.tipo} disabled={!editable} onChange={(e) => setDirecto({ tipo: e.target.value as TipoBoton, valor: '' })}>
+                  {DIRECTOS.map((t) => (
+                    <option key={t} value={t}>
+                      {defDe(t).nombre}
+                    </option>
+                  ))}
+                </select>
+                <input
+                  className="input"
+                  style={{ flex: 1 }}
+                  placeholder={defDe(directo.tipo).placeholder}
+                  aria-label={defDe(directo.tipo).pide}
+                  value={directo.valor}
+                  disabled={!editable}
+                  onChange={(e) => setDirecto({ ...directo, valor: e.target.value })}
+                />
+              </div>
+              <small>
+                {aUrl(directo.tipo, directo.valor) ? <>Abrirá: <span className="fz-mono">{aUrl(directo.tipo, directo.valor)}</span></> : defDe(directo.tipo).pide}
+              </small>
+            </div>
+          )}
+          {destino === 'perfil' && (
+            <div className="fz-campo">
+              <select className="select" value={form.profileId} disabled={!editable} onChange={(e) => setForm({ ...form, profileId: e.target.value })}>
+                <option value="">— Elige un perfil —</option>
+                {datos!.perfiles
+                  .filter((x) => !esDirecto(x.name))
+                  .map((x) => (
+                    <option key={x.id} value={x.id}>
+                      {x.name}
+                      {x.published_version_id ? '' : ' (sin publicar)'}
+                    </option>
+                  ))}
+              </select>
+            </div>
+          )}
+          <small className="fz-def" style={{ display: 'block', marginTop: -6, marginBottom: 12 }}>
+            Puedes cambiarlo cuando quieras: la placa y su QR siguen siendo los mismos, no hay que regrabar ni reimprimir.
+          </small>
           {datos!.sucursales.length > 0 && (
             <div className="fz-campo">
               <label className="field-label">Sucursal</label>
@@ -144,8 +267,8 @@ export default function FichaPlaca() {
           )}
           {editable && (
             <div className="fz-fila">
-              <button className="btn btn-primary btn-sm" onClick={() => void guardar()}>
-                Guardar
+              <button className="btn btn-primary btn-sm" disabled={ocupado} onClick={() => void guardar()}>
+                {ocupado ? 'Guardando…' : 'Guardar'}
               </button>
               {p.status !== 'active' && (
                 <button className="btn btn-ghost btn-sm" onClick={() => void estado('active')}>

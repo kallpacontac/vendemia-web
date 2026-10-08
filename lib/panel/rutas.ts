@@ -20,7 +20,7 @@
  * abrirla: la guardia lo devolverá a la de por defecto sin decir por qué.
  */
 
-export const RUTAS_GLOBALES = ['/panel/retargeting'] as const;
+export const RUTAS_GLOBALES = ['/panel/retargeting', '/panel/fabrica'] as const;
 
 /** A dónde va el admin de plataforma cuando entra sin compañía. */
 export const RUTA_GLOBAL_POR_DEFECTO = '/panel/retargeting';

@@ -90,6 +90,16 @@ export const BOTON_TARJETA: DefBoton = {
 export const defDe = (t: TipoBoton) =>
   t === 'tarjeta' ? BOTON_TARJETA : BOTONES.find((b) => b.tipo === t) ?? REDES.find((b) => b.tipo === t) ?? BOTONES[BOTONES.length - 1];
 
+/**
+ * Placa con ENLACE DIRECTO: abre una sola URL, sin página. Por dentro es un
+ * perfil de un solo enlace (el resolutor hace 302 con 1 enlace), uno por
+ * placa, reconocible por el nombre. Así se edita desde la ficha de la placa
+ * sin tocar «Mi página».
+ */
+export const DIRECTOS: TipoBoton[] = ['whatsapp', 'instagram', 'tiktok', 'facebook', 'youtube', 'resenas', 'maps', 'carta', 'web', 'enlace'];
+export const nombreDirecto = (deviceId: string) => `Directo · ${deviceId.slice(0, 8)}`;
+export const esDirecto = (nombre: string | null | undefined) => (nombre ?? '').startsWith('Directo · ');
+
 /** Con el negocio elegido en Google: la ventana de «escribir reseña», directa. */
 export const urlResenas = (placeId: string) => `https://search.google.com/local/writereview?placeid=${encodeURIComponent(placeId)}`;
 /** Y «cómo llegar» a ese mismo lugar (formato oficial de enlaces de Maps). */

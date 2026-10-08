@@ -70,6 +70,24 @@ export const ACCIONES = {
     esquema: z.object({}).passthrough(),
     ejecutar: async () => estadoConfiguracion(),
   }),
+  /**
+   * Alta propia del negocio (0009): una cuenta sin negocio crea el suyo y queda
+   * de owner. La RPC limita a uno por cuenta; aquí, además, a 5 intentos.
+   */
+  'negocio.crear': accion({
+    esquema: z.object({ nombre: textoCorto(60).min(2), telefono: textoCorto(20).optional() }),
+    limite: ['negocio', 5],
+    ejecutar: (d, { sb }) => rpc(sb, 'loyalty_business_create', { p_name: d.nombre, p_phone: d.telefono || null }),
+  }),
+  /**
+   * Guarda de duplicados (0010): mientras el dueño escribe el nombre, qué enlace
+   * le tocaría y si el natural ya lo tiene otro negocio. Se llama con debounce.
+   */
+  'negocio.enlace': accion({
+    esquema: z.object({ nombre: textoCorto(60).min(2) }),
+    limite: ['enlace', 40],
+    ejecutar: (d, { sb }) => rpc(sb, 'loyalty_business_slug_check', { p_name: d.nombre }),
+  }),
   'logo.comprobar': accion({
     esquema: z.object({ url: urlHttps }),
     limite: ['logo', 10],
@@ -479,6 +497,13 @@ export const ACCIONES = {
     limite: ['lote', 5],
     ejecutar: (d, { sb }) =>
       rpc(sb, 'loyalty_admin_device_batch', { p_count: d.count, p_batch: d.batch, p_kind: d.kind }),
+  }),
+  /** Lote para UN negocio: además del código de cada placa, uno común que las activa todas (0009). */
+  'placa.pedido': accion({
+    esquema: z.object({ count: z.number().int().min(1).max(200), batch: textoCorto(40).min(1), kind: z.enum(['nfc_qr', 'qr']) }),
+    limite: ['lote', 5],
+    ejecutar: (d, { sb }) =>
+      rpc(sb, 'loyalty_admin_device_order', { p_count: d.count, p_batch: d.batch, p_kind: d.kind }),
   }),
 
   // ── Campañas ───────────────────────────────────────────────────────────

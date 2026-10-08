@@ -35,13 +35,15 @@ tocar ese repositorio. No chocan: todo usa el prefijo `loyalty_`.
 | `0006_grants.sql` | Quién puede ejecutar qué. **Contiene el paso manual de la clave** |
 | `0007_placa_sin_activar.sql` | La placa nueva sin dueño responde «aún no está activada» (con camino al panel) en vez de «no disponible» |
 | `0008_estilo_y_redes.sql` | Plantillas de la página (`page_style`) y, en cada enlace, icono, subtítulo y si es red social o botón |
+| `0009_alta_rapida.sql` | Alta propia del negocio desde el panel (`loyalty_business_create`) y código de **pedido**: uno solo activa todas las placas de un lote (`loyalty_admin_device_order`). Pruebas: `tests/pruebas_0009.sql` |
+| `0010_enlace_libre.sql` | Guarda de duplicados en el alta: `loyalty_business_slug_check` dice qué enlace le toca al negocio y si el natural ya está ocupado, antes de crearlo |
 
-**Aplicar:** SQL Editor de Supabase, en orden (0001 → 0008), cada fichero entero. Primero en
+**Aplicar:** SQL Editor de Supabase, en orden (0001 → 0010), cada fichero entero. Primero en
 staging, y allí pegar `tests/pruebas.sql` (no deja nada escrito: acaba en
 `ROLLBACK`). Tiene que terminar con «TODAS LAS PRUEBAS PASARON».
 
 Dependen de lo que ya existe del bot: `companies`, `memberships`,
-`platform_admins` (0020) y `auth.users`. No modifican ninguna de esas tablas.
+`platform_admins` (0020) y `auth.users`. No modifican el esquema de ninguna de esas tablas. **Desde 0009** sí insertan FILAS en `companies` y `memberships` (el alta propia del negocio); esos negocios no tienen fila en `instances`, así que no levantan bot.
 
 **Comprobar después** con `scripts/verificar-seguridad.sql`: todas las
 `loyalty_*` deben salir con RLS activo y sin `INSERT/UPDATE/DELETE` para

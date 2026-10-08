@@ -21,6 +21,7 @@ import {
   Percent,
   Receipt,
   Send,
+  Factory,
   Settings,
   UserCog,
   Users,
@@ -60,6 +61,9 @@ const NAV = [
   // dentro (app/(panel)/panel/fideliza/layout.tsx). En el móvil va en «Más».
   { href: '/panel/fideliza', icon: Gift, label: 'Fideliza' },
   { href: '/panel/metricas', icon: BarChart2, label: 'Métricas' },
+  // Stock de placas sin dueño. Solo el superadmin (platform_admins); la base lo
+  // exige igual en loyalty_admin_device_batch/order.
+  { href: '/panel/fabrica', icon: Factory, label: 'Fábrica de placas', soloAdmin: true },
   { href: '/panel/configuracion', icon: Settings, label: 'Ajustes' },
 ];
 
@@ -104,13 +108,14 @@ export default function Sidebar({
   modo?: BusinessMode | null;
 }) {
   const ruta = usePathname();
-  const { salir } = useSesion();
+  const { salir, esAdminPlataforma } = useSesion();
   const [masAbierto, setMasAbierto] = useState(false);
 
   // Al cambiar de pantalla la hoja se cierra: ya cumplió.
   useEffect(() => setMasAbierto(false), [ruta]);
 
   const nav = NAV.filter((n) => {
+    if ('soloAdmin' in n && n.soloAdmin && !esAdminPlataforma) return false;
     if (soloGlobal) return esRutaGlobal(n.href);
     // modo == null cubre undefined (primer render) Y null (compañía sin modo
     // asignado): en los dos casos se enseña de más, nunca de menos.
