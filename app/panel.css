@@ -1915,9 +1915,28 @@ body{background:var(--bg-app)}
 .avisos-celular__silencio .input{width:auto;display:inline-block;padding:6px 10px}
 .avisos-celular__acciones{display:flex;flex-wrap:wrap;gap:8px;padding-top:12px;border-top:1px solid var(--line)}
 @media(max-width:560px){.avisos-celular__acciones .btn{flex:1;justify-content:center}}
-.invitacion-avisos{display:flex;align-items:center;gap:12px;padding:12px 16px;margin-bottom:16px;position:relative}
-.invitacion-avisos>svg{color:var(--brand);flex:none}
-.invitacion-avisos>div{flex:1;min-width:0}
-.invitacion-avisos b{display:block;font-size:14px}
-.invitacion-avisos small{font-size:12.5px}
-.invitacion-avisos__cerrar{border:none;background:none;color:var(--ink-mute);cursor:pointer;padding:4px;display:grid;place-items:center}
+
+/* ── El aviso de abajo: instalar y activar avisos · BannerApp.tsx ─────────
+   Abajo y sin tapar: en el teléfono, encima de la barra de navegación; en el
+   escritorio, en la esquina inferior izquierda del contenido (la derecha es de
+   los avisos de «Guardado»). */
+.banner-app{position:fixed;z-index:150;left:calc(var(--sb-w) + 48px);bottom:20px;width:min(440px,calc(100vw - 32px));
+  display:flex;align-items:center;gap:12px;flex-wrap:wrap;background:#fff;border-radius:18px;padding:12px 14px;
+  box-shadow:0 12px 36px rgba(0,0,0,.16);border:1px solid var(--line);animation:banner-sube .35s ease-out both}
+@keyframes banner-sube{from{transform:translateY(16px);opacity:0}to{transform:none;opacity:1}}
+@media(prefers-reduced-motion:reduce){.banner-app{animation:none}}
+.banner-app__icono{width:40px;height:40px;border-radius:10px;flex:none}
+.banner-app__texto{flex:1;min-width:0;padding-right:18px}
+.banner-app__texto>b{display:block;font-size:14px}
+.banner-app__texto small{display:block;font-size:12.5px;line-height:1.45;color:var(--ink-soft)}
+.banner-app__texto small svg{vertical-align:-2px}
+.banner-app__acciones{display:flex;align-items:center;gap:6px;margin-left:auto}
+.banner-app__no{border:none;background:none;font:600 13px 'Plus Jakarta Sans';color:var(--ink-soft);cursor:pointer;padding:8px}
+.banner-app__cerrar{position:absolute;top:6px;right:6px;border:none;background:none;color:var(--ink-mute);cursor:pointer;padding:4px;display:grid;place-items:center}
+@media(max-width:820px){
+  .banner-app{left:12px;right:12px;width:auto;bottom:calc(84px + env(safe-area-inset-bottom,0px))}
+  .banner-app__acciones{width:100%;justify-content:flex-end}
+  /* iPhone en Safari: el botón Compartir está abajo, en la barra del navegador. */
+  .banner-app--ios::after{content:"";position:absolute;left:50%;bottom:-9px;width:16px;height:16px;background:#fff;
+    border-right:1px solid var(--line);border-bottom:1px solid var(--line);transform:translateX(-50%) rotate(45deg)}
+}

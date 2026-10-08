@@ -13,6 +13,7 @@ import { RUTA_GLOBAL_POR_DEFECTO, esRutaGlobal } from '@/lib/panel/rutas';
 import { guardarDestino, rutaActual } from '@/lib/panel/destino';
 import AltaNegocio from '@/components/panel/AltaNegocio';
 import Instalable from '@/components/panel/Instalable';
+import BannerApp from '@/components/panel/BannerApp';
 
 /**
  * ══════════════════════════════════════════════════════════════════════════
@@ -117,6 +118,8 @@ function Guardia({ children }: { children: React.ReactNode }) {
       <BandaDemo />
       <Sidebar soloGlobal={soloGlobal} modo={compania?.business_mode} />
       {children}
+      {/* Instalar la app y activar los avisos, abajo y sin ir a Ajustes. */}
+      {!soloGlobal && <BannerApp />}
     </>
   );
 }

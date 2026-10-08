@@ -29,6 +29,7 @@ import { useSesion } from './Sesion';
 import { useAvisar } from './Avisos';
 import { enModoApp, plataforma, useInstalarAndroid } from './Instalable';
 import { supabase } from '@/lib/supabase/client';
+import { activarAvisos, enviarPrueba, registroPanel, soportaAvisos, suscripcionActual } from '@/lib/panel/suscribirAvisos';
 
 type Tipo = 'pago' | 'reserva' | 'whatsapp' | 'plan' | 'persona';
 
@@ -49,19 +50,7 @@ interface Fila {
   silencio_hasta: string | null;
 }
 
-const b64 = (s: string) => {
-  const pad = '='.repeat((4 - (s.length % 4)) % 4);
-  const raw = atob((s + pad).replace(/-/g, '+').replace(/_/g, '/'));
-  return Uint8Array.from(raw, (c) => c.charCodeAt(0));
-};
 const hhmm = (t: string | null | undefined) => (t ?? '').slice(0, 5);
-
-async function registro() {
-  return (
-    (await navigator.serviceWorker.getRegistration('/panel')) ??
-    (await navigator.serviceWorker.register('/panel-sw.js', { scope: '/panel' }))
-  );
-}
 
 export default function AvisosCelular() {
   const { companyId } = useSesion();
@@ -80,84 +69,45 @@ export default function AvisosCelular() {
   useEffect(() => {
     setSo(plataforma());
     setApp(enModoApp());
-    const ok = 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
+    const ok = soportaAvisos();
     setSoporta(ok);
     if (!ok || !companyId) {
       setListo(true);
       return;
     }
     setPermiso(Notification.permission);
-    void (async () => {
-      const reg = await registro();
-      const sub = await reg.pushManager.getSubscription();
-      if (sub) {
-        setEndpoint(sub.endpoint);
-        const { data } = await supabase()
-          .from('panel_push_subscriptions')
-          .select('id, prefs, silencio_desde, silencio_hasta')
-          .eq('endpoint', sub.endpoint)
-          .eq('company_id', companyId)
-          .is('revoked_at', null)
-          .maybeSingle();
-        setFila((data as Fila | null) ?? null);
-      }
-      setListo(true);
-    })().catch(() => setListo(true));
+    void suscripcionActual(companyId)
+      .then((r) => {
+        if (r) {
+          setEndpoint(r.endpoint);
+          setFila(r.fila);
+        }
+      })
+      .catch(() => {})
+      .finally(() => setListo(true));
   }, [companyId]);
 
   async function activar() {
     if (!companyId) return;
     setOcupado(true);
-    try {
-      const p = await Notification.requestPermission();
-      setPermiso(p);
-      if (p !== 'granted') {
-        avisar('No diste permiso. Puedes activarlo después desde los ajustes del navegador.', 'espera');
-        return;
-      }
-      const r = await fetch('/api/avisos/clave');
-      const { vapid } = (await r.json()) as { vapid?: string };
-      if (!vapid) throw new Error('Los avisos no están configurados en el servidor.');
-      const reg = await registro();
-      const sub =
-        (await reg.pushManager.getSubscription()) ??
-        (await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64(vapid) }));
-      const j = sub.toJSON() as { endpoint: string; keys: { p256dh: string; auth: string } };
-      const { data, error } = await supabase()
-        .from('panel_push_subscriptions')
-        .upsert(
-          {
-            company_id: companyId,
-            endpoint: j.endpoint,
-            p256dh: j.keys.p256dh,
-            auth: j.keys.auth,
-            user_agent: navigator.userAgent.slice(0, 300),
-            revoked_at: null,
-          },
-          { onConflict: 'endpoint,company_id' },
-        )
-        .select('id, prefs, silencio_desde, silencio_hasta')
-        .single();
-      if (error) throw error;
-      setEndpoint(j.endpoint);
-      setFila(data as Fila);
-      await probar(j.endpoint);
-    } catch (e) {
-      avisar(e instanceof Error ? e.message : 'No se pudieron activar los avisos.', 'error');
-    } finally {
-      setOcupado(false);
+    const r = await activarAvisos(companyId);
+    setOcupado(false);
+    setPermiso(Notification.permission);
+    if (r.ok) {
+      setEndpoint(r.endpoint);
+      setFila(r.fila);
+      avisar('Avisos activados. Te enviamos uno de prueba.', 'ok');
+    } else if (r.motivo === 'denegado') {
+      avisar('No diste permiso. Puedes activarlo después desde los ajustes del navegador.', 'espera');
+    } else {
+      avisar(r.mensaje ?? 'No se pudieron activar los avisos.', 'error');
     }
   }
 
   async function probar(ep = endpoint) {
     if (!ep) return;
-    const { data } = await supabase().auth.getSession();
-    const r = await fetch('/api/avisos/prueba', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${data.session?.access_token ?? ''}` },
-      body: JSON.stringify({ endpoint: ep }),
-    });
-    avisar(r.ok ? 'Te enviamos un aviso de prueba.' : 'No se pudo enviar el aviso de prueba.', r.ok ? 'ok' : 'error');
+    const ok = await enviarPrueba(ep);
+    avisar(ok ? 'Te enviamos un aviso de prueba.' : 'No se pudo enviar el aviso de prueba.', ok ? 'ok' : 'error');
   }
 
   async function guardar(cambio: Partial<Fila>) {
@@ -182,8 +132,7 @@ export default function AvisosCelular() {
       .select('id', { count: 'exact', head: true })
       .eq('endpoint', endpoint ?? '');
     if (!count) {
-      const reg = await navigator.serviceWorker.getRegistration('/panel');
-      await (await reg?.pushManager.getSubscription())?.unsubscribe();
+      await (await (await registroPanel()).pushManager.getSubscription())?.unsubscribe();
       setEndpoint(null);
     }
     setFila(null);
