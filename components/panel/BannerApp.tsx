@@ -22,13 +22,13 @@
  * sigue teniendo la versión completa (qué avisos, silencio, prueba).
  */
 import { useEffect, useState } from 'react';
-import { Bell, Download, Share, X } from 'lucide-react';
+import { Bell, Download, EllipsisVertical, Share, X } from 'lucide-react';
 import { useSesion } from './Sesion';
 import { useAvisar } from './Avisos';
 import { enModoApp, plataforma, useInstalarAndroid } from './Instalable';
 import { activarAvisos, soportaAvisos, suscripcionActual } from '@/lib/panel/suscribirAvisos';
 
-type Variante = 'instalar' | 'ios' | 'activar';
+type Variante = 'instalar' | 'ios' | 'android-manual' | 'activar';
 
 const CLAVE = 'vm-banner-app';
 const SIETE_DIAS = 7 * 24 * 3600 * 1000;
@@ -62,16 +62,33 @@ export default function BannerApp() {
   const instalar = useInstalarAndroid();
   const [variante, setVariante] = useState<Variante | null>(null);
   const [ocupado, setOcupado] = useState(false);
+  const [so, setSo] = useState<'ios' | 'android' | 'otra'>('otra');
+
+  useEffect(() => {
+    // `?app=1`: borra lo recordado y lo enseña ya. Para probarlo, o para
+    // mandárselo a un cliente que dijo «Ahora no» y luego sí lo quiere.
+    const url = new URL(location.href);
+    if (url.searchParams.has('app')) {
+      escribir({ veces: 0, hasta: 0 });
+      url.searchParams.delete('app');
+      history.replaceState(null, '', url.pathname + url.search);
+    }
+  }, []);
 
   useEffect(() => {
     if (!companyId || !permitido(leer())) return;
     let vivo = true;
     const reloj = setTimeout(async () => {
       const so = plataforma();
+      setSo(so);
       const app = enModoApp();
       let v: Variante | null = null;
+      // Primero instalar (es lo que la deja a mano), luego los avisos.
       if (so === 'ios' && !app) v = 'ios';
-      else if (so === 'android' && !app && instalar) v = 'instalar';
+      // Chrome (Android o computadora) ofreció instalar: el diálogo nativo.
+      else if (!app && instalar) v = 'instalar';
+      // Android sin oferta de Chrome (la rechazó antes, u otro navegador): a mano.
+      else if (so === 'android' && !app) v = 'android-manual';
       else if (soportaAvisos() && Notification.permission === 'default') {
         const actual = await suscripcionActual(companyId).catch(() => null);
         if (!actual?.fila) v = 'activar';
@@ -128,8 +145,21 @@ export default function BannerApp() {
       <div className="banner-app__texto">
         {variante === 'instalar' && (
           <>
-            <b>Ten Vendemia como app</b>
-            <small>Ábrela desde su icono y recibe tus pagos y reservas al instante.</small>
+            <b>{so === 'otra' ? 'Instala Vendemia en tu computadora' : 'Ten Vendemia como app'}</b>
+            <small>
+              {so === 'otra'
+                ? 'Se abre en su propia ventana, como una app, y te avisa de pagos y reservas.'
+                : 'Ábrela desde su icono y recibe tus pagos y reservas al instante.'}
+            </small>
+          </>
+        )}
+        {variante === 'android-manual' && (
+          <>
+            <b>Instala Vendemia en tu celular</b>
+            <small>
+              En Chrome, toca <EllipsisVertical size={13} aria-label="menú" /> y luego <b>«Instalar app»</b> o{' '}
+              <b>«Agregar a pantalla principal»</b>.
+            </small>
           </>
         )}
         {variante === 'ios' && (
@@ -149,7 +179,7 @@ export default function BannerApp() {
         )}
       </div>
       <div className="banner-app__acciones">
-        {variante === 'ios' ? (
+        {variante === 'ios' || variante === 'android-manual' ? (
           <button type="button" className="btn btn-primary btn-sm" onClick={ahoraNo}>
             Entendido
           </button>
@@ -159,7 +189,7 @@ export default function BannerApp() {
             {variante === 'instalar' ? 'Instalar' : ocupado ? 'Activando…' : 'Activar'}
           </button>
         )}
-        {variante !== 'ios' && (
+        {variante !== 'ios' && variante !== 'android-manual' && (
           <button type="button" className="banner-app__no" onClick={ahoraNo}>
             Ahora no
           </button>
