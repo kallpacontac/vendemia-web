@@ -173,6 +173,12 @@ export interface PreguntaObligatoria {
   reject_message: string | null;
   /** true = rechazo duro. false = aviso; el cliente puede insistir y sigue. */
   is_terminal: boolean;
+  /**
+   * El empleado que atiende la cita ve este dato del cliente (roles, 0041 del
+   * bot). Apagado por defecto: sin la marca, de los campos propios no ve nada.
+   * Solo tiene sentido con `field_key`.
+   */
+  visible_empleado?: boolean;
   /** Si está, la respuesta se guarda en `lead.custom_data[field_key]`. */
   field_key?: string;
   /** Con `field_key`: el bot no cierra la venta sin este dato. */

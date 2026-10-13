@@ -62,7 +62,7 @@ import {
   type Cita,
   type Trabajador,
 } from '@/lib/supabase/queries';
-import type { ResultadoBloqueo, ResultadoModificarCita } from '@/lib/supabase/commands';
+import type { ConSinPermiso, ResultadoBloqueo, ResultadoModificarCita } from '@/lib/supabase/commands';
 import type { ClaveDia, EmployeeBlockRow, Horario } from '@/lib/supabase/types';
 
 const DIAS: { clave: ClaveDia; nombre: string; corto: string }[] = [
@@ -387,7 +387,14 @@ function Ficha({
       return;
     }
     setGuardando(true);
-    await comando('upsert_employee', { employee: { id: t.id, ...cambios } }, 'Guardado', alCambiar);
+    const r = await comando<{ id: string } & ConSinPermiso>(
+      'upsert_employee',
+      { employee: { id: t.id, ...cambios } },
+      'Guardado',
+      alCambiar,
+    );
+    // El resto se guardó; el porcentaje, no. Ver ConSinPermiso.
+    if (r?.sin_permiso?.includes('comision_pct')) avisar('La comisión solo la cambia el dueño.', 'error');
     setGuardando(false);
   }
 

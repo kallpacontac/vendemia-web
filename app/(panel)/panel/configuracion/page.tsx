@@ -127,6 +127,14 @@ interface Formulario {
  * reserializáramos con las claves en otro orden, el campo saldría como cambiado
  * cada vez que se abre la pantalla aunque nadie hubiera tocado nada.
  */
+/** Los campos de cobro, con el nombre que ve quien los intentó cambiar. */
+const CAMPO_DEL_DUENO: Record<string, string> = {
+  payment_methods: 'los métodos de pago',
+  owner_phone: 'el teléfono del dueño',
+  admin_phone: 'el teléfono del administrador',
+  whatsapp_phone: 'el número de WhatsApp',
+};
+
 function limpiar(p: PreguntaObligatoria): PreguntaObligatoria {
   const clave = p.field_key?.trim();
   return {
@@ -137,6 +145,9 @@ function limpiar(p: PreguntaObligatoria): PreguntaObligatoria {
     // Sin `field_key` no hay dónde guardar la respuesta, y entonces `required`
     // no significa nada. Las dos se caen juntas.
     ...(clave ? { field_key: clave, required: Boolean(p.required) } : {}),
+    // Solo cuando está encendida: así las preguntas que nadie ha marcado se
+    // serializan igual que antes y no salen como «cambiadas» al abrir la pantalla.
+    ...(clave && p.visible_empleado ? { visible_empleado: true } : {}),
   };
 }
 
@@ -221,7 +232,7 @@ export default function ConfiguracionPage() {
 }
 
 function Configuracion() {
-  const { companyId, esDueno, esAdminPlataforma } = useSesion();
+  const { companyId, rol, esAdminPlataforma } = useSesion();
   const { salud } = useSalud();
   const comando = useComando();
   const avisar = useAvisar();
@@ -430,6 +441,14 @@ function Configuracion() {
      */
     if (r?.ignored?.length) {
       avisar(`El bot no aceptó estos campos: ${r.ignored.join(', ')}`, 'error');
+    }
+    /**
+     * Otra cosa distinta de `ignored`: campos que SÍ cambiaban y no se
+     * aplicaron por el rol de quien guarda. El resto del patch se guardó.
+     */
+    const vetados = r?.sin_permiso ?? [];
+    if (vetados.length) {
+      avisar(`Esto solo lo cambia el dueño: ${vetados.map((c) => CAMPO_DEL_DUENO[c] ?? c).join(', ')}.`, 'error');
     }
   }
 
@@ -992,10 +1011,11 @@ function Configuracion() {
             </div>
           </div>
 
-          {/* El dueño lo gestiona. El admin de la plataforma ve la lista, sin
-              botones: `equipo_listar` se la da, pero los comandos no los puede
-              encolar. Al resto ni se le pinta. Ver components/panel/Equipo.tsx. */}
-          {(esDueno || esAdminPlataforma) && <details className="cfg-advanced cfg-advanced--section"><summary>Acceso del equipo</summary><Equipo sinLista={datos?.miembros.length ?? 0} /></details>}
+          {/* El dueño y el administrador gestionan (cada uno lo suyo). El admin
+              de la plataforma ve la lista, sin botones: `equipo_listar` se la
+              da, pero los comandos no los puede encolar. Al empleado ni se le
+              pinta. Ver components/panel/Equipo.tsx. */}
+          {(rol === 'dueno' || rol === 'admin' || esAdminPlataforma) && <details className="cfg-advanced cfg-advanced--section"><summary>Acceso del equipo</summary><Equipo sinLista={datos?.miembros.length ?? 0} /></details>}
 
           <div className="nav-btns">
             <button className="btn btn-ghost" onClick={() => setPaso(2)}>
@@ -1262,6 +1282,27 @@ function Preguntas({
                 onClick={() => editar(i, { required: !p.required })}
                 role="switch"
                 aria-checked={Boolean(p.required)}
+              />
+            </div>
+          )}
+
+          {/* Apagado por defecto: de los datos propios, el empleado no ve
+              ninguno hasta que alguien decide que este sí. */}
+          {p.field_key?.trim() && (
+            <div className="toggle-row" style={{ marginTop: 10 }}>
+              <div className="t">
+                <b>Lo ve el empleado</b>
+                <small>
+                  Quien atiende la cita verá este dato del cliente. Sirve para la edad o una alergia;{' '}
+                  <b>no lo enciendas</b> en un teléfono o un correo
+                </small>
+              </div>
+              <div
+                className={`toggle ${p.visible_empleado ? 'on' : ''}`}
+                onClick={() => editar(i, { visible_empleado: !p.visible_empleado })}
+                role="switch"
+                aria-checked={Boolean(p.visible_empleado)}
+                aria-label="Lo ve el empleado"
               />
             </div>
           )}

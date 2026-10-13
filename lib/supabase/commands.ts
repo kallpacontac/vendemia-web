@@ -55,6 +55,12 @@ export type TipoComando =
   | 'cambiar_rol_miembro'
   | 'quitar_miembro'
   /**
+   * Unir a una persona con su ficha de `employees`: `{ user_id, employee_id }`,
+   * y `null` quita el enlace. El dueño, a cualquiera; el administrador, solo a
+   * un empleado. Ver ResultadoEnlace.
+   */
+  | 'enlazar_ficha'
+  /**
    * Retargeting: «ya le escribí a este cliente».
    *
    * ⚠️ Es el único comando que NO se manda con la compañía activa de la sesión.
@@ -141,11 +147,27 @@ export type TipoComando =
  * orden, el campo sale en `updated` aunque el contenido sea equivalente. Es
  * inofensivo, pero explica algún "guardado" que parece de más.
  */
-export interface ResultadoUpdateCompany {
+export interface ResultadoUpdateCompany extends ConSinPermiso {
   /** Campos cuyo valor quedó distinto del que había. */
   updated: string[];
   /** Campos que no cambiaron nada: mismo valor, o fuera de la lista blanca. */
   ignored: string[];
+}
+
+/**
+ * Lo que venía en el comando y NO se aplicó por el rol de quien lo encola: los
+ * campos de cobro en `update_company`, `comision_pct` en `upsert_employee`, las
+ * `comision_*` en `upsert_catalog_item`.
+ *
+ * ⚠️ NO es `ignored`. `ignored` significa «no cambió»; esto significa «no
+ * puedes». El comando no falla: el resto del patch SÍ se guarda.
+ *
+ * La clave solo viene cuando hay algo que decir, y hasta el corte de roles el
+ * bot ni la manda (aplica el campo y apunta en su log lo que rechazará). Se lee
+ * siempre con `r.sin_permiso ?? []`.
+ */
+export interface ConSinPermiso {
+  sin_permiso?: string[];
 }
 
 /**
@@ -348,6 +370,8 @@ export interface ResultadoAddMember {
    */
   role: string;
   ya_era_miembro: boolean;
+  /** La ficha que TIENE. Si ya era del negocio, tampoco se le cambió. */
+  employee_id: string | null;
 }
 
 /**
@@ -364,6 +388,26 @@ export interface ResultadoCambioDeRol {
   antes: string;
   ahora: 'member' | 'admin';
   /** false = ya tenía ese rol. No es un error. */
+  cambio: boolean;
+  employee_id: string | null;
+}
+
+/**
+ * Lo que devuelve `enlazar_ficha`.
+ *
+ * Una ficha, una persona: el bot rechaza una ficha que ya es de otro, que no
+ * existe o que está dada de baja, con un mensaje que se enseña tal cual.
+ *
+ * ⚠️ Como el cambio de rol: se pinta `employee_id` y NO se relee la lista.
+ */
+export interface ResultadoEnlace {
+  user_id: string;
+  email: string | null;
+  /** La ficha que tenía. */
+  antes: string | null;
+  /** La que tiene ahora. `null` = sin ficha. */
+  employee_id: string | null;
+  /** false = ya era esa. */
   cambio: boolean;
 }
 

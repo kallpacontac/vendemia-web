@@ -169,6 +169,8 @@ export interface Miembro {
   email: string | null;
   /** `owner` | `admin` | `member` | `agent`. Qué es cada uno: lib/panel/roles.ts. */
   role: string;
+  /** Su ficha de `employees`, o null. Antes de la migración 0041 del bot no viene. */
+  employee_id?: string | null;
   desde: string;
   eres_tu: boolean;
 }
@@ -180,9 +182,13 @@ export interface Miembro {
  * SU fila de `memberships`, y el correo vive en `auth.users`. Funciona con el
  * bot apagado.
  *
- * ⚠️ Solo el dueño (o un admin de la plataforma) recibe la lista. A cualquier
- * otro le llega `[]`, SIN error: no hay que distinguir «no puedes» de «no hay
- * nadie», y con `[]` la sección no se pinta.
+ * ⚠️ La reciben el dueño, el administrador (desde la migración 0042 del bot) y
+ * un admin de la plataforma. Al empleado le llega `[]`, SIN error: no hay que
+ * distinguir «no puedes» de «no hay nadie», y con `[]` la lista no se pinta.
+ *
+ * Al administrador le llega ENTERA —también el dueño y los demás
+ * administradores—: que la lista venga no dice qué botones pintar. Eso lo
+ * decide el rol de quien mira (components/panel/Equipo.tsx).
  *
  * `null` es otra cosa: la función todavía no existe (falta la migración 0040
  * del bot). La pantalla sigue con lo que tenía —dar acceso— en vez de romperse.

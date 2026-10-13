@@ -18,6 +18,7 @@ import { useRouter } from 'next/navigation';
 import type { Session } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase/client';
 import { misCompanias, soyAdminPlataforma, type CompaniaAccesible } from '@/lib/supabase/queries';
+import { rolDeNegocio, type RolNegocio } from '@/lib/panel/roles';
 import {
   apuntarActividad,
   motivoDeCaducidad,
@@ -31,6 +32,11 @@ interface Estado {
   companyId: string | null;
   compania: CompaniaAccesible | null;
   esDueno: boolean;
+  /**
+   * Quién es esta persona en el negocio activo: dueño, administrador o
+   * empleado. `null` sin negocio. Ver lib/panel/roles.ts.
+   */
+  rol: RolNegocio | null;
   /**
    * Admin de la plataforma (tabla `platform_admins`, migración 0020).
    *
@@ -348,6 +354,7 @@ export function ProveedorSesion({ children }: { children: React.ReactNode }) {
       companyId,
       compania,
       esDueno: compania?.rol === 'owner',
+      rol: rolDeNegocio(compania?.rol),
       esAdminPlataforma,
       cargando,
       reconectando,

@@ -29,8 +29,12 @@
  *   agent  → empleado
  *   otro   → empleado  Ante un rol que no se conoce, el que menos ve.
  *
- * El bot tiene la misma tabla para el asistente (`rolEnElAsistente`, en
- * src/services/owner/operadores.ts de su repo). Si cambia aquí, cambia allí.
+ * ⚠️ Esta tabla vive en TRES sitios y tienen que decir lo mismo. Si cambia
+ * aquí, cambia en los otros dos:
+ *
+ *   · `rol_en()` en Postgres (migración 0041 del bot);
+ *   · `rolDeNegocio` en `src/utils/roles.ts` del bot;
+ *   · esta función.
  *
  * ⚠️ ESTO SOLO SIRVE PARA ESCONDER. Hoy el RLS deja leer todas las tablas a
  * cualquier miembro y el bot solo mira el rol en el asistente y al dar de alta
@@ -52,3 +56,43 @@ export function nombreDeRol(rol: string | null | undefined): string {
   const r = rolDeNegocio(rol);
   return r === 'dueno' ? 'Dueño' : r === 'admin' ? 'Administrador' : 'Empleado';
 }
+
+/* ── Qué puede cada rol ─────────────────────────────────────────────────── */
+
+export type Permiso =
+  | 'agenda.todo'
+  | 'agenda.mia'
+  | 'equipo.ver'
+  | 'clientes.ver'
+  | 'caja.ver'
+  /** Las comisiones de TODOS. La propia es `comisiones.mia`. */
+  | 'comisiones.ver'
+  | 'comisiones.mia'
+  | 'metricas.ver'
+  | 'catalogo.ver'
+  | 'plan.ver'
+  | 'bot.ver';
+
+/**
+ * Copia de `rol_puede()` (migración 0041 del bot). La autoridad es aquella: en
+ * el corte, las políticas de Postgres preguntan allí, no aquí.
+ *
+ * ⚠️ HOY NO ESCONDE NADA. Hasta el corte —una semana después de que los dueños
+ * vean el aviso— el panel sigue enseñándoselo todo a todos, que es lo que la
+ * base les deja leer. Está aquí para que ese día el menú y las pantallas
+ * pregunten a una sola tabla, y para que sea la misma que la de la base.
+ */
+const MATRIZ: Record<RolNegocio, readonly Permiso[]> = {
+  dueno: [
+    'agenda.todo', 'equipo.ver', 'clientes.ver', 'caja.ver', 'comisiones.ver',
+    'metricas.ver', 'catalogo.ver', 'plan.ver', 'bot.ver',
+  ],
+  admin: [
+    'agenda.todo', 'equipo.ver', 'clientes.ver', 'caja.ver', 'comisiones.ver',
+    'catalogo.ver', 'plan.ver', 'bot.ver',
+  ],
+  empleado: ['agenda.mia', 'equipo.ver', 'comisiones.mia', 'catalogo.ver'],
+};
+
+export const rolPuede = (rol: RolNegocio | null, permiso: Permiso): boolean =>
+  rol !== null && MATRIZ[rol].includes(permiso);
