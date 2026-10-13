@@ -42,7 +42,7 @@ import {
 } from '@/modules/fideliza/dominio/botones';
 import { COLORES, PLANTILLAS, resolverEstilo, type Estilo, type Plantilla } from '@/modules/fideliza/dominio/estilo';
 import { ICONOS } from '@/modules/fideliza/dominio/iconos';
-import { htmlPagina, type DatosPagina } from '@/modules/fideliza/dominio/paginaPublica';
+import { htmlPagina, imagenPagina, type DatosPagina } from '@/modules/fideliza/dominio/paginaPublica';
 
 interface Boton {
   clave: string;
@@ -454,7 +454,7 @@ export default function MiPagina() {
               <label className="field-label">Tu foto o logo (opcional)</label>
               <div className="fz-logo-editor">
                 <span className="fz-logo-editor__vista" aria-hidden="true">
-                  {negocio.logo ? <img src={negocio.logo} alt="" /> : (negocio.nombre || '?').trim().slice(0, 1).toUpperCase()}
+                  {negocio.logo ? <img src={imagenPagina(negocio.logo, 'avatar')} alt="" width={72} height={72} loading="eager" decoding="async" /> : (negocio.nombre || '?').trim().slice(0, 1).toUpperCase()}
                 </span>
                 <div className="fz-logo-editor__acciones">
                   <button

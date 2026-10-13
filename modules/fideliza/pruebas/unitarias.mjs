@@ -268,3 +268,23 @@ test('19 · la ruta pública resuelve el estilo guardado y nunca usa caché de p
   assert.match(servidor, /'X-Vendemia-Template': estilo\.plantilla/);
   assert.match(ruta, /export const revalidate = 0/);
 });
+
+test('20 · las imágenes de plantillas usan variantes pequeñas y precargadas', () => {
+  const original = 'https://res.cloudinary.com/demo/image/upload/v123/brand/negocio/logo.png';
+  assert.equal(
+    pagina.imagenPagina(original, 'avatar'),
+    'https://res.cloudinary.com/demo/image/upload/c_limit,h_384,w_384/f_auto,q_auto:good/v123/brand/negocio/logo.png',
+  );
+  assert.equal(
+    pagina.imagenPagina(original, 'fondo'),
+    'https://res.cloudinary.com/demo/image/upload/c_limit,w_1200/f_auto,q_auto:good/v123/brand/negocio/logo.png',
+  );
+  assert.equal(pagina.imagenPagina('https://imagenes.ejemplo.com/logo.png', 'avatar'), 'https://imagenes.ejemplo.com/logo.png');
+
+  const html = pagina.htmlPagina({ nombre: 'Negocio', logo: original, color: '#FF4900', redes: [], botones: [] });
+  assert.ok(html.includes('rel="preconnect" href="https://res.cloudinary.com"'));
+  assert.ok(html.includes('rel="preload" as="image"'));
+  assert.ok(html.includes('fetchpriority="high"'));
+  assert.ok(html.includes('width="104" height="104"'));
+  assert.ok(!html.includes(`src="${original}"`), 'no descarga el PNG original de 1000 px en el avatar');
+});

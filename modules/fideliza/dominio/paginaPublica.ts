@@ -39,6 +39,36 @@ const esc = escHtml;
 const https = (u: string | null | undefined) => (u && /^https:\/\/[^\s"'<>]+$/.test(u) ? u : '');
 
 /**
+ * Cloudinary conserva el original de 1000 px para Google Wallet, pero la
+ * página pública no necesita descargarlo entero. Estas variantes quedan
+ * cacheadas en su CDN y se sirven en WebP/AVIF cuando el navegador lo admite.
+ * Las URL de otros proveedores se dejan intactas.
+ */
+export function imagenPagina(url: string | null | undefined, uso: 'avatar' | 'fondo'): string {
+  const segura = https(url);
+  if (!segura) return '';
+  try {
+    const u = new URL(segura);
+    const marca = '/image/upload/';
+    const i = u.pathname.indexOf(marca);
+    if (u.hostname !== 'res.cloudinary.com' || i < 0) return segura;
+    const transformacion = uso === 'avatar' ? 'c_limit,h_384,w_384/f_auto,q_auto:good' : 'c_limit,w_1200/f_auto,q_auto:good';
+    u.pathname = `${u.pathname.slice(0, i + marca.length)}${transformacion}/${u.pathname.slice(i + marca.length)}`;
+    return u.toString();
+  } catch {
+    return segura;
+  }
+}
+
+const origenImagen = (url: string) => {
+  try {
+    return new URL(url).origin;
+  } catch {
+    return '';
+  }
+};
+
+/**
  * Instagram sí tiene una ruta web para abrir las historias activas de un
  * perfil. TikTok no expone una ruta web estable a la Story actual: allí se
  * abre el perfil y la app enseña el aro si hay una historia disponible.
@@ -112,8 +142,8 @@ function paleta(plantilla: string, acc: string, conFondo: boolean) {
 export function htmlPagina(d: DatosPagina, o: { vista?: boolean; indexable?: boolean; titulo?: string } = {}): string {
   const acc = colorValido(d.color);
   const e = resolverEstilo(d.estilo);
-  const fondo = https(e.fondo);
-  const logo = https(d.logo ?? '');
+  const fondo = imagenPagina(e.fondo, 'fondo');
+  const logo = imagenPagina(d.logo, 'avatar');
   const p = paleta(e.plantilla, acc, Boolean(fondo));
   const tarjeta = e.plantilla === 'clasica' || e.plantilla === 'oscura';
   const radio = e.forma === 'pildora' ? '999px' : e.forma === 'recto' ? '6px' : '16px';
@@ -162,7 +192,9 @@ export function htmlPagina(d: DatosPagina, o: { vista?: boolean; indexable?: boo
   const inicial = esc((d.nombre || '?').trim().slice(0, 1).toUpperCase());
   const redHistoria = e.historia ? d.redes.find((r) => r.tipo === e.historia) : undefined;
   const historiaUrl = redHistoria && e.historia ? urlHistoria(e.historia, redHistoria.url) : '';
-  const contenidoAvatar = logo ? `<img src="${esc(logo)}" alt="">` : `<span class="av-inicial">${inicial}</span>`;
+  const contenidoAvatar = logo
+    ? `<img src="${esc(logo)}" alt="" width="104" height="104" loading="eager" decoding="async" fetchpriority="high">`
+    : `<span class="av-inicial">${inicial}</span>`;
   const claseAvatar = `av${e.plantilla === 'marco' ? ' av--marco' : ''}${historiaUrl ? ` av--historia av--${e.historia}` : ''}`;
 
   const avatar = sinAvatar
@@ -189,9 +221,13 @@ export function htmlPagina(d: DatosPagina, o: { vista?: boolean; indexable?: boo
 
   const titulo = esc(o.titulo || d.nombre || 'Mi página');
   const serif = e.plantilla === 'foto' || e.plantilla === 'marco';
+  const imagenPrioritaria = sinAvatar ? fondo : logo || fondo;
+  const origenesImagen = [...new Set([logo, fondo].map(origenImagen).filter(Boolean))];
+  const conexionesImagen = origenesImagen.map((origen) => `<link rel="preconnect" href="${esc(origen)}"><link rel="dns-prefetch" href="${esc(origen)}">`).join('');
+  const precargaImagen = imagenPrioritaria ? `<link rel="preload" as="image" href="${esc(imagenPrioritaria)}" fetchpriority="high">` : '';
 
   return `<!doctype html><html lang="es-PE"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>${titulo}</title>${o.indexable ? '' : '<meta name="robots" content="noindex,nofollow">'}<meta name="theme-color" content="${acc}">
+<title>${titulo}</title>${o.indexable ? '' : '<meta name="robots" content="noindex,nofollow">'}<meta name="theme-color" content="${acc}">${conexionesImagen}${precargaImagen}
 <style>
 *{box-sizing:border-box;margin:0}
 html{background:${fondoPagina.includes('url(') ? '#111' : p.bg.startsWith('linear') ? '#eee' : p.bg}}

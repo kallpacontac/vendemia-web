@@ -8,7 +8,7 @@
 import { Suspense, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Plus } from 'lucide-react';
+import { Nfc, Plus } from 'lucide-react';
 import { useFideliza } from '@/modules/fideliza/ui/Contexto';
 import { Cargando, Fallo, Vacio } from '@/modules/fideliza/ui/Estados';
 import { useAvisar } from '@/components/panel/Avisos';
@@ -141,7 +141,44 @@ function Lista() {
 
   return (
     <>
-      {editable && (
+      {editable && activando && (
+        <section className="card fz-activar-placa" aria-labelledby="titulo-activar-placa">
+          <div className="fz-activar-placa__cab">
+            <span className="fz-activar-placa__ico" aria-hidden="true">
+              <Nfc />
+            </span>
+            <div>
+              <small>Activación de placa</small>
+              <h2 id="titulo-activar-placa">Asóciala a {ajustes?.display_name || 'tu negocio'}</h2>
+              <p>Escribe el código de la tarjeta que vino en la caja. La placa quedará vinculada al negocio activo de este panel y apuntará a tu página.</p>
+            </div>
+          </div>
+          <div className="fz-activar-placa__campo">
+            <label className="field-label" htmlFor="codigo-placa">Código de activación</label>
+            <input
+              ref={campoCodigo}
+              id="codigo-placa"
+              className="input fz-input-gran"
+              placeholder="XXXXX-XXXXX"
+              value={codigo}
+              autoComplete="off"
+              inputMode="text"
+              maxLength={13}
+              onChange={(e) => setCodigo(e.target.value.toUpperCase().replace(/[^A-Z0-9-]/g, ''))}
+              aria-describedby="ayuda-codigo-placa"
+            />
+            <small id="ayuda-codigo-placa">También puedes escanear el QR privado de la tarjeta: el código se completa y activa automáticamente.</small>
+          </div>
+          <div className="fz-activar-placa__acciones">
+            <button className="btn btn-primary" disabled={codigo.replace(/[^A-Z0-9]/g, '').length < 10} onClick={() => void reclamar()}>
+              Asociar a {ajustes?.display_name || 'mi negocio'}
+            </button>
+            <button className="btn btn-ghost" onClick={() => setActivando(false)}>Ahora no</button>
+          </div>
+        </section>
+      )}
+
+      {editable && !activando && (
         <div className="toolbar">
           <button className="btn btn-primary btn-sm" onClick={() => setNueva({ label: '', kind: 'qr', profileId: '', locationId: '' })}>
             <Plus size={14} /> Crear placa
@@ -152,14 +189,6 @@ function Lista() {
           <button className="btn btn-ghost btn-sm" disabled={codigo.replace(/[^A-Z0-9]/g, '').length < 10} onClick={() => void reclamar()}>
             Añadir placa recibida
           </button>
-        </div>
-      )}
-
-      {activando && (
-        <div className="fz-panel-aviso fz-panel-aviso--info" role="status">
-          <span style={{ flex: 1 }}>
-            <b>Activa tu placa:</b> escribe abajo el código que viene en la tarjeta de la caja (XXXXX-XXXXX) y pulsa «Añadir placa recibida». Si es el código del pedido, se activan todas las placas de una vez. Quedarán apuntando a tu página.
-          </span>
         </div>
       )}
 
