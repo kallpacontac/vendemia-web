@@ -51,12 +51,12 @@ import {
   ShieldCheck,
   Store,
   Trash2,
-  UserPlus,
   UserSquare,
   Wallet,
   Wifi,
 } from 'lucide-react';
 import Topbar from '@/components/panel/Topbar';
+import Equipo from '@/components/panel/Equipo';
 import { useSesion } from '@/components/panel/Sesion';
 import { necesitaEmparejar, useSalud } from '@/components/panel/Salud';
 import { useAvisar, useComando } from '@/components/panel/Avisos';
@@ -66,7 +66,7 @@ import { esAppointmentFamily, esEcommerce } from '@/lib/panel/modo';
 import { cap, vocabulario } from '@/lib/panel/vocabulario';
 import { getCatalogo, getCompania } from '@/lib/supabase/queries';
 import { b01 } from '@/lib/supabase/parse';
-import type { ResultadoAddMember, ResultadoUpdateCompany } from '@/lib/supabase/commands';
+import type { ResultadoUpdateCompany } from '@/lib/supabase/commands';
 import type {
   BusinessMode,
   ClaveDia,
@@ -221,7 +221,7 @@ export default function ConfiguracionPage() {
 }
 
 function Configuracion() {
-  const { companyId, esDueno } = useSesion();
+  const { companyId, esDueno, esAdminPlataforma } = useSesion();
   const { salud } = useSalud();
   const comando = useComando();
   const avisar = useAvisar();
@@ -992,7 +992,10 @@ function Configuracion() {
             </div>
           </div>
 
-          {esDueno && <details className="cfg-advanced cfg-advanced--section"><summary>Acceso del equipo</summary><Usuarios cuantos={datos?.miembros.length ?? 0} /></details>}
+          {/* El dueño lo gestiona. El admin de la plataforma ve la lista, sin
+              botones: `equipo_listar` se la da, pero los comandos no los puede
+              encolar. Al resto ni se le pinta. Ver components/panel/Equipo.tsx. */}
+          {(esDueno || esAdminPlataforma) && <details className="cfg-advanced cfg-advanced--section"><summary>Acceso del equipo</summary><Equipo sinLista={datos?.miembros.length ?? 0} /></details>}
 
           <div className="nav-btns">
             <button className="btn btn-ghost" onClick={() => setPaso(2)}>
@@ -1300,83 +1303,6 @@ function Campo({
           {pista}
         </small>
       )}
-    </div>
-  );
-}
-
-
-/**
- * Dar acceso a otra persona. Solo el dueño.
- *
- * La contraseña temporal se ENSEÑA EN PANTALLA, no se manda por correo: el SMTP
- * por defecto de Supabase va limitadísimo y cae en spam, y un alta que depende
- * de un email falla justo cuando hay alguien delante esperando. El dueño la lee
- * y se la dicta.
- *
- * Si la persona ya tenía cuenta, `password_temporal` viene a null y su
- * contraseña NO se toca: aquí no se enseña un hueco vacío, se dice lo que pasó.
- */
-function Usuarios({ cuantos }: { cuantos: number }) {
-  const comando = useComando();
-  const [email, setEmail] = useState('');
-  const [enviando, setEnviando] = useState(false);
-  const [temporal, setTemporal] = useState<ResultadoAddMember | null>(null);
-
-  async function invitar() {
-    if (!email.trim()) return;
-    setEnviando(true);
-    const r = await comando<ResultadoAddMember>('add_member', { email: email.trim(), role: 'member' });
-    setEnviando(false);
-    /**
-     * Este `if (r)` SÍ es correcto, al revés que los que había en Catálogo: aquí
-     * no se refresca una pantalla, se enseña la CONTRASEÑA TEMPORAL que viene
-     * dentro de `r`. Sin respuesta del bot no hay nada que enseñar.
-     *
-     * ⚠️ Consecuencia conocida: si el bot tarda más de la cuenta, el usuario se
-     * crea igual —el comando está encolado— pero su contraseña temporal se
-     * pierde, porque solo viaja en el `result` de esa fila de `commands`. El
-     * arreglo no es refrescar aquí; sería leer la fila del comando después.
-     */
-    if (r) {
-      setTemporal(r);
-      setEmail('');
-    }
-  }
-
-  return (
-    <div className="sec">
-      <h4>
-        <UserPlus /> Quién más puede entrar
-      </h4>
-      <p className="muted" style={{ fontSize: 12.5, marginBottom: 12 }}>
-        {cuantos} {cuantos === 1 ? 'persona tiene' : 'personas tienen'} acceso a este negocio.
-      </p>
-      <div className="pay-item" style={{ gridTemplateColumns: '1fr auto' }}>
-        <input
-          placeholder="correo@dequien-va-a-entrar.com"
-          type="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-        />
-        <button className="btn btn-ghost btn-sm" onClick={() => void invitar()} disabled={enviando}>
-          <UserPlus size={15} /> {enviando ? 'Creando…' : 'Dar acceso'}
-        </button>
-      </div>
-
-      {temporal &&
-        (temporal.password_temporal ? (
-          <div className="clave-temporal">
-            Cuenta creada para <b>{temporal.email}</b>. Dile esta contraseña de viva voz —no se envía
-            por correo y no vuelve a aparecer:
-            <br />
-            <code>{temporal.password_temporal}</code>
-          </div>
-        ) : (
-          <div className="clave-temporal">
-            <b>{temporal.email}</b> ya tenía cuenta: ahora también ve este negocio. Su contraseña no
-            ha cambiado.
-          </div>
-        ))}
     </div>
   );
 }

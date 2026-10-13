@@ -14,9 +14,13 @@
  * puede arreglar: hay que re-emparejar el WhatsApp y eso se hace con su
  * teléfono delante.
  */
+import { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Bell } from 'lucide-react';
 import CuentaPanel from './CuentaPanel';
 import ComboPanel from './ComboPanel';
+import Confirmar from './Confirmar';
+import { useAvisar } from './Avisos';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useSesion } from './Sesion';
@@ -104,9 +108,51 @@ function NavegacionPanel() {
  * no hacía nada, que es peor que no parecerlo.
  */
 function MenuCuenta({ email, pie }: { email: string; pie: string }) {
-  const { salir } = useSesion();
+  const { salir, salirDeTodos } = useSesion();
+  const avisar = useAvisar();
   const demo = useDemo();
-  return <CuentaPanel email={email} pie={pie} demo={demo ?? false} alDemo={alternarDemo} alSalir={() => void salir()} />;
+  /** null = cerrado · 'pregunta' = el «¿seguro?» · 'yendo' = cerrando sesiones. */
+  const [deTodos, setDeTodos] = useState<null | 'pregunta' | 'yendo'>(null);
+
+  /**
+   * Es lo primero que hace el dueño si le roban el equipo, así que tiene que
+   * estar a mano —aquí, en el único menú que hay también en el móvil— y no
+   * puede fallar en silencio: si no se pudo, se dice, porque salir solo de
+   * ESTE equipo no es lo que pidió.
+   */
+  async function cerrarEnTodos() {
+    setDeTodos('yendo');
+    if (await salirDeTodos()) return; // ya va camino del login
+    setDeTodos(null);
+    avisar('No se pudo cerrar la sesión en los otros dispositivos. Revisa tu conexión y vuelve a intentarlo.', 'error');
+  }
+
+  return (
+    <>
+      <CuentaPanel email={email} pie={pie} demo={demo ?? false} alDemo={alternarDemo} alSalir={() => void salir()}
+        alSalirDeTodos={() => setDeTodos('pregunta')} />
+      {/* En el <body>, no aquí: la cabecera lleva `container-type`, que convierte
+          cualquier `position:fixed` de dentro en relativo A ELLA. El cuadro
+          saldría encajado en la barra superior en vez de tapar la pantalla. */}
+      {deTodos && createPortal(
+        <Confirmar
+          titulo="¿Cerrar sesión en todos los dispositivos?"
+          detalle={
+            <>
+              <p>Se cierra la sesión de <b>{email}</b> en este equipo y en cualquier otro donde esté abierta: tu celular, el ordenador de recepción.</p>
+              <p className="muted">Habrá que volver a entrar en cada uno. Un equipo que ya tenga el panel abierto puede tardar hasta una hora en quedarse fuera.</p>
+            </>
+          }
+          textoConfirmar="Cerrar en todos"
+          peligro
+          ocupado={deTodos === 'yendo'}
+          alConfirmar={() => void cerrarEnTodos()}
+          alCerrar={() => { if (deTodos !== 'yendo') setDeTodos(null); }}
+        />,
+        document.body,
+      )}
+    </>
+  );
 }
 
 export default function Topbar({

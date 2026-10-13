@@ -45,7 +45,8 @@ export type AppointmentStatus =
   | 'completed'
   | 'no_show';
 export type OrderStatus = 'pending' | 'paid' | 'cancelled' | 'delivered';
-export type Rol = 'owner' | 'member';
+/** Qué es cada uno, y cuáles existen ya de verdad: lib/panel/roles.ts. */
+export type Rol = 'owner' | 'admin' | 'member' | 'agent';
 
 export type ClaveDia =
   | 'monday'

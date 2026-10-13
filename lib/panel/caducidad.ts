@@ -84,6 +84,23 @@ function claimsDe(s: Session): Claims | null {
   }
 }
 
+/**
+ * La última vez que esta persona DEMOSTRÓ quién es —contraseña, Google, enlace
+ * del correo—, en milisegundos. `null` si el token no lo dice.
+ *
+ * Lo usa el bloqueo del asistente (components/panel/asistente/useBloqueo.ts).
+ * `token_refresh` no cuenta por lo mismo que no cuenta como actividad: ocurre
+ * solo, sin nadie delante.
+ */
+export function ultimaAutenticacion(s: Session | null): number | null {
+  if (!s) return null;
+  const veces = (claimsDe(s)?.amr ?? [])
+    .filter((a) => a.method !== 'token_refresh')
+    .map((a) => a.timestamp ?? 0)
+    .filter((t) => t > 0);
+  return veces.length ? Math.max(...veces) * 1000 : null;
+}
+
 /** Lo guardado de ESTA sesión: cuándo empezó y la última vez que alguien tocó algo. */
 interface Registro {
   sid: string;

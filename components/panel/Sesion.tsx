@@ -49,6 +49,11 @@ interface Estado {
   reconectando: boolean;
   elegirCompania: (id: string) => void;
   salir: () => Promise<void>;
+  /**
+   * Cerrar sesión en TODOS los dispositivos. Lo primero que hace el dueño si
+   * le roban el equipo. Devuelve false si no se pudo: ver abajo.
+   */
+  salirDeTodos: () => Promise<boolean>;
 }
 
 const Ctx = createContext<Estado | null>(null);
@@ -388,6 +393,35 @@ export function ProveedorSesion({ children }: { children: React.ReactNode }) {
         setCompanyId(null);
         setEsAdminPlataforma(false);
         router.replace('/login');
+      },
+      /**
+       * `scope: 'global'`: revoca los refresh tokens de TODAS las sesiones de
+       * esta cuenta, esta incluida.
+       *
+       * ⚠️ Si falla NO se sale, al revés que en `salir`. Allí, sin red, basta
+       * con borrar la sesión de este navegador. Aquí lo que se quiere es echar
+       * a OTRO equipo, y eso solo lo hace el servidor: salir de este y decir
+       * «hecho» dejaría al ladrón dentro y al dueño tranquilo.
+       *
+       * ⚠️ El otro equipo no cae en el acto: su token de acceso sigue valiendo
+       * hasta que caduca (una hora, como mucho, con el ajuste por defecto de
+       * Supabase). Lo que pierde ya es la capacidad de renovarlo.
+       */
+      salirDeTodos: async () => {
+        try {
+          const { error } = await supabase().auth.signOut({ scope: 'global' });
+          if (error) return false;
+        } catch {
+          return false;
+        }
+        setReconectando(false);
+        olvidarActividad();
+        localStorage.removeItem(CLAVE_COMPANIA);
+        setCompanias([]);
+        setCompanyId(null);
+        setEsAdminPlataforma(false);
+        router.replace('/login');
+        return true;
       },
     };
   }, [session, companias, companyId, esAdminPlataforma, cargando, reconectando, router]);

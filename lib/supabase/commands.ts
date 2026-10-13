@@ -48,6 +48,13 @@ export type TipoComando =
   | 'resolve_escalation'
   | 'add_member'
   /**
+   * El equipo de un negocio (13-oct-2026). Los dos, SOLO el dueño, y nunca
+   * sobre el dueño: un negocio tiene uno, y ni se le cambia el rol ni se le da
+   * de baja. Ver ResultadoCambioDeRol y ResultadoBaja.
+   */
+  | 'cambiar_rol_miembro'
+  | 'quitar_miembro'
+  /**
    * Retargeting: «ya le escribí a este cliente».
    *
    * ⚠️ Es el único comando que NO se manda con la compañía activa de la sesión.
@@ -103,7 +110,17 @@ export type TipoComando =
    * sueldo es un gasto con categoria 'adelanto'.
    */
   | 'upsert_gasto'
-  | 'delete_gasto';
+  | 'delete_gasto'
+  /**
+   * El dueño le pregunta a Mia por su negocio, escribiendo o hablando:
+   * `{ pregunta }` o `{ audio: { base64, mime } }`, más `con_voz?`. Ver
+   * RespuestaAsistente y lib/panel/asistente.ts.
+   *
+   * ⚠️ No lleva rol ni usuario: el bot los saca de `created_by` y de
+   * `memberships`. Y es el único comando cuyo `result` es dinero del negocio:
+   * con la migración 0037 del bot, la fila solo la lee quien la creó.
+   */
+  | 'preguntar_asistente';
 
 /**
  * ⚠️ `ignored` NO significa "rechazado". Significa "esto no cambió".
@@ -285,12 +302,85 @@ export interface ResultadoBloqueo {
   citas_afectadas: { id: string; slot_start: string; service: string | null; lead_id: string }[];
 }
 
+/**
+ * El audio de una respuesta del asistente.
+ *
+ * ⚠️ Llega en DOS TIEMPOS. `encolar` resuelve con el texto y, si se pidió voz,
+ * con `generando`: el audio tarda unos segundos más y aparece SOBRE LA MISMA
+ * FILA de `commands`, así que hay que releerla (ver esperarAudio en
+ * lib/panel/asistente.ts).
+ *
+ * `url` es un enlace firmado que caduca a los 10 minutos (`expira_en`, en
+ * segundos): se descarga al recibirlo y se reproduce desde memoria.
+ */
+export type AudioAsistente =
+  | null
+  | { estado: 'generando' }
+  | { estado: 'sin_audio' }
+  | { estado: 'listo'; url: string; mime: 'audio/mpeg'; hablado: string; expira_en: number };
+
+/**
+ * Lo que devuelve `preguntar_asistente`.
+ *
+ * ⚠️ Texto y audio NO son la misma respuesta en dos formatos: `respuesta` trae
+ * los datos y el audio los comenta. Por eso `audio.hablado` no se pinta debajo
+ * del texto como si fuera más respuesta.
+ */
+export interface RespuestaAsistente {
+  /** El id del comando: sirve para ir a buscar el audio. */
+  id: string;
+  respuesta: string;
+  /** Si se mandó un audio: lo que Mia entendió. */
+  transcripcion: string | null;
+  audio: AudioAsistente;
+}
+
 export interface ResultadoAddMember {
   email: string;
   user_id: string;
   ya_existia: boolean;
   /** null si la persona YA tenía cuenta: su contraseña no se toca. */
   password_temporal: string | null;
+  /**
+   * El rol con el que QUEDA, que no siempre es el que se pidió: si ya era del
+   * negocio (`ya_era_miembro`), el bot no le cambia el rol y devuelve el que
+   * tenía. Anunciar «ahora es administrador» sin mirarlo sería mentira.
+   */
+  role: string;
+  ya_era_miembro: boolean;
+}
+
+/**
+ * Lo que devuelve `cambiar_rol_miembro` · payload `{ user_id, role }`, con
+ * `role` = `member` (empleado) o `admin` (administrador).
+ *
+ * ⚠️ Tras el comando se pinta `ahora`, NO se relee `equipo_listar`: el cambio
+ * sube a Postgres por el espejo y tarda unos segundos, así que una relectura
+ * inmediata puede traer el rol viejo y la pantalla diría que no cambió.
+ */
+export interface ResultadoCambioDeRol {
+  user_id: string;
+  email: string | null;
+  antes: string;
+  ahora: 'member' | 'admin';
+  /** false = ya tenía ese rol. No es un error. */
+  cambio: boolean;
+}
+
+/**
+ * Lo que devuelve `quitar_miembro` · payload `{ user_id }`.
+ *
+ * Al revés que el cambio de rol, esto SÍ se puede releer: el bot borra primero
+ * la fila de Postgres y contesta después. Cuando llega el `done`, esa persona
+ * ya no lee nada del negocio aunque siga con el panel abierto.
+ *
+ * Se quita el acceso a ESTE negocio; la cuenta no se borra, puede ser de otro.
+ */
+export interface ResultadoBaja {
+  user_id: string;
+  email: string | null;
+  /** false = ya no era de este negocio (un doble clic). No es un error. */
+  quitado: boolean;
 }
 
 /**

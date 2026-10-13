@@ -93,6 +93,23 @@ async function cabeceras() {
     { source: '/callback', headers: CABECERAS_PRIVADAS },
     // Fideliza: tarjeta /m/, service worker y cámara en /panel. Ver el módulo.
     ...cabecerasFideliza(CABECERAS_PRIVADAS),
+    /**
+     * El asistente (/panel/asistente) graba la pregunta con el micrófono. Sin
+     * esto, `microphone=()` hace que getUserMedia falle con «Permission denied»
+     * SIN LLEGAR A PREGUNTAR: el botón del micro desaparece y parece que el
+     * usuario lo denegó.
+     *
+     * En TODO /panel por lo mismo que la cámara de Fideliza: la política se
+     * fija al cargar el documento, y al asistente se llega navegando desde el
+     * dashboard. Solo `self`: ningún iframe ni tercero puede pedirlo.
+     *
+     * ⚠️ Va DESPUÉS de Fideliza porque la última gana, y por eso repite su
+     * `camera=(self)`: quitarlo de aquí apagaría el escáner de la caja.
+     */
+    ...['/panel', '/panel/:path*'].map((source) => ({
+      source,
+      headers: [{ key: 'Permissions-Policy', value: 'camera=(self), microphone=(self), geolocation=(), interest-cohort=()' }],
+    })),
   ];
 }
 

@@ -1,11 +1,13 @@
 'use client';
 
 import { useEffect, useId, useRef, useState } from 'react';
-import { ChevronDown, FlaskConical, LogOut } from 'lucide-react';
+import { ChevronDown, FlaskConical, LogOut, ShieldOff } from 'lucide-react';
 
 /** Menú de cuenta compartido: el contenedor no depende de la sesión para poder probarlo. */
-export default function CuentaPanel({ email, pie, demo, alDemo, alSalir }: {
+export default function CuentaPanel({ email, pie, demo, alDemo, alSalir, alSalirDeTodos }: {
   email: string; pie: string; demo: boolean; alDemo: () => void; alSalir: () => void;
+  /** «Cerrar sesión en todos los dispositivos». Sin él, la opción no sale. */
+  alSalirDeTodos?: () => void;
 }) {
   const [abierto, setAbierto] = useState(false);
   const caja = useRef<HTMLDivElement>(null);
@@ -53,6 +55,9 @@ export default function CuentaPanel({ email, pie, demo, alDemo, alSalir }: {
         <button type="button" role="menuitem" className="menu-cuenta__salir" onClick={() => { cerrar(); alSalir(); }}>
           <LogOut size={16} /> Cerrar sesión
         </button>
+        {alSalirDeTodos && <button type="button" role="menuitem" className="menu-cuenta__salir" onClick={() => { cerrar(); alSalirDeTodos(); }}>
+          <ShieldOff size={16} /> Cerrar sesión en todos los dispositivos
+        </button>}
       </div>}
     </div>
   );

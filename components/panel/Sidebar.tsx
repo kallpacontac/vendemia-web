@@ -23,6 +23,7 @@ import {
   Send,
   Factory,
   Settings,
+  Sparkles,
   UserCog,
   Users,
   Wallet,
@@ -31,6 +32,8 @@ import { useSesion } from './Sesion';
 import MarcaMia from './MarcaMia';
 import { useCargar } from './useCargar';
 import { esRutaGlobal } from '@/lib/panel/rutas';
+import { puedeUsarAsistente } from '@/lib/panel/asistente';
+import { rolDeNegocio } from '@/lib/panel/roles';
 import { esAppointmentFamily, esCita, esEcommerce, esRecurrente } from '@/lib/panel/modo';
 import { vocabulario } from '@/lib/panel/vocabulario';
 import { estadoConsumo } from '@/lib/panel/consumo';
@@ -40,6 +43,10 @@ import type { BusinessMode } from '@/lib/supabase/types';
 
 const NAV = [
   { href: '/panel', icon: LayoutDashboard, label: 'Dashboard' },
+  // El dueño le pregunta a Mia por su negocio. Se enseña en cualquier plan
+  // —quien decide si hay asistente es el bot—, pero no al empleado: ver
+  // puedeUsarAsistente en lib/panel/asistente.ts.
+  { href: '/panel/asistente', icon: Sparkles, label: 'Asistente', sinEmpleado: true },
   { href: '/panel/mensajes', icon: MessageCircle, label: 'Mensajes' },
   { href: '/panel/leads', icon: Users, label: 'Leads' },
   { href: '/panel/retargeting', icon: Send, label: 'Retargeting' },
@@ -108,7 +115,7 @@ export default function Sidebar({
   modo?: BusinessMode | null;
 }) {
   const ruta = usePathname();
-  const { salir, esAdminPlataforma } = useSesion();
+  const { salir, compania, esAdminPlataforma } = useSesion();
   const [masAbierto, setMasAbierto] = useState(false);
 
   // Al cambiar de pantalla la hoja se cierra: ya cumplió.
@@ -117,6 +124,7 @@ export default function Sidebar({
   const nav = NAV.filter((n) => {
     if ('soloAdmin' in n && n.soloAdmin && !esAdminPlataforma) return false;
     if (soloGlobal) return esRutaGlobal(n.href);
+    if ('sinEmpleado' in n && n.sinEmpleado && !puedeUsarAsistente(rolDeNegocio(compania?.rol))) return false;
     // modo == null cubre undefined (primer render) Y null (compañía sin modo
     // asignado): en los dos casos se enseña de más, nunca de menos.
     if (!n.sirveA || modo == null) return true;
@@ -138,7 +146,7 @@ export default function Sidebar({
 
   const rutaOperacion = esEcommerce(modo) ? '/panel/pedidos' : '/panel/agenda';
   const rail = nav.filter((n) =>
-    ['/panel', '/panel/mensajes', rutaOperacion, '/panel/leads', '/panel/caja', '/panel/configuracion'].includes(n.href),
+    ['/panel', '/panel/asistente', '/panel/mensajes', rutaOperacion, '/panel/leads', '/panel/caja', '/panel/configuracion'].includes(n.href),
   );
   const railExtra = nav.filter((n) => !rail.some((r) => r.href === n.href));
   const railExtraActiva = railExtra.some((n) => esActivo(n.href));

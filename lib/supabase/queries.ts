@@ -161,6 +161,45 @@ export async function soyAdminPlataforma(): Promise<boolean> {
   return data === true;
 }
 
+/* ── El equipo ──────────────────────────────────────────────────────────── */
+
+export interface Miembro {
+  auth_user_id: string;
+  /** null si la cuenta ya no existe. */
+  email: string | null;
+  /** `owner` | `admin` | `member` | `agent`. Qué es cada uno: lib/panel/roles.ts. */
+  role: string;
+  desde: string;
+  eres_tu: boolean;
+}
+
+/**
+ * Quién tiene acceso a un negocio: el dueño primero, después por correo.
+ *
+ * Sale de `equipo_listar`, una función y no la tabla: por RLS cada uno lee solo
+ * SU fila de `memberships`, y el correo vive en `auth.users`. Funciona con el
+ * bot apagado.
+ *
+ * ⚠️ Solo el dueño (o un admin de la plataforma) recibe la lista. A cualquier
+ * otro le llega `[]`, SIN error: no hay que distinguir «no puedes» de «no hay
+ * nadie», y con `[]` la sección no se pinta.
+ *
+ * `null` es otra cosa: la función todavía no existe (falta la migración 0040
+ * del bot). La pantalla sigue con lo que tenía —dar acceso— en vez de romperse.
+ *
+ * En demo tampoco hay lista: son correos de personas reales, y el modo demo
+ * existe para no enseñar nada real delante de un cliente.
+ */
+export async function getEquipo(companyId: string): Promise<Miembro[] | null> {
+  if (demoActivo()) return null;
+  const { data, error } = await supabase().rpc('equipo_listar', { p_company: companyId });
+  if (error) {
+    if (error.code === 'PGRST202' || error.code === '42883') return null;
+    throw error;
+  }
+  return (data ?? []) as Miembro[];
+}
+
 /* ── La compañía ────────────────────────────────────────────────────────── */
 
 export interface Compania extends CompanyRow {
