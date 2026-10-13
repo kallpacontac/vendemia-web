@@ -133,7 +133,14 @@ métricas y los ajustes. Para que nadie se quede sin poder trabajar:
    «Sin asignar».
 
 **El corte va una semana después de que el aviso de la fase 3 esté en producción** (Alvaro,
-13-oct-2026). El día concreto sale de ahí: se le pone al aviso cuando se despliegue, y no antes.
+13-oct-2026). El aviso está construido y anuncia el **21 de octubre de 2026**: da la semana si llega
+a producción el 13 o el 14. La fecha es `CORTE_DE_ROLES` en `lib/panel/roles.ts`; si el despliegue se
+retrasa, hay que moverla.
+
+El aviso sale en dos sitios: una píldora en la barra de arriba de todo el panel, solo para el dueño
+que tiene a alguien más en el negocio (se puede cerrar), y el texto completo en «Acceso del equipo»,
+para el dueño y el administrador. Llegar la fecha no hace nada por sí solo: el corte se despliega a
+mano, y entonces el aviso se quita.
 
 Antes de la fase 3, contar a cuánta gente afecta:
 `select role, count(*) from memberships group by role;`
@@ -146,7 +153,7 @@ Antes de la fase 3, contar a cuánta gente afecta:
 | 1 | `components/panel/Equipo.tsx` | elegir la ficha al dar acceso a un empleado |
 | 2 | `components/panel/Equipo.tsx`, Ajustes | la sección para el administrador, con botones solo en empleados |
 | 2 | `modules/fideliza/sql` | `loyalty_role`: administrador → encargado por defecto |
-| 3 | `components/panel/Equipo.tsx` | el aviso de clasificación, con la fecha |
+| 3 | `components/panel/Equipo.tsx`, `Topbar.tsx`, `lib/panel/roles.ts` | el aviso de clasificación, con la fecha. **Hecho** |
 | 4 | `components/panel/Sidebar.tsx`, `Topbar.tsx` | el menú por permiso |
 | 4 | `app/(panel)/panel/*` | «no es para ti» donde hoy saldría una tabla vacía |
 | 4 | `agenda`, `comisiones` | la vista «mía» del empleado; comisiones en solo lectura para el administrador |

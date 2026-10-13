@@ -799,6 +799,16 @@ a{color:inherit;text-decoration:none}
 .miembro .who{flex:1;min-width:0}
 .miembro .who b{font-size:14px;display:block}
 .miembro .who small{color:var(--ink-soft);font-size:12px}
+/* El aviso del corte de roles. Ver AvisoDelCorte en components/panel/Equipo.tsx. */
+.equipo-aviso{background:#FFF4E5;border:1px solid #FFD9A8;color:#5F3600;border-radius:12px;padding:14px 16px;margin-bottom:14px;font-size:13px;line-height:1.55}
+.equipo-aviso p{margin:6px 0 0}
+.equipo-aviso ul{margin:6px 0 0;padding-left:18px}
+.equipo-aviso li{margin-top:4px}
+.equipo-aviso__cuenta{font-weight:700}
+.equipo__pendiente{color:#8A4B00!important;font-weight:600}
+.wa-pill--aviso a{color:inherit;text-decoration:none}
+.wa-pill__cerrar{border:none;background:none;color:inherit;font-size:16px;line-height:1;cursor:pointer;padding:0 0 0 4px;opacity:.7}
+.wa-pill__cerrar:hover{opacity:1}
 /* El equipo: quién entra y como qué. Ver components/panel/Equipo.tsx. */
 .equipo{list-style:none;margin:0 0 14px;border:1px solid var(--line);border-radius:12px;overflow:hidden}
 .equipo__fila{display:flex;align-items:center;gap:10px;padding:9px 12px;border-bottom:1px solid var(--line);font-size:13px}

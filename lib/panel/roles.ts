@@ -96,3 +96,30 @@ const MATRIZ: Record<RolNegocio, readonly Permiso[]> = {
 
 export const rolPuede = (rol: RolNegocio | null, permiso: Permiso): boolean =>
   rol !== null && MATRIZ[rol].includes(permiso);
+
+/* ── El corte ───────────────────────────────────────────────────────────── */
+
+/**
+ * El día en que cada persona pasa a ver solo lo que le toca (la fase 4 del
+ * plan, docs/PLAN-ROLES.md). `null` = no hay corte anunciado y el aviso no sale.
+ *
+ * Regla de Alvaro (13-oct-2026): UNA SEMANA después de que los dueños vean el
+ * aviso. Está puesto para que esto llegue a producción el 13 o el 14 de
+ * octubre; ⚠️ si se despliega más tarde, hay que mover esta fecha, o el aviso
+ * prometerá menos de una semana.
+ *
+ * ⚠️ Esto solo ANUNCIA. El corte no ocurre solo al llegar el día: lo despliegan
+ * a mano el bot (políticas y comandos) y el panel, y entonces esta constante y
+ * el aviso se quitan.
+ */
+export const CORTE_DE_ROLES: string | null = '2026-10-21';
+
+/** El corte anunciado, listo para escribir: «21 de octubre». `null` si no hay. */
+export function corteDeRoles(ahora: Date = new Date()): { dia: string; pasado: boolean } | null {
+  if (!CORTE_DE_ROLES) return null;
+  // A mediodía de Lima: así el día no baila con la zona horaria de quien mira.
+  const fecha = new Date(`${CORTE_DE_ROLES}T12:00:00-05:00`);
+  if (Number.isNaN(fecha.getTime())) return null;
+  const dia = new Intl.DateTimeFormat('es-PE', { day: 'numeric', month: 'long', timeZone: 'America/Lima' }).format(fecha);
+  return { dia, pasado: ahora.getTime() > fecha.getTime() + 12 * 3600 * 1000 };
+}

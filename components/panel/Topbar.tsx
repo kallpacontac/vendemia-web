@@ -14,7 +14,7 @@
  * puede arreglar: hay que re-emparejar el WhatsApp y eso se hace con su
  * teléfono delante.
  */
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Bell } from 'lucide-react';
 import CuentaPanel from './CuentaPanel';
@@ -28,6 +28,9 @@ import { necesitaEmparejar, useSalud } from './Salud';
 import { BotonDemo, useDemo } from './Demo';
 import { alternarDemo } from '@/lib/panel/demo';
 import { esEcommerce, esRecurrente } from '@/lib/panel/modo';
+import { CORTE_DE_ROLES, corteDeRoles } from '@/lib/panel/roles';
+import { getEquipo } from '@/lib/supabase/queries';
+import { useCargar } from './useCargar';
 
 /**
  * Silencio mientras todo va bien: devuelve `null` en todos los casos menos
@@ -46,6 +49,70 @@ function AvisoWhatsApp() {
   return (
     <div className="wa-pill wa-pill--aviso" title="Escríbenos y lo dejamos vinculado en un minuto.">
       Hay que volver a vincular el WhatsApp
+    </div>
+  );
+}
+
+/**
+ * ══════════════════════════════════════════════════════════════════════════
+ * EL AVISO DEL CORTE DE ROLES · solo al dueño, y solo si tiene a quién clasificar
+ * ══════════════════════════════════════════════════════════════════════════
+ *
+ * La explicación entera está en Ajustes › «Acceso del equipo»
+ * (components/panel/Equipo.tsx), pero esa sección vive plegada en el tercer
+ * paso de Ajustes: sin esto, el dueño se enteraría del cambio el día que su
+ * recepcionista le dijera que ya no ve la caja.
+ *
+ * Rompe a propósito la regla de esta barra —callada mientras todo va bien—
+ * porque es justo el otro caso que el cliente tiene que saber y que sin él no
+ * se puede arreglar. Y por eso se puede cerrar: una vez leído, no vuelve.
+ *
+ * Solo sale si en el negocio entra alguien más que el dueño: quien trabaja solo
+ * no tiene nada que clasificar.
+ */
+const CLAVE_AVISO_CORTE = 'vendemia_aviso_corte';
+
+function AvisoCorteDeRoles() {
+  const { companyId, rol } = useSesion();
+  const demo = useDemo();
+  const corte = corteDeRoles();
+  const pregunto = rol === 'dueno' && corte !== null && !corte.pasado && !demo;
+  const { datos: acompanado } = useCargar(
+    async () => (pregunto && companyId ? ((await getEquipo(companyId).catch(() => null)) ?? []).length > 1 : false),
+    [pregunto, companyId],
+  );
+  const [cerrado, setCerrado] = useState(true);
+  useEffect(() => {
+    try {
+      setCerrado(localStorage.getItem(CLAVE_AVISO_CORTE) === CORTE_DE_ROLES);
+    } catch {
+      setCerrado(false);
+    }
+  }, []);
+
+  if (!pregunto || !corte || !acompanado || cerrado) return null;
+
+  return (
+    <div className="wa-pill wa-pill--aviso">
+      <Link href="/panel/configuracion?paso=3&equipo=1">
+        El {corte.dia} cambia lo que ve tu equipo · <u>Revísalo</u>
+      </Link>
+      <button
+        type="button"
+        className="wa-pill__cerrar"
+        aria-label="Cerrar este aviso"
+        onClick={() => {
+          setCerrado(true);
+          try {
+            // Atado a la fecha: si el corte se mueve, el aviso vuelve a salir.
+            localStorage.setItem(CLAVE_AVISO_CORTE, CORTE_DE_ROLES ?? '');
+          } catch {
+            /* sin almacenamiento, se cierra solo hasta recargar */
+          }
+        }}
+      >
+        ×
+      </button>
     </div>
   );
 }
@@ -175,7 +242,7 @@ export default function Topbar({
   return (
     <CabeceraPanel titulo={titulo} sub={sub} accionesTitulo={accionesTitulo}
       navegacion={<NavegacionPanel />}
-      avisos={<>{children}<BotonDemo /><AvisoWhatsApp /></>}
+      avisos={<>{children}<BotonDemo /><AvisoCorteDeRoles /><AvisoWhatsApp /></>}
       cuenta={<><SelectorCompania /><div className="icon-btn" aria-hidden="true"><Bell size={18} /></div><MenuCuenta email={email} pie={pie} /></>}
     />
   );

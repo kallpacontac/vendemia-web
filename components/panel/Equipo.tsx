@@ -50,7 +50,7 @@ import Confirmar from './Confirmar';
 import { useSesion } from './Sesion';
 import { useComando } from './Avisos';
 import { useCargar } from './useCargar';
-import { nombreDeRol, rolDeNegocio } from '@/lib/panel/roles';
+import { corteDeRoles, nombreDeRol, rolDeNegocio } from '@/lib/panel/roles';
 import { getEquipo, getTrabajadores, type Miembro } from '@/lib/supabase/queries';
 import type {
   ResultadoAddMember,
@@ -152,6 +152,15 @@ export default function Equipo({ sinLista }: { sinLista: number }) {
         {fichas.length > 0 && lista.length > 0 && ' La ficha dice quién es cada uno en el equipo: es lo que hace que una cita sea suya.'}
       </p>
 
+      {gestiono && lista.length > 1 && (
+        <AvisoDelCorte
+          soyDueno={soyDueno}
+          hayFichas={fichas.length > 0}
+          empleados={lista.filter((m) => rolDeNegocio(rolDe(m)) === 'empleado').length}
+          sinFicha={lista.filter((m) => rolDeNegocio(rolDe(m)) === 'empleado' && !fichaDe(m)).length}
+        />
+      )}
+
       {lista.length > 0 && (
         <ul className="equipo">
           {lista.map((m) => {
@@ -167,6 +176,10 @@ export default function Equipo({ sinLista }: { sinLista: number }) {
                 <span className="equipo__quien">
                   <b>{m.email ?? 'Cuenta eliminada'}</b>
                   {m.eres_tu && <small> · tú</small>}
+                  {/* Lo que queda por clasificar antes del corte. */}
+                  {suRol === 'empleado' && !ficha && fichas.length > 0 && corteDeRoles() && (
+                    <small className="equipo__pendiente"> · sin ficha: solo verá las citas sin asignar</small>
+                  )}
                 </span>
 
                 {cambioSuRol ? (
@@ -249,6 +262,75 @@ export default function Equipo({ sinLista }: { sinLista: number }) {
           />,
           document.body,
         )}
+    </div>
+  );
+}
+
+/**
+ * ══════════════════════════════════════════════════════════════════════════
+ * EL AVISO DEL CORTE · la fase 3 del plan de roles
+ * ══════════════════════════════════════════════════════════════════════════
+ *
+ * Hoy todo el que entra ve lo mismo que el dueño. El día del corte deja de ser
+ * así, y quien no esté bien clasificado se queda sin poder trabajar: un
+ * administrador marcado como empleado pierde la caja; un barbero sin ficha no
+ * ve ninguna de sus citas.
+ *
+ * Por eso el aviso no explica el sistema de roles: dice QUÉ deja de ver cada
+ * uno, CUÁNDO, y las dos cosas que hay que hacer antes, que son justo los dos
+ * controles de la lista de debajo (el rol y la ficha).
+ *
+ * Al administrador se le dice solo lo de las fichas: el rol no lo cambia él.
+ *
+ * Solo sale si hay a quién clasificar —un negocio donde entra el dueño y nadie
+ * más no tiene nada que hacer— y mientras haya corte anunciado
+ * (`CORTE_DE_ROLES` en lib/panel/roles.ts).
+ */
+function AvisoDelCorte({
+  soyDueno,
+  hayFichas,
+  empleados,
+  sinFicha,
+}: {
+  soyDueno: boolean;
+  hayFichas: boolean;
+  empleados: number;
+  sinFicha: number;
+}) {
+  const corte = corteDeRoles();
+  if (!corte) return null;
+  const cuando = corte.pasado ? 'Muy pronto' : `A partir del ${corte.dia}`;
+
+  return (
+    <div className="equipo-aviso" role="note">
+      <b>{cuando}, cada persona verá solo lo que le toca.</b>
+      <p>Hoy todos los que entran ven lo mismo que {soyDueno ? 'tú' : 'el dueño'}. Desde ese día:</p>
+      <ul>
+        <li>
+          <b>El empleado</b> verá sus citas y las que no tienen a nadie asignado, con el nombre y las notas
+          del cliente (sin su teléfono), y su comisión. Deja de ver la caja, los mensajes, las métricas y los
+          ajustes.
+        </li>
+        <li>
+          <b>El administrador</b> lleva el día a día: agenda, clientes, mensajes, caja y catálogo, y ve las
+          comisiones sin poder cambiarlas. No ve las métricas ni cambia los métodos de pago.
+        </li>
+      </ul>
+      <p>
+        <b>Antes de ese día, revisa la lista de abajo:</b>{' '}
+        {soyDueno && 'pasa a Administrador a quien lleve el negocio contigo. '}
+        {hayFichas
+          ? `${soyDueno ? 'Y a' : 'A'} cada empleado ponle su ficha: quien se quede sin ella solo verá las citas sin asignar.`
+          : soyDueno
+            ? 'Los demás quedan como empleados.'
+            : 'Los empleados verán todas las clases, sin importes.'}
+      </p>
+      {empleados > 0 && (
+        <p className="equipo-aviso__cuenta">
+          Ahora mismo: {empleados} {empleados === 1 ? 'empleado' : 'empleados'}
+          {hayFichas && `, ${sinFicha === 0 ? 'todos con su ficha' : `${sinFicha} sin ficha`}`}.
+        </p>
+      )}
     </div>
   );
 }

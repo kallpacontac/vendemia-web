@@ -31,7 +31,7 @@
  *     El emparejamiento se hace en persona. Si `status = needs_qr`, lo único
  *     que puede hacer el panel es avisar.
  */
-import { Suspense, useEffect, useMemo, useState } from 'react';
+import { Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import AvisosCelular from '@/components/panel/AvisosCelular';
@@ -242,12 +242,40 @@ function Configuracion() {
     const p = Number(parametros.get('paso'));
     return p >= 1 && p <= 4 ? p : 1;
   });
+
+  /**
+   * `?equipo=1`: el aviso de la barra superior trae aquí al dueño. «Acceso del
+   * equipo» vive plegado dentro del paso 3, donde nadie lo iba a encontrar, así
+   * que se abre el paso, se despliega y se lleva a la vista.
+   *
+   * Es un efecto y no solo el valor inicial: si ya estaba en Ajustes, el enlace
+   * cambia la URL sin volver a montar la página.
+   */
+  const irAlEquipo = parametros.get('equipo') === '1';
+  const seccionEquipo = useRef<HTMLDetailsElement>(null);
+
   const [form, setForm] = useState<Formulario | null>(null);
   const [horario, setHorario] = useState<Horario>({});
   const [pagos, setPagos] = useState<MetodoPago[]>([]);
   const [preguntas, setPreguntas] = useState<PreguntaObligatoria[]>([]);
   const [pideEmpleado, setPideEmpleado] = useState(false);
   const [guardando, setGuardando] = useState(false);
+
+  const cargado = form !== null;
+  useEffect(() => {
+    if (!irAlEquipo) return;
+    setPaso(3);
+    // Tras el render del paso 3, que es cuando la sección existe.
+    const t = setTimeout(() => {
+      const d = seccionEquipo.current;
+      if (!d) return;
+      d.open = true;
+      d.scrollIntoView({ block: 'start', behavior: 'smooth' });
+    }, 80);
+    return () => clearTimeout(t);
+    // `cargado`: mientras el formulario no llega, la página enseña «Cargando…»
+    // y la sección todavía no existe.
+  }, [irAlEquipo, cargado]);
   /**
    * La foto de cómo estaba todo al cargar. Es lo único que distingue "esto no
    * cambió" de "el bot lo rechazó" cuando llega la respuesta del comando.
@@ -1015,7 +1043,7 @@ function Configuracion() {
               de la plataforma ve la lista, sin botones: `equipo_listar` se la
               da, pero los comandos no los puede encolar. Al empleado ni se le
               pinta. Ver components/panel/Equipo.tsx. */}
-          {(rol === 'dueno' || rol === 'admin' || esAdminPlataforma) && <details className="cfg-advanced cfg-advanced--section"><summary>Acceso del equipo</summary><Equipo sinLista={datos?.miembros.length ?? 0} /></details>}
+          {(rol === 'dueno' || rol === 'admin' || esAdminPlataforma) && <details ref={seccionEquipo} className="cfg-advanced cfg-advanced--section"><summary>Acceso del equipo</summary><Equipo sinLista={datos?.miembros.length ?? 0} /></details>}
 
           <div className="nav-btns">
             <button className="btn btn-ghost" onClick={() => setPaso(2)}>
