@@ -145,6 +145,42 @@ mano, y entonces el aviso se quita.
 Antes de la fase 3, contar a cuánta gente afecta:
 `select role, count(*) from memberships group by role;`
 
+## El día del corte (21 de octubre de 2026)
+
+En este orden. El porqué, en `docs/prompt-bot-roles-fase4.md`:
+
+1. Alvaro pone `NEXT_PUBLIC_ROLES_EN_VIGOR=1` en Vercel y redespliega. El panel pasa a repartir por
+   rol y el aviso se quita solo.
+2. Se aplica la migración de las políticas (bot).
+3. El bot pasa de avisar a rechazar los comandos.
+
+Si algo sale mal, se deshace en el orden contrario; lo del panel es quitar la variable y redesplegar.
+
+### Lo que ya hace el panel con el interruptor encendido
+
+- El menú, las pestañas y una guardia por pantalla, los tres desde la misma tabla
+  (`lib/panel/rutas.ts`). Quien entra por la URL a una pantalla que no es suya ve «no es para tu
+  rol», con el camino a lo suyo.
+- Cada uno entra por su portada: el dueño, el Dashboard; el administrador, la Agenda (o Pedidos en
+  una tienda); el empleado, Mi agenda.
+- «Mi agenda» (`app/(panel)/panel/mi-agenda`): sus citas y las «Sin asignar», las notas del
+  cliente sin contacto, y «vino / no vino». En una academia, los grupos con sus alumnos.
+- «Mi comisión» (`app/(panel)/panel/mi-comision`), con el mismo cálculo que el dueño.
+- El empleado ya no depende de `companies`: el nombre y el tipo de negocio le llegan por
+  `mi_negocio`.
+
+### Lo que falta en el panel antes del 21
+
+- **Esconderle al administrador lo que no puede cambiar:** métodos de pago y teléfonos en Ajustes, y
+  el porcentaje de comisión en Empleados y en Catálogo. Hoy los ve editables; al guardar, el bot no
+  los aplica y el panel dice «esto solo lo cambia el dueño». Funciona, pero es feo.
+- **Repasar las pantallas del administrador** por si alguna lee además una vista de métricas: ese
+  trozo le saldría vacío.
+- **El catálogo en solo lectura para el empleado.** Hoy sencillamente no entra.
+- **«Mi comisión» depende del bot:** hasta que `catalogo_del_equipo` le dé las comisiones por
+  servicio, el número sale con su porcentaje general. La pantalla lo avisa.
+- **Probarlo todo con cuentas reales** de los tres roles. Hasta ahora, solo con Supabase simulado.
+
 ## Qué toca cada fase en este repo
 
 | Fase | Dónde | Qué |
@@ -154,9 +190,9 @@ Antes de la fase 3, contar a cuánta gente afecta:
 | 2 | `components/panel/Equipo.tsx`, Ajustes | la sección para el administrador, con botones solo en empleados |
 | 2 | `modules/fideliza/sql` | `loyalty_role`: administrador → encargado por defecto |
 | 3 | `components/panel/Equipo.tsx`, `Topbar.tsx`, `lib/panel/roles.ts` | el aviso de clasificación, con la fecha. **Hecho** |
-| 4 | `components/panel/Sidebar.tsx`, `Topbar.tsx` | el menú por permiso |
+| 4 | `components/panel/Sidebar.tsx`, `Topbar.tsx`, `lib/panel/rutas.ts`, `app/(panel)/layout.tsx` | el menú y la guardia por permiso. **Hecho, detrás del interruptor** |
 | 4 | `app/(panel)/panel/*` | «no es para ti» donde hoy saldría una tabla vacía |
-| 4 | `agenda`, `comisiones` | la vista «mía» del empleado; comisiones en solo lectura para el administrador |
+| 4 | `mi-agenda`, `mi-comision` | las dos pantallas del empleado. **Hecho, detrás del interruptor** |
 | 4 | `configuracion`, `equipo` | métodos de pago, teléfonos y % de comisión: solo el dueño |
 | 4 | `app/api/cloudinary/firma` | subir fotos de catálogo y marca: administrador o dueño |
 | 4 | `modules/avisos/sql` | suscribirse a los avisos: administrador o dueño |
