@@ -189,13 +189,15 @@ Lo que dijo el bot y conviene saber:
 - El empleado ya no depende de `companies`: el nombre y el tipo de negocio le llegan por
   `mi_negocio`.
 
-### Lo que falta en el panel antes del 21
+- Lo que solo cambia el dueño (métodos de pago, teléfonos, % de comisión en Empleados y Catálogo) le
+  sale en solo lectura al administrador (`soloLeeLoDelDueno` en `lib/panel/roles.ts`).
+- El empleado tiene «Catálogo» (`app/(panel)/panel/mi-catalogo`): precios y duración, sin editar.
 
-- **Esconderle al administrador lo que no puede cambiar:** métodos de pago y teléfonos en Ajustes, y
-  el porcentaje de comisión en Empleados y en Catálogo. Hoy los ve editables; al guardar, el bot no
-  los aplica y el panel dice «esto solo lo cambia el dueño». Funciona, pero es feo.
-- **El catálogo en solo lectura para el empleado.** Hoy sencillamente no entra.
-- **Probarlo todo con cuentas reales** de los tres roles. Hasta ahora, solo con Supabase simulado.
+### Lo que falta antes del 21
+
+- **Aplicar la `0043` del bot.** El panel no tiene credencial de base para hacerlo él.
+- **Probarlo todo con cuentas reales** de los tres roles. Hasta ahora, solo con Supabase simulado;
+  el día del corte lo cubre `npm run smoke:equipo` del bot.
 
 ## Qué toca cada fase en este repo
 

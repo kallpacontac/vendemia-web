@@ -52,6 +52,8 @@ export const esRutaGlobal = (ruta: string): boolean =>
 /** Las pantallas que solo tiene el empleado. */
 export const RUTA_MI_AGENDA = '/panel/mi-agenda';
 export const RUTA_MI_COMISION = '/panel/mi-comision';
+/** El catálogo para mirar, sin editar. El empleado no entra a /panel/catalogo. */
+export const RUTA_MI_CATALOGO = '/panel/mi-catalogo';
 
 const con = (p: Permiso) => (rol: RolNegocio | null) => rolPuede(rol, p);
 
@@ -59,6 +61,8 @@ const con = (p: Permiso) => (rol: RolNegocio | null) => rolPuede(rol, p);
 const PANTALLAS: [string, (rol: RolNegocio | null) => boolean][] = [
   [RUTA_MI_AGENDA, con('agenda.mia')],
   [RUTA_MI_COMISION, con('comisiones.mia')],
+  // Quien puede editar el catálogo tiene el de verdad: esta es solo del empleado.
+  [RUTA_MI_CATALOGO, (rol) => rol === 'empleado' && rolPuede(rol, 'catalogo.ver')],
   ['/panel/asistente', puedeUsarAsistente],
   ['/panel/mensajes', con('clientes.ver')],
   ['/panel/leads', con('clientes.ver')],
@@ -71,7 +75,7 @@ const PANTALLAS: [string, (rol: RolNegocio | null) => boolean][] = [
   ['/panel/pedidos', con('caja.ver')],
   ['/panel/caja', con('caja.ver')],
   // El empleado puede VER el catálogo (`catalogo.ver`), pero esta pantalla es la
-  // de editarlo. Hasta que tenga una de solo lectura, no entra.
+  // de editarlo: él tiene RUTA_MI_CATALOGO.
   ['/panel/catalogo', (rol) => rol !== 'empleado' && rolPuede(rol, 'catalogo.ver')],
   ['/panel/metricas', con('metricas.ver')],
   ['/panel/configuracion', con('bot.ver')],

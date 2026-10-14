@@ -63,6 +63,7 @@ import { useAvisar, useComando } from '@/components/panel/Avisos';
 import { useCargar } from '@/components/panel/useCargar';
 import { supabase } from '@/lib/supabase/client';
 import { esAppointmentFamily, esEcommerce } from '@/lib/panel/modo';
+import { soloLeeLoDelDueno } from '@/lib/panel/roles';
 import { cap, vocabulario } from '@/lib/panel/vocabulario';
 import { getCatalogo, getCompania } from '@/lib/supabase/queries';
 import { b01 } from '@/lib/supabase/parse';
@@ -233,6 +234,8 @@ export default function ConfiguracionPage() {
 
 function Configuracion() {
   const { companyId, rol, esAdminPlataforma } = useSesion();
+  // Pagos y teléfonos: tras el corte, solo los cambia el dueño (el bot no los aplica a nadie más).
+  const delDueno = soloLeeLoDelDueno(rol);
   const { salud } = useSalud();
   const comando = useComando();
   const avisar = useAvisar();
@@ -562,15 +565,16 @@ function Configuracion() {
                 etiqueta="WhatsApp del bot"
                 valor={form.whatsapp_phone}
                 alCambiar={(v) => set('whatsapp_phone', v)}
-                pista="Sin +, así: 51987654321"
+                pista={delDueno ? 'Solo lo cambia el dueño.' : 'Sin +, así: 51987654321'}
+                bloqueado={delDueno}
               />
               <Campo etiqueta="Ubicación / distrito" valor={form.location} alCambiar={(v) => set('location', v)} />
             </div>
             <details className="cfg-advanced">
               <summary>Opciones avanzadas de contacto y presentación</summary>
               <div className="grid-form">
-                <Campo etiqueta="Teléfono del dueño" valor={form.owner_phone} alCambiar={(v) => set('owner_phone', v)} />
-                <Campo etiqueta="Teléfono admin (comandos)" valor={form.admin_phone} alCambiar={(v) => set('admin_phone', v)} />
+                <Campo etiqueta="Teléfono del dueño" valor={form.owner_phone} alCambiar={(v) => set('owner_phone', v)} bloqueado={delDueno} />
+                <Campo etiqueta="Teléfono admin (comandos)" valor={form.admin_phone} alCambiar={(v) => set('admin_phone', v)} bloqueado={delDueno} />
                 <div className="full">
                   <label className="field-label">Descripción del negocio</label>
                   <textarea className="textarea" value={form.business_description} onChange={(e) => set('business_description', e.target.value)} />
@@ -754,6 +758,12 @@ function Configuracion() {
             <h4>
               <Wallet /> Métodos de pago
             </h4>
+            {delDueno && (
+              <p className="muted" style={{ fontSize: 12.5, marginBottom: 8 }}>
+                Solo los cambia el dueño.
+              </p>
+            )}
+            <fieldset disabled={delDueno} style={{ border: 0, padding: 0, margin: 0, minWidth: 0 }}>
             {pagos.map((p, i) => {
               const cfg = PAGOS.find((x) => x.valor === p.type);
               return (
@@ -782,18 +792,21 @@ function Configuracion() {
                     value={p.name ?? ''}
                     onChange={(e) => setPagos((ps) => ps.map((x, j) => (j === i ? { ...x, name: e.target.value } : x)))}
                   />
-                  <Trash2
+                  {!delDueno && <Trash2
                     size={16}
                     className="del"
                     style={{ cursor: 'pointer', color: 'var(--ink-mute)' }}
                     onClick={() => setPagos((ps) => ps.filter((_, j) => j !== i))}
-                  />
+                  />}
                 </div>
               );
             })}
-            <button className="btn btn-ghost btn-sm" onClick={() => setPagos((ps) => [...ps, { type: 'yape' }])}>
-              <Plus size={15} /> Agregar método
-            </button>
+            {!delDueno && (
+              <button className="btn btn-ghost btn-sm" onClick={() => setPagos((ps) => [...ps, { type: 'yape' }])}>
+                <Plus size={15} /> Agregar método
+              </button>
+            )}
+            </fieldset>
           </div>
 
           {/*
@@ -1357,16 +1370,19 @@ function Campo({
   valor,
   alCambiar,
   pista,
+  bloqueado,
 }: {
   etiqueta: string;
   valor: string;
   alCambiar: (v: string) => void;
   pista?: string;
+  /** Se ve, no se edita: lo cambia solo el dueño. Ver soloLeeLoDelDueno. */
+  bloqueado?: boolean;
 }) {
   return (
     <div>
       <label className="field-label">{etiqueta}</label>
-      <input className="input" value={valor} onChange={(e) => alCambiar(e.target.value)} />
+      <input className="input" value={valor} onChange={(e) => alCambiar(e.target.value)} disabled={bloqueado} />
       {pista && (
         <small className="muted" style={{ fontSize: 11.5 }}>
           {pista}

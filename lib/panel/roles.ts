@@ -126,6 +126,18 @@ export const rolesEnVigor = (): boolean => process.env.NEXT_PUBLIC_ROLES_EN_VIGO
 export const puedeVer = (rol: RolNegocio | null, permiso: Permiso): boolean =>
   !rolesEnVigor() || rolPuede(rol, permiso);
 
+/**
+ * ¿Se le enseñan en solo lectura los campos que solo cambia el dueño? Son los
+ * métodos de pago, los teléfonos del negocio y los % de comisión: el bot no se
+ * los aplica a nadie más y devuelve `sin_permiso`. Ofrecérselos editables al
+ * administrador era invitarle a un «esto solo lo cambia el dueño» al guardar.
+ *
+ * Antes del corte, nadie. Al admin de la plataforma (rol `null`) tampoco: es
+ * soporte, y quien decide si se aplica es el bot.
+ */
+export const soloLeeLoDelDueno = (rol: RolNegocio | null): boolean =>
+  rolesEnVigor() && (rol === 'admin' || rol === 'empleado');
+
 /* ── El corte ───────────────────────────────────────────────────────────── */
 
 /**

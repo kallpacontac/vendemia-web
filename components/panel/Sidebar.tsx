@@ -31,7 +31,7 @@ import {
 import { useSesion } from './Sesion';
 import MarcaMia from './MarcaMia';
 import { useCargar } from './useCargar';
-import { RUTA_MI_AGENDA, RUTA_MI_COMISION, esRutaGlobal, rutaPermitida } from '@/lib/panel/rutas';
+import { RUTA_MI_AGENDA, RUTA_MI_CATALOGO, RUTA_MI_COMISION, esRutaGlobal, rutaPermitida } from '@/lib/panel/rutas';
 import { puedeUsarAsistente } from '@/lib/panel/asistente';
 import { puedeVer, rolDeNegocio } from '@/lib/panel/roles';
 import { esAppointmentFamily, esCita, esEcommerce, esRecurrente } from '@/lib/panel/modo';
@@ -47,6 +47,7 @@ const NAV = [
   // para él: quién ve cada entrada lo decide `rutaPermitida` (lib/panel/rutas.ts).
   { href: RUTA_MI_AGENDA, icon: CalendarDays, label: 'Mi agenda', sirveA: esAppointmentFamily },
   { href: RUTA_MI_COMISION, icon: Percent, label: 'Mi comisión', sirveA: esCita },
+  { href: RUTA_MI_CATALOGO, icon: Package, label: 'Catálogo' },
   // El dueño le pregunta a Mia por su negocio. Se enseña en cualquier plan
   // —quien decide si hay asistente es el bot—, pero no al empleado: ver
   // puedeUsarAsistente en lib/panel/asistente.ts.
@@ -153,7 +154,7 @@ export default function Sidebar({
 
   const rutaOperacion = esEcommerce(modo) ? '/panel/pedidos' : '/panel/agenda';
   const rail = nav.filter((n) =>
-    ['/panel', RUTA_MI_AGENDA, RUTA_MI_COMISION, '/panel/asistente', '/panel/mensajes', rutaOperacion, '/panel/leads', '/panel/caja', '/panel/configuracion'].includes(n.href),
+    ['/panel', RUTA_MI_AGENDA, RUTA_MI_COMISION, RUTA_MI_CATALOGO, '/panel/asistente', '/panel/mensajes', rutaOperacion, '/panel/leads', '/panel/caja', '/panel/configuracion'].includes(n.href),
   );
   const railExtra = nav.filter((n) => !rail.some((r) => r.href === n.href));
   const railExtraActiva = railExtra.some((n) => esActivo(n.href));

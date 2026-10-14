@@ -48,6 +48,7 @@ import {
 import Topbar from '@/components/panel/Topbar';
 import AvisarCliente from '@/components/panel/AvisarCliente';
 import { useSesion } from '@/components/panel/Sesion';
+import { soloLeeLoDelDueno } from '@/lib/panel/roles';
 import { useAvisar, useComando } from '@/components/panel/Avisos';
 import { useCargar } from '@/components/panel/useCargar';
 import { diaMes, hora } from '@/lib/panel/format';
@@ -331,6 +332,8 @@ function Ficha({
   const [horario, setHorario] = useState<Horario>(tienePropio ? t.horario : copiaDe(horarioNegocio));
   const [comision, setComision] = useState(String(t.comision_pct ?? 0));
   const [guardando, setGuardando] = useState(false);
+  // El % de comisión, tras el corte, solo lo cambia el dueño.
+  const pctDelDueno = soloLeeLoDelDueno(useSesion().rol);
 
   /* El borrador se rehace SOLO al abrir: si se repintara con cada recarga,
      borraría lo que alguien está escribiendo. */
@@ -532,12 +535,14 @@ function Ficha({
                 value={comision}
                 onChange={(e) => setComision(e.target.value)}
                 aria-label="Porcentaje de comisión"
+                disabled={pctDelDueno}
               />
               <b>%</b>
             </div>
             <small className="muted" style={{ fontSize: 11.5 }}>
               Sobre el precio de cada servicio que atienda, cuando la cita se marca como atendida. Si un
               servicio tiene su propia comisión en el Catálogo, manda la del servicio. 0 = sin comisión.
+              {pctDelDueno && ' Solo la cambia el dueño.'}
             </small>
           </div>
 

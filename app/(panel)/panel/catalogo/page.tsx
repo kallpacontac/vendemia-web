@@ -72,6 +72,7 @@ import {
 } from 'lucide-react';
 import Topbar from '@/components/panel/Topbar';
 import { useSesion } from '@/components/panel/Sesion';
+import { soloLeeLoDelDueno } from '@/lib/panel/roles';
 import { useAvisar, useGuardar } from '@/components/panel/Avisos';
 import { useCargar } from '@/components/panel/useCargar';
 import { supabase } from '@/lib/supabase/client';
@@ -528,6 +529,8 @@ function Ficha({
   /** Tiene cambios guardados en la cola que el bot aún no ha aplicado. */
   aplicandose: boolean;
 }) {
+  // Las comisiones del servicio, tras el corte, solo las cambia el dueño.
+  const comisionDelDueno = soloLeeLoDelDueno(useSesion().rol);
   // «servicio» en una barbería, «clase» en una academia, «producto» en una tienda.
   const v = useVocabulario();
   const enviar = useGuardar();
@@ -858,6 +861,8 @@ function Ficha({
                     placeholder="vacío = la del trabajador"
                     value={f.comision_pct}
                     onChange={(e) => set('comision_pct', e.target.value)}
+                    disabled={comisionDelDueno}
+                    title={comisionDelDueno ? 'Solo la cambia el dueño' : undefined}
                   />
                 </div>
                 <div>
@@ -868,6 +873,8 @@ function Ficha({
                     placeholder="gana al %"
                     value={f.comision_monto}
                     onChange={(e) => set('comision_monto', e.target.value)}
+                    disabled={comisionDelDueno}
+                    title={comisionDelDueno ? 'Solo la cambia el dueño' : undefined}
                   />
                 </div>
               </>

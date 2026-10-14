@@ -23,7 +23,7 @@ import { BotonDemo, useDemo } from './Demo';
 import { alternarDemo } from '@/lib/panel/demo';
 import { esAppointmentFamily, esCita, esEcommerce, esRecurrente } from '@/lib/panel/modo';
 import { CORTE_DE_ROLES, corteDeRoles } from '@/lib/panel/roles';
-import { RUTA_MI_AGENDA, RUTA_MI_COMISION, rutaPermitida } from '@/lib/panel/rutas';
+import { RUTA_MI_AGENDA, RUTA_MI_CATALOGO, RUTA_MI_COMISION, rutaPermitida } from '@/lib/panel/rutas';
 import { getEquipo } from '@/lib/supabase/queries';
 import { useCargar } from './useCargar';
 
@@ -136,6 +136,7 @@ function NavegacionPanel() {
       : []),
     // Las comisiones son de los negocios de citas, igual que en el menú.
     ...(esCita(modo) ? [{ href: RUTA_MI_COMISION, label: 'Mi comisión', rutas: [RUTA_MI_COMISION] }] : []),
+    { href: RUTA_MI_CATALOGO, label: 'Catálogo', rutas: [RUTA_MI_CATALOGO] },
     { href: '/panel/fideliza', label: 'Fideliza', rutas: ['/panel/fideliza'] },
   ];
   const visibles = rutaPermitida(RUTA_MI_AGENDA, rol)
