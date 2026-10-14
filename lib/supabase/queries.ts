@@ -112,15 +112,33 @@ export async function misCompanias(): Promise<CompaniaAccesible[]> {
     .select('company_id, role, companies(name, business_mode)');
   if (error) throw error;
 
-  return ((data ?? []) as MembershipRow[]).map((m) => {
-    const c = Array.isArray(m.companies) ? m.companies[0] : m.companies;
-    return {
-      id: m.company_id,
-      nombre: c?.name ?? 'Mi negocio',
-      rol: m.role,
-      business_mode: c?.business_mode ?? null,
-    };
-  });
+  return Promise.all(
+    ((data ?? []) as MembershipRow[]).map(async (m) => {
+      let c: { name?: string | null; business_mode?: BusinessMode | null } | null | undefined = Array.isArray(m.companies)
+        ? m.companies[0]
+        : m.companies;
+      /**
+       * ⚠️ Tras el corte de roles, el empleado NO lee `companies` (lleva los
+       * métodos de pago y los teléfonos), así que el `companies(…)` de arriba
+       * le llega vacío. Sin esto entraría a un negocio sin nombre y, peor, sin
+       * `business_mode`: una academia se le pintaría como una barbería.
+       *
+       * `mi_negocio` es lo que la base le da en su lugar (migración 0041 del
+       * bot). Solo se llama si hace falta: al dueño y al administrador no les
+       * cuesta una consulta de más.
+       */
+      if (!c) {
+        const { data: negocio } = await supabase().rpc('mi_negocio', { p_company: m.company_id });
+        if (negocio) c = negocio as { name?: string | null; business_mode?: BusinessMode | null };
+      }
+      return {
+        id: m.company_id,
+        nombre: c?.name ?? 'Mi negocio',
+        rol: m.role,
+        business_mode: c?.business_mode ?? null,
+      };
+    }),
+  );
 }
 
 /**
@@ -204,6 +222,100 @@ export async function getEquipo(companyId: string): Promise<Miembro[] | null> {
     throw error;
   }
   return (data ?? []) as Miembro[];
+}
+
+/* ── Lo que lee el empleado ─────────────────────────────────────────────── */
+
+/**
+ * El RLS filtra FILAS, no columnas: quien lee una fila de `leads` se lleva el
+ * teléfono, y quien lee `companies`, los métodos de pago. Por eso el empleado
+ * no lee esas tablas: lee estas cuatro funciones (migración 0041 del bot), que
+ * devuelven solo lo que le toca. Tras el corte son su único camino.
+ *
+ * En demo no devuelven nada: el modo demo es una herramienta del dueño.
+ */
+export interface MiNegocio {
+  id: string;
+  name: string;
+  business_mode: BusinessMode | null;
+  /** La ficha de `employees` de quien pregunta, o null. */
+  tu_ficha: string | null;
+  /** Las preguntas propias marcadas «Lo ve el empleado», para rotular sus respuestas. */
+  campos_visibles: { field_key: string; question: string }[];
+}
+
+export async function getMiNegocio(companyId: string): Promise<MiNegocio | null> {
+  if (demoActivo()) return null;
+  const { data, error } = await supabase().rpc('mi_negocio', { p_company: companyId });
+  if (error) throw error;
+  if (!data) return null;
+  const n = data as Partial<MiNegocio>;
+  return {
+    id: n.id ?? companyId,
+    name: n.name ?? '',
+    business_mode: n.business_mode ?? null,
+    tu_ficha: n.tu_ficha ?? null,
+    campos_visibles: Array.isArray(n.campos_visibles) ? n.campos_visibles : [],
+  };
+}
+
+/** Un cliente tal como lo ve quien lo atiende: sin teléfono, correo ni dirección. */
+export interface ClienteDelEquipo {
+  lead_id: string;
+  name: string | null;
+  notas_salon: string | null;
+  /** Las notas de Mia. */
+  customer_notes: string | null;
+  /** Solo las claves de las preguntas marcadas «Lo ve el empleado». */
+  custom_data: Record<string, unknown> | null;
+}
+
+export async function getMisClientes(companyId: string): Promise<ClienteDelEquipo[]> {
+  if (demoActivo()) return [];
+  const { data, error } = await supabase().rpc('mis_clientes', { p_company: companyId });
+  if (error) throw error;
+  return (data ?? []) as ClienteDelEquipo[];
+}
+
+/** Una ficha del equipo. `comision_pct` viene con valor solo en la propia. */
+export interface FichaDelEquipo {
+  id: string;
+  name: string;
+  comision_pct: number | null;
+  es_la_tuya: boolean;
+}
+
+export async function getEquipoFichas(companyId: string): Promise<FichaDelEquipo[]> {
+  if (demoActivo()) return [];
+  const { data, error } = await supabase().rpc('equipo_fichas', { p_company: companyId });
+  if (error) throw error;
+  return (data ?? []) as FichaDelEquipo[];
+}
+
+/** El catálogo como lo recibe el equipo: las filas de `catalog`, ya recortadas para el empleado. */
+export async function getCatalogoDelEquipo(companyId: string): Promise<CatalogRow[]> {
+  if (demoActivo()) return [];
+  const { data, error } = await supabase().rpc('catalogo_del_equipo', { p_company: companyId });
+  if (error) throw error;
+  return (data ?? []) as CatalogRow[];
+}
+
+/**
+ * Las plazas en grupos semanales (academia). Sin fechas: una inscripción no es
+ * de un día, es de un periodo. Tras el corte el RLS le da al empleado las
+ * suyas y las «sin asignar», que en una academia hoy son todas.
+ */
+export async function getInscripcionesVivas(companyId: string): Promise<AppointmentRow[]> {
+  if (demoActivo()) return [];
+  const { data, error } = await supabase()
+    .from('appointments')
+    .select('*')
+    .eq('company_id', companyId)
+    .like('slot_start', 'sched:%')
+    .in('status', ['confirmed', 'pending_payment'])
+    .limit(2000);
+  if (error) throw error;
+  return (data ?? []) as AppointmentRow[];
 }
 
 /* ── La compañía ────────────────────────────────────────────────────────── */

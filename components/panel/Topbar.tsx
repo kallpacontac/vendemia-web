@@ -1,18 +1,13 @@
 'use client';
 
 /**
- * La barra superior: título de la pantalla, aviso de WhatsApp y selector de
- * compañía.
+ * La barra superior: título de la pantalla, avisos y selector de compañía.
  *
- * El aviso está callado el 99% del tiempo, y eso es la funcionalidad. Aquí
- * había una píldora permanente con el estado del proceso: «WhatsApp
- * conectado» en verde, «El bot no está en línea» en rojo. Se quitó porque el
- * proceso corre en un portátil nuestro, no del cliente: los baches los
- * arreglamos nosotros y contárselos solo enseña a ignorar la barra.
- *
- * Queda el único caso que el cliente sí tiene que saber, porque sin él no se
- * puede arreglar: hay que re-emparejar el WhatsApp y eso se hace con su
- * teléfono delante.
+ * Aquí no se cuenta el estado del WhatsApp. Hubo una píldora permanente
+ * («WhatsApp conectado», «El bot no está en línea») y luego una que solo salía
+ * para «Hay que volver a vincular el WhatsApp»; Alvaro pidió quitar también esa
+ * (14-oct-2026). El estado sigue en Ajustes › Conexión de WhatsApp, y el
+ * re-emparejado lo gestionamos nosotros, con el dueño.
  */
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
@@ -24,34 +19,13 @@ import { useAvisar } from './Avisos';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useSesion } from './Sesion';
-import { necesitaEmparejar, useSalud } from './Salud';
 import { BotonDemo, useDemo } from './Demo';
 import { alternarDemo } from '@/lib/panel/demo';
-import { esEcommerce, esRecurrente } from '@/lib/panel/modo';
+import { esAppointmentFamily, esCita, esEcommerce, esRecurrente } from '@/lib/panel/modo';
 import { CORTE_DE_ROLES, corteDeRoles } from '@/lib/panel/roles';
+import { RUTA_MI_AGENDA, RUTA_MI_COMISION, rutaPermitida } from '@/lib/panel/rutas';
 import { getEquipo } from '@/lib/supabase/queries';
 import { useCargar } from './useCargar';
-
-/**
- * Silencio mientras todo va bien: devuelve `null` en todos los casos menos
- * uno. Ni "conectado" en verde —el cliente no necesita que le confirmemos
- * cada minuto que su negocio funciona— ni "cargando", que solo produce un
- * parpadeo en cada carga de pantalla.
- *
- * El texto lo escribimos aquí y NO se toma de `salud.diagnostico`: ese campo
- * lo redacta el backend y dice cosas como «La instancia no da señales», que
- * es ruido nuestro colado en la pantalla del cliente.
- */
-function AvisoWhatsApp() {
-  const { salud } = useSalud();
-  if (!necesitaEmparejar(salud)) return null;
-
-  return (
-    <div className="wa-pill wa-pill--aviso" title="Escríbenos y lo dejamos vinculado en un minuto.">
-      Hay que volver a vincular el WhatsApp
-    </div>
-  );
-}
 
 /**
  * ══════════════════════════════════════════════════════════════════════════
@@ -128,7 +102,7 @@ function SelectorCompania() {
 
 function NavegacionPanel() {
   const ruta = usePathname();
-  const { compania, esAdminPlataforma } = useSesion();
+  const { compania, esAdminPlataforma, rol } = useSesion();
   const modo = compania?.business_mode;
 
   if (!compania && esAdminPlataforma) {
@@ -150,10 +124,30 @@ function NavegacionPanel() {
     { href: '/panel/metricas', label: 'Reportes', rutas: ['/panel/metricas'] },
   ];
   const activa = (rutas: string[]) => rutas.some((r) => (r === '/panel' ? ruta === r : ruta.startsWith(r)));
+  /**
+   * Las pestañas, según el rol (fase 4 del plan de roles; antes del corte no
+   * cambia nada). El empleado tiene las suyas; a los demás se les quita la que
+   * no pueden abrir, y si su primera pantalla no es la suya, la pestaña apunta
+   * a la primera del grupo que sí lo es.
+   */
+  const delEmpleado = [
+    ...(esAppointmentFamily(modo)
+      ? [{ href: RUTA_MI_AGENDA, label: esRecurrente(modo) ? 'Mis clases' : 'Mi agenda', rutas: [RUTA_MI_AGENDA] }]
+      : []),
+    // Las comisiones son de los negocios de citas, igual que en el menú.
+    ...(esCita(modo) ? [{ href: RUTA_MI_COMISION, label: 'Mi comisión', rutas: [RUTA_MI_COMISION] }] : []),
+    { href: '/panel/fideliza', label: 'Fideliza', rutas: ['/panel/fideliza'] },
+  ];
+  const visibles = rutaPermitida(RUTA_MI_AGENDA, rol)
+    ? delEmpleado
+    : tabs.flatMap((t) => {
+        const href = [t.href, ...t.rutas].find((r) => rutaPermitida(r, rol));
+        return href ? [{ ...t, href }] : [];
+      });
 
   return (
     <nav className="panel-tabs" aria-label="Secciones del panel">
-      {tabs.map((tab) => (
+      {visibles.map((tab) => (
         <Link key={tab.href} href={tab.href} className={activa(tab.rutas) ? 'active' : ''}>
           {tab.label}
         </Link>
@@ -228,7 +222,8 @@ export default function Topbar({
   children,
   accionesTitulo,
 }: {
-  titulo: string;
+  /** Sin título, la cabecera no pinta esa fila (la pantalla del asistente). */
+  titulo?: string;
   sub?: string;
   children?: React.ReactNode;
   accionesTitulo?: React.ReactNode;
@@ -242,7 +237,7 @@ export default function Topbar({
   return (
     <CabeceraPanel titulo={titulo} sub={sub} accionesTitulo={accionesTitulo}
       navegacion={<NavegacionPanel />}
-      avisos={<>{children}<BotonDemo /><AvisoCorteDeRoles /><AvisoWhatsApp /></>}
+      avisos={<>{children}<BotonDemo /><AvisoCorteDeRoles /></>}
       cuenta={<><SelectorCompania /><div className="icon-btn" aria-hidden="true"><Bell size={18} /></div><MenuCuenta email={email} pie={pie} /></>}
     />
   );
@@ -250,7 +245,7 @@ export default function Topbar({
 
 /** Estructura única para todas las rutas, independiente de sesión y consultas. */
 export function CabeceraPanel({ titulo, sub, accionesTitulo, navegacion, cuenta, avisos }: {
-  titulo: string; sub?: string; accionesTitulo?: React.ReactNode;
+  titulo?: string; sub?: string; accionesTitulo?: React.ReactNode;
   navegacion: React.ReactNode; cuenta: React.ReactNode; avisos?: React.ReactNode;
 }) {
   return (
@@ -260,10 +255,12 @@ export function CabeceraPanel({ titulo, sub, accionesTitulo, navegacion, cuenta,
         <div className="topbar__actions">{cuenta}</div>
       </div>
       <div className="topbar__notices">{avisos}</div>
-      <div className={`topbar__title${accionesTitulo ? ' topbar__title--with-actions' : ''}`}>
-        <div><h1>{titulo}</h1>{sub && <p>{sub}</p>}</div>
-        {accionesTitulo}
-      </div>
+      {(titulo || accionesTitulo) && (
+        <div className={`topbar__title${accionesTitulo ? ' topbar__title--with-actions' : ''}`}>
+          <div>{titulo && <h1>{titulo}</h1>}{sub && <p>{sub}</p>}</div>
+          {accionesTitulo}
+        </div>
+      )}
     </header>
   );
 }

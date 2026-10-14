@@ -9,7 +9,9 @@ import { ProveedorAvisos } from '@/components/panel/Avisos';
 import Sidebar from '@/components/panel/Sidebar';
 import { ProveedorSalud } from '@/components/panel/Salud';
 import { BandaDemo } from '@/components/panel/Demo';
-import { RUTA_GLOBAL_POR_DEFECTO, esRutaGlobal } from '@/lib/panel/rutas';
+import Link from 'next/link';
+import { RUTA_GLOBAL_POR_DEFECTO, esRutaGlobal, inicioDe, rutaPermitida } from '@/lib/panel/rutas';
+import { puedeVer } from '@/lib/panel/roles';
 import { guardarDestino, rutaActual } from '@/lib/panel/destino';
 import AltaNegocio from '@/components/panel/AltaNegocio';
 import Instalable from '@/components/panel/Instalable';
@@ -34,7 +36,7 @@ import BannerApp from '@/components/panel/BannerApp';
 function Guardia({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const ruta = usePathname();
-  const { session, cargando, reconectando, companias, companyId, esAdminPlataforma, compania, salir } = useSesion();
+  const { session, cargando, reconectando, companias, companyId, esAdminPlataforma, compania, rol, salir } = useSesion();
 
   /** Sin compañía activa: o es una cuenta recién creada, o es el admin de plataforma. */
   const sinCompania = !companias.length || !companyId;
@@ -66,6 +68,20 @@ function Guardia({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!cargando && soloGlobal && !esRutaGlobal(ruta)) router.replace(RUTA_GLOBAL_POR_DEFECTO);
   }, [cargando, soloGlobal, ruta, router]);
+
+  /**
+   * Una pantalla que no es de su rol (fase 4 del plan de roles). Antes del corte
+   * `rutaPermitida` dice que sí a todo, así que esto no hace nada.
+   *
+   * Desde `/panel` se le lleva a SU inicio en vez de enseñarle una tarjeta: es
+   * donde aterriza todo el mundo al entrar, y para quien no es el dueño el
+   * Dashboard sencillamente no es su portada.
+   */
+  const modo = compania?.business_mode;
+  const vetada = !sinCompania && !rutaPermitida(ruta, rol);
+  useEffect(() => {
+    if (!cargando && vetada && ruta === '/panel') router.replace(inicioDe(rol, modo));
+  }, [cargando, vetada, ruta, rol, modo, router]);
 
   if (cargando || reconectando || !session) {
     return (
@@ -117,9 +133,31 @@ function Guardia({ children }: { children: React.ReactNode }) {
     <>
       <BandaDemo />
       <Sidebar soloGlobal={soloGlobal} modo={compania?.business_mode} />
-      {children}
-      {/* Instalar la app y activar los avisos, abajo y sin ir a Ajustes. */}
-      {!soloGlobal && <BannerApp />}
+      {!vetada ? (
+        children
+      ) : ruta === '/panel' ? (
+        // El `router.replace` de arriba está en camino.
+        <div className="cargando">
+          <div className="spin" />
+          Abriendo tu panel…
+        </div>
+      ) : (
+        <main className="main">
+          <div className="no-es-para-ti">
+            <b>Esta pantalla no es para tu rol</b>
+            <p>
+              La lleva {rol === 'empleado' ? 'el dueño o el administrador' : 'el dueño'} del negocio. Si necesitas
+              algo de aquí, pídeselo.
+            </p>
+            <Link className="btn btn-primary" href={inicioDe(rol, modo)}>
+              Ir a lo mío
+            </Link>
+          </div>
+        </main>
+      )}
+      {/* Instalar la app y activar los avisos, abajo y sin ir a Ajustes. Los
+          avisos son del dueño y del administrador. */}
+      {!soloGlobal && puedeVer(rol, 'bot.ver') && <BannerApp />}
     </>
   );
 }

@@ -31,9 +31,9 @@ import {
 import { useSesion } from './Sesion';
 import MarcaMia from './MarcaMia';
 import { useCargar } from './useCargar';
-import { esRutaGlobal } from '@/lib/panel/rutas';
+import { RUTA_MI_AGENDA, RUTA_MI_COMISION, esRutaGlobal, rutaPermitida } from '@/lib/panel/rutas';
 import { puedeUsarAsistente } from '@/lib/panel/asistente';
-import { rolDeNegocio } from '@/lib/panel/roles';
+import { puedeVer, rolDeNegocio } from '@/lib/panel/roles';
 import { esAppointmentFamily, esCita, esEcommerce, esRecurrente } from '@/lib/panel/modo';
 import { vocabulario } from '@/lib/panel/vocabulario';
 import { estadoConsumo } from '@/lib/panel/consumo';
@@ -43,10 +43,15 @@ import type { BusinessMode } from '@/lib/supabase/types';
 
 const NAV = [
   { href: '/panel', icon: LayoutDashboard, label: 'Dashboard' },
+  // Las dos pantallas del empleado. Solo existen tras el corte de roles, y solo
+  // para él: quién ve cada entrada lo decide `rutaPermitida` (lib/panel/rutas.ts).
+  { href: RUTA_MI_AGENDA, icon: CalendarDays, label: 'Mi agenda', sirveA: esAppointmentFamily },
+  { href: RUTA_MI_COMISION, icon: Percent, label: 'Mi comisión', sirveA: esCita },
   // El dueño le pregunta a Mia por su negocio. Se enseña en cualquier plan
   // —quien decide si hay asistente es el bot—, pero no al empleado: ver
   // puedeUsarAsistente en lib/panel/asistente.ts.
-  { href: '/panel/asistente', icon: Sparkles, label: 'Asistente', sinEmpleado: true },
+  // «Mia Gerente»: el nombre comercial del asistente del dueño (Alvaro, 14-oct-2026).
+  { href: '/panel/asistente', icon: Sparkles, label: 'Mia Gerente', sinEmpleado: true },
   { href: '/panel/mensajes', icon: MessageCircle, label: 'Mensajes' },
   { href: '/panel/leads', icon: Users, label: 'Leads' },
   { href: '/panel/retargeting', icon: Send, label: 'Retargeting' },
@@ -90,7 +95,7 @@ const NAV = [
  * La tercera es Agenda o, en una tienda (que no tiene agenda), Pedidos.
  */
 // En una academia, Alumnos va antes que Caja: es lo que se mira a diario.
-const FIJAS_MOVIL = ['/panel', '/panel/mensajes', '/panel/agenda', '/panel/pedidos', '/panel/alumnos', '/panel/caja'];
+const FIJAS_MOVIL = ['/panel', RUTA_MI_AGENDA, RUTA_MI_COMISION, '/panel/mensajes', '/panel/agenda', '/panel/pedidos', '/panel/alumnos', '/panel/caja'];
 const MAX_FIJAS_MOVIL = 4;
 
 type Entrada = (typeof NAV)[number];
@@ -125,6 +130,8 @@ export default function Sidebar({
     if ('soloAdmin' in n && n.soloAdmin && !esAdminPlataforma) return false;
     if (soloGlobal) return esRutaGlobal(n.href);
     if ('sinEmpleado' in n && n.sinEmpleado && !puedeUsarAsistente(rolDeNegocio(compania?.rol))) return false;
+    // Lo que no es de su rol no se le ofrece. Antes del corte, sí a todo.
+    if (!rutaPermitida(n.href, rolDeNegocio(compania?.rol))) return false;
     // modo == null cubre undefined (primer render) Y null (compañía sin modo
     // asignado): en los dos casos se enseña de más, nunca de menos.
     if (!n.sirveA || modo == null) return true;
@@ -146,14 +153,15 @@ export default function Sidebar({
 
   const rutaOperacion = esEcommerce(modo) ? '/panel/pedidos' : '/panel/agenda';
   const rail = nav.filter((n) =>
-    ['/panel', '/panel/asistente', '/panel/mensajes', rutaOperacion, '/panel/leads', '/panel/caja', '/panel/configuracion'].includes(n.href),
+    ['/panel', RUTA_MI_AGENDA, RUTA_MI_COMISION, '/panel/asistente', '/panel/mensajes', rutaOperacion, '/panel/leads', '/panel/caja', '/panel/configuracion'].includes(n.href),
   );
   const railExtra = nav.filter((n) => !rail.some((r) => r.href === n.href));
   const railExtraActiva = railExtra.some((n) => esActivo(n.href));
 
   const pintar = ({ href, icon: Icono, label: fijo }: Entrada, enHoja = false) => {
     // «Agenda» en una barbería, «Clases» en una academia. Ver lib/panel/vocabulario.
-    const label = href === '/panel/agenda' ? vocabulario(modo).agenda : fijo;
+    const label =
+      href === '/panel/agenda' ? vocabulario(modo).agenda : href === RUTA_MI_AGENDA && esRecurrente(modo) ? 'Mis clases' : fijo;
     const clases = [
       'nav-item',
       esActivo(href) ? 'active' : '',
@@ -225,7 +233,7 @@ export default function Sidebar({
 
       <div className="sidebar__foot">
         {/* El admin de plataforma no tiene plan propio: no se le enseña. */}
-        {!soloGlobal && <TuPlan />}
+        {!soloGlobal && puedeVer(rolDeNegocio(compania?.rol), 'plan.ver') && <TuPlan />}
         <button type="button" className="sidebar__logout" title="Cerrar sesión" aria-label="Cerrar sesión" onClick={() => void salir()}>
           <LogOut size={18} /><span>Cerrar sesión</span>
         </button>

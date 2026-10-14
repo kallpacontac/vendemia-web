@@ -29,7 +29,7 @@
  * preguntando.
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ArrowUp, Mic, Square, Volume2, X } from 'lucide-react';
+import { ArrowUp, Mic, Trash2, Volume2, X } from 'lucide-react';
 import {
   MAX_AUDIO_BYTES,
   MAX_GRABACION_S,
@@ -304,9 +304,10 @@ export default function Conversacion({
       <div className="asis__msgs" ref={fondo} role="log" aria-live="polite">
         {burbujas.length === 0 && !enVuelo && (
           <div className="asis__vacio">
-            <b>Pregúntale a Mia por tu negocio</b>
+            <b>Mia Gerente</b>
             <span>
-              Escríbele o háblale. Lo que hablen se queda en esta pantalla: al salir o recargar, se borra.
+              Pregúntale cómo va tu negocio, escribiendo o hablando. Lo que hablen se queda en esta pantalla: al
+              salir o recargar, se borra.
             </span>
           </div>
         )}
@@ -374,15 +375,28 @@ export default function Conversacion({
         )}
 
         {grabando ? (
+          // Dos botones con su palabra, no dos iconos: con una ✕ y un cuadrado
+          // rojo no se sabía cuál mandaba la nota y cuál la tiraba, y equivocarse
+          // es mandar a Mia algo que no querías decir.
           <div className="asis__caja asis__caja--grabando">
-            <button type="button" className="asis__btn" onClick={mic.cancelar} aria-label="Cancelar la grabación" title="Cancelar">
-              <X size={18} />
+            <button
+              type="button"
+              className="asis__btn asis__btn--texto asis__btn--borrar"
+              onClick={mic.cancelar}
+              aria-label="Borrar la nota de voz"
+            >
+              <Trash2 size={16} /> Borrar
             </button>
             <span className="asis__grabando" role="timer">
-              <i /> Grabando · {duracion(mic.segundos)} <small>/ {duracion(MAX_GRABACION_S)}</small>
+              <i /> {duracion(mic.segundos)} <small>/ {duracion(MAX_GRABACION_S)}</small>
             </span>
-            <button type="button" className="asis__btn asis__btn--parar" onClick={mic.terminar} aria-label="Parar y enviar">
-              <Square size={15} />
+            <button
+              type="button"
+              className="asis__btn asis__btn--texto asis__btn--enviar"
+              onClick={mic.terminar}
+              aria-label="Enviar la nota de voz"
+            >
+              Enviar <ArrowUp size={16} />
             </button>
           </div>
         ) : (

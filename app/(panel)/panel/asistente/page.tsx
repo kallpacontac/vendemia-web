@@ -64,7 +64,8 @@ export default function Asistente() {
   return (
     <main className="main main--asistente">
       <div className="wrap">
-        <Topbar titulo="Asistente" sub="Pregúntale a Mia por tu negocio" />
+        {/* Sin título: el chat ya dice lo que es, y en el celular cada línea cuenta. */}
+        <Topbar />
 
         {!puedeUsarAsistente(rolDeNegocio(compania?.rol)) || sinPermiso.includes(companyId) ? (
           // El empleado que llega por la URL, o a quien el bot le acaba de decir que no. La entrada del menú ya no
@@ -74,7 +75,7 @@ export default function Asistente() {
             <span className="asis-tarjeta__ico">
               <Lock size={22} />
             </span>
-            <h2>El asistente es para el dueño y el administrador del negocio</h2>
+            <h2>Mia Gerente es para el dueño y el administrador del negocio</h2>
             <p>Aquí Mia contesta con los números del negocio. Si necesitas un dato, pídeselo a quien lo administra.</p>
           </section>
         ) : bloqueado ? (
@@ -121,11 +122,11 @@ function NoDisponible({ companyId }: { companyId: string }) {
       </span>
       {loTiene ? (
         <>
-          <h2>El asistente se está activando para tu negocio</h2>
+          <h2>Mia Gerente se está activando para tu negocio</h2>
           <p>Tu plan lo incluye. Si en un rato sigue sin responder, escríbenos y lo dejamos listo.</p>
           <a
             className="btn btn-primary asis-tarjeta__ancho"
-            href={whatsappUrl('Hola 👋 Tengo el plan Best Seller y el asistente de Mia aún no está activo en mi panel.')}
+            href={whatsappUrl('Hola 👋 Tengo el plan Best Seller y Mia Gerente aún no está activa en mi panel.')}
             target="_blank"
             rel="noopener noreferrer"
           >
@@ -134,7 +135,7 @@ function NoDisponible({ companyId }: { companyId: string }) {
         </>
       ) : (
         <>
-          <h2>Pregúntale a Mia lo que quieras de tu negocio: incluido en Best Seller</h2>
+          <h2>Mia Gerente: pregúntale lo que quieras de tu negocio. Incluida en Best Seller</h2>
           <p>Cuánto entró hoy, quién te debe, qué se está agotando. Escribiendo o hablando, desde aquí.</p>
           <a className="btn btn-primary asis-tarjeta__ancho" href="/#pricing" target="_blank" rel="noopener noreferrer">
             Ver los planes

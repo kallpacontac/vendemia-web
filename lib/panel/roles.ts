@@ -97,6 +97,31 @@ const MATRIZ: Record<RolNegocio, readonly Permiso[]> = {
 export const rolPuede = (rol: RolNegocio | null, permiso: Permiso): boolean =>
   rol !== null && MATRIZ[rol].includes(permiso);
 
+/**
+ * ══════════════════════════════════════════════════════════════════════════
+ * ¿YA RIGE EL REPARTO POR ROLES? · el interruptor del corte
+ * ══════════════════════════════════════════════════════════════════════════
+ *
+ * Es una variable de entorno y no una constante a propósito: el corte se hace
+ * en Vercel poniendo `NEXT_PUBLIC_ROLES_EN_VIGOR=1` y redesplegando, el MISMO
+ * día en que el bot activa sus políticas (la fase 4 de docs/PLAN-ROLES.md). Sin
+ * tocar código, y se deshace igual de rápido.
+ *
+ * Mientras esté apagada, el panel se comporta como siempre: todo el que entra
+ * lo ve todo, que es lo que la base le deja leer. Todo lo de la fase 4 —el
+ * menú por rol, las pantallas del empleado— pregunta aquí antes.
+ *
+ * ⚠️ Los dos lados tienen que ir juntos. Encendida aquí con la base sin
+ * cortar, el panel esconde pero los datos siguen leyéndose a mano. Al revés
+ * —la base cortada y esto apagado— es peor: al empleado le saldrían las
+ * pantallas de siempre, vacías.
+ */
+export const rolesEnVigor = (): boolean => process.env.NEXT_PUBLIC_ROLES_EN_VIGOR === '1';
+
+/** Lo que pregunta la pantalla. Antes del corte, sí a todo; después, la matriz. */
+export const puedeVer = (rol: RolNegocio | null, permiso: Permiso): boolean =>
+  !rolesEnVigor() || rolPuede(rol, permiso);
+
 /* ── El corte ───────────────────────────────────────────────────────────── */
 
 /**
@@ -116,7 +141,8 @@ export const CORTE_DE_ROLES: string | null = '2026-10-21';
 
 /** El corte anunciado, listo para escribir: «21 de octubre». `null` si no hay. */
 export function corteDeRoles(ahora: Date = new Date()): { dia: string; pasado: boolean } | null {
-  if (!CORTE_DE_ROLES) return null;
+  // Con el corte ya hecho no hay nada que anunciar: el aviso se quita solo.
+  if (!CORTE_DE_ROLES || rolesEnVigor()) return null;
   // A mediodía de Lima: así el día no baila con la zona horaria de quien mira.
   const fecha = new Date(`${CORTE_DE_ROLES}T12:00:00-05:00`);
   if (Number.isNaN(fecha.getTime())) return null;

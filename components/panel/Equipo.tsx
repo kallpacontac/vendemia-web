@@ -443,7 +443,7 @@ function DarAcceso({
           «no ve la caja» sería mentira mientras el panel se la siga enseñando. */}
       <p className="muted" style={{ fontSize: 12, marginBottom: 10 }}>
         {soyDueno
-          ? 'El administrador puede, además, dar acceso a empleados y preguntarle a Mia en el Asistente (sin ver importes). Por ahora, el resto del panel lo ven los dos.'
+          ? 'El administrador puede, además, dar acceso a empleados y usar Mia Gerente (sin ver importes). Por ahora, el resto del panel lo ven los dos.'
           : 'Entra como empleado. Nombrar a un administrador lo hace el dueño.'}
       </p>
 
