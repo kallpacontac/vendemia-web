@@ -147,14 +147,34 @@ Antes de la fase 3, contar a cuánta gente afecta:
 
 ## El día del corte (21 de octubre de 2026)
 
-En este orden. El porqué, en `docs/prompt-bot-roles-fase4.md`:
+**Antes del día, ya:** aplicar la `0043` del bot (le da al empleado las comisiones por servicio en
+`catalogo_del_equipo`; no le quita nada a nadie).
+
+El día, en este orden (el porqué, en `docs/prompt-bot-roles-fase4.md`; lo confirmó el bot el
+14-oct-2026):
 
 1. Alvaro pone `NEXT_PUBLIC_ROLES_EN_VIGOR=1` en Vercel y redespliega. El panel pasa a repartir por
    rol y el aviso se quita solo.
-2. Se aplica la migración de las políticas (bot).
-3. El bot pasa de avisar a rechazar los comandos.
+2. Se aplica `0044_roles_corte.sql` (repo del bot). Se niega a entrar antes del 21.
+3. Se aplica `modules/avisos/sql/0002_avisos_por_rol.sql` (este repo): los avisos al celular, solo
+   al dueño y al administrador. Sin ella, un empleado que activó los avisos antes del corte sigue
+   recibiendo pagos con importe y el nombre o teléfono del cliente. También se niega antes del 21.
+4. En el `.env` de cada bot, `ROLES_MODO=corte`, y se reinicia cada uno.
+5. `npm run smoke:equipo` (repo del bot) comprueba con sesiones de verdad lo que lee cada rol.
 
-Si algo sale mal, se deshace en el orden contrario; lo del panel es quitar la variable y redesplegar.
+Si algo sale mal, se deshace en el orden contrario: quitar `ROLES_MODO=corte` de los bots,
+`0002_avisos_por_rol_deshacer.sql`, `supabase/deshacer/0044_roles_corte_deshacer.sql` (bot), y quitar
+la variable del panel y redesplegar.
+
+Lo que dijo el bot y conviene saber:
+
+- El empleado **sí** puede leer `catalog` (no hay nada que esconderle desde la 0043). La pantalla de
+  Catálogo sigue cerrada para él porque es la de editar.
+- Lo que no le toca al empleado le devuelve **cero filas, sin error**; lo mismo al administrador con
+  las vistas y RPC de métricas. Repasado el 14-oct: solo las leen el Dashboard y Métricas, que el
+  administrador no tiene.
+- Un empleado **sin ficha enlazada** solo ve las citas «sin asignar». En cuanto una se le asigna a
+  otro, deja de verla.
 
 ### Lo que ya hace el panel con el interruptor encendido
 
@@ -174,11 +194,7 @@ Si algo sale mal, se deshace en el orden contrario; lo del panel es quitar la va
 - **Esconderle al administrador lo que no puede cambiar:** métodos de pago y teléfonos en Ajustes, y
   el porcentaje de comisión en Empleados y en Catálogo. Hoy los ve editables; al guardar, el bot no
   los aplica y el panel dice «esto solo lo cambia el dueño». Funciona, pero es feo.
-- **Repasar las pantallas del administrador** por si alguna lee además una vista de métricas: ese
-  trozo le saldría vacío.
 - **El catálogo en solo lectura para el empleado.** Hoy sencillamente no entra.
-- **«Mi comisión» depende del bot:** hasta que `catalogo_del_equipo` le dé las comisiones por
-  servicio, el número sale con su porcentaje general. La pantalla lo avisa.
 - **Probarlo todo con cuentas reales** de los tres roles. Hasta ahora, solo con Supabase simulado.
 
 ## Qué toca cada fase en este repo

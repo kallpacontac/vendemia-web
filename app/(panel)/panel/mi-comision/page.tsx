@@ -15,14 +15,10 @@
  *   · solo SUS citas (el filtro de abajo, y tras el corte, el RLS);
  *   · solo SU porcentaje: `equipo_fichas` trae `comision_pct` únicamente en la
  *     ficha propia;
- *   · el catálogo de `catalogo_del_equipo`.
- *
- * ⚠️ UN HUECO CONOCIDO. La comisión de un servicio puede venir de la ficha del
- * profesional o del propio servicio (`catalog.comision_pct` / `comision_monto`),
- * y la del servicio GANA. Hoy `catalogo_del_equipo` le quita esos dos campos al
- * empleado, así que en un negocio con comisiones por servicio este número sale
- * calculado con su porcentaje general y puede no coincidir con el del dueño.
- * Está pedido al bot (docs/prompt-bot-roles-fase4.md); la pantalla lo avisa.
+ *   · el catálogo de `catalogo_del_equipo`, CON `comision_pct` y
+ *     `comision_monto` de cada servicio (migración 0043 del bot): la comisión
+ *     del servicio gana a la de la ficha, y sin ellos esta cifra no coincidiría
+ *     con la del dueño. La 0043 se aplica antes del corte.
  *
  * Solo devenga la cita COMPLETADA, igual que para el dueño.
  */
@@ -74,9 +70,6 @@ export default function MiComision() {
       pct: Number(mia?.comision_pct ?? 0),
       yo: r.profesionales.find((p) => p.employeeId === datos.ficha) ?? null,
       sinMarcar: r.sinMarcar,
-      // ¿Llegaron las tarifas por servicio? Si ningún servicio trae el campo,
-      // no se sabe si es que no hay o que no se le enseñan. Ver la cabecera.
-      conTarifasDeServicio: datos.catalogo.some((c) => c.comision_pct != null || c.comision_monto != null),
     };
   }, [datos]);
 
@@ -114,12 +107,6 @@ export default function MiComision() {
                 <p className="muted" style={{ fontSize: 12.5, marginTop: 8 }}>
                   Tienes {resumen.sinMarcar.citas} {resumen.sinMarcar.citas === 1 ? 'cita pasada' : 'citas pasadas'} sin
                   marcar si el cliente vino. Hasta que se marquen no cuentan: hazlo en Mi agenda.
-                </p>
-              )}
-              {!resumen.conTarifasDeServicio && (
-                <p className="muted" style={{ fontSize: 12.5, marginTop: 8 }}>
-                  Está calculada con tu comisión general. Si algún servicio tiene una comisión propia, el importe que
-                  te confirme el dueño puede ser distinto.
                 </p>
               )}
             </div>

@@ -71,10 +71,14 @@ export type Permiso =
   | 'metricas.ver'
   | 'catalogo.ver'
   | 'plan.ver'
-  | 'bot.ver';
+  | 'bot.ver'
+  /** `companies` entera (la 0043 del bot). El empleado lee su negocio por `mi_negocio`. */
+  | 'negocio.ver'
+  /** Los `commands` de todo el negocio (la 0043). El empleado, solo los suyos. */
+  | 'comandos.ver';
 
 /**
- * Copia de `rol_puede()` (migración 0041 del bot). La autoridad es aquella: en
+ * Copia de `rol_puede()` (migraciones 0041 y 0043 del bot). La autoridad es aquella: en
  * el corte, las políticas de Postgres preguntan allí, no aquí.
  *
  * ⚠️ HOY NO ESCONDE NADA. Hasta el corte —una semana después de que los dueños
@@ -85,11 +89,11 @@ export type Permiso =
 const MATRIZ: Record<RolNegocio, readonly Permiso[]> = {
   dueno: [
     'agenda.todo', 'equipo.ver', 'clientes.ver', 'caja.ver', 'comisiones.ver',
-    'metricas.ver', 'catalogo.ver', 'plan.ver', 'bot.ver',
+    'metricas.ver', 'catalogo.ver', 'plan.ver', 'bot.ver', 'negocio.ver', 'comandos.ver',
   ],
   admin: [
     'agenda.todo', 'equipo.ver', 'clientes.ver', 'caja.ver', 'comisiones.ver',
-    'catalogo.ver', 'plan.ver', 'bot.ver',
+    'catalogo.ver', 'plan.ver', 'bot.ver', 'negocio.ver', 'comandos.ver',
   ],
   empleado: ['agenda.mia', 'equipo.ver', 'comisiones.mia', 'catalogo.ver'],
 };
