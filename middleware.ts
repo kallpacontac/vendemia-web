@@ -1,13 +1,15 @@
 /**
- * El middleware del sitio. Hoy solo lo usa Fideliza para separar
- * vendemias.com de fideliza.vendemias.com: ver modules/fideliza/servidor/hosts.ts.
- * Si otra parte del sitio necesita middleware, se encadena aquí.
+ * El middleware del sitio. Separa los hosts públicos del dominio principal:
+ *   · pide.vendemias.com     → modules/pide/servidor/hosts.ts
+ *   · fideliza.vendemias.com → modules/fideliza/servidor/hosts.ts
+ * Cada uno devuelve su respuesta o deja pasar al siguiente.
  */
 import type { NextRequest } from 'next/server';
 import { hostsFideliza } from '@/modules/fideliza/servidor/hosts';
+import { hostsPide } from '@/modules/pide/servidor/hosts';
 
 export function middleware(req: NextRequest) {
-  return hostsFideliza(req);
+  return hostsPide(req) ?? hostsFideliza(req);
 }
 
 export const config = {
