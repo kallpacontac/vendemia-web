@@ -82,7 +82,7 @@ const PANTALLAS: [string, (rol: RolNegocio | null) => boolean][] = [
   // Fideliza reparte con sus propios roles (modules/fideliza), impuestos en la base.
   ['/panel/fideliza', () => true],
   // La página pública y sus envíos: nombres, teléfonos y direcciones de clientes.
-  ['/panel/pide', con('clientes.ver')],
+  ['/panel/tu-pagina', con('clientes.ver')],
   // Solo el admin de la plataforma; eso ya lo decide el menú (`soloAdmin`).
   ['/panel/fabrica', () => true],
 ];

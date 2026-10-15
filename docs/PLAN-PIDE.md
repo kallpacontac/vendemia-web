@@ -1,16 +1,21 @@
-# Plan · Pide (pide.vendemias.com)
+# Plan · Tu página (tienda.vendemias.com · agenda.vendemias.com)
+
+> **Nombre.** Por fuera el producto se llama **«Tu página»** y vive en dos hosts que sirven lo mismo:
+> `tienda.*` para quien vende y `agenda.*` para quien agenda (citas y grupos); el panel le da a cada
+> negocio el suyo según `business_mode`. Por dentro sigue llamándose **Pide**: `modules/pide`, tablas
+> `pide_*`, `/api/pide`, la ruta interna `/pide/<negocio>`. Donde este plan dice «Pide» es eso.
 
 Escrito el 15-oct-2026. Sustituye a `PLAN-CATALOGO-Y-RESERVAS.md` (14-oct), que se borró. Los datos
 de los que depende están en `docs/ARQUITECTURA-DATOS-V2.md`.
 
 **Pide es la página que un negocio comparte con sus clientes**: lo que vende, cómo reservar, cómo
-inscribirse y cómo pedir un envío, en un solo enlace:
+inscribirse y cómo pedir un envío, en un solo enlace (con `agenda.` en vez de `tienda.` si agenda):
 
 ```
-pide.vendemias.com/<negocio>             portada + catálogo
-pide.vendemias.com/<negocio>/p/<item>    un producto o servicio (para compartir suelto)
-pide.vendemias.com/<negocio>/reservar    citas y grupos
-pide.vendemias.com/<negocio>/envio       agendar un envío
+tienda.vendemias.com/<negocio>             portada + catálogo
+tienda.vendemias.com/<negocio>/p/<item>    un producto o servicio (para compartir suelto)
+tienda.vendemias.com/<negocio>/reservar    citas y grupos
+tienda.vendemias.com/<negocio>/envio       agendar un envío
 ```
 
 ## 1 · Principios
@@ -153,7 +158,7 @@ devuelve solo campos públicos. Nunca PII de otros clientes: los cupos salen com
 
 | Fase | Qué | Depende de |
 |---|---|---|
-| **0** | Dominio `pide.vendemias.com` (código hecho el 15-oct; faltan Vercel y DNS) | Alvaro |
+| **0** | Dominios `tienda.vendemias.com` y `agenda.vendemias.com` (código y Vercel el 15-oct; faltan los CNAME) | Alvaro |
 | **1** | Envíos completo: formulario, panel, etiquetas | Nada: las tablas nacen en la nube |
 | **2** | Página + plantillas + catálogo + opciones + carrito → WhatsApp | Leer: nada. Que un negocio **sin bot** edite su catálogo: etapa 2 de la arquitectura |
 | **3** | Reservar e inscribirse | Etapa 4 de la arquitectura (servicio de reservas) |
@@ -163,7 +168,12 @@ Las fases 1 y 2 van en paralelo con las etapas 0–2 de la arquitectura.
 
 ## 8 · Decidido
 
-- Nombre y host: **pide** (Alvaro, 15-oct).
+- Nombre: **«Tu página»**; hosts **tienda** y **agenda**, la misma página en los dos (Alvaro, 15-oct;
+  sustituye a «Pide» / `pide.vendemias.com`, decidido esa misma mañana). En el panel: `/panel/tu-pagina`.
+  La pestaña «Mi página» de Fideliza (el Linktree) pasó a «Mis enlaces» para no chocar.
+- **Unir «Mis enlaces» con Tu página** en la fase 2 (Alvaro, 15-oct): una sola página por negocio, con
+  los botones de Fideliza como sección; `fideliza.vendemias.com/<slug>` (placas ya impresas) redirige
+  siempre, y un solo slug por negocio. No antes: hoy Tu página solo tiene envíos.
 - Arquitectura completa, sin atajos (Alvaro, 15-oct).
 - Las preguntas obligatorias de Mia no aplican a Pide.
 - Lo del voucher → cita (`prompt-bot-voucher-y-caja.md`) sigue en pausa.
@@ -172,5 +182,5 @@ Las fases 1 y 2 van en paralelo con las etapas 0–2 de la arquitectura.
 
 - **«El primero libre»** en reservas: ¿por orden o repartido?
 - **Slugs reservados:** `panel`, `api`, `login`, `admin`, `ayuda`… no se pueden dar a un negocio.
-  Hoy `pide.vendemias.com/panel` muestra una página de negocio llamada «panel» (no el panel, que nunca
-  se sirve en este host).
+  Hoy `tienda.vendemias.com/panel` muestra una página de negocio llamada «panel» (no el panel, que nunca
+  se sirve en estos hosts).

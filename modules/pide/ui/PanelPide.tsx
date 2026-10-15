@@ -2,14 +2,17 @@
 
 /**
  * ══════════════════════════════════════════════════════════════════════════
- * PIDE EN EL PANEL · la página del negocio y sus envíos
+ * TU PÁGINA EN EL PANEL · la página del negocio y sus envíos
  * ══════════════════════════════════════════════════════════════════════════
  *
  * Dos pestañas:
  *   · Envíos    lo que llegó desde la página, para imprimir etiquetas y
  *               llevar la cuenta de qué se recogió y qué se entregó.
- *   · Mi página la dirección, el WhatsApp a donde llega todo y qué secciones
+ *   · La página la dirección, el WhatsApp a donde llega todo y qué secciones
  *               se enseñan. Si todavía no hay página, se abre aquí.
+ *
+ * Por fuera el producto se llama «Tu página» (Alvaro, 15-oct-2026); por dentro
+ * sigue siendo Pide. El host del enlace depende del modo: dominio/config.ts.
  *
  * Todo escribe en la nube (tablas pide_*, RPC con la sesión del usuario):
  * no pasa por el bot y funciona igual en un negocio sin bot.
@@ -81,7 +84,7 @@ export default function PanelPide() {
   return (
     <main className="main">
       <div className="wrap">
-        <Topbar titulo="Pide" sub="Tu página para que tus clientes te pidan, y lo que te piden" />
+        <Topbar titulo="Tu página" sub="El enlace para que tus clientes te pidan, y lo que te piden" />
         {error && <p className="vacio">No se pudo cargar: {error}</p>}
         {cargando && !pagina && <p className="vacio">Cargando…</p>}
         {!cargando && !error && companyId && (
@@ -91,7 +94,7 @@ export default function PanelPide() {
                 Envíos
               </button>
               <button role="tab" aria-selected={pestana === 'pagina'} className={pestana === 'pagina' ? 'active' : ''} onClick={() => setPestana('pagina')}>
-                Mi página
+                La página
               </button>
             </div>
             {pestana === 'pagina' ? (
@@ -107,11 +110,12 @@ export default function PanelPide() {
 }
 
 /* ═══════════════════════════════════════════════════════════════════════
-   MI PÁGINA
+   LA PÁGINA
    ═══════════════════════════════════════════════════════════════════════ */
 
 function MiPagina({ companyId, nombre, pagina, alGuardar }: { companyId: string; nombre: string; pagina: Pagina | null; alGuardar: () => void }) {
   const avisar = useAvisar();
+  const { compania } = useSesion();
   const [titulo, setTitulo] = useState(pagina?.titulo || nombre);
   const [frase, setFrase] = useState(pagina?.frase ?? '');
   const [slug, setSlug] = useState(pagina?.slug ?? sugerirSlug(nombre || companyId));
@@ -186,7 +190,7 @@ function MiPagina({ companyId, nombre, pagina, alGuardar }: { companyId: string;
         <label className="pd-panel-campo">
           <span>Tu dirección</span>
           <div className="pd-panel-slug">
-            <span className="muted">{urlPagina('').replace(/^https?:\/\//, '')}</span>
+            <span className="muted">{urlPagina('', compania?.business_mode).replace(/^https?:\/\//, '')}</span>
             <input className="input" value={slug} maxLength={40} onChange={(e) => setSlug(sugerirSlug(e.target.value, true))} />
           </div>
           <small className={libre === false ? 'pd-panel-mal' : 'muted'}>
@@ -238,7 +242,8 @@ function MiPagina({ companyId, nombre, pagina, alGuardar }: { companyId: string;
 
 function Compartir({ slug, envios }: { slug: string; envios: boolean }) {
   const avisar = useAvisar();
-  const enlaces = [{ nombre: 'Tu página', url: urlPagina(slug) }, ...(envios ? [{ nombre: 'Directo a envíos', url: urlEnvio(slug) }] : [])];
+  const modo = useSesion().compania?.business_mode;
+  const enlaces = [{ nombre: 'Tu página', url: urlPagina(slug, modo) }, ...(envios ? [{ nombre: 'Directo a envíos', url: urlEnvio(slug, modo) }] : [])];
   async function bajarQr(url: string) {
     const png = await QRCode.toDataURL(url, { width: 1024, margin: 2, errorCorrectionLevel: 'M' });
     const a = document.createElement('a');
@@ -358,7 +363,7 @@ function Envios({ companyId, pagina, nombre, codigo, alConfigurar }: {
     <section className="card table-card">
       <div className="pd-panel-barra">
         {codigo ? (
-          <p className="muted">Buscando el envío <b>{codigo}</b> · <a href="/panel/pide">ver todos</a></p>
+          <p className="muted">Buscando el envío <b>{codigo}</b> · <a href="/panel/tu-pagina">ver todos</a></p>
         ) : (
           <div className="chip-tabs">
             {FILTROS.map((f) => (

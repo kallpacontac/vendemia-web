@@ -1,5 +1,5 @@
 /**
- * pide.vendemias.com/<negocio> · la portada.
+ * tienda.vendemias.com/<negocio> · la portada (o agenda.*: es la misma).
  *
  * Lo que el negocio encendió, como botones grandes, y siempre «Escríbenos por
  * WhatsApp». El catálogo y las reservas entran en sus fases (docs/PLAN-PIDE.md);
@@ -16,7 +16,7 @@ type Props = { params: { slug: string } };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const p = await paginaDe(params.slug).catch(() => null);
-  if (!p) return { title: 'Pide', robots: { index: false } };
+  if (!p) return { title: 'Vendemia', robots: { index: false } };
   return {
     title: p.titulo,
     description: p.frase || `Pide a ${p.titulo}`,
@@ -33,7 +33,7 @@ export default async function Portada({ params }: Props) {
       <Cabecera pagina={p} />
       <div className="pd-hoja">
         <nav className="pd-acciones" aria-label="Qué quieres hacer">
-          {/* Enlace relativo a propósito: vale igual en pide.vendemias.com/<negocio> y en /pide/<negocio>. */}
+          {/* Enlace relativo a propósito: vale igual en tienda o agenda (host/<negocio>) y en /pide/<negocio>. */}
           {p.secciones.envios && (
             <a className="pd-accion" href={`./${p.slug}/envio`}>
               <span className="pd-accion__icono"><Package size={22} aria-hidden="true" /></span>

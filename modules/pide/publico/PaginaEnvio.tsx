@@ -1,5 +1,5 @@
 /**
- * pide.vendemias.com/<negocio>/envio · agendar un envío.
+ * tienda.vendemias.com/<negocio>/envio · agendar un envío (o agenda.*).
  *
  * El servidor pinta el marco (color, nombre) y el formulario es la única isla
  * con JavaScript.
@@ -16,7 +16,7 @@ type Props = { params: { slug: string } };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const p = await paginaDe(params.slug).catch(() => null);
-  return p ? { title: `Agendar un envío · ${p.titulo}` } : { title: 'Pide', robots: { index: false } };
+  return p ? { title: `Agendar un envío · ${p.titulo}` } : { title: 'Vendemia', robots: { index: false } };
 }
 
 export default async function PaginaEnvio({ params }: Props) {

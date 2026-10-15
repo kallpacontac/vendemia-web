@@ -71,7 +71,7 @@ function Lista() {
     const perfil = datos.perfiles.find((p) => p.id === id);
     if (!perfil) return '—';
     if (esDirecto(perfil.name)) return 'Enlace directo';
-    return perfil.id === ajustes?.default_profile_id ? 'Mi página' : perfil.name;
+    return perfil.id === ajustes?.default_profile_id ? 'Mis enlaces' : perfil.name;
   };
 
   /**
@@ -121,7 +121,7 @@ function Lista() {
       const n = ids.length;
       /**
        * Su página aún no tiene botones publicados (lo normal en un negocio
-       * recién creado): directo a montarla. Al publicar, Mi página activa
+       * recién creado): directo a montarla. Al publicar, Mis enlaces activa
        * las placas que esperan (activarPendientes) y allí mismo puede elegir
        * un enlace directo en vez de la página.
        */

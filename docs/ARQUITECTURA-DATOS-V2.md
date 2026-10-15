@@ -15,7 +15,7 @@ Hoy el bot (en local, con SQLite) es el único que escribe. El panel inserta un 
 el bot lo ejecute. Eso funcionó mientras todo negocio tenía bot. Ya no es así:
 
 - Los negocios de **Fideliza** nacen solo en Supabase (`loyalty_business_create`), sin bot.
-- **Pide** (`docs/PLAN-PIDE.md`) tiene que funcionar con un negocio que solo tiene un número de
+- **Pide** (por fuera «Tu página», en `tienda.*`/`agenda.*`; `docs/PLAN-PIDE.md`) tiene que funcionar con un negocio que solo tiene un número de
   WhatsApp.
 - Sin bot, **un negocio no puede ni guardar su catálogo**: `upsert_catalog_item` espera a un bot que
   no existe.

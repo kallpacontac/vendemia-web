@@ -1,6 +1,6 @@
 /**
  * El middleware del sitio. Separa los hosts públicos del dominio principal:
- *   · pide.vendemias.com     → modules/pide/servidor/hosts.ts
+ *   · tienda.vendemias.com y agenda.vendemias.com → modules/pide/servidor/hosts.ts
  *   · fideliza.vendemias.com → modules/fideliza/servidor/hosts.ts
  * Cada uno devuelve su respuesta o deja pasar al siguiente.
  */

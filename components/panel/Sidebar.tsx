@@ -74,8 +74,9 @@ const NAV = [
   // Tarjetas de cliente, placas NFC/QR y Google Wallet. Tiene sus pestañas
   // dentro (app/(panel)/panel/fideliza/layout.tsx). En el móvil va en «Más».
   { href: '/panel/fideliza', icon: Gift, label: 'Fideliza' },
-  // La página pública del negocio (pide.vendemias.com) y los envíos que llegan por ella.
-  { href: '/panel/pide', icon: Store, label: 'Pide' },
+  // La página pública del negocio (tienda.* o agenda.*, según el modo) y los envíos
+  // que llegan por ella. Por dentro es Pide: modules/pide.
+  { href: '/panel/tu-pagina', icon: Store, label: 'Tu página' },
   { href: '/panel/metricas', icon: BarChart2, label: 'Métricas' },
   // Stock de placas sin dueño. Solo el superadmin (platform_admins); la base lo
   // exige igual en loyalty_admin_device_batch/order.

@@ -1,5 +1,5 @@
 /**
- * El envoltorio común de toda página pública de Pide: el color del negocio y
+ * El envoltorio común de toda «Tu página» (Pide por dentro): el color del negocio y
  * el pie. Componente de servidor, sin JavaScript.
  */
 import { colorValido, tintaSobre } from '@/modules/fideliza/dominio/estilo';
@@ -16,7 +16,7 @@ export default function Marco({ pagina, children }: { pagina: PaginaPublica; chi
     <div className="pd" style={estiloDe(pagina)}>
       {children}
       <p className="pd-pie">
-        Hecho con <a href="https://vendemias.com/?utm_source=pide" rel="noopener">Vendemia</a>
+        Hecho con <a href="https://vendemias.com/?utm_source=tu-pagina" rel="noopener">Vendemia</a>
       </p>
     </div>
   );

@@ -1,4 +1,4 @@
-/* Pide en el panel. Usa los tokens de app/panel.css; aquí solo lo propio. */
+/* «Tu página» en el panel (Pide por dentro). Usa los tokens de app/panel.css; aquí solo lo propio. */
 
 .pd-panel-tabs { margin-bottom: 16px; }
 .pd-panel-grid { display: grid; gap: 16px; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); align-items: start; }

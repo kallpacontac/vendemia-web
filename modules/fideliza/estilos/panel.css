@@ -98,7 +98,7 @@
 .fz-opcion span{color:var(--ink-soft);font-size:14px;line-height:1.45}
 .fz-opcion em{font-style:normal;font-weight:700;color:var(--brand-txt);margin-top:auto}
 .fz-cta{display:flex;gap:16px;align-items:center;justify-content:space-between;margin-top:16px}
-/* Editor «Mi página»: formulario + móvil de vista previa. */
+/* Editor «Mis enlaces»: formulario + móvil de vista previa. */
 .fz-editor{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:20px;align-items:start;padding-bottom:90px}
 .fz-editor__form{display:flex;flex-direction:column;gap:16px}
 .fz-editor__vista{position:sticky;top:20px}
@@ -180,7 +180,7 @@
   .fz-activar-placa__acciones{flex-direction:column}
   .fz-activar-placa__acciones .btn{width:100%}
 }
-/* Mi página v2: plantillas, redes, Google y vista previa real (iframe). */
+/* Mis enlaces (antes «Mi página») v2: plantillas, redes, Google y vista previa real (iframe). */
 .fz-ico{display:inline-flex;flex-shrink:0}
 .fz-ico svg{width:100%;height:100%}
 .fz-plantillas{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}

@@ -1,5 +1,5 @@
 'use client';
-// Pide en el panel: modules/pide/ui. Aquí solo la ruta.
+// «Tu página» en el panel (Pide por dentro): modules/pide/ui. Aquí solo la ruta.
 import { Suspense } from 'react';
 import PanelPide from '@/modules/pide/ui/PanelPide';
 

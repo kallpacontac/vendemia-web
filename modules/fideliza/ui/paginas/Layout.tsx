@@ -25,7 +25,7 @@ const PESTANAS: { href: string; label: string; permiso: string; modos: Modo[] }[
   { href: '/panel/fideliza', label: 'Inicio', permiso: 'program.read', modos: ['nuevo', 'enlaces', 'fidelizacion'] },
   { href: '/panel/fideliza/caja', label: 'Caja', permiso: 'ops.record', modos: ['fidelizacion'] },
   { href: '/panel/fideliza/clientes', label: 'Clientes', permiso: 'members.read', modos: ['fidelizacion'] },
-  { href: '/panel/fideliza/mi-pagina', label: 'Mi página', permiso: 'program.read', modos: ['enlaces', 'fidelizacion'] },
+  { href: '/panel/fideliza/mi-pagina', label: 'Mis enlaces', permiso: 'program.read', modos: ['enlaces', 'fidelizacion'] },
   { href: '/panel/fideliza/programa', label: 'Programa de puntos', permiso: 'program.read', modos: ['fidelizacion'] },
   { href: '/panel/fideliza/placas', label: 'Placas y QR', permiso: 'program.read', modos: ['enlaces', 'fidelizacion'] },
   { href: '/panel/fideliza/enlaces', label: 'Perfiles de placas', permiso: 'links.manage', modos: ['fidelizacion'] },

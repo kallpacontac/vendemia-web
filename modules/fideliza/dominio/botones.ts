@@ -94,7 +94,7 @@ export const defDe = (t: TipoBoton) =>
  * Placa con ENLACE DIRECTO: abre una sola URL, sin página. Por dentro es un
  * perfil de un solo enlace (el resolutor hace 302 con 1 enlace), uno por
  * placa, reconocible por el nombre. Así se edita desde la ficha de la placa
- * sin tocar «Mi página».
+ * sin tocar «Mis enlaces».
  */
 export const DIRECTOS: TipoBoton[] = ['whatsapp', 'instagram', 'tiktok', 'facebook', 'youtube', 'resenas', 'maps', 'carta', 'web', 'enlace'];
 export const nombreDirecto = (deviceId: string) => `Directo · ${deviceId.slice(0, 8)}`;

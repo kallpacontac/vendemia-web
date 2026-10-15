@@ -72,7 +72,7 @@ export default function FichaPlaca() {
       return null;
     }
     // Sin página principal todavía, el primer perfil guardado pasaría a serlo
-    // (sql 0008). Se crea antes la principal, vacía, para que «Mi página» siga
+    // (sql 0008). Se crea antes la principal, vacía, para que «Mis enlaces» siga
     // siendo la página y no este enlace.
     if (!ajustes?.default_profile_id) {
       await accion('perfil.guardar', { companyId, profileId: null, name: 'Principal', title: '', tagline: '', links: [], makeDefault: true });
@@ -101,7 +101,7 @@ export default function FichaPlaca() {
       if (destino === 'pagina') {
         profileId = ajustes?.default_profile_id ?? null;
         if (!profileId) {
-          avisar('Aún no tienes página. Créala en «Mi página» o elige «Un enlace directo».', 'error');
+          avisar('Aún no tienes página. Créala en «Mis enlaces» o elige «Un enlace directo».', 'error');
           return;
         }
       } else if (destino === 'directo') {
@@ -117,7 +117,7 @@ export default function FichaPlaca() {
           await accion('placa.estado', { companyId, deviceId, status: 'active' });
           activada = true;
         } catch {
-          /* p. ej. «Mi página» publicada sin botones: se queda asignada */
+          /* p. ej. «Mis enlaces» publicada sin botones: se queda asignada */
         }
       }
       avisar(activada ? '¡Listo! La placa ya está activa.' : 'Guardado. La URL de la placa no cambia.');
@@ -191,7 +191,7 @@ export default function FichaPlaca() {
             <label className="fz-fila" style={{ gap: 8 }}>
               <input type="radio" name="destino" checked={destino === 'pagina'} disabled={!editable} onChange={() => setDestino('pagina')} />
               <span>
-                <b>Mi página</b> · tus botones y redes{!ajustes?.default_profile_id && <> (aún no la tienes: <Link href="/panel/fideliza/mi-pagina">créala</Link>)</>}
+                <b>Mis enlaces</b> · tus botones y redes{!ajustes?.default_profile_id && <> (aún no la tienes: <Link href="/panel/fideliza/mi-pagina">créala</Link>)</>}
               </span>
             </label>
             <label className="fz-fila" style={{ gap: 8 }}>
