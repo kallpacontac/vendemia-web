@@ -53,3 +53,17 @@ para y se replantea antes de la etapa 1.
 - No cambies el espejo, ni los comandos, ni ninguna escritura.
 - No toques `memberships` ni nada de roles: el corte es el 21-oct.
 - No empieces la bajada. Va en la etapa 2, después de los cimientos SQL de la web.
+
+## Para que lo sepas: la etapa 1 ya está escrita en la web
+
+`vendemia-web/modules/datos/sql/0001_cimientos_v2.sql` (todavía sin aplicar). Cuando se aplique, Postgres
+tendrá cosas que SQLite no tiene, y **no debería romper el espejo**, pero confírmalo:
+
+- `sync_version bigint` en `companies`, `catalog`, `catalog_media`, `employees`, `employee_blocks`,
+  `form_templates`, `appointments`, `appointment_services`, `orders`, `pending_payments`, `gastos`. La pone
+  un trigger en cada insert/update, también en los upserts del espejo.
+- `appointment_services.company_id`, que un trigger rellena desde la cita.
+- La tabla `sync_borrados` y la `datos_v2_empresas` (quién manda en cada negocio; sin fila = el bot).
+
+Dime si `npm run schema:diff` se queja de columnas que existen en Postgres y no en SQLite, y si el espejo
+sube algún campo que choque con esos triggers.
