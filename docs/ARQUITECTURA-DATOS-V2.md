@@ -15,7 +15,7 @@ Hoy el bot (en local, con SQLite) es el único que escribe. El panel inserta un 
 el bot lo ejecute. Eso funcionó mientras todo negocio tenía bot. Ya no es así:
 
 - Los negocios de **Fideliza** nacen solo en Supabase (`loyalty_business_create`), sin bot.
-- **Pide** (por fuera «Tu página», en `tienda.*`/`agenda.*`; `docs/PLAN-PIDE.md`) tiene que funcionar con un negocio que solo tiene un número de
+- **Tu página** (`tienda.*`/`agenda.*`; `docs/PLAN-TU-PAGINA.md`) tiene que funcionar con un negocio que solo tiene un número de
   WhatsApp.
 - Sin bot, **un negocio no puede ni guardar su catálogo**: `upsert_catalog_item` espera a un bot que
   no existe.
@@ -45,11 +45,11 @@ ni WhatsApp. Lo que de verdad compra SQLite es **velocidad de lectura**, y eso s
 |---|---|---|---|
 | **Configuración** | `companies` (campos de ajustes), `catalog`, `catalog_media`, `employees`, `employee_blocks`, `form_templates` · nuevas: `catalog_opciones` | **Nube** | Bajada a SQLite (§4) |
 | **Agenda y dinero** | `appointments`, `appointment_services`, `orders`, `pending_payments`, `gastos` | **Nube**, a través del servicio de reservas (§5) | Bajada a SQLite (§4) |
-| **Pide** | `pide_paginas`, `envios` | **Nube** (nacen ahí) | Bajada solo si el bot las usa algún día |
+| **Tu página** | `tu_pagina`, `envios` | **Nube** (nacen ahí) | Bajada solo si el bot las usa algún día |
 | **Conversación** | `leads`, `messages`, `conversation_events`, `escalations`, `retargeting`, `consumo_mensual`, `recargas`, `blocklist`, `seguimientos` | **Bot** (como hoy) | Espejo de subida, sin cambios |
 | **Accesos** | `memberships` y lo de roles | Sin tocar hasta después del corte del 21-oct | — |
 
-**`leads` en un negocio sin bot:** no hay conversación, así que los únicos clientes son los de Pide.
+**`leads` en un negocio sin bot:** no hay conversación, así que los únicos clientes son los de Tu página.
 Los crea la nube. Si ese negocio activa a Mia más tarde, el alta del bot **importa** sus leads una vez
 y desde ahí el bot pasa a ser su dueño. Es la única tabla cuyo escritor depende del negocio, y por eso
 el traspaso es un paso explícito, no algo que ocurra solo.
@@ -129,7 +129,7 @@ decidirReserva(datos: { horario, slotMinutes, equipo, bloqueos, citasQueSeCruzan
 ```
 
 y `calendario(datos, dias)`: la parte de `availability.calendar.ts` sin `db`, que es lo que pinta
-Pide.
+Tu página.
 
 **Por qué no copiar el motor:** sería la tercera copia de una regla con muchos casos (el de Leslie,
 el de «cualquiera», el del bloqueo). El día que una copia se desincronice, la página ofrecerá huecos
@@ -144,16 +144,16 @@ Cada etapa se puede desplegar y revertir sola. Las que tocan al bot van en un pr
 |---|---|---|---|---|
 | **0** | **Medir**: consultas y tiempo de SQLite por turno, reservas por día, tamaño de la cola del espejo | Bot | Los números que faltan en §2 | — |
 | **1** | **Cimientos en Postgres**: `sync_seq`, `sync_version` y triggers, `sync_borrados`; RPC de escritura de configuración con las MISMAS validaciones que los handlers de hoy (PATCH que conserva lo no enviado, comisión 0–100, horario válido, id de otra empresa rechazado); RLS de escritura por rol | Web (SQL en `modules/datos/sql/`) | Nada visible: prepara la etapa 2 | Sí: nadie lo usa todavía |
-| **2** | **Configuración a la nube**: el bot baja configuración en **modo sombra** (compara, no aplica) unos días → corte: deja de subirla, aplica la bajada, sus propias escrituras de catálogo y stock van por RPC. El panel escribe directo | Bot + web | **Catálogo sin bot.** Panel instantáneo. Pide catálogo para todos | Sí: volver a encender la subida (SQLite tiene todo) |
+| **2** | **Configuración a la nube**: el bot baja configuración en **modo sombra** (compara, no aplica) unos días → corte: deja de subirla, aplica la bajada, sus propias escrituras de catálogo y stock van por RPC. El panel escribe directo | Bot + web | **Catálogo sin bot.** Panel instantáneo. Tu página con catálogo para todos | Sí: volver a encender la subida (SQLite tiene todo) |
 | **3** | **Motor compartido**: `@vendemia/motor` con las pruebas del bot como prueba dorada; el bot pasa a importarlo **sin cambiar ninguna decisión** | Bot + paquete | La etapa 4 | Sí |
-| **4** | **Agenda a la nube**: servicio de reservas. Primero **en sombra**: el bot reserva como hoy y además pide al servicio una decisión de prueba; se comparan durante una semana. Corte cuando no haya diferencias | Bot + web | **Reservas desde Pide, con o sin bot.** Una sola agenda | Sí, mientras dure la sombra |
+| **4** | **Agenda a la nube**: servicio de reservas. Primero **en sombra**: el bot reserva como hoy y además pide al servicio una decisión de prueba; se comparan durante una semana. Corte cuando no haya diferencias | Bot + web | **Reservas desde Tu página, con o sin bot.** Una sola agenda | Sí, mientras dure la sombra |
 | **5** | Quitar los comandos que ya no tienen sentido (9 de configuración, los de agenda) | Las dos | Limpieza | — |
 
 **Fechas que mandan:** la etapa 2 va **después del corte de roles del 21-oct**, porque las RLS de
 escritura dependen de los roles en vigor. Las etapas 0 y 1 pueden ir ya.
 
-**Pide no espera a que acabe todo:** el catálogo se puede leer hoy mismo (todo está en Supabase) y
-los envíos nacen en la nube. Ver el orden en `docs/PLAN-PIDE.md`.
+**Tu página no espera a que acabe todo:** el catálogo se puede leer hoy mismo (todo está en Supabase) y
+los envíos nacen en la nube. Ver el orden en `docs/PLAN-TU-PAGINA.md`.
 
 ## 8 · Lo que garantiza «sin afectar al bot»
 
@@ -167,7 +167,7 @@ los envíos nacen en la nube. Ver el orden en `docs/PLAN-PIDE.md`.
 
 ## 9 · Riesgos con nombre
 
-1. **El mismo cliente creado a la vez en los dos lados** (reserva en Pide mientras le escribe a Mia).
+1. **El mismo cliente creado a la vez en los dos lados** (reserva en Tu página mientras le escribe a Mia).
    El servicio busca el lead por `(company_id, teléfono)` y, si no existe, deja la cita con el teléfono
    y sin `lead_id`. El bot, al bajarla, la enlaza con su lead (o lo crea) y avisa al servicio. Nunca se
    crean dos.

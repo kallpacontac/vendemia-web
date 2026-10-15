@@ -18,8 +18,8 @@ Alvaro aprobó cambiar quién escribe cada tabla. El documento completo está en
 
 Motivo: «Tu página» y Fideliza tienen negocios **sin bot** que hoy no pueden ni guardar su catálogo.
 «Tu página» es la página pública del negocio (catálogo, reservas, envíos) en `tienda.vendemias.com/<negocio>`
-o `agenda.vendemias.com/<negocio>`, según el modo; por dentro se llama **Pide** (`docs/PLAN-PIDE.md`,
-tablas `pide_*`), así que si ves «Pide» en la web, es lo mismo.
+o `agenda.vendemias.com/<negocio>`, según el modo (`docs/PLAN-TU-PAGINA.md`, tablas `tu_pagina` y `envios`). Antes se llamó «Pide»: si
+lo ves en algún documento viejo, es lo mismo.
 
 Desde la web se midió: **~210 ms por consulta a Supabase** con la conexión abierta (420–770 ms
 abriéndola), desde esta misma máquina. Lo que falta es medir el lado del bot.

@@ -75,7 +75,7 @@ const NAV = [
   // dentro (app/(panel)/panel/fideliza/layout.tsx). En el móvil va en «Más».
   { href: '/panel/fideliza', icon: Gift, label: 'Fideliza' },
   // La página pública del negocio (tienda.* o agenda.*, según el modo) y los envíos
-  // que llegan por ella. Por dentro es Pide: modules/pide.
+  // que llegan por ella. Vive en modules/tu-pagina.
   { href: '/panel/tu-pagina', icon: Store, label: 'Tu página' },
   { href: '/panel/metricas', icon: BarChart2, label: 'Métricas' },
   // Stock de placas sin dueño. Solo el superadmin (platform_admins); la base lo

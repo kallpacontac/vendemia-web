@@ -45,7 +45,7 @@ returns boolean language sql stable security definer set search_path = public as
     select coalesce((select config_en_nube from public.datos_v2_empresas where company_id = p_company), false);
 $$;
 
--- Un negocio que crea una PERSONA desde la web (alta de Fideliza o de Pide) no tiene bot:
+-- Un negocio que crea una PERSONA desde la web (alta de Fideliza o de Tu página) no tiene bot:
 -- nace en la nube. El espejo del bot sube con la clave de servicio, sin auth.uid(), así
 -- que sus altas no entran aquí.
 create or replace function public.v2_alta_en_nube()
