@@ -303,6 +303,16 @@ begin
     return n;
 end $$;
 
+-- ── 3b · Permisos de más que dejó la 0001 ─────────────────────────────────────
+
+-- La 0001 creó estas dos tablas sin quitar los permisos que Supabase da por defecto a
+-- toda tabla nueva de public: `anon` podía hacer SELECT (lo frenaba solo el RLS; se vio el
+-- 16-oct con la clave anon devolviendo `[]` en vez de «permission denied»). Mismo caso que
+-- scripts/arreglar-permisos-2.sql. Ahora: el panel lee datos_v2_empresas (con su política)
+-- y sync_borrados solo la lee la clave de servicio.
+revoke all on public.datos_v2_empresas, public.sync_borrados from anon, authenticated;
+grant select on public.datos_v2_empresas to authenticated;
+
 -- ── 4 · Permisos de ejecución ─────────────────────────────────────────────────
 
 revoke execute on function public.v2_sincronizar_stock(text, text)                 from public, anon, authenticated;
