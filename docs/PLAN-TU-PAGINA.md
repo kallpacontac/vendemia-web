@@ -121,15 +121,17 @@ técnico es el de Fideliza: una función pura arma la página, y **la misma** fu
 previa en un iframe. Lo que ve el dueño es lo que verá su cliente.
 
 **Opciones de producto** en el Catálogo del panel: «Añadir opciones» → elegir un grupo frecuente
-(Talla, Color, Tamaño, Nivel) o escribir uno → escribir los valores separados por coma → precio extra
-y stock por valor, solo si hace falta. Nada más.
+(Talla, Color, Tamaño, Nivel) o escribir uno → escribir los valores separados por coma → el panel arma
+las combinaciones (S/Negro, S/Blanco, M/Negro…) y se pone el stock de cada una, o se borran las que no
+existen. Se guardan como `catalog_variantes` (`cfg_variante_guardar`), la misma tabla con la que Mia
+descuenta al vender. Nada más.
 
 ## 5 · Datos
 
 | Tabla | Nace en | Contenido |
 |---|---|---|
 | `tu_pagina` | Nube | `company_id`, `slug` (único; por defecto el de Fideliza si existe, si no el id del negocio), `plantilla`, `color`, `logo_url`, `portada_url`, `secciones` (jsonb), `whatsapp`, `publicada`, `version` |
-| `catalog_opciones` | Nube | `catalog_id`, `grupo`, `valor`, `precio_extra`, `stock` (null = sin control), `orden`, `color_hex` |
+| `catalog_variantes` | Nube (ya existía en el bot; en Postgres desde la 0002) | Una fila por combinación vendible: `etiqueta` («M / Negro»), `atributos` (`{"talla":"M","color":"Negro"}`), `stock`. `catalog.stock` es su suma. La misma tabla que usa Mia al vender: no hay una tabla de opciones aparte. Precio distinto por variante: todavía no (columna nueva cuando haga falta) |
 | `pedidos_web` | Nube | `codigo`, `company_id`, cliente, líneas (jsonb con opciones), total, entrega, `estado`. Es la intención del cliente; el pedido real (`orders`) llega en la etapa 4 de la arquitectura |
 | `envios` | Nube | `codigo`, remitente, destinatario, dirección, distrito, referencia, bultos, peso, contra entrega, fecha y franja de recojo, `estado`, `impreso_at` |
 

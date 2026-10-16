@@ -1,7 +1,9 @@
 # Arquitectura de datos v2 · quién manda en cada tabla
 
 Escrito el 15-oct-2026. Estado: **aprobada por Alvaro** («procede con la arquitectura, nada de
-atajos»). Sin código todavía, salvo lo que diga cada etapa.
+atajos»). **16-oct:** etapa 0 hecha (medidas del bot en `vendemia/docs/medidas-arquitectura-v2.md`,
+resumidas en §2) y etapa 1 aplicada en Supabase (`modules/datos/sql/0001`). La 0002 recoge lo que la
+medida corrigió.
 
 Sustituye la regla «SQLite manda en todo» de `docs/sincronizacion-supabase.md` (repo del bot). La
 regla que **no** cambia: **cada tabla tiene un solo escritor.** Lo que cambia es quién es ese
@@ -29,10 +31,20 @@ el bot lo ejecute. Eso funcionó mientras todo negocio tenía bot. Ya no es así
 | Consulta a SQLite local | microsegundos |
 | Un turno de Mia (modelo incluido) | 2–6 s |
 
-Falta la medida del lado del bot: **cuántas consultas hace cada turno**. Es la etapa 0.
+**Medido por el bot (etapa 0, 16-oct)**, 170 turnos del eval completo sobre una copia de la base:
 
-**La conclusión ya es firme:** leer en remoto en cada turno sumaría segundos (10 consultas × 210 ms ≈
-2 s). **El bot sigue leyendo todo en local.** Solo va a la nube al **escribir** una reserva, un cobro
+| Por turno | p50 | p95 | máx |
+|---|---|---|---|
+| Consultas a SQLite | 16 | 37 | 50 |
+| Tiempo en SQLite | 1,5 ms | 19,7 ms | 36,6 ms |
+| Turno entero (modelo incluido) | 2.556 ms | 4.912 ms | 7.624 ms |
+| Escrituras en tablas de la nube | 0 | 3–4 | 5 (turnos que reservan) |
+| Lectura a Supabase (PostgREST, 20 seguidas) | 258 ms | 430 ms | 725 ms |
+
+Volumen real de escrituras de agenda y configuración: **menos de una por negocio y día**.
+
+**La conclusión ya es firme:** leer en remoto en cada turno lo triplicaría (16 × ~250 ms ≈ +4 s
+sobre ~2,5 s). Leer en local no es una optimización, es la condición. **El bot sigue leyendo todo en local.** Solo va a la nube al **escribir** una reserva, un cobro
 o un cambio de catálogo, que pasa una vez por conversación y cuesta 0,2–0,4 s sobre un turno de
 2–6 s.
 
@@ -43,8 +55,9 @@ ni WhatsApp. Lo que de verdad compra SQLite es **velocidad de lectura**, y eso s
 
 | Dominio | Tablas | Escritor | Cómo llega al otro lado |
 |---|---|---|---|
-| **Configuración** | `companies` (campos de ajustes), `catalog`, `catalog_media`, `employees`, `employee_blocks`, `form_templates` · nuevas: `catalog_opciones` | **Nube** | Bajada a SQLite (§4) |
+| **Configuración** | `companies` (entera), `catalog`, `catalog_variantes`, `catalog_media`, `employees`, `employee_blocks`, `form_templates` | **Nube** | Bajada a SQLite (§4) |
 | **Agenda y dinero** | `appointments`, `appointment_services`, `orders`, `pending_payments`, `gastos` | **Nube**, a través del servicio de reservas (§5) | Bajada a SQLite (§4) |
+| **Anotaciones del bot sobre citas** | `citas_del_bot` (nueva: `appointment_id`, `calendar_event_id`, `reminder_sent_at`) | **Bot** | Espejo de subida |
 | **Tu página** | `tu_pagina`, `envios` | **Nube** (nacen ahí) | Bajada solo si el bot las usa algún día |
 | **Conversación** | `leads`, `messages`, `conversation_events`, `escalations`, `retargeting`, `consumo_mensual`, `recargas`, `blocklist`, `seguimientos` | **Bot** (como hoy) | Espejo de subida, sin cambios |
 | **Accesos** | `memberships` y lo de roles | Sin tocar hasta después del corte del 21-oct | — |
@@ -54,9 +67,24 @@ Los crea la nube. Si ese negocio activa a Mia más tarde, el alta del bot **impo
 y desde ahí el bot pasa a ser su dueño. Es la única tabla cuyo escritor depende del negocio, y por eso
 el traspaso es un paso explícito, no algo que ocurra solo.
 
-**`companies` tiene dos dueños por campo** (los ajustes los escribe la nube; el estado de la
-instancia, el bot). Se resuelve partiendo la escritura: el bot deja de subir esa fila entera y
-actualiza sus campos con una RPC que solo acepta los suyos.
+**`companies` pasa entera a la nube** (corregido por la etapa 0). El estado de la instancia no vive
+ahí: el bot lo publica en `instances`, directo a Supabase. Todo lo que el bot escribe en `companies`
+en ejecución es configuración que llega del panel o de la API.
+
+**Los campos con dos dueños están en `appointments`:** `calendar_event_id` (Mia lo escribe segundos
+después de reservar, cuando contesta Google) y `reminder_sent_at` (cron cada 15 min). Con la agenda en
+la nube serían escrituras del bot sobre filas que ya no son suyas. Se sacan a una tabla del bot,
+`citas_del_bot`, que sube por el espejo: un escritor por tabla, sin excepciones.
+
+**Las escrituras de arranque del bot** (`initSchema` en `companies`, `catalog_media` y `appointments`;
+`completarClavesCalificacion`) rellenan datos en cada boot. Tras el corte serían escrituras locales que
+la bajada pisa: se apagan para las tablas de la nube y su trabajo lo hace la nube (la 0002 ya pone
+las claves de las preguntas obligatorias, como `conClaves`).
+
+**Un negocio nacido en la web que luego monta un bot** (`onboard`) tiene el mismo problema que los
+leads: su espejo empezaría a subir `companies`, `catalog`… sobre filas cuya dueña es la nube. El alta
+del bot **comprueba `datos_v2_empresas`** y, si el negocio es de la nube, arranca bajando en vez de
+subiendo.
 
 ## 4 · La bajada: nube → SQLite
 
@@ -104,12 +132,21 @@ POST /api/agenda/reservar | mover | cancelar | cobrar | asistencia
 - Vive en Vercel (`app/api/agenda/*`), con conexión directa a Postgres por el pooler de Supabase
   (modo transacción). Necesita `DATABASE_URL` en Vercel, que **hoy no existe**: la pone Alvaro.
 - El bloqueo es **por negocio**: dos negocios nunca se esperan entre sí.
-- **El bot reserva llamándolo.** `book_appointment`, `update_appointment`, `cancel`, el cron de
-  asistencia, el voucher y `settlePendingEnrolment` dejan de escribir en SQLite y llaman aquí. Si la
+- **El bot reserva llamándolo.** Inventario completo de la etapa 0: `book_appointment`,
+  `update_appointment`, `cancel_appointment`, **`join_schedule_slot`** (otra reserva, con su propio cupo,
+  que además cancela la anterior al cambiar de grupo), **`save_customer_info`** (beneficiario de la
+  inscripción), **`create_order` / `cancel_order`** (pedido y stock, con `ajustar_stock_variante`), el
+  voucher, `settlePendingEnrolment`, el cron de asistencia y **`cerrarInscripcionesVencidas`**. Todos dejan
+  de escribir en SQLite y llaman aquí. Si la
   nube no responde, Mia dice que no pudo confirmar y lo reintenta; no inventa una cita que el panel no
   verá.
-- Los comandos de agenda del panel (`crear_cita`, `modificar_cita`, `marcar_pagado`,
-  `registrar_pago`, `marcar_cumplido`) pasan a ser llamadas a este servicio.
+- Los comandos de agenda del panel (`crear_cita`, `modificar_cita` —también cuando cancela—,
+  `marcar_pagado`, `registrar_pago`, `marcar_cumplido`, `upsert_gasto`, `delete_gasto`) pasan a ser
+  llamadas a este servicio.
+- **Se retira `POST /public/:companyId/book`** del bot (y `availability`/`calendar` públicos). Hoy es
+  inalcanzable, pero es un escritor más: la reserva pública es la de Tu página.
+- **El caso real que lo justifica** (etapa 0): 9 comandos de barberia-01 esperando desde el 11-sep
+  (`marcar_pagado` ×4, `upsert_gasto` ×2…). Su bot no corre. Sin bot, el panel no puede ni cobrar.
 
 ## 6 · El motor compartido
 
@@ -129,7 +166,13 @@ decidirReserva(datos: { horario, slotMinutes, equipo, bloqueos, citasQueSeCruzan
 ```
 
 y `calendario(datos, dias)`: la parte de `availability.calendar.ts` sin `db`, que es lo que pinta
-Tu página.
+Tu página. Tiene que recibir los intervalos **de una sola consulta**: hoy hace N+1
+(`getAppointmentsBySlot` por grupo, `getAppointmentsByDate` por día), que en SQLite no se nota y en
+Postgres sería ~250 ms por día del calendario.
+
+Lo que la etapa 0 encontró al revisarlo: ninguno de los cinco ficheros importa `db`, red ni ficheros.
+Lo único con estado es **el reloj** (`limaToday`, `limaNowSlot` en `datetime.ts`): `ahora` pasa a ser
+un parámetro de `isPastSlot`, `hasEnded`, `buildPunctualAvailability` y `formatDayLabel`.
 
 **Por qué no copiar el motor:** sería la tercera copia de una regla con muchos casos (el de Leslie,
 el de «cualquiera», el del bloqueo). El día que una copia se desincronice, la página ofrecerá huecos
@@ -142,8 +185,8 @@ Cada etapa se puede desplegar y revertir sola. Las que tocan al bot van en un pr
 
 | # | Etapa | Lado | Qué desbloquea | Reversible |
 |---|---|---|---|---|
-| **0** | **Medir**: consultas y tiempo de SQLite por turno, reservas por día, tamaño de la cola del espejo | Bot | Los números que faltan en §2 | — |
-| **1** | **Cimientos en Postgres**: `sync_seq`, `sync_version` y triggers, `sync_borrados`; RPC de escritura de configuración con las MISMAS validaciones que los handlers de hoy (PATCH que conserva lo no enviado, comisión 0–100, horario válido, id de otra empresa rechazado); RLS de escritura por rol | Web (SQL en `modules/datos/sql/`) | Nada visible: prepara la etapa 2 | Sí: nadie lo usa todavía |
+| **0** ✓ | **Medir** (hecho 16-oct): §2. Queda midiendo en producción con `MEDIR_V2=1` | Bot | Los números de §2 | — |
+| **1** ✓ | **Cimientos en Postgres** (0001 aplicada 16-oct; 0002 con variantes, claves de preguntas y limpieza): `sync_seq`, `sync_version` y triggers, `sync_borrados`; RPC de escritura de configuración con las MISMAS validaciones que los handlers de hoy (PATCH que conserva lo no enviado, comisión 0–100, horario válido, id de otra empresa rechazado); RLS de escritura por rol | Web (SQL en `modules/datos/sql/`) | Nada visible: prepara la etapa 2 | Sí: nadie lo usa todavía |
 | **2** | **Configuración a la nube**: el bot baja configuración en **modo sombra** (compara, no aplica) unos días → corte: deja de subirla, aplica la bajada, sus propias escrituras de catálogo y stock van por RPC. El panel escribe directo | Bot + web | **Catálogo sin bot.** Panel instantáneo. Tu página con catálogo para todos | Sí: volver a encender la subida (SQLite tiene todo) |
 | **3** | **Motor compartido**: `@vendemia/motor` con las pruebas del bot como prueba dorada; el bot pasa a importarlo **sin cambiar ninguna decisión** | Bot + paquete | La etapa 4 | Sí |
 | **4** | **Agenda a la nube**: servicio de reservas. Primero **en sombra**: el bot reserva como hoy y además pide al servicio una decisión de prueba; se comparan durante una semana. Corte cuando no haya diferencias | Bot + web | **Reservas desde Tu página, con o sin bot.** Una sola agenda | Sí, mientras dure la sombra |
@@ -166,6 +209,12 @@ los envíos nacen en la nube. Ver el orden en `docs/PLAN-TU-PAGINA.md`.
   camino nuevo.
 
 ## 9 · Riesgos con nombre
+
+**Riesgo 2 sin medir** (etapa 0): el espejo no guarda historia, así que no se sabe cuántas veces cayó
+Postgres el último mes. Desde el 16-oct, con `MEDIR_V2=1`, el bot apunta la cola cada 30 s; con unas
+semanas de bot encendido sale el número. Lo que sí se sabe: con menos de una escritura de agenda por
+negocio y día, una caída de minutos afectaría a muy pocas reservas.
+
 
 1. **El mismo cliente creado a la vez en los dos lados** (reserva en Tu página mientras le escribe a Mia).
    El servicio busca el lead por `(company_id, teléfono)` y, si no existe, deja la cita con el teléfono
