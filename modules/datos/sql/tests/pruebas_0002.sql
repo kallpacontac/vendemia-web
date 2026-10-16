@@ -79,6 +79,9 @@ select pg_temp.ok((select stock = 7 from public.catalog where id = 'zz-v2b-polo'
 select pg_temp.esperar_error($$select public.ajustar_stock('zz-v2b-a', 'zz-v2b-polo', -1)$$, 'tiene variantes', '7a');
 select pg_temp.ok(public.ajustar_stock('zz-v2b-a', 'zz-v2b-gorra', -2) = 3, '7b sin variantes');
 
+-- 7c · El bot escribe configuración como dueño (comisión incluida) en un negocio de la nube.
+select pg_temp.ok((public.cfg_producto_guardar('zz-v2b-a', '{"id":"zz-v2b-gorra","comision_pct":30}') -> 'sin_permiso') = '[]'::jsonb, '7c bot como dueño');
+
 -- ── Borrar ────────────────────────────────────────────────────────────────────
 reset role;
 set local role authenticated;

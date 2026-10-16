@@ -19,6 +19,11 @@
 --   3. `sync_borrados` no tenía limpieza: los borrados del bot (evals, suites) la hacen
 --      crecer desde ya. `sync_borrados_limpiar(días)`.
 --
+--   4. El bot también escribe configuración después del corte (Mia Gerente cambiando un
+--      precio por WhatsApp, `scripts/asistente.ts` con las variantes). Llega con la clave
+--      de servicio, sin auth.uid(), y las cfg_* lo rechazaban. Ahora lo aceptan como dueño:
+--      el bot ya comprobó el rol de quien se lo pidió (utils/roles.ts) antes de llamar.
+--
 -- Lo que NO se cambia a propósito: `cfg_producto_guardar` sigue sin aceptar `image_url`.
 -- Es un campo muerto (las fotos viven en catalog_media; ver lib/supabase/types.ts) y el
 -- PATCH conserva el valor que tenga la fila, así que no se pierde nada.
@@ -151,6 +156,32 @@ begin
     returning stock into v_stock;
     return v_stock;   -- null = ese producto no controla stock
 end $$;
+
+-- ── 1b · El bot escribe configuración como dueño ──────────────────────────────
+
+-- Igual que en la 0001, más la clave de servicio. Sigue exigiendo config_en_nube: en un
+-- negocio que todavía es del bot, el bot escribe en su SQLite como siempre.
+create or replace function public.v2_autorizar_config(p_company text)
+returns text language plpgsql stable security definer set search_path = public as $$
+declare
+    v_rol text;
+begin
+    if (select auth.role()) = 'service_role' then
+        v_rol := 'dueno';
+    else
+        v_rol := public.rol_en(p_company);
+        if v_rol is null then raise exception 'No tienes acceso a este negocio.' using errcode = '42501'; end if;
+        if v_rol not in ('admin', 'dueno') then
+            raise exception 'Eso lo hace el dueño o el administrador del negocio.' using errcode = '42501';
+        end if;
+    end if;
+    if not public.config_en_nube(p_company) then
+        raise exception 'La configuración de este negocio todavía la guarda su bot (arquitectura v2, etapa 2 sin cortar).'
+            using errcode = '55000';
+    end if;
+    return v_rol;
+end $$;
+revoke execute on function public.v2_autorizar_config(text) from public, anon, authenticated;
 
 -- ── 2 · Las claves de las preguntas obligatorias ──────────────────────────────
 
@@ -285,5 +316,25 @@ grant  execute on function public.cfg_variante_guardar(text, text, text, integer
 grant  execute on function public.cfg_variante_borrar(text, text, text)            to authenticated;
 revoke execute on function public.cfg_empresa_actualizar(text, jsonb)              from public, anon;
 grant  execute on function public.cfg_empresa_actualizar(text, jsonb)              to authenticated;
+
+-- El bot (clave de servicio) llama a las mismas cfg_* que el panel.
+do $$
+declare
+    f text;
+begin
+    foreach f in array array[
+        'cfg_producto_guardar(text, jsonb)', 'cfg_producto_borrar(text, text)',
+        'cfg_media_guardar(text, jsonb)', 'cfg_media_principal(text, text)', 'cfg_media_borrar(text, text)',
+        'cfg_trabajador_guardar(text, jsonb)', 'cfg_trabajador_borrar(text, text)',
+        'cfg_bloqueo_guardar(text, jsonb)', 'cfg_bloqueo_borrar(text, text)',
+        'cfg_empresa_actualizar(text, jsonb)', 'cfg_variante_guardar(text, text, text, integer, jsonb)',
+        'cfg_variante_borrar(text, text, text)'
+    ] loop
+        execute format('grant execute on function public.%s to service_role', f);
+    end loop;
+end $$;
+grant execute on function public.ajustar_stock(text, text, integer)          to service_role;
+grant execute on function public.ajustar_stock_variante(text, text, integer) to service_role;
+grant execute on function public.sync_borrados_limpiar(integer)              to service_role;
 
 commit;
