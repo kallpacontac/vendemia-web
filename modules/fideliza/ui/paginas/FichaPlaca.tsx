@@ -226,6 +226,7 @@ export default function FichaPlaca() {
                   aria-label={defDe(directo.tipo).pide}
                   value={directo.valor}
                   disabled={!editable}
+                  inputMode={directo.tipo === 'whatsapp' || directo.tipo === 'yape' ? 'tel' : 'url'}
                   onChange={(e) => setDirecto({ ...directo, valor: e.target.value })}
                 />
               </div>

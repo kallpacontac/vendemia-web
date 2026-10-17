@@ -12,6 +12,7 @@
  */
 export type TipoBoton =
   | 'whatsapp'
+  | 'yape'
   | 'instagram'
   | 'tiktok'
   | 'facebook'
@@ -39,6 +40,14 @@ export interface DefBoton {
 
 export const BOTONES: DefBoton[] = [
   { tipo: 'whatsapp', nombre: 'WhatsApp', label: 'Escríbenos por WhatsApp', pide: 'Tu número de WhatsApp', placeholder: '987 654 321' },
+  {
+    tipo: 'yape',
+    nombre: 'Yape / Plin',
+    label: 'Paga con Yape o Plin',
+    pide: 'Tu número de Yape o Plin (+51)',
+    placeholder: '987 654 321',
+    ayuda: 'Perú (+51) está seleccionado por defecto: escribe solo los 9 dígitos. Tus clientes podrán copiarlo y pegarlo en Yape o Plin.',
+  },
   {
     tipo: 'resenas',
     nombre: 'Reseñas en Google',
@@ -96,7 +105,7 @@ export const defDe = (t: TipoBoton) =>
  * placa, reconocible por el nombre. Así se edita desde la ficha de la placa
  * sin tocar «Mis enlaces».
  */
-export const DIRECTOS: TipoBoton[] = ['whatsapp', 'instagram', 'tiktok', 'facebook', 'youtube', 'resenas', 'maps', 'carta', 'web', 'enlace'];
+export const DIRECTOS: TipoBoton[] = ['whatsapp', 'yape', 'instagram', 'tiktok', 'facebook', 'youtube', 'resenas', 'maps', 'carta', 'web', 'enlace'];
 export const nombreDirecto = (deviceId: string) => `Directo · ${deviceId.slice(0, 8)}`;
 export const esDirecto = (nombre: string | null | undefined) => (nombre ?? '').startsWith('Directo · ');
 
@@ -123,6 +132,16 @@ export function numeroWhatsApp(v: string): string {
   return d.length === 9 && d.startsWith('9') ? `51${d}` : d;
 }
 
+/** Celular peruano válido para recibir por Yape o Plin, sin el prefijo 51. */
+export function numeroPagoMovil(v: string): string {
+  const d = v.replace(/\D/g, '');
+  const local = d.length === 11 && d.startsWith('51') ? d.slice(2) : d;
+  return /^9\d{8}$/.test(local) ? local : '';
+}
+
+/** URL estable que permite mostrar y copiar el número desde cualquier placa. */
+export const urlPagoMovil = (numero: string) => `https://fideliza.vendemias.com/pagar/${numero}`;
+
 /** Del dato que escribe el dueño a la URL que se guarda. '' si no hay forma. */
 export function aUrl(tipo: TipoBoton, valor: string): string {
   const v = valor.trim();
@@ -132,6 +151,10 @@ export function aUrl(tipo: TipoBoton, valor: string): string {
       if (/wa\.me|whatsapp\.com/i.test(v)) return urlSuelta(v);
       const n = numeroWhatsApp(v);
       return n.length >= 8 ? `https://wa.me/${n}` : '';
+    }
+    case 'yape': {
+      const n = numeroPagoMovil(v);
+      return n ? urlPagoMovil(n) : '';
     }
     case 'instagram':
       return /instagram\.com/i.test(v) ? urlSuelta(v) : sinArroba(v) ? `https://instagram.com/${sinArroba(v)}` : '';
@@ -169,6 +192,9 @@ export function deUrl(url: string | null, kind: 'url' | 'join'): { tipo: TipoBot
   if ((m = u.match(/^https:\/\/wa\.me\/(\d+)/i))) {
     const d = m[1];
     return { tipo: 'whatsapp', valor: d.startsWith('51') && d.length === 11 ? d.slice(2) : d };
+  }
+  if ((m = u.match(/^https:\/\/fideliza\.vendemias\.com\/pagar\/(9\d{8})\/?(?:[?#].*)?$/i))) {
+    return { tipo: 'yape', valor: m[1] };
   }
   if ((m = u.match(/^https:\/\/(?:www\.)?instagram\.com\/([A-Za-z0-9._]+)\/?$/i))) return { tipo: 'instagram', valor: '@' + m[1] };
   if ((m = u.match(/^https:\/\/(?:www\.)?tiktok\.com\/@([A-Za-z0-9._]+)\/?$/i))) return { tipo: 'tiktok', valor: '@' + m[1] };

@@ -29,6 +29,7 @@ export const ICONOS: Record<string, string> = {
   youtube: marca(siYoutube.path),
   x: marca(siX.path),
   whatsapp: marca(siWhatsapp.path),
+  yape: trazo('<rect x="5" y="2" width="14" height="20" rx="3"/><path d="M9 8h5a2 2 0 0 1 0 4h-4a2 2 0 0 0 0 4h5M12 6v2M12 16v2M9 19h6"/>'),
   telegram: marca(siTelegram.path),
   spotify: marca(siSpotify.path),
   resenas: marca(siGoogle.path),

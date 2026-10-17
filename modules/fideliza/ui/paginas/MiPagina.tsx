@@ -367,7 +367,7 @@ export default function MiPagina() {
       {placaEspera && (
         <div className="fz-panel-aviso fz-panel-aviso--info" role="status">
           <span style={{ flex: 1 }}>
-            <b>{placaEspera.n > 1 ? `Tus ${placaEspera.n} placas ya son tuyas.` : 'Tu placa ya es tuya.'}</b> Añade tus botones (WhatsApp, Instagram,
+            <b>{placaEspera.n > 1 ? `Tus ${placaEspera.n} placas ya son tuyas.` : 'Tu placa ya es tuya.'}</b> Añade tus botones (WhatsApp, Yape / Plin, Instagram,
             reseñas…) y pulsa <b>Publicar</b>: desde ese momento, al escanearla se abre esta página.
           </span>
           <Link className="btn btn-ghost btn-sm" href={`/panel/fideliza/placas/${placaEspera.id}`}>
@@ -613,7 +613,7 @@ export default function MiPagina() {
           {/* ── 5 · Botones ── */}
           <section className="card">
             <h3 className="fz-sec">5 · Tus botones</h3>
-            {botones.length === 0 && <p className="muted" style={{ fontSize: 13.5, marginBottom: 10 }}>Todavía no hay botones. Empieza por WhatsApp para reservar o por tu negocio en Google.</p>}
+            {botones.length === 0 && <p className="muted" style={{ fontSize: 13.5, marginBottom: 10 }}>Todavía no hay botones. Empieza por WhatsApp, Yape / Plin o por tu negocio en Google.</p>}
             {botones.map((b, i) => {
               const d = defDe(b.tipo);
               const url = b.tipo === 'tarjeta' ? '' : aUrl(b.tipo, b.valor);
@@ -650,7 +650,7 @@ export default function MiPagina() {
                     {b.tipo !== 'tarjeta' && (
                       <div>
                         <label className="field-label">{d.pide}</label>
-                        <input className="input" value={b.valor} disabled={!editable} placeholder={d.placeholder} inputMode={b.tipo === 'whatsapp' ? 'tel' : 'url'} onChange={(ev) => cambiar(b.clave, { valor: ev.target.value })} />
+                        <input className="input" value={b.valor} disabled={!editable} placeholder={d.placeholder} inputMode={b.tipo === 'whatsapp' || b.tipo === 'yape' ? 'tel' : 'url'} onChange={(ev) => cambiar(b.clave, { valor: ev.target.value })} />
                       </div>
                     )}
                   </div>

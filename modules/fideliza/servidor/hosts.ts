@@ -5,11 +5,11 @@
  *
  * vendemias.com y fideliza.vendemias.com apuntan al mismo despliegue.
  *
- *   · En fideliza.* solo existen las rutas públicas de Fideliza (/t, /n, /m,
+ *   · En fideliza.* solo existen las rutas públicas de Fideliza (/t, /n, /m, /pagar,
  *     su API pública y estáticos). Todo lo demás —el panel, el login, la
  *     landing— se manda al dominio principal: el panel no se sirve bajo el
  *     host de las placas.
- *   · En el dominio principal, /t /n /m redirigen a fideliza.* (308 para las
+ *   · En el dominio principal, /t /n /m /pagar redirigen a fideliza.* (308 para las
  *     páginas; las placas usan fideliza.* desde el primer día).
  *
  * Solo actúa si NEXT_PUBLIC_FIDELIZA_URL es otro host que el de la petición:
@@ -17,7 +17,7 @@
  */
 import { NextResponse, type NextRequest } from 'next/server';
 
-const PUBLICAS = /^\/(t|n|m)\/|^\/api\/fideliza\/(publico|cron)\/|^\/_next\/|^\/wallet\/|^\/favicon|^\/icon|^\/apple-icon|^\/robots\.txt$/;
+const PUBLICAS = /^\/(t|n|m|pagar)\/|^\/api\/fideliza\/(publico|cron)\/|^\/_next\/|^\/wallet\/|^\/favicon|^\/icon|^\/apple-icon|^\/robots\.txt$/;
 
 export function hostsFideliza(req: NextRequest) {
   const fz = process.env.NEXT_PUBLIC_FIDELIZA_URL;
@@ -39,7 +39,7 @@ export function hostsFideliza(req: NextRequest) {
   }
   // En local, o con previews de Vercel, cada host sirve todo.
   if (local(host) || local(hostFz) || host.endsWith('.vercel.app')) return NextResponse.next();
-  if (/^\/(t|n|m)\//.test(ruta)) {
+  if (/^\/(t|n|m|pagar)\//.test(ruta)) {
     // 307 para /t: es la placa y su destino cambia; 308 para lo demás.
     return NextResponse.redirect(new URL(ruta + req.nextUrl.search, fz), ruta.startsWith('/t/') ? 307 : 308);
   }

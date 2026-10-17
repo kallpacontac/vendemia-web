@@ -348,7 +348,7 @@ function Bienvenida() {
       <div className="fz-bienvenida__opciones">
         <Link href="/panel/fideliza/mi-pagina" className="card fz-opcion">
           <b>Mis enlaces</b>
-          <span>Un solo link con tus botones: WhatsApp, reseñas de Google, Instagram, cómo llegar… Y un QR o placa NFC para el local.</span>
+          <span>Un solo link con tus botones: WhatsApp, Yape / Plin, reseñas de Google, Instagram, cómo llegar… Y un QR o placa NFC para el local.</span>
           <em>Listo en 3 minutos →</em>
         </Link>
         <Link href="/panel/fideliza/programa?paso=0" className="card fz-opcion">

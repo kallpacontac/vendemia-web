@@ -145,6 +145,9 @@ test('10 · botones: el dato del dueño se convierte en la URL correcta', () => 
   assert.equal(botones.aUrl('tiktok', 'barberia'), 'https://www.tiktok.com/@barberia');
   assert.equal(botones.aUrl('web', 'barberia.pe'), 'https://barberia.pe');
   assert.equal(botones.aUrl('web', 'http://barberia.pe'), 'https://barberia.pe');
+  assert.equal(botones.aUrl('yape', '987 654 321'), 'https://fideliza.vendemias.com/pagar/987654321');
+  assert.equal(botones.aUrl('yape', '+51 987 654 321'), 'https://fideliza.vendemias.com/pagar/987654321');
+  assert.equal(botones.aUrl('yape', '123'), '');
   assert.equal(botones.aUrl('whatsapp', '123'), '');
   assert.equal(botones.aUrl('instagram', ''), '');
   assert.equal(botones.urlAyuda('987 654 321'), 'https://wa.me/51987654321');
@@ -159,9 +162,13 @@ test('11 · botones: al volver a editar se reconoce el tipo y el dato', () => {
   assert.deepEqual(botones.deUrl('https://www.tiktok.com/@barberia', 'url'), { tipo: 'tiktok', valor: '@barberia' });
   assert.equal(botones.deUrl('https://g.page/r/abc123/review', 'url').tipo, 'resenas');
   assert.equal(botones.deUrl('https://maps.app.goo.gl/xyz', 'url').tipo, 'maps');
+  assert.deepEqual(botones.deUrl('https://fideliza.vendemias.com/pagar/987654321', 'url'), {
+    tipo: 'yape',
+    valor: '987654321',
+  });
   assert.equal(botones.deUrl(null, 'join').tipo, 'tarjeta');
   // Ida y vuelta: lo que se guarda vuelve a dar la misma URL.
-  for (const [t, v] of [['whatsapp', '987654321'], ['instagram', '@a.b'], ['tiktok', '@x']]) {
+  for (const [t, v] of [['whatsapp', '987654321'], ['yape', '987654321'], ['instagram', '@a.b'], ['tiktok', '@x']]) {
     const url = botones.aUrl(t, v);
     const d = botones.deUrl(url, 'url');
     assert.equal(botones.aUrl(d.tipo, d.valor), url);

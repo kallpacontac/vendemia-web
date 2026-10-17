@@ -39,7 +39,7 @@ function Marco({ children }: { children: React.ReactNode }) {
   const activa = (h: string) => (h === '/panel/fideliza' ? ruta === h : ruta.startsWith(h));
 
   return (
-    <main className="main">
+    <main className="main main--fideliza">
       <div className="wrap">
         <Topbar
           titulo="Fideliza"

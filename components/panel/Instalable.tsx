@@ -63,7 +63,11 @@ export const plataforma = (): 'ios' | 'android' | 'otra' => {
 
 function etiqueta(tag: 'link' | 'meta', attrs: Record<string, string>) {
   const clave = tag === 'link' ? `link[rel="${attrs.rel}"]` : `meta[name="${attrs.name}"]`;
-  if (document.head.querySelector(clave)) return;
+  const existente = document.head.querySelector(clave);
+  if (existente) {
+    Object.entries(attrs).forEach(([k, v]) => existente.setAttribute(k, v));
+    return;
+  }
   const el = document.createElement(tag);
   Object.entries(attrs).forEach(([k, v]) => el.setAttribute(k, v));
   document.head.appendChild(el);
@@ -72,7 +76,10 @@ function etiqueta(tag: 'link' | 'meta', attrs: Record<string, string>) {
 export default function Instalable() {
   useEffect(() => {
     etiqueta('link', { rel: 'manifest', href: '/panel.webmanifest' });
-    etiqueta('meta', { name: 'theme-color', content: '#0B0B0B' });
+    // Android usa este color para la barra superior cuando el navegador o la
+    // app instalada lo permiten. Se actualiza aunque el layout raíz ya haya
+    // creado la etiqueta, para que el panel conserve el naranja de Vendemia.
+    etiqueta('meta', { name: 'theme-color', content: '#FF4900' });
     etiqueta('meta', { name: 'apple-mobile-web-app-capable', content: 'yes' });
     etiqueta('meta', { name: 'mobile-web-app-capable', content: 'yes' });
     etiqueta('meta', { name: 'apple-mobile-web-app-title', content: 'Vendemia' });
