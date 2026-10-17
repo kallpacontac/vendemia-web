@@ -22,6 +22,7 @@ import { ArrowDown, ArrowUp, Eye, EyeOff, ImagePlus, Plus, Search, Star, Trash2 
 import { useFideliza } from '@/modules/fideliza/ui/Contexto';
 import { Cargando, Fallo, SinPermiso } from '@/modules/fideliza/ui/Estados';
 import LinkPublico from '@/modules/fideliza/ui/LinkPublico';
+import AvisoSinPlaca from '@/modules/fideliza/ui/AvisoSinPlaca';
 import { useAvisar } from '@/components/panel/Avisos';
 import { useCargar } from '@/components/panel/useCargar';
 import { accion, ErrorFideliza, lecturas, mensaje } from '@/modules/fideliza/cliente/api';
@@ -374,6 +375,8 @@ export default function MiPagina() {
           </Link>
         </div>
       )}
+      {/* Sin ninguna placa: ofrecer activarla, venga de donde venga. */}
+      {!placaEspera && <AvisoSinPlaca />}
       {ajustes && (
         <LinkPublico slug={ajustes.slug} nombre={ajustes.display_name} programaActivo={Boolean(datos?.programaActivo)} hayEnlaces={botones.some((b) => b.visible)} />
       )}
