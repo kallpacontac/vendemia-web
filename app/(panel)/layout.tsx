@@ -12,7 +12,7 @@ import { BandaDemo } from '@/components/panel/Demo';
 import Link from 'next/link';
 import { RUTA_GLOBAL_POR_DEFECTO, esRutaGlobal, inicioDe, rutaPermitida } from '@/lib/panel/rutas';
 import { puedeVer } from '@/lib/panel/roles';
-import { guardarDestino, rutaActual } from '@/lib/panel/destino';
+import { guardarDestino, rutaActual, vieneDePlaca } from '@/lib/panel/destino';
 import AltaNegocio from '@/components/panel/AltaNegocio';
 import Instalable from '@/components/panel/Instalable';
 import BannerApp from '@/components/panel/BannerApp';
@@ -33,13 +33,6 @@ import BannerApp from '@/components/panel/BannerApp';
  * cero filas. Aquí solo evitamos enseñar una pantalla vacía a quien todavía no
  * ha entrado.
  */
-/**
- * Fideliza es de UN negocio: activar una placa, montar la página. El admin de
- * plataforma sin membresías que llega aquí (p. ej. desde «Activar mi placa»)
- * no va a Retargeting: crea su negocio como cualquier dueño y sigue donde iba.
- */
-const quiereNegocio = (ruta: string) => ruta === '/panel/fideliza' || ruta.startsWith('/panel/fideliza/');
-
 function Guardia({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const ruta = usePathname();
@@ -52,7 +45,12 @@ function Guardia({ children }: { children: React.ReactNode }) {
    * resto de pantallas empiezan por `if (!companyId) return null` y se quedarían
    * en blanco o cargando para siempre. Ver lib/panel/rutas.ts.
    */
-  const soloGlobal = sinCompania && esAdminPlataforma && !quiereNegocio(ruta);
+  /**
+   * Salvo si viene de «Activar mi placa» (`?origen=placa`): entonces crea su
+   * negocio como cualquier dueño y sigue a la activación, en vez de acabar en
+   * Retargeting. Solo esa entrada; el resto del panel no cambia.
+   */
+  const soloGlobal = sinCompania && esAdminPlataforma && !(typeof window !== 'undefined' && vieneDePlaca(window.location.search));
 
   /**
    * ⚠️ `reconectando` es la diferencia entre "no has entrado" y "ahora mismo no

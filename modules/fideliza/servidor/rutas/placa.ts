@@ -66,7 +66,7 @@ export async function GET(req: Request, { params }: { params: { token: string } 
  * enseñar esto a un desconocido no le da nada.
  */
 function sinActivar() {
-  const panel = `${(process.env.NEXT_PUBLIC_SITE_URL || 'https://vendemias.com').replace(/\/+$/, '')}/panel/fideliza/placas?activar=1`;
+  const panel = `${(process.env.NEXT_PUBLIC_SITE_URL || 'https://vendemias.com').replace(/\/+$/, '')}/panel/fideliza/placas?activar=1&origen=placa`;
   return pagina({
     titulo: 'Placa sin activar',
     marca: null,

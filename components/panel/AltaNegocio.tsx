@@ -95,12 +95,12 @@ export default function AltaNegocio({ salir }: { salir: () => Promise<void> }) {
     try {
       await accion('negocio.crear', { nombre: nombre.trim() });
       /**
-       * A dónde: lo que pidió antes del login, o la pantalla en la que ya está
-       * (p. ej. «activar placa» con su código), o a configurar su página.
+       * A dónde: lo que pidió antes del login, o la pantalla en la que ya está.
+       * Quien viene de una placa (`?origen=placa`) sigue a activarla; los demás
+       * se quedan en su panel. Antes, desde /panel se iba a «Mi página», y eso
+       * mandaba a Fideliza también a los negocios del bot.
        */
-      const aqui = rutaActual();
-      const destino = tomarDestino() ?? (/^\/panel\/?(?:[?#]|$)/.test(aqui) ? '/panel/fideliza/mi-pagina' : aqui);
-      window.location.assign(destino);
+      window.location.assign(tomarDestino() ?? rutaActual());
     } catch (err) {
       setError(mensaje(err));
       setEnviando(false);

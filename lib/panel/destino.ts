@@ -59,6 +59,13 @@ export function tomarDestino(): string | null {
 }
 
 /** La ruta actual completa, con búsqueda y fragmento (el código va en el fragmento). */
+/**
+ * ¿Llega desde la página «Esta placa aún no está activada»? Su botón añade
+ * `origen=placa` (modules/fideliza/servidor/rutas/placa.ts). Decide a dónde va
+ * quien acaba de crear su negocio, sin cambiar nada para los demás.
+ */
+export const vieneDePlaca = (ruta: string) => /[?&]origen=placa(?:[&#]|$)/.test(ruta);
+
 export function rutaActual() {
   return `${window.location.pathname}${window.location.search}${window.location.hash}`;
 }
