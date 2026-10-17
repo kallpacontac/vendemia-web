@@ -490,21 +490,111 @@ export async function encolarSinEsperar(
   companyId: string,
   type: TipoComando,
   payload: Record<string, unknown>,
-): Promise<string> {
+): Promise<{ id: string; enNube: boolean }> {
+  if (await vaALaNube(companyId, type)) {
+    try {
+      await aplicarEnNube(companyId, type, payload);
+      return { id: '', enNube: true };
+    } catch (e) {
+      if (!(e instanceof YaNoEsDeLaNube)) throw e;
+    }
+  }
   const { data, error } = await supabase()
     .from('commands')
     .insert({ company_id: companyId, type, payload })
     .select('id')
     .single();
   if (error || !data) throw error ?? new Error('No se pudo guardar el cambio');
-  return (data as { id: string }).id;
+  return { id: (data as { id: string }).id, enNube: false };
 }
 
-export function encolar<T = unknown>(
+export async function encolar<T = unknown>(
   companyId: string,
   type: TipoComando,
   payload: Record<string, unknown>,
   timeoutMs: number = 15000,
+): Promise<T> {
+  if (await vaALaNube(companyId, type)) {
+    try {
+      return await aplicarEnNube<T>(companyId, type, payload);
+    } catch (e) {
+      if (!(e instanceof YaNoEsDeLaNube)) throw e;
+    }
+  }
+  return encolarEnLaCola<T>(companyId, type, payload, timeoutMs);
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   LA CONFIGURACIÓN DE UN NEGOCIO «DE LA NUBE» NO PASA POR EL BOT
+   ══════════════════════════════════════════════════════════════════════════
+
+   Arquitectura de datos v2 (docs/ARQUITECTURA-DATOS-V2.md). En un negocio con
+   `datos_v2_empresas.config_en_nube`, la configuración —catálogo, fotos,
+   equipo, ausencias, ajustes— la escribe Postgres, no el bot: el panel llama a
+   las funciones `cfg_*` (modules/datos/sql/0001 y 0002), que aplican las MISMAS
+   reglas que los handlers del bot y devuelven el mismo `result`. Así ninguna
+   pantalla cambia: siguen llamando a encolar()/useComando()/useGuardar().
+
+   Es lo que deja a un negocio SIN bot (alta de Fideliza o de Tu página) editar
+   su catálogo, y lo que hace el guardado instantáneo en vez de «en 15 minutos».
+
+   En un negocio que sigue siendo del bot, nada cambia: todo va por la cola.
+   ══════════════════════════════════════════════════════════════════════════ */
+
+const RPC_DE_CONFIG: Partial<Record<TipoComando, (p: Record<string, unknown>) => [string, Record<string, unknown>]>> = {
+  update_company: (p) => ['cfg_empresa_actualizar', { p_patch: p.patch ?? {} }],
+  upsert_catalog_item: (p) => ['cfg_producto_guardar', { p_item: p.item ?? {} }],
+  delete_catalog_item: (p) => ['cfg_producto_borrar', { p_id: p.id }],
+  upsert_catalog_media: (p) => ['cfg_media_guardar', { p_media: p }],
+  set_primary_media: (p) => ['cfg_media_principal', { p_id: p.id }],
+  delete_catalog_media: (p) => ['cfg_media_borrar', { p_id: p.id }],
+  upsert_employee: (p) => ['cfg_trabajador_guardar', { p_emp: p.employee ?? {} }],
+  delete_employee: (p) => ['cfg_trabajador_borrar', { p_id: p.id }],
+  upsert_employee_block: (p) => ['cfg_bloqueo_guardar', { p_block: p.block ?? {} }],
+  delete_employee_block: (p) => ['cfg_bloqueo_borrar', { p_id: p.id }],
+};
+
+/**
+ * Quién manda en cada negocio cambia muy de vez en cuando (el corte de la
+ * etapa 2, negocio a negocio), así que se pregunta una vez por minuto, no en
+ * cada guardado. Si en ese minuto el negocio volviera al bot, la `cfg_*`
+ * contesta 55000 y el cambio sigue por la cola (ver YaNoEsDeLaNube).
+ */
+const VIGENCIA_MS = 60_000;
+const quienManda = new Map<string, { nube: boolean; hasta: number }>();
+
+class YaNoEsDeLaNube extends Error {}
+
+async function vaALaNube(companyId: string, type: TipoComando): Promise<boolean> {
+  if (!RPC_DE_CONFIG[type]) return false;
+  const visto = quienManda.get(companyId);
+  if (visto && visto.hasta > Date.now()) return visto.nube;
+  const { data, error } = await supabase().rpc('config_en_nube', { p_company: companyId });
+  // Sin respuesta (la función no existe, red), lo seguro es lo de siempre: la cola.
+  const nube = !error && data === true;
+  quienManda.set(companyId, { nube, hasta: Date.now() + VIGENCIA_MS });
+  return nube;
+}
+
+async function aplicarEnNube<T>(companyId: string, type: TipoComando, payload: Record<string, unknown>): Promise<T> {
+  const [fn, args] = RPC_DE_CONFIG[type]!(payload);
+  const { data, error } = await supabase().rpc(fn, { p_company: companyId, ...args });
+  if (error) {
+    if (error.code === '55000') {
+      quienManda.delete(companyId);
+      throw new YaNoEsDeLaNube();
+    }
+    // El mensaje es de Postgres y ya está en palabras del panel («horario inválido: …»).
+    throw new Error(error.message);
+  }
+  return data as T;
+}
+
+function encolarEnLaCola<T>(
+  companyId: string,
+  type: TipoComando,
+  payload: Record<string, unknown>,
+  timeoutMs: number,
 ): Promise<T> {
   const sb = supabase();
 

@@ -222,17 +222,24 @@ export function useGuardar() {
         avisar('Estás en modo demo: no se guarda nada. Sal del modo demo para cambiar algo de verdad.', 'espera');
         return false;
       }
+      let enNube = false;
       try {
-        await encolarSinEsperar(companyId, type, payload);
+        enNube = (await encolarSinEsperar(companyId, type, payload)).enNube;
       } catch (e) {
-        // Aquí SÍ es un fallo de verdad: el cambio no llegó ni a la cola.
+        // Aquí SÍ es un fallo de verdad: el cambio no llegó ni a la cola. Si
+        // viene de la nube (negocio sin bot) es una validación, no la conexión:
+        // su mensaje ya dice qué falla («horario inválido: …»).
+        const msg = e instanceof Error ? e.message : '';
         avisar(
-          `No se pudo guardar${e instanceof Error && e.message ? `: ${e.message}` : ''}. Revisa tu conexión y vuelve a intentarlo.`,
+          msg && !/fetch|network|conexi/i.test(msg)
+            ? `No se pudo guardar: ${msg}`
+            : `No se pudo guardar${msg ? `: ${msg}` : ''}. Revisa tu conexión y vuelve a intentarlo.`,
           'error',
         );
         return false;
       }
-      avisar(`${que}. ${PLAZO}`, 'ok');
+      // En un negocio de la nube ya está guardado de verdad: no hay bot al que esperar.
+      avisar(enNube ? `${que}.` : `${que}. ${PLAZO}`, 'ok');
       refrescar?.();
       return true;
     },
