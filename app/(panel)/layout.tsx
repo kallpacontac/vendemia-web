@@ -33,6 +33,13 @@ import BannerApp from '@/components/panel/BannerApp';
  * cero filas. Aquí solo evitamos enseñar una pantalla vacía a quien todavía no
  * ha entrado.
  */
+/**
+ * Fideliza es de UN negocio: activar una placa, montar la página. El admin de
+ * plataforma sin membresías que llega aquí (p. ej. desde «Activar mi placa»)
+ * no va a Retargeting: crea su negocio como cualquier dueño y sigue donde iba.
+ */
+const quiereNegocio = (ruta: string) => ruta === '/panel/fideliza' || ruta.startsWith('/panel/fideliza/');
+
 function Guardia({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const ruta = usePathname();
@@ -45,7 +52,7 @@ function Guardia({ children }: { children: React.ReactNode }) {
    * resto de pantallas empiezan por `if (!companyId) return null` y se quedarían
    * en blanco o cargando para siempre. Ver lib/panel/rutas.ts.
    */
-  const soloGlobal = sinCompania && esAdminPlataforma;
+  const soloGlobal = sinCompania && esAdminPlataforma && !quiereNegocio(ruta);
 
   /**
    * ⚠️ `reconectando` es la diferencia entre "no has entrado" y "ahora mismo no
@@ -101,7 +108,7 @@ function Guardia({ children }: { children: React.ReactNode }) {
    * una placa nueva. Ya no es un «escríbenos»: crea su negocio aquí mismo
    * (AltaNegocio → loyalty_business_create) y entra.
    */
-  if (sinCompania && !esAdminPlataforma) {
+  if (sinCompania && !soloGlobal) {
     return <AltaNegocio salir={salir} />;
   }
 
