@@ -50,7 +50,7 @@ function Guardia({ children }: { children: React.ReactNode }) {
    * negocio como cualquier dueño y sigue a la activación, en vez de acabar en
    * Retargeting. Solo esa entrada; el resto del panel no cambia.
    */
-  const soloGlobal = sinCompania && esAdminPlataforma && !(typeof window !== 'undefined' && vieneDePlaca(window.location.search));
+  const soloGlobal = sinCompania && esAdminPlataforma && !(typeof window !== 'undefined' && vieneDePlaca(rutaActual()));
 
   /**
    * ⚠️ `reconectando` es la diferencia entre "no has entrado" y "ahora mismo no

@@ -60,11 +60,15 @@ export function tomarDestino(): string | null {
 
 /** La ruta actual completa, con búsqueda y fragmento (el código va en el fragmento). */
 /**
- * ¿Llega desde la página «Esta placa aún no está activada»? Su botón añade
- * `origen=placa` (modules/fideliza/servidor/rutas/placa.ts). Decide a dónde va
- * quien acaba de crear su negocio, sin cambiar nada para los demás.
+ * ¿Llega para activar una placa? Por la página «Esta placa aún no está
+ * activada» (su botón añade `origen=placa`, modules/fideliza/servidor/rutas/
+ * placa.ts) o por el QR de la tarjeta de la caja. Las tarjetas ya impresas no
+ * llevan `origen`: su enlace es /panel/fideliza/placas?activar=1#codigo=…, y
+ * también cuenta. Decide a dónde va quien acaba de crear su negocio, sin
+ * cambiar nada para los demás.
  */
-export const vieneDePlaca = (ruta: string) => /[?&]origen=placa(?:[&#]|$)/.test(ruta);
+export const vieneDePlaca = (ruta: string) =>
+  /[?&]origen=placa(?:[&#]|$)/.test(ruta) || /^\/panel\/fideliza\/placas\?(?:[^#]*&)?activar=/.test(ruta);
 
 export function rutaActual() {
   return `${window.location.pathname}${window.location.search}${window.location.hash}`;

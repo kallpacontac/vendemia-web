@@ -184,7 +184,7 @@ function Lista() {
             <Plus size={14} /> Crear placa
           </button>
           <div className="search" style={{ minWidth: 260 }}>
-            <input ref={campoCodigo} placeholder="Código de activación (XXXXX-XXXXX)" value={codigo} onChange={(e) => setCodigo(e.target.value.toUpperCase())} aria-label="Código de activación" />
+            <input ref={campoCodigo} placeholder="Código de la tarjeta o del pedido" value={codigo} onChange={(e) => setCodigo(e.target.value.toUpperCase())} aria-label="Código de activación" />
           </div>
           <button className="btn btn-ghost btn-sm" disabled={codigo.replace(/[^A-Z0-9]/g, '').length < 10} onClick={() => void reclamar()}>
             Añadir placa recibida

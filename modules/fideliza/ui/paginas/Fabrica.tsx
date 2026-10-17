@@ -111,7 +111,7 @@ export default function Fabrica() {
   }
 
   /** QR privado de la tarjeta de la caja: el código va en el fragmento (no llega al servidor). */
-  const activar = (c: string) => `${window.location.origin}/panel/fideliza/placas?activar=1#codigo=${c}`;
+  const activar = (c: string) => `${window.location.origin}/panel/fideliza/placas?activar=1&origen=placa#codigo=${c}`;
 
   function bajarCsv(l: Lote) {
     const csv = [

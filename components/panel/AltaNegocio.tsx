@@ -24,13 +24,29 @@
  *
  * Al terminar se recarga la página entera a propósito: la sesión vuelve a leer
  * las membresías y el panel arranca ya con el negocio elegido, sin tocar
- * Sesion.tsx. Sin destino pendiente, va directo a configurar su página.
+ * Sesion.tsx. Sin destino pendiente, se queda donde estaba.
+ *
+ * ── SI VIENE DE UNA PLACA ────────────────────────────────────────────────
+ * Primero la placa, luego la página. Aquí mismo se pide el código de la
+ * tarjeta y se canjea al crear el negocio: si se dejaba para después, quien
+ * confirmaba la cuenta desde el correo en otro dispositivo perdía el «a dónde
+ * ibas», montaba su página y la placa seguía sin activar (17-oct).
+ *
+ * Un solo campo para los dos casos, porque la base acepta los dos códigos:
+ *   · placa suelta  → su código, XXXXX-XXXXX;
+ *   · varias placas → el del pedido, PXXXX-XXXXX, que las activa todas.
+ * Después, a Mi página: al publicar, todas quedan apuntando a ella.
+ *
+ * «Viene de una placa» se sabe por `?origen=placa` (en la URL o en el destino
+ * guardado) o por la marca que deja el registro en la cuenta, que sí viaja de
+ * un dispositivo a otro (login/page.tsx).
  */
 import { useEffect, useRef, useState } from 'react';
 import { accion, mensaje } from '@/modules/fideliza/cliente/api';
 import { slugDe } from '@/modules/fideliza/dominio/botones';
 import { urlNegocio } from '@/modules/fideliza/dominio/config';
-import { rutaActual, tomarDestino } from '@/lib/panel/destino';
+import { rutaActual, tomarDestino, verDestino, vieneDePlaca } from '@/lib/panel/destino';
+import { useSesion } from './Sesion';
 
 interface Enlace {
   slug: string;
@@ -48,8 +64,17 @@ function enlaceLocal(nombre: string): Enlace {
 
 const sinProtocolo = (url: string) => url.replace(/^https?:\/\//, '');
 
+/** Lo que se escribe del código: letras y números, con el guion en su sitio. */
+const limpiarCodigo = (c: string) => c.toUpperCase().replace(/[^A-Z0-9-]/g, '').slice(0, 13);
+const codigoCompleto = (c: string) => c.replace(/-/g, '').length >= 10;
+/** El código que trae el QR de la tarjeta, en el fragmento: `#codigo=…`. */
+const codigoDe = (ruta: string | null) => limpiarCodigo(new URLSearchParams((ruta ?? '').split('#')[1] ?? '').get('codigo') ?? '');
+
 export default function AltaNegocio({ salir }: { salir: () => Promise<void> }) {
+  const { session } = useSesion();
   const [nombre, setNombre] = useState('');
+  /** null = no viene de una placa; '' = sí, todavía sin código. */
+  const [codigo, setCodigo] = useState<string | null>(null);
   const [enlace, setEnlace] = useState<Enlace | null>(null);
   const [comprobando, setComprobando] = useState(false);
   /** Con el enlace ocupado, el dueño confirma que es OTRO negocio. */
@@ -85,7 +110,15 @@ export default function AltaNegocio({ salir }: { salir: () => Promise<void> }) {
     return () => clearTimeout(t);
   }, [nombre]);
 
+  useEffect(() => {
+    const guardado = verDestino();
+    const desdePlaca =
+      vieneDePlaca(guardado ?? '') || vieneDePlaca(rutaActual()) || session?.user?.user_metadata?.origen === 'placa';
+    if (desdePlaca) setCodigo(codigoDe(guardado) || codigoDe(rutaActual()));
+  }, [session]);
+
   const bloqueado = Boolean(enlace?.ocupado && !esOtro);
+  const conPlaca = codigo !== null;
 
   async function crear(e: React.FormEvent) {
     e.preventDefault();
@@ -93,7 +126,19 @@ export default function AltaNegocio({ salir }: { salir: () => Promise<void> }) {
     setError(null);
     setEnviando(true);
     try {
-      await accion('negocio.crear', { nombre: nombre.trim() });
+      const alta = await accion<{ company_id: string }>('negocio.crear', { nombre: nombre.trim() });
+      if (conPlaca && codigoCompleto(codigo)) {
+        tomarDestino();
+        try {
+          // Con el código de un PEDIDO llegan todas sus placas a la vez.
+          const r = await accion<{ id: string; count?: number }>('placa.reclamar', { companyId: alta.company_id, code: codigo });
+          window.location.assign(`/panel/fideliza/mi-pagina?placa=${r.id}&n=${r.count ?? 1}`);
+        } catch {
+          // El negocio ya existe: el código se corrige en Placas, con su mensaje.
+          window.location.assign(`/panel/fideliza/placas?activar=1&origen=placa#codigo=${encodeURIComponent(codigo)}`);
+        }
+        return;
+      }
       /**
        * A dónde: lo que pidió antes del login, o la pantalla en la que ya está.
        * Quien viene de una placa (`?origen=placa`) sigue a activarla; los demás
@@ -113,7 +158,11 @@ export default function AltaNegocio({ salir }: { salir: () => Promise<void> }) {
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img className="acceso__logo" src="/assets/logos/logo-naranja.webp" alt="Vendemia" />
         <h1>¿Cómo se llama tu negocio?</h1>
-        <p className="sub">Ese nombre es también tu página: la que abren tus placas y tus clientes.</p>
+        <p className="sub">
+          {conPlaca
+            ? 'Dos datos y tu placa queda tuya. Después armas la página que abrirá.'
+            : 'Ese nombre es también tu página: la que abren tus placas y tus clientes.'}
+        </p>
 
         <label className="field-label" htmlFor="alta-nombre">
           Nombre del negocio
@@ -151,15 +200,43 @@ export default function AltaNegocio({ salir }: { salir: () => Promise<void> }) {
           </div>
         )}
 
+        {conPlaca && (
+          <>
+            <label className="field-label" htmlFor="alta-codigo" style={{ marginTop: 14 }}>
+              Código de activación
+            </label>
+            <input
+              id="alta-codigo"
+              className="input fz-mono"
+              autoComplete="off"
+              placeholder="XXXXX-XXXXX"
+              value={codigo}
+              onChange={(e) => setCodigo(limpiarCodigo(e.target.value))}
+            />
+            <p className="acceso__enlace">
+              Está en la tarjeta que vino en la caja. ¿Compraste varias placas? Usa el <b>código del pedido</b> (empieza por P) y se activan todas
+              juntas.
+            </p>
+          </>
+        )}
+
         {error && <div className="acceso__error">{error}</div>}
 
         <button
           className="btn btn-primary"
           type="submit"
-          disabled={enviando || comprobando || bloqueado || nombre.trim().length < 2}
+          disabled={enviando || comprobando || bloqueado || nombre.trim().length < 2 || (conPlaca && !codigoCompleto(codigo))}
         >
-          {enviando ? 'Creando…' : 'Crear mi página'}
+          {enviando ? (conPlaca ? 'Activando…' : 'Creando…') : conPlaca ? 'Activar mi placa' : 'Crear mi página'}
         </button>
+        {conPlaca && (
+          <div className="acceso__alt">
+            ¿No tienes el código a mano?{' '}
+            <button type="button" onClick={() => setCodigo(null)}>
+              Activarla después
+            </button>
+          </div>
+        )}
         <div className="acceso__alt">
           ¿No es tu cuenta?{' '}
           <button type="button" onClick={() => void salir()}>

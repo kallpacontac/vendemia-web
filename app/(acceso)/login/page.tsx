@@ -32,7 +32,7 @@ import { ArrowRight, Eye, EyeOff } from 'lucide-react';
 import { FALTAN_CLAVES, supabase } from '@/lib/supabase/client';
 import BotonGoogle from '@/components/panel/BotonGoogle';
 import { MENSAJE_CADUCIDAD } from '@/lib/panel/caducidad';
-import { tomarDestino, verDestino } from '@/lib/panel/destino';
+import { tomarDestino, verDestino, vieneDePlaca } from '@/lib/panel/destino';
 
 type Modo = 'entrar' | 'crear' | 'recuperar';
 
@@ -135,7 +135,15 @@ export default function Login() {
         const { data, error } = await sb.auth.signUp({
           email,
           password: clave,
-          options: { emailRedirectTo: `${window.location.origin}/callback` },
+          options: {
+            emailRedirectTo: `${window.location.origin}/callback`,
+            /**
+             * Viene de una placa: se marca en la CUENTA, no solo en este
+             * navegador. Si confirma el correo en el celular, el alta pide el
+             * código igual (AltaNegocio.tsx). El código en sí no se guarda.
+             */
+            ...(vieneDePlaca(verDestino() ?? '') ? { data: { origen: 'placa' } } : {}),
+          },
         });
         if (error) throw error;
         /**
