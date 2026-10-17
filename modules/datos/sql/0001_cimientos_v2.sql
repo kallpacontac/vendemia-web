@@ -120,9 +120,12 @@ alter table public.sync_borrados enable row level security;
 create or replace function public.v2_anotar_borrado()
 returns trigger language plpgsql security definer set search_path = public as $$
 begin
+    -- ⚠️ `old.company_id` a pelo no compila en `companies` (no tiene esa
+    -- columna), aunque esa rama del case no se tome: plpgsql resuelve el campo
+    -- igual y todo borrado de un negocio fallaba (17-oct). Por jsonb, sí.
     insert into public.sync_borrados (tabla, pk, company_id)
     values (tg_table_name, old.id,
-            case when tg_table_name = 'companies' then old.id else old.company_id end);
+            case when tg_table_name = 'companies' then old.id else to_jsonb(old) ->> 'company_id' end);
     return old;
 end $$;
 
