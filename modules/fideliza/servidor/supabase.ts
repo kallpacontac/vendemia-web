@@ -15,6 +15,17 @@ import { entorno, FaltaConfiguracion } from './entorno';
  */
 const opciones = { auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false } };
 
+/**
+ * ⚠️ Sin caché, siempre. Next 14 guarda en su Data Cache los `fetch` del
+ * servidor, POST incluidos, con el cuerpo como clave, y `dynamic =
+ * 'force-dynamic'` en la ruta no lo evitó. Pasó en producción el 17-oct: el
+ * primer escaneo de una placa nueva («sin activar») quedó guardado para
+ * (token, 'nfc') y el chip siguió diciendo «sin activar» después de activarla,
+ * mientras `?o=qr` —otra clave— ya abría la página. Todo lo de aquí es vivo:
+ * placas, saldos, canjes. Nada se puede servir de memoria.
+ */
+const sinCache: typeof fetch = (entrada, init) => fetch(entrada, { ...init, cache: 'no-store' });
+
 function base() {
   const url = entorno.supabaseUrl();
   const anon = entorno.supabaseAnon();
@@ -24,7 +35,7 @@ function base() {
 
 export function deUsuario(jwt: string): SupabaseClient {
   const { url, anon } = base();
-  return createClient(url, anon, { ...opciones, global: { headers: { Authorization: `Bearer ${jwt}` } } });
+  return createClient(url, anon, { ...opciones, global: { fetch: sinCache, headers: { Authorization: `Bearer ${jwt}` } } });
 }
 
 let cache: SupabaseClient | null = null;
@@ -34,7 +45,7 @@ export function servidor(): SupabaseClient {
   if (clave.length < 32) throw new FaltaConfiguracion('FIDELIZA_SERVER_KEY');
   if (!cache) {
     const { url, anon } = base();
-    cache = createClient(url, anon, { ...opciones, global: { headers: { 'x-fideliza-key': clave } } });
+    cache = createClient(url, anon, { ...opciones, global: { fetch: sinCache, headers: { 'x-fideliza-key': clave } } });
   }
   return cache;
 }
