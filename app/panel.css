@@ -1118,10 +1118,28 @@ body:has(.demo-banda) .sidebar{padding-top:44px}
 
 /* Alta del negocio (AltaNegocio.tsx): el enlace que le toca, mientras escribe,
    y la confirmación de «es otro negocio» cuando el natural ya está ocupado. */
-.acceso__enlace{margin:8px 0 0;font-size:12.5px;color:var(--ink-soft);word-break:break-all}
+.acceso__enlace{margin:8px 0 0;font-size:12.5px;color:var(--ink-soft);overflow-wrap:break-word;word-break:normal}
 .acceso__enlace b{color:var(--ink)}
+.acceso__enlace--url b{overflow-wrap:anywhere}
 .acceso__check{display:flex;align-items:flex-start;gap:8px;margin-top:10px;cursor:pointer;font-weight:700}
 .acceso__check input{margin-top:3px;flex:none}
+
+/* Alta desde una placa: en teléfonos bajos debe caber completa sin cortar
+   palabras ni obligar a recorrer una tarjeta llena de aire vertical. */
+@media(max-width:520px){
+  .acceso{align-items:start;padding:14px 12px calc(22px + env(safe-area-inset-bottom,0px))}
+  .acceso__card--alta{max-width:440px;padding:24px 20px 26px;border-radius:24px}
+  .acceso__card--alta .acceso__logo{height:54px;margin-bottom:14px}
+  .acceso__card--alta h1{font-size:clamp(20px,6.2vw,22px);line-height:1.15;margin-bottom:5px}
+  .acceso__card--alta p.sub{max-width:34ch;margin:0 auto 18px;font-size:12.5px;line-height:1.4}
+  .acceso__card--alta .field-label{margin-top:11px;font-size:12.5px}
+  .acceso__card--alta .input{min-height:46px;padding-block:10px;font-size:16px}
+  .acceso__card--alta .acceso__enlace{margin-top:7px;font-size:11.5px;line-height:1.38}
+  .acceso__card--alta .acceso__enlace--url b{font-size:11px}
+  .acceso__card--alta .btn{height:48px;margin-top:16px}
+  .acceso__card--alta .acceso__alt{margin-top:14px;font-size:12px}
+  .acceso__card--alta .acceso__alt button{font-size:12px}
+}
 
 /* Agenda recurrente: lo que va debajo de la barra de cada grupo. */
 .grupo-extra{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:7px}

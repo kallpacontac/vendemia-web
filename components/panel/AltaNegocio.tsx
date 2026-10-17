@@ -119,6 +119,8 @@ export default function AltaNegocio({ salir }: { salir: () => Promise<void> }) {
 
   const bloqueado = Boolean(enlace?.ocupado && !esOtro);
   const conPlaca = codigo !== null;
+  const direccion = enlace ? sinProtocolo(urlNegocio(enlace.slug)) : '';
+  const prefijoDireccion = enlace ? direccion.slice(0, -enlace.slug.length) : '';
 
   async function crear(e: React.FormEvent) {
     e.preventDefault();
@@ -154,13 +156,13 @@ export default function AltaNegocio({ salir }: { salir: () => Promise<void> }) {
 
   return (
     <div className="acceso">
-      <form className="acceso__card" onSubmit={crear}>
+      <form className="acceso__card acceso__card--alta" onSubmit={crear}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img className="acceso__logo" src="/assets/logos/logo-naranja.webp" alt="Vendemia" />
         <h1>¿Cómo se llama tu negocio?</h1>
         <p className="sub">
           {conPlaca
-            ? 'Dos datos y tu placa queda tuya. Después armas la página que abrirá.'
+            ? 'Dos datos y tu placa queda a tu nombre. Después eliges qué página abrirá.'
             : 'Ese nombre es también tu página: la que abren tus placas y tus clientes.'}
         </p>
 
@@ -180,8 +182,13 @@ export default function AltaNegocio({ salir }: { salir: () => Promise<void> }) {
         />
 
         {enlace && (
-          <p className="acceso__enlace" aria-live="polite">
-            Tu página: <b>{sinProtocolo(urlNegocio(enlace.slug))}</b>
+          <p className="acceso__enlace acceso__enlace--url" aria-live="polite" title={direccion}>
+            Tu página:{' '}
+            <b>
+              {prefijoDireccion}
+              <wbr />
+              {enlace.slug}
+            </b>
             {comprobando && <span> · comprobando…</span>}
           </p>
         )}
@@ -214,8 +221,7 @@ export default function AltaNegocio({ salir }: { salir: () => Promise<void> }) {
               onChange={(e) => setCodigo(limpiarCodigo(e.target.value))}
             />
             <p className="acceso__enlace">
-              Está en la tarjeta que vino en la caja. ¿Compraste varias placas? Usa el <b>código del pedido</b> (empieza por P) y se activan todas
-              juntas.
+              Está en la tarjeta de la caja. Para varias placas, usa el <b>código del pedido</b> (empieza por P): activa todas.
             </p>
           </>
         )}

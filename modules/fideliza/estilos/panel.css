@@ -145,9 +145,12 @@
 .fz-movil__botones span{display:block;background:#fff;border:1.5px solid #DEDED9;border-radius:12px;padding:12px;text-align:center;font-weight:600;font-size:13.5px}
 .fz-barra-publicar{position:fixed;left:var(--content-x);right:26px;bottom:16px;z-index:50;display:flex;gap:12px;align-items:center;justify-content:flex-end;background:#fff;border-radius:18px;box-shadow:var(--sh-lg);padding:12px 16px}
 .fz-barra-publicar__aviso{flex:1;color:#B4232A;font-size:13px;font-weight:600}
+.fz-barra-publicar .btn:disabled{background:#E7E7E2;color:#8B8B84;box-shadow:none;cursor:not-allowed;opacity:1}
 @media(max-width:1100px){.fz-editor{grid-template-columns:1fr}.fz-editor__vista{position:static}}
 @media(max-width:820px){.fz-bienvenida__opciones{grid-template-columns:1fr}.fz-cta{flex-direction:column;align-items:stretch}.fz-barra-publicar{left:12px;right:12px;bottom:84px}.fz-menu-botones{grid-template-columns:1fr;min-width:240px}}
 @media(max-width:520px){
+  .fz-aviso-placa{flex-wrap:nowrap;padding:10px 12px;font-size:12.5px;line-height:1.35}
+  .fz-aviso-placa .btn{flex:0 0 auto;min-height:40px;padding:8px 10px;font-size:12px;white-space:nowrap}
   .fz-logo-editor{align-items:flex-start;padding:10px;gap:12px}
   .fz-logo-editor__vista{width:64px;height:64px;flex-basis:64px}
   .fz-logo-editor__acciones{flex:1;min-width:0;flex-direction:column;align-items:stretch}

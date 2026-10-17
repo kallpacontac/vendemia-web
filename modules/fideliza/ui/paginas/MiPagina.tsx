@@ -365,13 +365,12 @@ export default function MiPagina() {
   return (
     <>
       {placaEspera && (
-        <div className="fz-panel-aviso fz-panel-aviso--info" role="status">
+        <div className="fz-panel-aviso fz-panel-aviso--info fz-aviso-placa" role="status">
           <span style={{ flex: 1 }}>
-            <b>{placaEspera.n > 1 ? `Tus ${placaEspera.n} placas ya son tuyas.` : 'Tu placa ya es tuya.'}</b> Añade tus botones (WhatsApp, Yape / Plin, Instagram,
-            reseñas…) y pulsa <b>Publicar</b>: desde ese momento, al escanearla se abre esta página.
+            <b>{placaEspera.n > 1 ? `Tus ${placaEspera.n} placas ya son tuyas.` : 'Tu placa ya es tuya.'}</b> Añade tus botones y publica.
           </span>
           <Link className="btn btn-ghost btn-sm" href={`/panel/fideliza/placas/${placaEspera.id}`}>
-            Prefiero un solo enlace
+            Usar un solo enlace
           </Link>
         </div>
       )}
@@ -751,7 +750,7 @@ export default function MiPagina() {
           </span>
           {aviso && <span className="fz-barra-publicar__aviso" role="alert">{aviso}</span>}
           <button className="btn btn-primary" disabled={ocupado || (!sucio && Boolean(ajustes))} onClick={() => void publicar()}>
-            {ocupado ? 'Publicando…' : 'Guardar y publicar'}
+            {ocupado ? 'Publicando…' : !sucio && ajustes ? 'Sin cambios' : 'Guardar y publicar'}
           </button>
         </div>
       )}
