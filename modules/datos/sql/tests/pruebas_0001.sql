@@ -4,6 +4,7 @@
 -- Todo dentro de BEGIN … ROLLBACK: no deja nada escrito. Si una comprobación falla se
 -- para con «FALLO n: …»; si llega al final, la última fila dice «TODAS LAS PRUEBAS PASARON».
 -- Simula usuarios fijando el `sub` del JWT, como hace PostgREST con un token real.
+-- Se corre DESPUÉS de aplicar la 0001: prueba sus funciones.
 -- ═══════════════════════════════════════════════════════════════════════════════
 
 begin;

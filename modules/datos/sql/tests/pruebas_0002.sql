@@ -2,7 +2,10 @@
 -- ARQUITECTURA v2 · PRUEBAS DE 0002_variantes_y_ajustes.sql
 --
 -- Todo dentro de BEGIN … ROLLBACK. Si algo falla se para con «FALLO n: …»; si llega al
--- final, la última fila dice «TODAS LAS PRUEBAS PASARON». Necesita la 0001 aplicada.
+-- final, la última fila dice «TODAS LAS PRUEBAS PASARON».
+--
+-- Se corre DESPUÉS de aplicar la 0002 (prueba sus funciones; antes falla con «function
+-- public.v2_clave_de_pregunta(unknown) does not exist»). Lo mismo vale para pruebas_0001.
 -- ═══════════════════════════════════════════════════════════════════════════════
 
 begin;
