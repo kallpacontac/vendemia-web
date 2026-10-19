@@ -792,7 +792,7 @@ export async function getVentas(
 
 /**
  * Lo pagado de cada cita PUNTUAL con pagos asociados, contra el total de sus
- * líneas: el adelanto («Adelanto S/ 30 de 80»). Ver lib/panel/adelantos.ts.
+ * líneas: lo pagado a cuenta («Por cobrar · S/ 30 de S/ 80»). Ver lib/panel/adelantos.ts.
  *
  * Una consulta por los pagos con cita del negocio (pocos: son vouchers y
  * cobros con importe) y las líneas solo de las citas que tienen alguno.
@@ -826,9 +826,11 @@ export async function getPagosDeCitas(
  * `pending_payments` no guarda método: se toma de la cita (`metodo_pago`) o del
  * pedido (`payment_method`) al que va enganchado.
  *
- * Para separar los adelantos (lib/panel/adelantos.ts) trae además, de cada cita
- * con pagos, si es puntual y quién la dio por cobrada (`citaDePago`), y cuánto
- * lleva pagado cada cita del día (`pagadoPorCita`).
+ * Para separar lo que entra A CUENTA (lib/panel/dinero.ts) trae además, de cada
+ * cita con pagos, si es puntual y quién la dio por cobrada (`citaDePago`), cuánto
+ * lleva pagado cada cita del día (`pagadoPorCita`) y, de cada pago del día, el
+ * saldo de lo que paga (`saldoDePago`): su cita puntual, o la VENTA de
+ * inscripciones del lead (saldo.ts). Saldo > 0 = sigue por cobrar.
  */
 export async function getPagosCaja(
   companyId: string,
@@ -841,6 +843,7 @@ export async function getPagosCaja(
   metodoPedido: Map<string, string>;
   citaDePago: Map<string, { slot_start: string; pagado_por: string; service: string }>;
   pagadoPorCita: Map<string, number>;
+  saldoDePago: Map<string, Saldo>;
 }> {
   const vacio = {
     pagosDelDia: [],
@@ -849,6 +852,7 @@ export async function getPagosCaja(
     metodoPedido: new Map(),
     citaDePago: new Map(),
     pagadoPorCita: new Map(),
+    saldoDePago: new Map(),
   };
   if (demoActivo()) return vacio;
   const sb = supabase();
@@ -871,11 +875,11 @@ export async function getPagosCaja(
   for (const r of [delDia, deCitas, dePedidos]) if (r.error) throw r.error;
 
   const pagosDelDia = ((delDia.data ?? []) as PendingPaymentRow[]).map((p) => ({ ...p, amount: Number(p.amount ?? 0) }));
-  const pagosDeCitas = (deCitas.data ?? []) as { appointment_id: string; amount: number | string | null }[];
+  const pagosCitasDelDia = (deCitas.data ?? []) as { appointment_id: string; amount: number | string | null }[];
   const pagadoPorCita = new Map<string, number>();
-  for (const p of pagosDeCitas) pagadoPorCita.set(p.appointment_id, (pagadoPorCita.get(p.appointment_id) ?? 0) + Number(p.amount ?? 0));
+  for (const p of pagosCitasDelDia) pagadoPorCita.set(p.appointment_id, (pagadoPorCita.get(p.appointment_id) ?? 0) + Number(p.amount ?? 0));
   const conPagoConImporte = new Set<string>([
-    ...pagosDeCitas.map((p) => `appointment:${p.appointment_id}`),
+    ...pagosCitasDelDia.map((p) => `appointment:${p.appointment_id}`),
     ...((dePedidos.data ?? []) as { order_id: string }[]).map((p) => `order:${p.order_id}`),
   ]);
 
@@ -892,7 +896,52 @@ export async function getPagosCaja(
   ]);
   if (mc.error) throw mc.error;
   const citasDePagos = (mc.data ?? []) as { id: string; metodo_pago: string | null; slot_start: string; pagado_por: string | null; service: string | null }[];
+
+  // Cuánto falta de lo que paga cada pago del día: su cita puntual, o la venta de inscripciones del lead.
+  const puntuales = citasDePagos.filter((c) => esPuntual(c.slot_start));
+  const idsPuntuales = new Set(puntuales.map((c) => c.id));
+  const leadsVenta = [
+    ...new Set(pagosDelDia.filter((p) => !p.order_id && !idsPuntuales.has(p.appointment_id ?? '')).map((p) => p.lead_id)),
+  ];
+  const [lineasP, pagosP, ins] = await Promise.all([
+    getServiciosDeCitas([...idsPuntuales]),
+    idsPuntuales.size
+      ? sb.from('pending_payments').select('appointment_id, amount').eq('company_id', companyId).in('appointment_id', [...idsPuntuales])
+      : Promise.resolve({ data: [], error: null }),
+    leadsVenta.length
+      ? sb
+          .from('appointments')
+          .select('id, lead_id, status, slot_start, created_at, service, beneficiario')
+          .eq('company_id', companyId)
+          .in('lead_id', leadsVenta.slice(0, 200))
+          .like('slot_start', 'sched:%')
+      : Promise.resolve({ data: [], error: null }),
+  ]);
+  if (pagosP.error) throw pagosP.error;
+  if (ins.error) throw ins.error;
+  const saldoPuntual = pagosDeCitas(
+    puntuales,
+    lineasP,
+    ((pagosP.data ?? []) as { appointment_id: string; amount: number | string | null }[]).map((p) => ({
+      appointment_id: p.appointment_id,
+      amount: Number(p.amount ?? 0),
+    })),
+  );
+  const inscripciones = (ins.data ?? []) as AppointmentRow[];
+  const ventas = inscripciones.length ? await getVentas(companyId, inscripciones) : new Map<string, VentaLead>();
+  const saldoDePago = new Map<string, Saldo>();
+  for (const p of pagosDelDia) {
+    const deCita = p.appointment_id ? saldoPuntual.get(p.appointment_id) : undefined;
+    if (deCita) {
+      saldoDePago.set(p.id, deCita);
+      continue;
+    }
+    const venta = ventas.get(p.lead_id);
+    if (venta?.pagos.some((x) => x.id === p.id)) saldoDePago.set(p.id, venta.saldo);
+  }
+
   return {
+    saldoDePago,
     pagosDelDia,
     conPagoConImporte,
     citaDePago: new Map(citasDePagos.map((c) => [c.id, { slot_start: c.slot_start, pagado_por: c.pagado_por ?? '', service: c.service ?? '' }])),

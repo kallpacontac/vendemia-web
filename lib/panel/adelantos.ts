@@ -1,20 +1,18 @@
 /**
  * ══════════════════════════════════════════════════════════════════════════
- * LA CITA PUNTUAL Y SU DINERO · apartada, adelanto, pagó sin hora
+ * LA CITA PUNTUAL Y SU DINERO · apartada, por cobrar, pagó sin hora
  * ══════════════════════════════════════════════════════════════════════════
  *
  * Desde el 19-oct-2026 el bot asocia el voucher a la cita puntual más cercana
  * del cliente y marca `pagado_por='voucher'` SOLO cuando la suma de sus pagos
- * cubre el total de sus líneas. Lo que queda por debajo es un ADELANTO.
+ * cubre el total de sus líneas. Lo que queda por debajo es un pago A CUENTA.
  *
- * ── Decisión de Alvaro (19-oct-2026): un adelanto NO es un cobro ─────────
- * «Debe tener estados separados.» La caja lo enseña aparte y no entra en
- * «Cobrado» ni en el neto hasta que la cita queda cubierta (voucher) o alguien
- * la da por cobrada desde el panel. Ver entradasDelDia en lib/panel/dinero.ts.
- *
- * ⚠️ Solo citas PUNTUALES. La seña de una inscripción a un grupo sigue la
- * regla del 3-oct («si la seña me ingresó 50, eso es lo que entra») y cuenta
- * como cobrada el día que se paga: ver lib/panel/saldo.ts.
+ * ── Decisión de Alvaro (19-oct-2026) ─────────────────────────────────────
+ * «Cobrada es cuando ya se cobró todo. Por cobrar, otro estado. Lo que sí,
+ * sumar para la caja del día.» La cita con pagos parciales está POR COBRAR;
+ * su dinero suma a la caja del día que entra, nombrado «a cuenta»
+ * (entradasDelDia en lib/panel/dinero.ts). Lo mismo con las inscripciones,
+ * por la venta del lead (lib/panel/saldo.ts).
  *
  * ── La cita apartada («Requerir pago para confirmar») ───────────────────
  * Con el interruptor encendido y un servicio con precio, la cita nace
@@ -80,7 +78,7 @@ export function pagosDeCitas(
 }
 
 export interface SelloCita {
-  clave: 'esperando_pago' | 'caducada' | 'pago_sin_hora' | 'adelanto';
+  clave: 'esperando_pago' | 'caducada' | 'pago_sin_hora' | 'por_cobrar';
   label: string;
   color: string;
   ayuda: string;
@@ -94,7 +92,7 @@ export interface SelloCita {
  *   caducada        apartada, pasaron las 24 h: la hora ya no es suya.
  *   pago_sin_hora   pagó tarde y su hora se la llevó otro: el bot la deja en
  *                   `pending_payment` y abre la escalación `paid_slot_full`.
- *   adelanto        tiene pagos que no cubren el total. Sin `pagado_por`.
+ *   por_cobrar      tiene pagos a cuenta que no cubren el total. Sin `pagado_por`.
  */
 export function selloCita(
   c: CitaMin & Pick<AppointmentRow, 'pagado_por'>,
@@ -116,10 +114,10 @@ export function selloCita(
   }
   if (!c.pagado_por && pagos?.hayPago && !pagos.completo) {
     return {
-      clave: 'adelanto',
-      label: `Adelanto ${soles(pagos.pagado)} de ${soles(pagos.total)}`,
-      color: '#6C5CE7',
-      ayuda: `Faltan ${soles(pagos.saldo)}. Un adelanto no entra en «Cobrado» de la caja hasta que se cobre el resto.`,
+      clave: 'por_cobrar',
+      label: `Por cobrar · ${soles(pagos.pagado)} de ${soles(pagos.total)}`,
+      color: '#C2410C',
+      ayuda: `Pagó ${soles(pagos.pagado)} a cuenta y faltan ${soles(pagos.saldo)}. Pasa a cobrada cuando se pague todo.`,
     };
   }
   if (apartada && apartadaCaducada(c, ahora)) {

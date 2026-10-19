@@ -21,12 +21,12 @@
  * importe («Cobrada», marcar_pagado) cuentan por su precio, el día del
  * servicio, porque no hay fecha de cobro guardada. Ver entradasDelDia.
  *
- * ── El adelanto no es un cobro (Alvaro, 19-oct-2026) ─────────────────────
- * Un Yape que no cubre el total de una cita puntual es un ADELANTO: se ve en
- * su propia tarjeta y no suma a «Cobrado» ni al neto hasta que la cita queda
- * cobrada entera. Y una cita apartada esperando el comprobante no es un cobro
- * olvidado: va en «Esperando pago», no en «sin cobro apuntado». Ver
- * lib/panel/adelantos.ts.
+ * ── Cobrada ≠ a cuenta (Alvaro, 19-oct-2026) ─────────────────────────────
+ * «Cobrada» es cuando se cobró todo; con un pago parcial la cita o la
+ * inscripción está «por cobrar». Pero ese dinero entró: suma a «Entró» y al
+ * neto, y se enseña aparte como «a cuenta». Una cita apartada esperando el
+ * comprobante tampoco es un cobro olvidado: va en «Esperando pago». Ver
+ * lib/panel/dinero.ts y lib/panel/adelantos.ts.
  *
  * ── Los gastos ───────────────────────────────────────────────────────────
  * Van por `upsert_gasto` / `delete_gasto`: el bot es el único que escribe, y
@@ -118,24 +118,31 @@ export default function Caja() {
       datos.pagos.conPagoConImporte,
       (fuente, id) => (fuente === 'appointment' ? metodoCita.get(id) : metodoPedido.get(id)) ?? '',
       citaDe,
+      // A cuenta: lo que paga sigue con saldo. Una puntual que alguien dio por cobrada ya no.
+      (p) => {
+        if ((datos.pagos.saldoDePago.get(p.id)?.saldo ?? 0) <= 0) return false;
+        const cita = p.appointment_id ? citaDe(p.appointment_id) : undefined;
+        return !(cita?.puntual && cita.pagadoPor);
+      },
     );
-    const cobros = entradas.filter((e) => !e.adelanto);
-    const esAdelanto = new Set(entradas.filter((e) => e.adelanto).map((e) => e.id));
-    const adelantos = datos.pagos.pagosDelDia
-      .filter((p) => esAdelanto.has(p.id))
+    const esACuenta = new Set(entradas.filter((e) => e.aCuenta).map((e) => e.id));
+    const aCuenta = datos.pagos.pagosDelDia
+      .filter((p) => esACuenta.has(p.id))
       .map((p) => ({
         pago: p,
         metodo: metodoCita.get(p.appointment_id ?? '') ?? '',
         cita: citaDelDia.get(p.appointment_id ?? '') ?? datos.pagos.citaDePago.get(p.appointment_id ?? ''),
+        falta: datos.pagos.saldoDePago.get(p.id)?.saldo ?? 0,
       }));
+    // Por método, TODO lo que entró: es lo que tiene que cuadrar con el cajón y el Yape.
     const porMetodo = new Map<string, number>();
-    for (const e of cobros) {
+    for (const e of entradas) {
       const etiqueta = etiquetaMetodo(e.metodo);
       porMetodo.set(etiqueta, (porMetodo.get(etiqueta) ?? 0) + e.importe);
     }
 
     // Las citas del día, cada una en su sitio: sin cobro apuntado (con o sin
-    // adelanto), esperando el comprobante, o pagada sin hora.
+    // pagos a cuenta), esperando el comprobante, o pagada sin hora.
     const ahora = Date.now();
     const filas = datos.citas.map((c) => {
       const pagado = datos.pagos.pagadoPorCita.get(c.id) ?? 0;
@@ -145,25 +152,26 @@ export default function Caja() {
     const esperando = filas.filter((f) => f.sello?.clave === 'esperando_pago' || f.sello?.clave === 'caducada');
     const sinHora = filas.filter((f) => f.sello?.clave === 'pago_sin_hora');
     const porCobrar = filas.filter(
-      (f) => cobroPorApuntar(f.cita.status, f.cita.pagado_por) && (!f.sello || f.sello.clave === 'adelanto'),
+      (f) => cobroPorApuntar(f.cita.status, f.cita.pagado_por) && (!f.sello || f.sello.clave === 'por_cobrar'),
     );
     const pedidosSinConstancia = datos.movimientos.filter((m) => m.fuente === 'order' && cobradoSinConstancia(m));
 
-    const cobrado = cobros.reduce((t, e) => t + e.importe, 0);
+    const entro = entradas.reduce((t, e) => t + e.importe, 0);
+    const aCuentaTotal = aCuenta.reduce((t, a) => t + Number(a.pago.amount ?? 0), 0);
     const gastado = datos.gastos.reduce((t, g) => t + g.importe, 0);
     return {
-      cobrado,
-      adelantado: adelantos.reduce((t, a) => t + Number(a.pago.amount ?? 0), 0),
-      adelantos,
+      entro,
+      aCuentaTotal,
+      aCuenta,
       porMetodo: [...porMetodo.entries()].sort((a, b) => b[1] - a[1]),
       porCobrar,
-      // Lo que falta: el precio entero, o lo que queda tras el adelanto.
+      // Lo que falta: el precio entero, o lo que queda tras lo pagado a cuenta.
       porCobrarTotal: porCobrar.reduce((t, x) => t + (x.pagos ? x.pagos.saldo : x.importe), 0),
       esperando,
       sinHora,
       pedidosSinConstancia,
       gastado,
-      neto: cobrado - gastado,
+      neto: entro - gastado,
     };
   }, [datos, dia]);
 
@@ -202,13 +210,13 @@ export default function Caja() {
 
         {calculo && (
           <div className="caja-grid">
-            {/* ── Cobrado, por método ── */}
+            {/* ── Lo que entró, por método (completo + a cuenta) ── */}
             <div className="card">
               <div className="card-mini-head">
-                <h3>Cobrado, por método</h3>
+                <h3>Entró, por método</h3>
               </div>
               {calculo.porMetodo.length === 0 ? (
-                <p className="vacio">Nada cobrado todavía este día.</p>
+                <p className="vacio">No ha entrado nada todavía este día.</p>
               ) : (
                 calculo.porMetodo.map(([metodo, total]) => (
                   <div className="kv-fila" key={metodo}>
@@ -225,14 +233,14 @@ export default function Caja() {
               )}
             </div>
 
-            {/* ── Adelantos: dinero a cuenta, aparte de lo cobrado ── */}
-            {calculo.adelantos.length > 0 && (
+            {/* ── A cuenta: entró, pero lo que paga sigue por cobrar ── */}
+            {calculo.aCuenta.length > 0 && (
               <div className="card">
                 <div className="card-mini-head">
-                  <h3>Adelantos</h3>
-                  <small className="muted">{soles(calculo.adelantado)} a cuenta</small>
+                  <h3>A cuenta · por cobrar</h3>
+                  <small className="muted">{soles(calculo.aCuentaTotal)} de lo que entró</small>
                 </div>
-                {calculo.adelantos.map(({ pago, metodo, cita }) => (
+                {calculo.aCuenta.map(({ pago, metodo, cita, falta }) => (
                   <div className="kv-fila" key={pago.id}>
                     <span>
                       {nombrePorLead.get(pago.lead_id) ?? 'Cliente'}
@@ -241,14 +249,15 @@ export default function Caja() {
                         · {etiquetaMetodo(metodo)}
                         {cita?.slot_start ? ` · para el ${textoSlotCorto(cita.slot_start)}` : ''}
                         {cita?.service ? ` · ${cita.service}` : ''}
+                        {falta > 0 ? ` · faltan ${soles(falta)}` : ''}
                       </small>
                     </span>
                     <b>{soles(Number(pago.amount ?? 0))}</b>
                   </div>
                 ))}
                 <p className="muted" style={{ fontSize: 12, marginTop: 8 }}>
-                  Pagos que no cubren todavía el total de su {v.sesion}. No suman a «Cobrado» ni al neto: entran
-                  cuando se cobra el resto.
+                  Pagos que no cubren todavía el total: el dinero entró y suma a la caja, pero {v.la} {v.sesion}
+                  sigue por cobrar hasta que se pague todo.
                 </p>
               </div>
             )}
@@ -295,7 +304,7 @@ export default function Caja() {
               )}
               {calculo.porCobrar.some((f) => f.pagos) && (
                 <p className="muted" style={{ fontSize: 12.5, marginTop: 10 }}>
-                  «Cobrada» en {v.una} {v.sesion} con adelanto apunta lo que faltaba, con el método que elijas.
+                  «Cobrada» en {v.una} {v.sesion} con pagos a cuenta apunta lo que faltaba, con el método que elijas.
                 </p>
               )}
               {calculo.pedidosSinConstancia.length > 0 && (
@@ -358,10 +367,10 @@ export default function Caja() {
         <SaldosPendientes key={companyId} alCambiar={releer} />
 
         <p className="muted" style={{ fontSize: 12.5, lineHeight: 1.7, marginTop: 14 }}>
-          <b>Cobrado es lo que entró, no lo que podría entrar.</b> Cada comprobante que verificó Mia y cada pago
+          <b>Entró es lo que entró, no lo que podría entrar.</b> Cada comprobante que verificó Mia y cada pago
           registrado cuentan por su importe y el día en que se pagaron: una seña de S/ 50 es S/ 50, aunque la
           inscripción valga más. Lo que se marcó «Cobrada» sin importe cuenta por su precio, el día de la {v.sesion}.
-          Un adelanto de {v.una} {v.sesion} va aparte y no suma hasta que se cobra el resto.
+          Lo pagado a cuenta suma el día que entra; {v.la} {v.sesion} solo pasa a cobrad{v.a} cuando se paga todo.
           Las deudas de otros períodos se consultan en «Saldos por cobrar», sin depender de la fecha seleccionada.
         </p>
       </div>

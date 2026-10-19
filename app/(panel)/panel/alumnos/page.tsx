@@ -30,15 +30,15 @@ type Filtro = 'todos' | EstadoFamilia | 'renovar';
 
 const FILTROS: { id: Filtro; label: string }[] = [
   { id: 'todos', label: 'Todos' },
-  { id: 'debe', label: 'Deben' },
-  { id: 'por_pagar', label: 'Por pagar' },
+  { id: 'debe', label: 'Por cobrar' },
+  { id: 'por_pagar', label: 'Esperando pago' },
   { id: 'renovar', label: 'Por renovar' },
   { id: 'al_dia', label: 'Al día' },
 ];
 
 const ESTADO: Record<EstadoFamilia, { label: string; color: string; fondo: string }> = {
-  debe: { label: 'Debe', color: '#C2410C', fondo: '#FFEDD5' },
-  por_pagar: { label: 'Por pagar · sin cupo', color: '#B26B00', fondo: '#FEF6E7' },
+  debe: { label: 'Por cobrar', color: '#C2410C', fondo: '#FFEDD5' },
+  por_pagar: { label: 'Esperando pago · sin cupo', color: '#B26B00', fondo: '#FEF6E7' },
   al_dia: { label: 'Al día', color: '#0FA968', fondo: '#E8FBF2' },
 };
 

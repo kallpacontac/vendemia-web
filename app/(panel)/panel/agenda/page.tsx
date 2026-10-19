@@ -856,17 +856,21 @@ interface Pendiente {
 }
 
 /** "2026-09-18 16:00" → "18 sep · 16:00". */
+/* «Cobrada» solo cuando se pagó todo (Alvaro, 19-oct-2026); con seña, «Por cobrar».
+   `pagado_por` no sirve aquí: la seña ya lo pone. Manda el saldo de la venta. */
 const ESTADO_ALUMNO: Record<EstadoInscripcion, { label: string; color: string; fondo: string }> = {
-  por_pagar: { label: 'Por pagar', color: '#B26B00', fondo: '#FEF6E7' },
-  con_saldo: { label: 'Con saldo', color: '#C2410C', fondo: '#FFEDD5' },
-  confirmada: { label: 'Confirmada', color: '#0FA968', fondo: '#E8FBF2' },
+  por_pagar: { label: 'Esperando pago', color: '#B26B00', fondo: '#FEF6E7' },
+  con_saldo: { label: 'Por cobrar', color: '#C2410C', fondo: '#FFEDD5' },
+  confirmada: { label: 'Cobrada', color: '#0FA968', fondo: '#E8FBF2' },
 };
 
 /** La píldora de estado de un alumno, con la cifra cuando debe. Ver lib/panel/saldo.ts. */
 function EstadoAlumno({ c, ventas }: { c: Cita; ventas: Map<string, VentaLead> }) {
   const estado = estadoInscripcion(c, ventas);
-  const e = ESTADO_ALUMNO[estado];
-  const debe = ventas.get(c.lead_id)?.saldo.saldo ?? 0;
+  const venta = ventas.get(c.lead_id);
+  const debe = venta?.saldo.saldo ?? 0;
+  // Sin precio no hay nada que cobrar: «Confirmada», no «Cobrada».
+  const e = estado === 'confirmada' && !venta?.saldo.total ? { ...ESTADO_ALUMNO.confirmada, label: 'Confirmada' } : ESTADO_ALUMNO[estado];
   return (
     <span
       className="badge-pill"
@@ -880,7 +884,7 @@ function EstadoAlumno({ c, ventas }: { c: Cita; ventas: Map<string, VentaLead> }
       }
     >
       {e.label}
-      {estado === 'con_saldo' ? ` · debe ${soles(debe)}` : ''}
+      {estado === 'con_saldo' ? ` · faltan ${soles(debe)}` : ''}
     </span>
   );
 }
@@ -1130,7 +1134,7 @@ function Proximas({
         {pag.visibles.map((c) => {
           const quien = nombrePorLead.get(c.lead_id) ?? 'Cliente';
           const estado = ESTADO_CITA[c.status ?? 'confirmed'];
-          /* Apartada (esperando pago / caducada), pagó sin hora, o con adelanto.
+          /* Apartada (esperando pago / caducada), pagó sin hora, o por cobrar (pagos a cuenta).
              En una apartada el sello SUSTITUYE al estado: «Esperando pago»
              dos veces no dice nada, y «Caducada» es lo que hay que ver. */
           const sello = selloCita(c, pagosCitas.get(c.id), soles);
@@ -1506,7 +1510,7 @@ function FilaPorConfirmar({
   );
 }
 
-/** El sello del dinero de una cita puntual: apartada, caducada, adelanto, pagó sin hora. */
+/** El sello del dinero de una cita puntual: apartada, caducada, por cobrar, pagó sin hora. */
 function SelloDeCita({ s }: { s: SelloCita }) {
   return (
     <span className="badge-pill" style={{ color: s.color, background: `${s.color}18` }} title={s.ayuda}>

@@ -100,19 +100,25 @@ export const suma = (movimientos: MovimientoRow[]): number =>
  * precio: su dinero entra por (1), en las fechas de cada pago. Si sumara las
  * dos cosas, el mismo dinero contaría dos veces.
  *
- * ── El adelanto de una cita puntual NO es un cobro (Alvaro, 19-oct-2026) ──
- * Desde el 19-oct el bot asocia el voucher a la cita puntual y solo la marca
- * (`pagado_por='voucher'`) cuando sus pagos cubren el total. Mientras no la
- * marque nadie, cada pago suyo sale con `adelanto: true`: la caja lo enseña
- * aparte y no lo suma a «Cobrado» ni al neto. Cuando queda cubierta, sus pagos
- * pasan a cobrados en el día en que se hicieron.
+ * ── Cobrada ≠ a cuenta (Alvaro, 19-oct-2026) ──────────────────────────
+ * «Cobrada es cuando ya se cobró todo. Por cobrar, otro estado. Lo que sí,
+ * sumar para la caja del día.» Dos cosas distintas:
  *
- * Y si la da por cobrada una persona («Cobrada», sin importe), entra EL RESTO
- * —precio menos lo ya pagado— el día de la cita: «Cobrada» sobre una cita con
- * adelanto quiere decir «cobré lo que faltaba». Sin esto, ese resto no entraba
- * nunca, porque una cita con pagos con importe no suma su precio.
+ *   · El ESTADO: una cita o inscripción con pagos que no cubren el total está
+ *     «por cobrar», nunca «cobrada» (lib/panel/adelantos.ts, saldo.ts).
+ *   · La CAJA: ese dinero sí entró, y suma a lo que entró el día y al neto.
+ *     Cada entrada lleva `aCuenta: true` para enseñarla aparte de los cobros
+ *     completos. Cuando la cita o la venta queda cubierta, sus pagos pasan a
+ *     completos en el día en que se hicieron.
  *
- * La seña de una INSCRIPCIÓN no cambia: cuenta como cobrada (regla del 3-oct).
+ * Igual para citas puntuales (el bot marca `pagado_por='voucher'` solo al
+ * cubrir) y para inscripciones (cubre la VENTA del lead: saldo.ts). En una
+ * inscripción `pagado_por` NO dice «cobrada»: la seña ya la pone.
+ *
+ * Si una persona da por cobrada una puntual con pagos («Cobrada», sin
+ * importe), entra EL RESTO —precio menos lo pagado— el día de la cita:
+ * «Cobrada» ahí quiere decir «cobré lo que faltaba». Sin esto ese resto no
+ * entraba nunca, porque una cita con pagos con importe no suma su precio.
  */
 export interface PagoConImporte {
   id: string;
@@ -128,11 +134,11 @@ export interface EntradaCaja {
   importe: number;
   /** yape · plin · cash… o '' si no consta. */
   metodo: string;
-  /** Pago a cuenta de una cita puntual que nadie ha dado por cobrada. No suma a «Cobrado». */
-  adelanto: boolean;
+  /** Pago de algo que sigue por cobrar (no cubre el total). Suma a la caja; se enseña aparte. */
+  aCuenta: boolean;
 }
 
-/** Lo que entradasDelDia necesita saber de una cita para separar adelantos. */
+/** Lo que entradasDelDia necesita saber de una cita puntual para el resto de «Cobrada». */
 export interface CitaCaja {
   puntual: boolean;
   pagadoPor: string;
@@ -151,15 +157,16 @@ export function entradasDelDia(
   metodoDe: (fuente: 'appointment' | 'order', id: string) => string,
   /** La cita de un pago o de un movimiento; undefined si no se sabe (cuenta como antes). */
   citaDe: (id: string) => CitaCaja | undefined = () => undefined,
+  /** ¿Este pago es de algo que sigue por cobrar? Lo decide quien conoce citas y ventas. */
+  aCuentaDe: (p: PagoConImporte) => boolean = () => false,
 ): EntradaCaja[] {
   const pagos: EntradaCaja[] = pagosDelDia.map((p) => {
-    const cita = p.appointment_id ? citaDe(p.appointment_id) : undefined;
     return {
       id: p.id,
       fuente: 'pago',
       importe: Number(p.amount) || 0,
       metodo: p.order_id ? metodoDe('order', p.order_id) : p.appointment_id ? metodoDe('appointment', p.appointment_id) : '',
-      adelanto: !!cita && cita.puntual && !cita.pagadoPor,
+      aCuenta: aCuentaDe(p),
     };
   });
   const sinImporte: EntradaCaja[] = [];
@@ -174,7 +181,7 @@ export function entradasDelDia(
       importe = Math.max(0, Math.round((importe - cita.pagado) * 100) / 100);
       if (importe === 0) continue;
     }
-    sinImporte.push({ id: m.movimiento_id, fuente, importe, metodo: metodoDe(fuente, m.movimiento_id), adelanto: false });
+    sinImporte.push({ id: m.movimiento_id, fuente, importe, metodo: metodoDe(fuente, m.movimiento_id), aCuenta: false });
   }
   return [...pagos, ...sinImporte];
 }
