@@ -75,8 +75,9 @@ export type TipoComando =
    * (defecto cash), appointment_id? }`. El bot lo apunta en pending_payments,
    * confirma los cupos y recalcula el saldo de la venta entera. Queda firmado
    * como `panel`, no `voucher`. Reintentarlo no cobra dos veces (dedupe por id
-   * del comando; vuelve `duplicado: true`). Solo inscripciones: los pedidos
-   * siguen con marcar_pagado.
+   * del comando; vuelve `duplicado: true`). Los pedidos siguen con
+   * marcar_pagado. Con `appointment_id` de una cita PUNTUAL (0005, solo agenda
+   * en la nube) el pago va a esa cita: «cobrada» al cubrir el total.
    */
   | 'registrar_pago'
   /**

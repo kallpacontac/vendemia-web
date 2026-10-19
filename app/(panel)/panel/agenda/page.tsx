@@ -45,6 +45,7 @@ import { construirSemana, lunesDe } from '@/lib/panel/agenda';
 import { cap, vocabulario, type Vocabulario } from '@/lib/panel/vocabulario';
 import { cobroPorApuntar, etiquetaMetodo, type MetodoPago } from '@/lib/panel/metodosPago';
 import { BotonCobrar } from '@/components/panel/BotonCobrar';
+import { RegistrarPago } from '@/components/panel/Saldos';
 import { diaMes, ESTADO_CITA, hora as horaDe, soles } from '@/lib/panel/format';
 import { estadoInscripcion, type EstadoInscripcion, type Saldo, type VentaLead } from '@/lib/panel/saldo';
 import { selloCita, type SelloCita } from '@/lib/panel/adelantos';
@@ -979,6 +980,8 @@ function Proximas({
   const avisar = useAvisar();
   const [enVuelo, setEnVuelo] = useState<string | null>(null);
   const [abierto, setAbierto] = useState<string | null>(null);
+  /** La cita con «Registrar pago» abierto: la seña de una cita que aún no llega. */
+  const [pagando, setPagando] = useState<string | null>(null);
   const [fecha, setFecha] = useState('');
   const [hora, setHora] = useState('');
   const [destino, setDestino] = useState('');
@@ -1175,6 +1178,17 @@ function Proximas({
                 </div>
 
                 <div className="confirmar-acciones">
+                  {cobroPorApuntar(c.status, c.pagado_por) && sello?.clave !== 'pago_sin_hora' && (
+                    <button
+                      type="button"
+                      className="btn btn-ghost btn-sm"
+                      aria-expanded={pagando === c.id}
+                      disabled={ocupado}
+                      onClick={() => setPagando(pagando === c.id ? null : c.id)}
+                    >
+                      <Wallet size={14} /> Registrar pago
+                    </button>
+                  )}
                   <button className="btn btn-ghost btn-sm" disabled={ocupado} onClick={() => abrir(c)}>
                     <Pencil size={14} /> Editar
                   </button>
@@ -1187,6 +1201,18 @@ function Proximas({
                   </button>
                 </div>
               </div>
+
+              {pagando === c.id && (
+                <div className="form-cita">
+                  <RegistrarPago
+                    leadId={c.lead_id}
+                    appointmentId={c.id}
+                    sugerido={pagosCitas.get(c.id)?.saldo ?? 0}
+                    alCerrar={() => setPagando(null)}
+                    alGuardar={alCambiar}
+                  />
+                </div>
+              )}
 
               {abierto === c.id && (
                 <div className="form-cita">

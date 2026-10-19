@@ -36,7 +36,7 @@
  */
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
-import { Plus, Trash2 } from 'lucide-react';
+import { Plus, Trash2, Wallet } from 'lucide-react';
 import CajaResumen from '@/components/panel/CajaResumen';
 import Topbar from '@/components/panel/Topbar';
 import { useSesion } from '@/components/panel/Sesion';
@@ -44,7 +44,7 @@ import { useAvisar, useComando } from '@/components/panel/Avisos';
 import { useCargar } from '@/components/panel/useCargar';
 import { useVocabulario } from '@/components/panel/useVocabulario';
 import { BotonCobrar } from '@/components/panel/BotonCobrar';
-import { SaldosPendientes } from '@/components/panel/Saldos';
+import { RegistrarPago, SaldosPendientes } from '@/components/panel/Saldos';
 import { diaMes, hora, isoLocal, soles, telefono } from '@/lib/panel/format';
 import { cobradoSinConstancia, entradasDelDia, suma, type CitaCaja } from '@/lib/panel/dinero';
 import { esPuntual, selloCita, type SelloCita } from '@/lib/panel/adelantos';
@@ -73,6 +73,8 @@ export default function Caja() {
   const hoy = isoLocal(new Date());
   const [dia, setDia] = useState(hoy);
   const [enVuelo, setEnVuelo] = useState<string | null>(null);
+  /** La cita con el formulario de «Registrar pago» abierto (una a la vez). */
+  const [pagando, setPagando] = useState<string | null>(null);
 
   const { datos, cargando, error, releer } = useCargar(async () => {
     if (!companyId) return null;
@@ -285,26 +287,40 @@ export default function Caja() {
                     Cuentan en los ingresos, pero no están en la caja hasta que se apunte con qué se pagaron.
                   </p>
                   {calculo.porCobrar.map(({ cita, importe, pagos, sello }) => (
-                    <div className="confirmar-fila" key={cita.id}>
-                      <div className="confirmar-quien">
-                        <b>{nombrePorLead.get(cita.lead_id) ?? 'Cliente'}</b>
-                        <small className="muted">
-                          {cita.inicio ? hora(cita.inicio) : ''}
-                          {cita.service ? ` · ${cita.service}` : ''}
-                          {pagos ? ` · faltan ${soles(pagos.saldo)}` : importe ? ` · ${soles(importe)}` : ''}
-                        </small>
+                    <div key={cita.id}>
+                      <div className="confirmar-fila">
+                        <div className="confirmar-quien">
+                          <b>{nombrePorLead.get(cita.lead_id) ?? 'Cliente'}</b>
+                          <small className="muted">
+                            {cita.inicio ? hora(cita.inicio) : ''}
+                            {cita.service ? ` · ${cita.service}` : ''}
+                            {pagos ? ` · faltan ${soles(pagos.saldo)}` : importe ? ` · ${soles(importe)}` : ''}
+                          </small>
+                        </div>
+                        <div className="confirmar-sellos">{sello && <Sello s={sello} />}</div>
+                        <div className="confirmar-acciones">
+                          <BotonPago abierto={pagando === cita.id} alPulsar={() => setPagando(pagando === cita.id ? null : cita.id)} />
+                          <BotonCobrar ocupado={enVuelo === cita.id} alCobrar={(m) => void cobrar(cita, m)} />
+                        </div>
                       </div>
-                      {sello && <Sello s={sello} />}
-                      <div className="confirmar-acciones">
-                        <BotonCobrar ocupado={enVuelo === cita.id} alCobrar={(m) => void cobrar(cita, m)} />
-                      </div>
+                      {pagando === cita.id && (
+                        <div className="form-cita">
+                          <RegistrarPago
+                            leadId={cita.lead_id}
+                            appointmentId={cita.id}
+                            sugerido={pagos ? pagos.saldo : importe}
+                            alCerrar={() => setPagando(null)}
+                            alGuardar={releer}
+                          />
+                        </div>
+                      )}
                     </div>
                   ))}
                 </>
               )}
-              {calculo.porCobrar.some((f) => f.pagos) && (
+              {calculo.porCobrar.length > 0 && (
                 <p className="muted" style={{ fontSize: 12.5, marginTop: 10 }}>
-                  «Cobrada» en {v.una} {v.sesion} con pagos a cuenta apunta lo que faltaba, con el método que elijas.
+                  «Registrar pago» apunta un importe (una seña o una parte); «Cobrada», que se cobró todo lo que faltaba.
                 </p>
               )}
               {calculo.pedidosSinConstancia.length > 0 && (
@@ -331,7 +347,7 @@ export default function Caja() {
             </div>
             <p className="muted" style={{ fontSize: 12.5, marginBottom: 10 }}>
               {cap(v.reservas)} apartad{v.a}s a nombre del cliente hasta que llegue su comprobante. Si no paga en 24 h,
-              la hora se libera. «Cobrada» {v.la} confirma si la hora sigue libre.
+              la hora se libera. Una seña o «Cobrada» {v.la} confirman si la hora sigue libre.
             </p>
             {calculo.sinHora.map(({ cita, sello }) => (
               <div className="confirmar-fila" key={cita.id}>
@@ -342,23 +358,37 @@ export default function Caja() {
                     {cita.service ? ` · ${cita.service}` : ''} · dale otra hora en la Agenda o devuélvele el dinero
                   </small>
                 </div>
-                {sello && <Sello s={sello} />}
+                <div className="confirmar-sellos">{sello && <Sello s={sello} />}</div>
               </div>
             ))}
             {calculo.esperando.map(({ cita, importe, sello }) => (
-              <div className="confirmar-fila" key={cita.id}>
-                <div className="confirmar-quien">
-                  <b>{nombrePorLead.get(cita.lead_id) ?? 'Cliente'}</b>
-                  <small className="muted">
-                    {cita.inicio ? hora(cita.inicio) : ''}
-                    {cita.service ? ` · ${cita.service}` : ''}
-                    {importe ? ` · ${soles(importe)}` : ''}
-                  </small>
+              <div key={cita.id}>
+                <div className="confirmar-fila">
+                  <div className="confirmar-quien">
+                    <b>{nombrePorLead.get(cita.lead_id) ?? 'Cliente'}</b>
+                    <small className="muted">
+                      {cita.inicio ? hora(cita.inicio) : ''}
+                      {cita.service ? ` · ${cita.service}` : ''}
+                      {importe ? ` · ${soles(importe)}` : ''}
+                    </small>
+                  </div>
+                  <div className="confirmar-sellos">{sello && <Sello s={sello} />}</div>
+                  <div className="confirmar-acciones">
+                    <BotonPago abierto={pagando === cita.id} alPulsar={() => setPagando(pagando === cita.id ? null : cita.id)} />
+                    <BotonCobrar ocupado={enVuelo === cita.id} alCobrar={(m) => void cobrar(cita, m)} />
+                  </div>
                 </div>
-                {sello && <Sello s={sello} />}
-                <div className="confirmar-acciones">
-                  <BotonCobrar ocupado={enVuelo === cita.id} alCobrar={(m) => void cobrar(cita, m)} />
-                </div>
+                {pagando === cita.id && (
+                  <div className="form-cita">
+                    <RegistrarPago
+                      leadId={cita.lead_id}
+                      appointmentId={cita.id}
+                      sugerido={importe}
+                      alCerrar={() => setPagando(null)}
+                      alGuardar={releer}
+                    />
+                  </div>
+                )}
               </div>
             ))}
           </div>
@@ -379,6 +409,15 @@ export default function Caja() {
 }
 
 /* ═══════════════════════════════════════════════════════════════════════ */
+
+/** «Registrar pago»: el mismo botón que en Saldos por cobrar. */
+function BotonPago({ abierto, alPulsar }: { abierto: boolean; alPulsar: () => void }) {
+  return (
+    <button type="button" className="btn btn-ghost btn-sm" aria-expanded={abierto} onClick={alPulsar}>
+      <Wallet size={14} /> Registrar pago
+    </button>
+  );
+}
 
 function Sello({ s }: { s: SelloCita }) {
   return (

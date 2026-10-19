@@ -100,7 +100,7 @@ function FilaSaldo({ v, nombre, alGuardar }: { v: VentaLead; nombre: string; alG
       </div>
       <b className="saldos__debe">debe {soles(v.saldo.saldo)}</b>
       {abierto ? (
-        <RegistrarPago v={v} alCerrar={() => setAbierto(false)} alGuardar={alGuardar} />
+        <RegistrarPago leadId={v.leadId} sugerido={v.saldo.saldo} alCerrar={() => setAbierto(false)} alGuardar={alGuardar} />
       ) : (
         <button type="button" className="btn btn-ghost btn-sm" onClick={() => setAbierto(true)}>
           <Wallet size={14} /> Registrar pago
@@ -114,10 +114,26 @@ function FilaSaldo({ v, nombre, alGuardar }: { v: VentaLead; nombre: string; alG
  * El formulario de `registrar_pago`. El importe arranca en el saldo entero
  * porque es lo más habitual («vino a pagar lo que faltaba»), pero se edita: una
  * segunda seña también vale.
+ *
+ * Sirve para la venta de inscripciones de un lead y, con `appointmentId`, para
+ * una cita puntual (0005, 19-oct-2026): la seña o el resto de esa cita.
  */
-export function RegistrarPago({ v, alCerrar, alGuardar }: { v: VentaLead; alCerrar: () => void; alGuardar: () => void }) {
+export function RegistrarPago({
+  leadId,
+  sugerido,
+  appointmentId,
+  alCerrar,
+  alGuardar,
+}: {
+  leadId: string;
+  /** El importe con el que arranca: lo que falta. */
+  sugerido: number;
+  appointmentId?: string;
+  alCerrar: () => void;
+  alGuardar: () => void;
+}) {
   const comando = useComando();
-  const [monto, setMonto] = useState(String(v.saldo.saldo));
+  const [monto, setMonto] = useState(sugerido > 0 ? String(sugerido) : '');
   const [metodo, setMetodo] = useState<MetodoPago>('cash');
   const [enviando, setEnviando] = useState(false);
   const valor = Number(monto.replace(',', '.'));
@@ -128,7 +144,12 @@ export function RegistrarPago({ v, alCerrar, alGuardar }: { v: VentaLead; alCerr
     setEnviando(true);
     const r = await comando(
       'registrar_pago',
-      { lead_id: v.leadId, monto: Math.round(valor * 100) / 100, metodo_pago: metodo },
+      {
+        lead_id: leadId,
+        monto: Math.round(valor * 100) / 100,
+        metodo_pago: metodo,
+        ...(appointmentId ? { appointment_id: appointmentId } : {}),
+      },
       `Pago de ${soles(valor)} registrado.`,
       alGuardar,
     );

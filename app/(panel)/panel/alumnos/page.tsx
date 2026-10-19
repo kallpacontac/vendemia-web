@@ -239,7 +239,12 @@ function TarjetaFamilia({ f, alGuardar }: { f: Familia; alGuardar: () => void })
 
       <div className="familia__acciones">
         {pagando && f.venta ? (
-          <RegistrarPago v={f.venta} alCerrar={() => setPagando(false)} alGuardar={alGuardar} />
+          <RegistrarPago
+            leadId={f.venta.leadId}
+            sugerido={f.venta.saldo.saldo}
+            alCerrar={() => setPagando(false)}
+            alGuardar={alGuardar}
+          />
         ) : (
           <>
             {f.estado === 'debe' && f.venta && (
