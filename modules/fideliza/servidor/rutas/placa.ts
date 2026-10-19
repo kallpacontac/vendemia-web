@@ -17,7 +17,7 @@
  */
 import { FIDELIZA_URL } from '@/modules/fideliza/dominio/config';
 import { rutaActivacionPlaca, type FuentePlaca } from '@/modules/fideliza/dominio/activacion';
-import { destino, noDisponible, paginaDeEnlaces, type EnlacePublico, type MarcaPublica } from '@/modules/fideliza/servidor/html';
+import { destino, noDisponible, paginaDeEnlaces, type EnlacePublico, type MarcaPublica, type Negocio } from '@/modules/fideliza/servidor/html';
 import { huellaIp, limitar, log, NO_CACHE } from '@/modules/fideliza/servidor/http';
 import { rpc, servidor } from '@/modules/fideliza/servidor/supabase';
 
@@ -48,11 +48,24 @@ export async function GET(req: Request, { params }: { params: { token: string } 
       const url = destino(r.links[0], r.brand.slug, FIDELIZA_URL, token);
       return new Response(null, { status: 302, headers: { Location: url, ...NO_CACHE, 'Referrer-Policy': 'no-referrer' } });
     }
+    // El programa vive en el negocio, no en la versión de enlaces de la placa.
+    // Consultarlo aquí mantiene la página NFC/QR alineada con el enlace corto.
+    let programa: Negocio['program'] = null;
+    try {
+      const negocio = await rpc<Negocio>(servidor(), 'loyalty_srv_business', {
+        p_slug: r.brand.slug,
+        p_event: 'device_program',
+      });
+      if (negocio.status === 'ok') programa = negocio.program;
+    } catch (e) {
+      log('device_program_error', { mensaje: e instanceof Error ? e.message.slice(0, 120) : 'x' });
+    }
     return paginaDeEnlaces({
       marca: r.brand,
       titulo: r.title,
       frase: r.tagline,
       links: r.links,
+      programa,
       base: FIDELIZA_URL,
       placa: token,
     });

@@ -37,7 +37,7 @@ type Borrador = Programa['draft'];
 
 /** Qué es cada paso, en palabras del dueño, y si lo ven sus clientes al momento. */
 const TEXTO_PASO = [
-  { d: 'Cómo te verán tus clientes y la dirección de tu link público.', vivo: true },
+  { d: 'Cómo te verán tus clientes en la placa NFC/QR y en tu enlace corto.', vivo: true },
   { d: 'Ponle nombre a tu programa y elige qué quieres conseguir.', vivo: false },
   { d: '¿Qué suma para el premio: cada compra, lo que gastan o cada visita?', vivo: false },
   { d: 'Cuánto hace falta para ganar el premio y cuál es.', vivo: false },
@@ -428,7 +428,7 @@ function ProgramaPagina() {
             {campo(
               'Dirección pública',
               <input className="input" maxLength={40} value={negocio.slug} disabled={!editable} onChange={(e) => setNegocio({ ...negocio, slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '') })} />,
-              negocio.slug ? `Quedará en ${urlNegocio(negocio.slug)}. Cambiarla rompe los enlaces a la página, NO las placas.` : 'Minúsculas, números y guiones. Ej.: barberia-el-centro',
+              negocio.slug ? `Enlace corto: ${urlNegocio(negocio.slug)}. Abre la misma página que tu placa; la URL grabada en el NFC no cambia.` : 'Minúsculas, números y guiones. Ej.: barberia-el-centro',
             )}
             {campo('Frase corta', <input className="input" maxLength={120} value={negocio.tagline} disabled={!editable} onChange={(e) => setNegocio({ ...negocio, tagline: e.target.value })} />)}
             <h3 style={{ fontSize: 15, margin: '18px 0 4px' }}>Sucursales</h3>

@@ -15,7 +15,7 @@ import LinkPublico from '@/modules/fideliza/ui/LinkPublico';
 import PrimerosPasos, { type Paso } from '@/modules/fideliza/ui/PrimerosPasos';
 import { useCargar } from '@/components/panel/useCargar';
 import { accion, lecturas, type Enlace } from '@/modules/fideliza/cliente/api';
-import { urlNegocio } from '@/modules/fideliza/dominio/config';
+import { urlNegocio, urlPlaca, urlPlacaQr } from '@/modules/fideliza/dominio/config';
 import { fechaHora, soles, ESTADO_PLACA } from '@/modules/fideliza/dominio/formato';
 import { DEFINICIONES, pct, type Metricas } from '@/modules/fideliza/dominio/metricas';
 
@@ -90,6 +90,10 @@ export default function Resumen() {
   const { vivo, version, config, m, publicada, placas } = datos;
   const programaActivo = vivo?.status === 'active';
   const botones = publicada ? vigentes(publicada.links, programaActivo) : 0;
+  const placaPrincipal = placas.find((p) => p.status === 'active' && p.profile_id === ajustes?.default_profile_id) ?? null;
+  const paginaUrl = placaPrincipal
+    ? placaPrincipal.kind === 'qr' ? urlPlacaQr(placaPrincipal.public_token) : urlPlaca(placaPrincipal.public_token)
+    : ajustes ? urlNegocio(ajustes.slug) : '';
 
   const pasos: Paso[] = [
     {
@@ -177,7 +181,7 @@ export default function Resumen() {
     return (
       <>
         {puede('program.edit') && <PrimerosPasos pasos={pasosEnlaces} />}
-        {ajustes && <LinkPublico slug={ajustes.slug} nombre={ajustes.display_name} programaActivo={false} hayEnlaces={botones > 0} />}
+        {ajustes && <LinkPublico slug={ajustes.slug} nombre={ajustes.display_name} programaActivo={false} hayEnlaces={botones > 0} placa={placaPrincipal} />}
         {datos.visitas !== null && (
           <div className="fz-grid">
             <Cifra titulo="Visitas a tu página" valor={datos.visitas ?? 0} def="Últimos 30 días. Cada vez que alguien abre tu link." />
@@ -205,7 +209,7 @@ export default function Resumen() {
     <>
       {puede('program.edit') && <PrimerosPasos pasos={pasos} />}
       {ajustes && (
-        <LinkPublico slug={ajustes.slug} nombre={ajustes.display_name} programaActivo={programaActivo} hayEnlaces={botones > 0} />
+        <LinkPublico slug={ajustes.slug} nombre={ajustes.display_name} programaActivo={programaActivo} hayEnlaces={botones > 0} placa={placaPrincipal} />
       )}
 
       <div className="card" style={{ marginBottom: 16 }}>
@@ -239,7 +243,7 @@ export default function Resumen() {
               </Link>
             )}
             {ajustes && (
-              <a className="btn btn-ghost btn-sm" href={urlNegocio(ajustes.slug)} target="_blank" rel="noopener noreferrer">
+              <a className="btn btn-ghost btn-sm" href={paginaUrl} target="_blank" rel="noopener noreferrer">
                 Página pública <ExternalLink size={14} />
               </a>
             )}

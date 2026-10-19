@@ -69,16 +69,18 @@ export default function MiPagina() {
 
   const { datos, cargando, error, releer } = useCargar(async () => {
     if (!companyId) return null;
-    const [perfiles, enlaces, programas] = await Promise.all([
+    const [perfiles, enlaces, programas, placas] = await Promise.all([
       lecturas.perfiles(companyId),
       lecturas.enlaces(companyId),
       lecturas.programas(companyId),
+      lecturas.placas(companyId),
     ]);
     const perfil = perfiles.find((p) => p.id === ajustes?.default_profile_id) ?? perfiles.find((p) => !esDirecto(p.name)) ?? null;
     return {
       perfil,
       enlaces: enlaces.filter((l) => l.profile_id === perfil?.id).sort((a, b) => (a.position ?? 0) - (b.position ?? 0)),
       programaActivo: programas.some((p) => p.status === 'active'),
+      placa: placas.find((p) => p.status === 'active' && p.profile_id === perfil?.id) ?? null,
     };
   }, [companyId, ajustes?.default_profile_id]);
 
@@ -377,7 +379,7 @@ export default function MiPagina() {
       {/* Sin ninguna placa: ofrecer activarla, venga de donde venga. */}
       {!placaEspera && <AvisoSinPlaca />}
       {ajustes && (
-        <LinkPublico slug={ajustes.slug} nombre={ajustes.display_name} programaActivo={Boolean(datos?.programaActivo)} hayEnlaces={botones.some((b) => b.visible)} />
+        <LinkPublico slug={ajustes.slug} nombre={ajustes.display_name} programaActivo={Boolean(datos?.programaActivo)} hayEnlaces={botones.some((b) => b.visible)} placa={datos?.placa} />
       )}
 
       <div className="fz-editor">

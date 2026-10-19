@@ -8,7 +8,7 @@
 import { useState } from 'react';
 import { Check, Copy, ExternalLink, MessageCircle } from 'lucide-react';
 import { Qr } from './Estados';
-import { urlNegocio, urlUnirse } from '@/modules/fideliza/dominio/config';
+import { urlNegocio, urlPlaca, urlPlacaQr, urlUnirse } from '@/modules/fideliza/dominio/config';
 
 async function copiar(texto: string): Promise<boolean> {
   try {
@@ -71,13 +71,17 @@ export default function LinkPublico({
   nombre,
   programaActivo,
   hayEnlaces,
+  placa,
 }: {
   slug: string;
   nombre: string;
   programaActivo: boolean;
   hayEnlaces: boolean;
+  placa?: { public_token: string; kind: 'nfc_qr' | 'qr' } | null;
 }) {
   const vacio = !programaActivo && !hayEnlaces;
+  const paginaUrl = placa ? (placa.kind === 'qr' ? urlPlacaQr(placa.public_token) : urlPlaca(placa.public_token)) : urlNegocio(slug);
+  const qrUrl = placa ? urlPlacaQr(placa.public_token) : paginaUrl;
   return (
     <div className="card fz-copia-card">
       <div className="fz-copia-card__texto">
@@ -91,11 +95,12 @@ export default function LinkPublico({
           </div>
         )}
         <FilaLink
-          titulo="Tu página"
-          url={urlNegocio(slug)}
+          titulo={placa ? (placa.kind === 'qr' ? 'Página de tu QR' : 'Página de tu placa') : 'Tu página'}
+          url={paginaUrl}
           nombre={nombre}
-          ayuda="Tu página con tus botones (WhatsApp, reseñas, cómo llegar…) y el alta en la tarjeta."
+          ayuda={placa ? 'Es el enlace de tu placa o QR. Muestra tus botones y el alta en la tarjeta.' : 'Tu página con tus botones (WhatsApp, reseñas, cómo llegar…) y el alta en la tarjeta.'}
         />
+        {placa && <small className="fz-def">Tu enlace corto {urlNegocio(slug)} muestra los mismos botones. La placa conserva su dirección para contar las aperturas.</small>}
         {programaActivo && (
           <FilaLink
             titulo="Link directo para crear la tarjeta"
@@ -106,7 +111,7 @@ export default function LinkPublico({
         )}
       </div>
       <div className="fz-copia-card__qr">
-        <Qr valor={urlNegocio(slug)} tam={150} descargar={`qr-${slug}`} />
+        <Qr valor={qrUrl} tam={150} descargar={`qr-${slug}`} />
         <small className="fz-def" style={{ textAlign: 'center' }}>QR de tu página, para imprimir</small>
       </div>
     </div>
