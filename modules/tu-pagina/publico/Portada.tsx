@@ -1,15 +1,17 @@
 /**
  * tienda.vendemias.com/<negocio> · la portada (o agenda.*: es la misma).
  *
- * Lo que el negocio encendió, como botones grandes, y siempre «Escríbenos por
- * WhatsApp». El catálogo y las reservas entran en sus fases (docs/PLAN-TU-PAGINA.md);
- * hasta entonces la portada solo enseña lo que ya funciona.
+ * Cabecera, los atajos (envío, WhatsApp) y el escaparate: lo que el negocio
+ * vende, reserva o inscribe, sacado de su catálogo del panel. El escaparate es
+ * la única isla con JavaScript; lo demás llega en HTML.
  */
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { MessageCircle, Package } from 'lucide-react';
 import Marco, { Cabecera } from '@/modules/tu-pagina/publico/Marco';
+import Escaparate from '@/modules/tu-pagina/publico/Escaparate';
 import { paginaDe } from '@/modules/tu-pagina/servidor/pagina';
+import { escaparateDe } from '@/modules/tu-pagina/servidor/escaparate';
 import { urlWhatsApp } from '@/modules/tu-pagina/dominio/envio';
 
 type Props = { params: { slug: string } };
@@ -27,12 +29,15 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function Portada({ params }: Props) {
   const p = await paginaDe(params.slug);
   if (!p) notFound();
+  const conEscaparate = Boolean(p.secciones.catalogo || p.secciones.reservar);
+  const esc = conEscaparate ? await escaparateDe(p.slug) : null;
+  const hayItems = Boolean(esc && esc.items.length > 0);
 
   return (
     <Marco pagina={p}>
       <Cabecera pagina={p} />
       <div className="tp-hoja">
-        <nav className="tp-acciones" aria-label="Qué quieres hacer">
+        <nav className={`tp-acciones${hayItems ? ' tp-acciones--fila' : ''}`} aria-label="Qué quieres hacer">
           {/* Enlace relativo a propósito: vale igual en tienda o agenda (host/<negocio>) y en /tu-pagina/<negocio>. */}
           {p.secciones.envios && (
             <a className="tp-accion" href={`./${p.slug}/envio`}>
@@ -51,6 +56,15 @@ export default async function Portada({ params }: Props) {
             </span>
           </a>
         </nav>
+        {esc && hayItems && (
+          <Escaparate
+            esc={esc}
+            slug={p.slug}
+            whatsapp={p.whatsapp}
+            puedePedir={Boolean(p.secciones.catalogo)}
+            puedeReservar={Boolean(p.secciones.reservar)}
+          />
+        )}
       </div>
     </Marco>
   );

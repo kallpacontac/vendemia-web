@@ -73,6 +73,19 @@ export function redactar(eventos: EventoPendiente[]): Mensaje {
 
   switch (e.tipo) {
     case 'reserva': {
+      // Lo que llega desde Tu página (pedidos_web / reservas_web): sin lead, con el nombre que escribió.
+      const web = eventos.filter((x) => String(x.datos.clase ?? '').startsWith('web_'));
+      if (web.length === n) {
+        const nombre = typeof e.datos.nombre === 'string' ? e.datos.nombre : 'Un cliente';
+        const esPedido = e.datos.clase === 'web_pedido';
+        const detalle = esPedido ? soles(e.datos.total) : typeof e.datos.servicio === 'string' ? e.datos.servicio : '';
+        return {
+          title: n === 1 ? `${prefijo}${esPedido ? 'Pedido' : 'Reserva'} desde tu página` : `${prefijo}${n} nuevos desde tu página`,
+          body: n === 1 ? `${nombre}${detalle ? ` · ${detalle}` : ''}` : 'Ábrelos para confirmarlos.',
+          url: '/panel/tu-pagina',
+          tag,
+        };
+      }
       const pedidos = eventos.filter((x) => x.datos.clase === 'pedido').length;
       const esPedido = pedidos === n;
       // Un pedido es un pedido aunque el negocio sea de citas, y al revés.

@@ -46,4 +46,8 @@
 .tp-panel-pill--impreso { background: #fff4e0; color: var(--warm); }
 .tp-panel-pill--recogido { background: #e6f3f4; color: var(--c-blue); }
 .tp-panel-pill--entregado { background: #e7f6ef; color: var(--new); }
+.tp-panel-pill--nuevo, .tp-panel-pill--apartada { background: var(--brand-soft); color: var(--brand-txt); }
+.tp-panel-pill--confirmado, .tp-panel-pill--confirmada { background: #e6f3f4; color: var(--c-blue); }
+.tp-panel-pill--atendida { background: #e7f6ef; color: var(--new); }
 .tp-panel-mas { width: 100%; margin-top: 8px; }
+.tp-panel-botones { display: inline-flex; gap: 6px; flex-wrap: wrap; }

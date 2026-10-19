@@ -11,8 +11,9 @@
  *   · La página la dirección, el WhatsApp a donde llega todo y qué secciones
  *               se enseñan. Si todavía no hay página, se abre aquí.
  *
- * El producto se llama «Tu página» (Alvaro, 15-oct-2026), por fuera y por
- * dentro. El host del enlace depende del modo: dominio/config.ts.
+ * Por fuera el producto se llama «Pide» (Alvaro, 19-oct-2026; antes «Tu página»).
+ * Por dentro sigue siendo tu-pagina: módulo, tablas, API y rutas.
+ * El host del enlace depende del modo: dominio/config.ts.
  *
  * Todo escribe en la nube (tablas tu_pagina / envios, RPC con la sesión del usuario):
  * no pasa por el bot y funciona igual en un negocio sin bot.
@@ -28,6 +29,8 @@ import { useCargar } from '@/components/panel/useCargar';
 import { supabase } from '@/lib/supabase/client';
 import { COLORES } from '@/modules/fideliza/dominio/estilo';
 import { urlPagina, urlEnvio } from '@/modules/tu-pagina/dominio/config';
+import { esEcommerce, esRecurrente } from '@/lib/panel/modo';
+import { Pedidos, Reservas } from '@/modules/tu-pagina/ui/PedidosYReservas';
 import {
   ESTADOS,
   fechaCorta,
@@ -55,6 +58,8 @@ interface Pagina {
 
 const POR_PAGINA = 50;
 
+type Pestana = 'pedidos' | 'reservas' | 'envios' | 'pagina';
+
 const mensajeDe = (e: unknown) => {
   const m = e instanceof Error ? e.message : String((e as { message?: string })?.message ?? e);
   if (m.includes('tu_pagina:slug_ocupado')) return 'Esa dirección ya la tiene otro negocio.';
@@ -74,8 +79,16 @@ export default function PanelTuPagina() {
     if (error) throw new Error(error.message);
     return (data as Pagina | null) ?? null;
   }, [companyId]);
-  const [pestana, setPestana] = useState<'envios' | 'pagina'>('envios');
   const sinPagina = !cargando && !error && !pagina?.publicada;
+  const s = pagina?.publicada ? pagina.secciones ?? {} : {};
+  const pestanas = [
+    ...(s.catalogo ? [{ id: 'pedidos' as const, nombre: 'Pedidos' }] : []),
+    ...(s.reservar ? [{ id: 'reservas' as const, nombre: esRecurrente(compania?.business_mode) ? 'Cupos' : 'Reservas' }] : []),
+    ...(s.envios ? [{ id: 'envios' as const, nombre: 'Envíos' }] : []),
+    { id: 'pagina' as const, nombre: 'La página' },
+  ];
+  const [pestana, setPestana] = useState<Pestana | null>(null);
+  const activa: Pestana = pestana && pestanas.some((p) => p.id === pestana) ? pestana : codigoBuscado ? 'envios' : pestanas[0].id;
 
   useEffect(() => {
     if (sinPagina) setPestana('pagina');
@@ -84,21 +97,24 @@ export default function PanelTuPagina() {
   return (
     <main className="main">
       <div className="wrap">
-        <Topbar titulo="Tu página" sub="El enlace para que tus clientes te pidan, y lo que te piden" />
+        <Topbar titulo="Pide" sub="El enlace para que tus clientes te pidan, y lo que te piden" />
         {error && <p className="vacio">No se pudo cargar: {error}</p>}
         {cargando && !pagina && <p className="vacio">Cargando…</p>}
         {!cargando && !error && companyId && (
           <>
             <div className="chip-tabs tp-panel-tabs" role="tablist">
-              <button role="tab" aria-selected={pestana === 'envios'} className={pestana === 'envios' ? 'active' : ''} onClick={() => setPestana('envios')}>
-                Envíos
-              </button>
-              <button role="tab" aria-selected={pestana === 'pagina'} className={pestana === 'pagina' ? 'active' : ''} onClick={() => setPestana('pagina')}>
-                La página
-              </button>
+              {pestanas.map((p) => (
+                <button key={p.id} role="tab" aria-selected={activa === p.id} className={activa === p.id ? 'active' : ''} onClick={() => setPestana(p.id)}>
+                  {p.nombre}
+                </button>
+              ))}
             </div>
-            {pestana === 'pagina' ? (
+            {activa === 'pagina' ? (
               <MiPagina companyId={companyId} nombre={compania?.nombre ?? ''} pagina={pagina ?? null} alGuardar={releer} />
+            ) : activa === 'pedidos' ? (
+              <Pedidos companyId={companyId} nombre={pagina?.titulo || compania?.nombre || ''} />
+            ) : activa === 'reservas' ? (
+              <Reservas companyId={companyId} nombre={pagina?.titulo || compania?.nombre || ''} />
             ) : (
               <Envios companyId={companyId} pagina={pagina ?? null} nombre={pagina?.titulo || compania?.nombre || ''} codigo={codigoBuscado} alConfigurar={() => setPestana('pagina')} />
             )}
@@ -120,7 +136,12 @@ function MiPagina({ companyId, nombre, pagina, alGuardar }: { companyId: string;
   const [frase, setFrase] = useState(pagina?.frase ?? '');
   const [slug, setSlug] = useState(pagina?.slug ?? sugerirSlug(nombre || companyId));
   const [whatsapp, setWhatsapp] = useState(telefonoBonito(pagina?.whatsapp ?? ''));
-  const [envios, setEnvios] = useState(pagina?.secciones?.envios ?? true);
+  const modo = compania?.business_mode;
+  const tienda = esEcommerce(modo);
+  const [envios, setEnvios] = useState(pagina?.secciones?.envios ?? false);
+  // Por defecto, lo que hace cada negocio: la tienda vende, el de citas o clases reserva.
+  const [catalogo, setCatalogo] = useState(pagina ? Boolean(pagina.secciones?.catalogo) : tienda);
+  const [reservar, setReservar] = useState(pagina ? Boolean(pagina.secciones?.reservar) : !tienda);
   const [distritos, setDistritos] = useState((pagina?.distritos ?? []).join(', '));
   const [color, setColor] = useState(pagina?.color ?? '#FF4900');
   const [libre, setLibre] = useState<boolean | null>(null);
@@ -148,7 +169,7 @@ function MiPagina({ companyId, nombre, pagina, alGuardar }: { companyId: string;
           frase: frase.trim(),
           whatsapp: telefonoNormal(whatsapp),
           color,
-          secciones: { envios },
+          secciones: { envios, catalogo: tienda && catalogo, reservar: !tienda && reservar },
           distritos: distritos.split(/[,\n]/).map((d) => d.trim()).filter(Boolean),
         },
       });
@@ -173,7 +194,7 @@ function MiPagina({ companyId, nombre, pagina, alGuardar }: { companyId: string;
   return (
     <div className="tp-panel-grid">
       <section className="card">
-        <div className="card-mini-head"><h3>{publicada ? 'Tu página' : 'Crea tu página en un minuto'}</h3></div>
+        <div className="card-mini-head"><h3>{publicada ? 'Tu Pide' : 'Crea tu Pide en un minuto'}</h3></div>
 
         <label className="tp-panel-campo">
           <span>Nombre que verán tus clientes</span>
@@ -200,17 +221,25 @@ function MiPagina({ companyId, nombre, pagina, alGuardar }: { companyId: string;
 
         <div className="tp-panel-campo">
           <span>Qué pueden hacer tus clientes</span>
+          {tienda ? (
+            <label className="tp-panel-check">
+              <input type="checkbox" checked={catalogo} onChange={(e) => setCatalogo(e.target.checked)} />
+              <span><b>Ver mi catálogo y pedir</b><small className="muted">Eligen producto, opción y cantidad; el stock queda separado y te avisan por WhatsApp</small></span>
+            </label>
+          ) : esRecurrente(modo) ? (
+            <label className="tp-panel-check">
+              <input type="checkbox" checked={reservar} onChange={(e) => setReservar(e.target.checked)} />
+              <span><b>Separar su cupo en un grupo</b><small className="muted">Ven tus niveles con los cupos que quedan; el cupo queda separado y te avisan por WhatsApp</small></span>
+            </label>
+          ) : (
+            <label className="tp-panel-check">
+              <input type="checkbox" checked={reservar} onChange={(e) => setReservar(e.target.checked)} />
+              <span><b>Reservar una cita</b><small className="muted">Eligen servicio, día y hora libres; el hueco queda separado y te avisan por WhatsApp</small></span>
+            </label>
+          )}
           <label className="tp-panel-check">
             <input type="checkbox" checked={envios} onChange={(e) => setEnvios(e.target.checked)} />
             <span><b>Agendar un envío</b><small className="muted">Te llega con todo: dirección, distrito, fecha de recojo</small></span>
-          </label>
-          <label className="tp-panel-check tp-panel-check--pronto">
-            <input type="checkbox" disabled />
-            <span><b>Ver mi catálogo y pedir</b><small className="muted">Muy pronto</small></span>
-          </label>
-          <label className="tp-panel-check tp-panel-check--pronto">
-            <input type="checkbox" disabled />
-            <span><b>Reservar una cita</b><small className="muted">Muy pronto</small></span>
           </label>
         </div>
 
@@ -231,7 +260,7 @@ function MiPagina({ companyId, nombre, pagina, alGuardar }: { companyId: string;
         </div>
 
         <button className="btn btn-primary" disabled={guardando || libre === false || !whatsapp.trim()} onClick={() => void guardar()}>
-          {guardando ? 'Publicando…' : publicada ? 'Guardar cambios' : 'Publicar mi página'}
+          {guardando ? 'Publicando…' : publicada ? 'Guardar cambios' : 'Publicar mi Pide'}
         </button>
       </section>
 
@@ -243,7 +272,7 @@ function MiPagina({ companyId, nombre, pagina, alGuardar }: { companyId: string;
 function Compartir({ slug, envios }: { slug: string; envios: boolean }) {
   const avisar = useAvisar();
   const modo = useSesion().compania?.business_mode;
-  const enlaces = [{ nombre: 'Tu página', url: urlPagina(slug, modo) }, ...(envios ? [{ nombre: 'Directo a envíos', url: urlEnvio(slug, modo) }] : [])];
+  const enlaces = [{ nombre: 'Tu Pide', url: urlPagina(slug, modo) }, ...(envios ? [{ nombre: 'Directo a envíos', url: urlEnvio(slug, modo) }] : [])];
   async function bajarQr(url: string) {
     const png = await QRCode.toDataURL(url, { width: 1024, margin: 2, errorCorrectionLevel: 'M' });
     const a = document.createElement('a');
@@ -350,9 +379,9 @@ function Envios({ companyId, pagina, nombre, codigo, alConfigurar }: {
     return (
       <section className="card">
         <p className="vacio">
-          Todavía no recibes envíos. Publica tu página con «Agendar un envío» encendido y comparte el enlace.
+          Todavía no recibes envíos. Publica tu Pide con «Agendar un envío» encendido y comparte el enlace.
         </p>
-        <button className="btn btn-primary" onClick={alConfigurar}>Configurar mi página</button>
+        <button className="btn btn-primary" onClick={alConfigurar}>Configurar mi Pide</button>
       </section>
     );
   }
