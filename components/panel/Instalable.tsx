@@ -92,8 +92,8 @@ export default function Instalable() {
     etiqueta('link', { rel: 'manifest', href: '/panel.webmanifest' });
     // Android usa este color para la barra superior cuando el navegador o la
     // app instalada lo permiten. Se actualiza aunque el layout raíz ya haya
-    // creado la etiqueta, para que el panel conserve el naranja de Vendemia.
-    etiqueta('meta', { name: 'theme-color', content: '#FF4900' });
+    // creado la etiqueta, para que la barra continúe el fondo del dashboard.
+    etiqueta('meta', { name: 'theme-color', content: '#EAEAE8' });
     etiqueta('meta', { name: 'apple-mobile-web-app-capable', content: 'yes' });
     etiqueta('meta', { name: 'mobile-web-app-capable', content: 'yes' });
     etiqueta('meta', { name: 'apple-mobile-web-app-title', content: 'Vendemia' });
