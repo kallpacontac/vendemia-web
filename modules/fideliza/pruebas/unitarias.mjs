@@ -25,6 +25,7 @@ const errores = cargar('modules/fideliza/dominio/errores.ts');
 const botones = cargar('modules/fideliza/dominio/botones.ts');
 const pagina = cargar('modules/fideliza/dominio/paginaPublica.ts');
 const activacion = cargar('modules/fideliza/dominio/activacion.ts');
+const config = cargar('modules/fideliza/dominio/config.ts');
 
 const MIEMBRO_ID = '9f1c2d3e-4b5a-4c6d-8e7f-001122334455';
 const marca = { slug: 'barberia-centro', display_name: 'Barbería Centro', logo_url: 'https://x.com/l.png', bg_color: '#112233', support_url: null };
@@ -333,4 +334,9 @@ test('22 · una placa libre entra directo al alta de Fideliza conservando QR o N
   const ruta = readFileSync(join(raiz, 'modules/fideliza/servidor/rutas/placa.ts'), 'utf8');
   assert.match(ruta, /r\.status === 'unclaimed'\) return irAlAlta\(origen\)/);
   assert.match(ruta, /status:\s*302/);
+});
+
+test('23 · el chip y el QR declaran su origen con el mismo parámetro', () => {
+  assert.equal(config.urlPlaca('TOKEN'), `${config.FIDELIZA_URL}/t/TOKEN?o=nfc`);
+  assert.equal(config.urlPlacaQr('TOKEN'), `${config.FIDELIZA_URL}/t/TOKEN?o=qr`);
 });

@@ -7,10 +7,10 @@
  *
  * Cada placa tiene UN token y dos URL que abren lo mismo:
  *
- *   NFC  →  fideliza.vendemias.com/t/<token>        (lo que se graba en el chip)
+ *   NFC  →  fideliza.vendemias.com/t/<token>?o=nfc  (lo que se graba en el chip)
  *   QR   →  fideliza.vendemias.com/t/<token>?o=qr   (lo que lleva el QR impreso)
  *
- * El `?o=qr` solo sirve para medir si escanearon el QR o acercaron el móvil.
+ * `o=nfc` y `o=qr` solo sirven para medir cómo abrieron la placa.
  * Ninguna de las dos cambia nunca: a dónde lleva la placa se decide en el
  * panel, sin reimprimir ni regrabar.
  *

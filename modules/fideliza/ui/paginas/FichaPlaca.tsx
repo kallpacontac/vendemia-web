@@ -177,7 +177,7 @@ export default function FichaPlaca() {
           <div style={{ marginTop: 14 }}>
             <Qr valor={urlPlacaQr(p.public_token)} tam={220} descargar={`placa-${p.label || p.id.slice(0, 8)}`} />
           </div>
-          <p className="fz-def">El QR lleva «?o=qr» para contar aparte las aperturas por QR. Lo que se graba en el chip es la URL de arriba, sin parámetro.</p>
+          <p className="fz-def">El chip lleva «?o=nfc» y el QR «?o=qr» para contar cada tipo de apertura por separado. Las placas antiguas sin parámetro siguen funcionando como NFC.</p>
         </div>
 
         <div className="card">

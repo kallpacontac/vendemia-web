@@ -12,8 +12,8 @@
  */
 export const FIDELIZA_URL = (process.env.NEXT_PUBLIC_FIDELIZA_URL || 'http://localhost:3000').replace(/\/+$/, '');
 
-/** Lo que se graba en el chip. El token es lo único que lo identifica. */
-export const urlPlaca = (token: string) => `${FIDELIZA_URL}/t/${token}`;
+/** Lo que se graba en el chip. `o=nfc` identifica explícitamente el origen. */
+export const urlPlaca = (token: string) => `${FIDELIZA_URL}/t/${token}?o=nfc`;
 /** Lo que lleva el QR impreso de la MISMA placa: mide QR aparte de NFC. */
 export const urlPlacaQr = (token: string) => `${FIDELIZA_URL}/t/${token}?o=qr`;
 export const urlNegocio = (slug: string) => `${FIDELIZA_URL}/n/${slug}`;

@@ -11,8 +11,9 @@
  *   2 o más   → la página del negocio con los botones.
  *
  * 302 y no 301: un 301 lo cachea el navegador para siempre, y el destino de
- * una placa es editable. `?o=qr` marca la apertura desde el QR impreso; sin
- * parámetro se cuenta como NFC/directo (no se puede distinguir más).
+ * una placa es editable. `?o=qr` marca la apertura desde el QR impreso y
+ * `?o=nfc` la del chip. Las placas antiguas sin parámetro siguen contando como
+ * NFC para no romper nada ya grabado.
  */
 import { FIDELIZA_URL } from '@/modules/fideliza/dominio/config';
 import { rutaActivacionPlaca, type FuentePlaca } from '@/modules/fideliza/dominio/activacion';
