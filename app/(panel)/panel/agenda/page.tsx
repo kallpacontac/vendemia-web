@@ -46,7 +46,8 @@ import { cap, vocabulario, type Vocabulario } from '@/lib/panel/vocabulario';
 import { cobroPorApuntar, etiquetaMetodo, type MetodoPago } from '@/lib/panel/metodosPago';
 import { BotonCobrar } from '@/components/panel/BotonCobrar';
 import { diaMes, ESTADO_CITA, hora as horaDe, soles } from '@/lib/panel/format';
-import { estadoInscripcion, type EstadoInscripcion, type VentaLead } from '@/lib/panel/saldo';
+import { estadoInscripcion, type EstadoInscripcion, type Saldo, type VentaLead } from '@/lib/panel/saldo';
+import { selloCita, type SelloCita } from '@/lib/panel/adelantos';
 import {
   adelantada,
   claveGrupo,
@@ -69,6 +70,7 @@ import {
   getCatalogo,
   getCitas,
   getVentas,
+  getPagosDeCitas,
   getCompania,
   getLeads,
   getTrabajadores,
@@ -184,8 +186,12 @@ export default function Agenda() {
     ]);
     // El saldo de cada venta (la seña reserva el cupo). Solo hay algo que
     // calcular con inscripciones recurrentes; si falla, la agenda sigue sin él.
-    const ventas = await getVentas(companyId, citas).catch(() => new Map<string, VentaLead>());
-    return { empresa, citas, leads, trabajadores, bloqueos, catalogo, ventas };
+    const [ventas, pagosCitas] = await Promise.all([
+      getVentas(companyId, citas).catch(() => new Map<string, VentaLead>()),
+      // Los adelantos de las citas puntuales (lib/panel/adelantos.ts). Igual: si falla, sin ellos.
+      getPagosDeCitas(companyId, citas).catch(() => new Map<string, Saldo>()),
+    ]);
+    return { empresa, citas, leads, trabajadores, bloqueos, catalogo, ventas, pagosCitas };
   }, [companyId]);
 
   const semana = useMemo(() => {
@@ -366,6 +372,7 @@ export default function Agenda() {
             v={v}
             citas={citasVista}
             nombrePorLead={new Map((datos?.leads ?? []).map((l) => [l.id, l.name || l.phone]))}
+            pagosCitas={datos?.pagosCitas ?? new Map()}
             alCambiar={recargar}
           />
         )}
@@ -375,6 +382,7 @@ export default function Agenda() {
             v={v}
             citas={citasVista}
             nombrePorLead={new Map((datos?.leads ?? []).map((l) => [l.id, l.name || l.phone]))}
+            pagosCitas={datos?.pagosCitas ?? new Map()}
             trabajadores={datos?.trabajadores ?? []}
             alCambiar={recargar}
           />
@@ -951,12 +959,15 @@ function Proximas({
   v,
   citas,
   nombrePorLead,
+  pagosCitas,
   trabajadores,
   alCambiar,
 }: {
   v: Vocabulario;
   citas: Cita[];
   nombrePorLead: Map<string, string>;
+  /** Lo pagado de cada cita con pagos: el adelanto. Ver lib/panel/adelantos.ts. */
+  pagosCitas: Map<string, Saldo>;
   trabajadores: Trabajador[];
   alCambiar: () => void;
 }) {
@@ -1119,6 +1130,10 @@ function Proximas({
         {pag.visibles.map((c) => {
           const quien = nombrePorLead.get(c.lead_id) ?? 'Cliente';
           const estado = ESTADO_CITA[c.status ?? 'confirmed'];
+          /* Apartada (esperando pago / caducada), pagó sin hora, o con adelanto.
+             En una apartada el sello SUSTITUYE al estado: «Esperando pago»
+             dos veces no dice nada, y «Caducada» es lo que hay que ver. */
+          const sello = selloCita(c, pagosCitas.get(c.id), soles);
           const ocupado = enVuelo === c.id;
           /* El asignado entra en la lista aunque esté dado de baja: si no,
              el desplegable enseñaría a otra persona como si fuera la suya. */
@@ -1137,7 +1152,15 @@ function Proximas({
                 </div>
 
                 <div className="confirmar-sellos">
-                  {estado && (
+                  {estado && c.status !== 'pending_payment' && (
+                    <span
+                      className="badge-pill"
+                      style={{ color: estado.color, background: `${estado.color}18` }}
+                    >
+                      {estado.label}
+                    </span>
+                  )}
+                  {sello ? <SelloDeCita s={sello} /> : estado && c.status === 'pending_payment' && (
                     <span
                       className="badge-pill"
                       style={{ color: estado.color, background: `${estado.color}18` }}
@@ -1287,11 +1310,13 @@ function PorConfirmar({
   v,
   citas,
   nombrePorLead,
+  pagosCitas,
   alCambiar,
 }: {
   v: Vocabulario;
   citas: Cita[];
   nombrePorLead: Map<string, string>;
+  pagosCitas: Map<string, Saldo>;
   alCambiar: () => void;
 }) {
   const comando = useComando();
@@ -1379,6 +1404,7 @@ function PorConfirmar({
               key={c.id}
               cita={c}
               cliente={nombrePorLead.get(c.lead_id) ?? 'Cliente'}
+              sello={selloCita(c, pagosCitas.get(c.id), soles)}
               ocupado={enVuelo === c.id}
               alResolver={(vino) => void resolver(c, vino)}
               alCobrar={(metodo) => void cobrar(c, metodo)}
@@ -1395,12 +1421,15 @@ function PorConfirmar({
 function FilaPorConfirmar({
   cita,
   cliente,
+  sello,
   ocupado,
   alResolver,
   alCobrar,
 }: {
   cita: Cita;
   cliente: string;
+  /** Adelanto, apartada o pagó sin hora. Ver lib/panel/adelantos.ts. */
+  sello: SelloCita | null;
   ocupado: boolean;
   alResolver: (vino: boolean) => void;
   alCobrar: (metodo: MetodoPago) => void;
@@ -1427,13 +1456,17 @@ function FilaPorConfirmar({
         >
           {cumplido.label}
         </span>
-        <span
-          className="badge-pill"
-          style={{ color: pagado.color, background: `${pagado.color}18` }}
-          title={pagado.ayuda}
-        >
-          {pagado.label}
-        </span>
+        {sello ? (
+          <SelloDeCita s={sello} />
+        ) : (
+          <span
+            className="badge-pill"
+            style={{ color: pagado.color, background: `${pagado.color}18` }}
+            title={pagado.ayuda}
+          >
+            {pagado.label}
+          </span>
+        )}
       </div>
 
       <div className="confirmar-acciones">
@@ -1470,5 +1503,14 @@ function FilaPorConfirmar({
         )}
       </div>
     </div>
+  );
+}
+
+/** El sello del dinero de una cita puntual: apartada, caducada, adelanto, pagó sin hora. */
+function SelloDeCita({ s }: { s: SelloCita }) {
+  return (
+    <span className="badge-pill" style={{ color: s.color, background: `${s.color}18` }} title={s.ayuda}>
+      {s.label}
+    </span>
   );
 }

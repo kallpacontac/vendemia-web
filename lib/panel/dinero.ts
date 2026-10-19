@@ -99,6 +99,20 @@ export const suma = (movimientos: MovimientoRow[]): number =>
  * Una cita o pedido que tiene AL MENOS UN pago con importe ya no suma su
  * precio: su dinero entra por (1), en las fechas de cada pago. Si sumara las
  * dos cosas, el mismo dinero contaría dos veces.
+ *
+ * ── El adelanto de una cita puntual NO es un cobro (Alvaro, 19-oct-2026) ──
+ * Desde el 19-oct el bot asocia el voucher a la cita puntual y solo la marca
+ * (`pagado_por='voucher'`) cuando sus pagos cubren el total. Mientras no la
+ * marque nadie, cada pago suyo sale con `adelanto: true`: la caja lo enseña
+ * aparte y no lo suma a «Cobrado» ni al neto. Cuando queda cubierta, sus pagos
+ * pasan a cobrados en el día en que se hicieron.
+ *
+ * Y si la da por cobrada una persona («Cobrada», sin importe), entra EL RESTO
+ * —precio menos lo ya pagado— el día de la cita: «Cobrada» sobre una cita con
+ * adelanto quiere decir «cobré lo que faltaba». Sin esto, ese resto no entraba
+ * nunca, porque una cita con pagos con importe no suma su precio.
+ *
+ * La seña de una INSCRIPCIÓN no cambia: cuenta como cobrada (regla del 3-oct).
  */
 export interface PagoConImporte {
   id: string;
@@ -114,6 +128,16 @@ export interface EntradaCaja {
   importe: number;
   /** yape · plin · cash… o '' si no consta. */
   metodo: string;
+  /** Pago a cuenta de una cita puntual que nadie ha dado por cobrada. No suma a «Cobrado». */
+  adelanto: boolean;
+}
+
+/** Lo que entradasDelDia necesita saber de una cita para separar adelantos. */
+export interface CitaCaja {
+  puntual: boolean;
+  pagadoPor: string;
+  /** Suma de sus pagos con importe, de cualquier día. */
+  pagado: number;
 }
 
 export function entradasDelDia(
@@ -125,20 +149,32 @@ export function entradasDelDia(
    */
   conPagoConImporte: Set<string>,
   metodoDe: (fuente: 'appointment' | 'order', id: string) => string,
+  /** La cita de un pago o de un movimiento; undefined si no se sabe (cuenta como antes). */
+  citaDe: (id: string) => CitaCaja | undefined = () => undefined,
 ): EntradaCaja[] {
-  const pagos: EntradaCaja[] = pagosDelDia.map((p) => ({
-    id: p.id,
-    fuente: 'pago',
-    importe: Number(p.amount) || 0,
-    metodo: p.order_id ? metodoDe('order', p.order_id) : p.appointment_id ? metodoDe('appointment', p.appointment_id) : '',
-  }));
-  const sinImporte: EntradaCaja[] = movimientosDelDia
-    .filter((m) => entroEnCaja(m) && !conPagoConImporte.has(`${m.fuente}:${m.movimiento_id}`))
-    .map((m) => ({
-      id: m.movimiento_id,
-      fuente: m.fuente === 'order' ? 'order' : 'appointment',
-      importe: Number(m.importe) || 0,
-      metodo: metodoDe(m.fuente === 'order' ? 'order' : 'appointment', m.movimiento_id),
-    }));
+  const pagos: EntradaCaja[] = pagosDelDia.map((p) => {
+    const cita = p.appointment_id ? citaDe(p.appointment_id) : undefined;
+    return {
+      id: p.id,
+      fuente: 'pago',
+      importe: Number(p.amount) || 0,
+      metodo: p.order_id ? metodoDe('order', p.order_id) : p.appointment_id ? metodoDe('appointment', p.appointment_id) : '',
+      adelanto: !!cita && cita.puntual && !cita.pagadoPor,
+    };
+  });
+  const sinImporte: EntradaCaja[] = [];
+  for (const m of movimientosDelDia) {
+    if (!entroEnCaja(m)) continue;
+    const fuente = m.fuente === 'order' ? 'order' : 'appointment';
+    let importe = Number(m.importe) || 0;
+    if (conPagoConImporte.has(`${m.fuente}:${m.movimiento_id}`)) {
+      // Su dinero entra por sus pagos; de una puntual dada por cobrada, además, lo que faltaba.
+      const cita = fuente === 'appointment' ? citaDe(m.movimiento_id) : undefined;
+      if (!cita?.puntual) continue;
+      importe = Math.max(0, Math.round((importe - cita.pagado) * 100) / 100);
+      if (importe === 0) continue;
+    }
+    sinImporte.push({ id: m.movimiento_id, fuente, importe, metodo: metodoDe(fuente, m.movimiento_id), adelanto: false });
+  }
   return [...pagos, ...sinImporte];
 }

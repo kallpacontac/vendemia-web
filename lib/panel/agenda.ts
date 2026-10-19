@@ -15,6 +15,7 @@
  */
 import type { AppointmentStatus, ClaveDia, Horario } from '@/lib/supabase/types';
 import { isoLocal } from './format';
+import { ocupaHora } from './adelantos';
 
 const CLAVES: ClaveDia[] = [
   'sunday',
@@ -26,8 +27,11 @@ const CLAVES: ClaveDia[] = [
   'saturday',
 ];
 
-/** Las citas que ocupan cupo. Una cancelada libera el hueco; una no_show ya pasó. */
-const OCUPAN: AppointmentStatus[] = ['confirmed', 'pending_payment', 'completed'];
+/*
+ * Las citas que ocupan cupo: ocupaHora (lib/panel/adelantos.ts). Una cancelada
+ * libera el hueco; una no_show ya pasó; una apartada esperando el pago lo ocupa
+ * solo 24 h desde que se creó, como en el bot y en v2_hueco.
+ */
 
 export interface Reserva {
   id: string;
@@ -74,6 +78,8 @@ interface Entrada {
     service: string | null;
     employee_id: string | null;
     lead_id: string;
+    slot_start?: string;
+    created_at?: number | null;
   }[];
   nombrePorLead: Map<string, string>;
   nombrePorTrabajador: Map<string, string>;
@@ -198,7 +204,7 @@ export function construirSemana(offset: number, e: Entrada): Semana {
             c.inicio &&
             c.inicio >= inicio &&
             c.inicio < fin &&
-            OCUPAN.includes(c.status ?? 'confirmed'),
+            ocupaHora({ status: c.status ?? 'confirmed', slot_start: c.slot_start ?? '', created_at: c.created_at ?? null }, ahora),
         )
         .map((c) => ({
           id: c.id,

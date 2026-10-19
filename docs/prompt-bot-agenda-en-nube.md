@@ -20,6 +20,13 @@ encienden hasta que esto esté hecho.
   - El hueco lo decide `v2_hueco` (tu `capAt` en SQL) con `pg_advisory_xact_lock(hashtext('tu_pagina:' || company_id))`.
 - Las cinco tablas ya llevan `sync_version` y triggers desde la 0001 de la web, y los borrados van a
   `sync_borrados`, igual que la configuración.
+- **La cita apartada** (tu cambio del 19-oct): `v2_hueco` ya cuenta una `pending_payment` puntual como
+  ocupada solo 24 h desde `created_at` (`public.v2_ocupa_hora`, constante, sin columna; si cambias
+  `PAGO_CADUCA_HORAS`, avísame). `agenda_marcar_pagado` sobre una puntual `pending_payment` revalida el
+  hueco y falla con tu mismo texto (`no se puede confirmar: <motivo>. Muévela a otra hora y márcala
+  pagada`). Mi página (`agenda_srv_reservar`) la crea `pending_payment` con el interruptor en 1 y precio
+  > 0. Lo que **no** hace la nube: el voucher (asociar a la cita, sumar pagos, `pagado_por='voucher'` al
+  cubrir, la escalación `paid_slot_full`) sigue siendo tuyo; al escribirlo en la nube, mismas reglas.
 
 ## Lo que necesito de ti, en este orden
 

@@ -25,6 +25,10 @@
 --   · actualizar_lead no valida el correo con el normalizador del bot (solo forma básica)
 --     ni fija el nombre frente al bot (_fijado_por_panel).
 --
+-- La cita APARTADA (bot, 19-oct-2026): con «Requerir pago para confirmar» y precio > 0, la cita
+-- puntual nace `pending_payment` y ocupa su hora 24 h (v2_ocupa_hora); marcar_pagado la confirma
+-- revalidando el hueco y, si ya no está libre, falla sin tocar nada.
+--
 -- Roles: lo que el corte del 21-oct dejará así. Dueño y administrador, todo; el
 -- empleado solo «vino / no vino». Un `member` de hoy ya es empleado aquí.
 -- ═══════════════════════════════════════════════════════════════════════════════
@@ -192,8 +196,17 @@ begin
     return coalesce((v_dia->>'capacity')::integer, 1);
 end $$;
 
+-- ¿Ocupa su hora esta cita? La apartada que espera el pago (`pending_payment`, «Requerir pago para
+-- confirmar») la ocupa 24 h desde que se creó —PAGO_CADUCA_HORAS del bot, 19-oct-2026— y después deja
+-- de ocupar; la fila no se toca. Si el bot cambia el plazo, se cambia aquí y en lib/panel/adelantos.ts.
+create or replace function public.v2_ocupa_hora(p_status text, p_creada bigint)
+returns boolean language sql stable as $$
+    select p_status in ('confirmed', 'completed')
+        or (p_status = 'pending_payment' and coalesce(p_creada, 0) > extract(epoch from now() - interval '24 hours'));
+$$;
+
 -- ¿Cabe? null = sí; si no, el motivo en palabras del panel. Lo ocupado: citas puntuales vivas
--- y reservas de la página (0002) que sigan apartadas.
+-- (v2_ocupa_hora) y reservas de la página (0002) que sigan apartadas.
 create or replace function public.v2_hueco(p_company text, p_inicio text, p_minutos integer, p_empleado text, p_excepto text default '')
 returns text language plpgsql stable security definer set search_path = public as $$
 declare
@@ -225,7 +238,7 @@ begin
         select count(*) into n from (
             select 1 from public.appointments a
              where a.company_id = p_company and a.id <> coalesce(p_excepto, '')
-               and a.status in ('confirmed', 'pending_payment', 'completed')
+               and public.v2_ocupa_hora(a.status, a.created_at)
                and a.slot_start ~ '^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$' and a.slot_start < t1
                and coalesce(nullif(a.slot_end, ''), public.tu_pagina_sumar_min(a.slot_start, a.slot_minutes)) > t
             union all
@@ -240,7 +253,7 @@ begin
     if coalesce(p_empleado, '') <> '' and exists (
         select 1 from public.appointments a
          where a.company_id = p_company and a.id <> coalesce(p_excepto, '') and a.employee_id = p_empleado
-           and a.status in ('confirmed', 'pending_payment', 'completed')
+           and public.v2_ocupa_hora(a.status, a.created_at)
            and a.slot_start ~ '^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$' and a.slot_start < v_fin
            and coalesce(nullif(a.slot_end, ''), public.tu_pagina_sumar_min(a.slot_start, a.slot_minutes)) > p_inicio) then
         return coalesce(v_nombre, 'ese profesional') || ' ya tiene una cita a esa hora';
@@ -321,7 +334,7 @@ begin
     v_fin  := public.tu_pagina_sumar_min(v_slot, v_span);
 
     select * into v_cita from public.appointments a
-     where a.company_id = p_company and a.lead_id = v_lead.id and a.status in ('confirmed', 'pending_payment')
+     where a.company_id = p_company and a.lead_id = v_lead.id and a.status <> 'completed' and public.v2_ocupa_hora(a.status, a.created_at)
        and a.slot_start < v_fin and coalesce(nullif(a.slot_end, ''), public.tu_pagina_sumar_min(a.slot_start, a.slot_minutes)) > v_slot
      limit 1;
     if found then
@@ -756,9 +769,14 @@ begin
         v_span := coalesce(nullif(v_item.duration_minutes, 0), (select nullif(slot_minutes, 0) from public.companies where id = v_pag.company_id), 60);
         v_motivo := public.v2_hueco(v_pag.company_id, v_ini, v_span, v_emp);
         if v_motivo is not null then return jsonb_build_object('status', 'lleno', 'motivo', v_motivo); end if;
+        -- «Requerir pago para confirmar» y un servicio con precio: la cita queda APARTADA, ocupando su
+        -- hora 24 h (v2_ocupa_hora) hasta que llegue el comprobante. Igual que book_appointment del bot.
+        v_estado := case when coalesce(v_item.price, 0) > 0
+                          and (select coalesce(require_payment_to_confirm, 0) from public.companies where id = v_pag.company_id) = 1
+                         then 'pending_payment' else 'confirmed' end;
         insert into public.appointments (id, company_id, lead_id, service, slot_start, slot_end, slot_minutes, employee_id, status, beneficiario)
         values (gen_random_uuid()::text, v_pag.company_id, v_lead.id, v_item.name, v_ini, public.tu_pagina_sumar_min(v_ini, v_span), v_span,
-                v_emp, 'confirmed', btrim(coalesce(p_datos->>'beneficiario', '')))
+                v_emp, v_estado, btrim(coalesce(p_datos->>'beneficiario', '')))
         returning * into v_cita;
         insert into public.appointment_services (id, appointment_id, company_id, catalog_item_id, name, price, duration_minutes, sort_order)
         values (gen_random_uuid()::text, v_cita.id, v_pag.company_id, v_item.id, v_item.name, coalesce(v_item.price, 0), v_span, 0);
@@ -797,7 +815,8 @@ begin
         exit when not exists (select 1 from public.pagina_idem where company_id = v_pag.company_id and codigo = v_cod);
     end loop;
     insert into public.pagina_idem (company_id, idem, codigo, ref_id) values (v_pag.company_id, p_idem, v_cod, v_cita.id);
-    return jsonb_build_object('status', 'ok', 'codigo', v_cod, 'servicio', v_item.name, 'precio', v_item.price, 'repetido', false);
+    return jsonb_build_object('status', 'ok', 'codigo', v_cod, 'servicio', v_item.name, 'precio', v_item.price,
+                              'estado', v_cita.status, 'repetido', false);
 exception when check_violation or invalid_text_representation or not_null_violation or invalid_datetime_format then
     return jsonb_build_object('status', 'datos_invalidos');
 end $$;
@@ -924,7 +943,7 @@ begin
     end loop;
     foreach f in array array[
         'v2_autorizar_agenda(text, boolean)', 'v2_aforo(text, text, integer, text)',
-        'v2_hueco(text, text, integer, text, text)', 'v2_lead(text, text, text, text)'
+        'v2_hueco(text, text, integer, text, text)', 'v2_lead(text, text, text, text)', 'v2_ocupa_hora(text, bigint)'
     ] loop
         execute format('revoke execute on function public.%s from public, anon, authenticated', f);
     end loop;

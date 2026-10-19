@@ -61,7 +61,7 @@ export default function MiAgenda() {
 
 const ESTADO: Record<string, string> = {
   confirmed: 'Confirmada',
-  pending_payment: 'Por confirmar',
+  pending_payment: 'Esperando pago',
   completed: 'Vino',
   no_show: 'No vino',
 };

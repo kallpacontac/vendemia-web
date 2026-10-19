@@ -65,6 +65,7 @@ import { supabase } from '@/lib/supabase/client';
 import { esAppointmentFamily, esEcommerce } from '@/lib/panel/modo';
 import { soloLeeLoDelDueno } from '@/lib/panel/roles';
 import { cap, vocabulario } from '@/lib/panel/vocabulario';
+import { PAGO_CADUCA_HORAS } from '@/lib/panel/adelantos';
 import { getCatalogo, getCompania } from '@/lib/supabase/queries';
 import { b01 } from '@/lib/supabase/parse';
 import type { ResultadoUpdateCompany } from '@/lib/supabase/commands';
@@ -661,9 +662,13 @@ function Configuracion() {
               <div className="toggle-row" style={{ marginTop: 12 }}>
                 <div className="t">
                   <b>Requerir pago para confirmar</b>
+                  {/* Citas puntuales (bot, 19-oct-2026): la cita queda apartada y ocupa
+                      su hora 24 h (PAGO_CADUCA_HORAS, sin columna; ver
+                      lib/panel/adelantos.ts). Solo con servicios con precio. */}
                   <small>
-                    {cap(vocabulario(form.business_mode).la)} {vocabulario(form.business_mode).reserva} queda en
-                    «esperando pago» hasta que llegue el comprobante
+                    {form.business_mode === 'appointment'
+                      ? `${cap(vocabulario(form.business_mode).la)} ${vocabulario(form.business_mode).reserva} queda apartada a su nombre hasta que llegue el comprobante. Si no paga en ${PAGO_CADUCA_HORAS} h, la hora se libera.`
+                      : `${cap(vocabulario(form.business_mode).la)} ${vocabulario(form.business_mode).reserva} queda en «esperando pago» hasta que llegue el comprobante`}
                   </small>
                 </div>
                 <div

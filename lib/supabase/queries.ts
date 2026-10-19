@@ -87,7 +87,8 @@ import type {
 } from './types';
 import { esPlan, PLAN_POR_DEFECTO } from '@/lib/planes';
 import type { Consumo } from '@/lib/panel/consumo';
-import { esInscripcionViva, ventasPorLead, type VentaLead } from '@/lib/panel/saldo';
+import { esInscripcionViva, ventasPorLead, type Saldo, type VentaLead } from '@/lib/panel/saldo';
+import { esPuntual, pagosDeCitas } from '@/lib/panel/adelantos';
 
 /* ── Compañías del usuario ──────────────────────────────────────────────── */
 
@@ -790,6 +791,33 @@ export async function getVentas(
 }
 
 /**
+ * Lo pagado de cada cita PUNTUAL con pagos asociados, contra el total de sus
+ * líneas: el adelanto («Adelanto S/ 30 de 80»). Ver lib/panel/adelantos.ts.
+ *
+ * Una consulta por los pagos con cita del negocio (pocos: son vouchers y
+ * cobros con importe) y las líneas solo de las citas que tienen alguno.
+ */
+export async function getPagosDeCitas(
+  companyId: string,
+  citas: Pick<AppointmentRow, 'id' | 'slot_start'>[],
+): Promise<Map<string, Saldo>> {
+  if (demoActivo()) return new Map();
+  const { data, error } = await supabase()
+    .from('pending_payments')
+    .select('appointment_id, amount')
+    .eq('company_id', companyId)
+    .neq('appointment_id', '')
+    .limit(5000);
+  if (error) throw error;
+  const pagos = (data ?? []) as { appointment_id: string; amount: number | string | null }[];
+  const conPago = new Set(pagos.map((p) => p.appointment_id));
+  const suyas = citas.filter((c) => conPago.has(c.id) && esPuntual(c.slot_start));
+  if (suyas.length === 0) return new Map();
+  const lineas = await getServiciosDeCitas(suyas.map((c) => c.id));
+  return pagosDeCitas(suyas, lineas, pagos.map((p) => ({ appointment_id: p.appointment_id, amount: Number(p.amount ?? 0) })));
+}
+
+/**
  * El dinero con importe de un día para la Caja (ver entradasDelDia en
  * lib/panel/dinero.ts): los pagos hechos ESE día (hora de Lima), cuáles de las
  * citas/pedidos del día tienen algún pago con importe —de cualquier día, para
@@ -797,6 +825,10 @@ export async function getVentas(
  *
  * `pending_payments` no guarda método: se toma de la cita (`metodo_pago`) o del
  * pedido (`payment_method`) al que va enganchado.
+ *
+ * Para separar los adelantos (lib/panel/adelantos.ts) trae además, de cada cita
+ * con pagos, si es puntual y quién la dio por cobrada (`citaDePago`), y cuánto
+ * lleva pagado cada cita del día (`pagadoPorCita`).
  */
 export async function getPagosCaja(
   companyId: string,
@@ -807,8 +839,17 @@ export async function getPagosCaja(
   conPagoConImporte: Set<string>;
   metodoCita: Map<string, string>;
   metodoPedido: Map<string, string>;
+  citaDePago: Map<string, { slot_start: string; pagado_por: string; service: string }>;
+  pagadoPorCita: Map<string, number>;
 }> {
-  const vacio = { pagosDelDia: [], conPagoConImporte: new Set<string>(), metodoCita: new Map(), metodoPedido: new Map() };
+  const vacio = {
+    pagosDelDia: [],
+    conPagoConImporte: new Set<string>(),
+    metodoCita: new Map(),
+    metodoPedido: new Map(),
+    citaDePago: new Map(),
+    pagadoPorCita: new Map(),
+  };
   if (demoActivo()) return vacio;
   const sb = supabase();
   // El día en hora de Lima (UTC-5, sin horario de verano), en epoch segundos.
@@ -821,7 +862,7 @@ export async function getPagosCaja(
   const [delDia, deCitas, dePedidos] = await Promise.all([
     sb.from('pending_payments').select(columnas).eq('company_id', companyId).gte('created_at', desde).lt('created_at', hasta),
     citas.length
-      ? sb.from('pending_payments').select('appointment_id').eq('company_id', companyId).in('appointment_id', citas.slice(0, 300))
+      ? sb.from('pending_payments').select('appointment_id, amount').eq('company_id', companyId).in('appointment_id', citas.slice(0, 300))
       : Promise.resolve({ data: [], error: null }),
     pedidos.length
       ? sb.from('pending_payments').select('order_id').eq('company_id', companyId).in('order_id', pedidos.slice(0, 300))
@@ -830,8 +871,11 @@ export async function getPagosCaja(
   for (const r of [delDia, deCitas, dePedidos]) if (r.error) throw r.error;
 
   const pagosDelDia = ((delDia.data ?? []) as PendingPaymentRow[]).map((p) => ({ ...p, amount: Number(p.amount ?? 0) }));
+  const pagosDeCitas = (deCitas.data ?? []) as { appointment_id: string; amount: number | string | null }[];
+  const pagadoPorCita = new Map<string, number>();
+  for (const p of pagosDeCitas) pagadoPorCita.set(p.appointment_id, (pagadoPorCita.get(p.appointment_id) ?? 0) + Number(p.amount ?? 0));
   const conPagoConImporte = new Set<string>([
-    ...((deCitas.data ?? []) as { appointment_id: string }[]).map((p) => `appointment:${p.appointment_id}`),
+    ...pagosDeCitas.map((p) => `appointment:${p.appointment_id}`),
     ...((dePedidos.data ?? []) as { order_id: string }[]).map((p) => `order:${p.order_id}`),
   ]);
 
@@ -840,16 +884,20 @@ export async function getPagosCaja(
   const idsPedido = [...new Set(pagosDelDia.map((p) => p.order_id).filter((x): x is string => !!x))];
   const [mc, mp] = await Promise.all([
     idsCita.length
-      ? sb.from('appointments').select('id, metodo_pago').in('id', idsCita)
+      ? sb.from('appointments').select('id, metodo_pago, slot_start, pagado_por, service').in('id', idsCita)
       : Promise.resolve({ data: [], error: null }),
     idsPedido.length
       ? sb.from('orders').select('id, payment_method').in('id', idsPedido)
       : Promise.resolve({ data: [], error: null }),
   ]);
+  if (mc.error) throw mc.error;
+  const citasDePagos = (mc.data ?? []) as { id: string; metodo_pago: string | null; slot_start: string; pagado_por: string | null; service: string | null }[];
   return {
     pagosDelDia,
     conPagoConImporte,
-    metodoCita: new Map(((mc.data ?? []) as { id: string; metodo_pago: string | null }[]).map((c) => [c.id, c.metodo_pago ?? ''])),
+    citaDePago: new Map(citasDePagos.map((c) => [c.id, { slot_start: c.slot_start, pagado_por: c.pagado_por ?? '', service: c.service ?? '' }])),
+    pagadoPorCita,
+    metodoCita: new Map(citasDePagos.map((c) => [c.id, c.metodo_pago ?? ''])),
     metodoPedido: new Map(((mp.data ?? []) as { id: string; payment_method: string | null }[]).map((o) => [o.id, o.payment_method ?? ''])),
   };
 }

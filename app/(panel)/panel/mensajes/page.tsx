@@ -89,7 +89,15 @@ function juntar(prev: Mensaje[], nuevos: Mensaje[]): Mensaje[] {
 }
 
 /** Qué pide cada escalación, dicho con las palabras de este negocio. */
-function etiquetaEscalacion(kind: string, v: Vocabulario): string {
+function etiquetaEscalacion(kind: string, detalle: Record<string, unknown>, v: Vocabulario): string {
+  /* El bot la abre cuando llega un pago y ya no hay sitio. Con `slot` "sched:…"
+     es una inscripción a un grupo lleno; con "YYYY-MM-DD HH:MM", una cita
+     apartada que pagó tarde y su hora ya es de otro (bot, 19-oct-2026). */
+  if (kind === 'paid_slot_full') {
+    return String(detalle.slot ?? '').startsWith('sched:')
+      ? 'Pagó, pero el grupo se llenó: dale otro grupo o devuélvele el dinero'
+      : 'Pagó, pero su hora se ocupó: dale otra o devuélvele el dinero';
+  }
   if (kind === 'paid_removal') return `Quitar ${v.reserva} (pagad${v.a})`;
   if (kind === 'paid_reschedule') return `Reprogramar ${v.reserva} (pagad${v.a})`;
   if (kind === 'paid_order_cancel') return 'Cancelar pedido (pagado)';
@@ -825,7 +833,7 @@ function Mensajes() {
           ) : (
             escalacionesDelLead.map((e) => (
               <div className="esc" key={e.id}>
-                <b>⚠️ {etiquetaEscalacion(e.kind, v)}</b>
+                <b>⚠️ {etiquetaEscalacion(e.kind, e.detalle, v)}</b>
                 <p>{resumenDetalle(e.detalle)}</p>
                 <button onClick={() => void resolver(e.id)}>
                   <Check size={11} /> Resolver
@@ -878,6 +886,12 @@ function escalacionesPendientes(
 
 /** El `detail` es JSON abierto: se enseña algo legible sin dar por hecho su forma. */
 function resumenDetalle(detalle: Record<string, unknown>): string {
+  // paid_slot_full de una cita: { slot: "2026-10-22 16:00", motivo }.
+  if (typeof detalle.slot === 'string' && /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/.test(detalle.slot)) {
+    const d = new Date(`${detalle.slot.slice(0, 10)}T12:00:00`);
+    const dia = `${diaMes(d)} a las ${detalle.slot.slice(11, 16)}`;
+    return typeof detalle.motivo === 'string' && detalle.motivo ? `${dia} · ${detalle.motivo}` : dia;
+  }
   const texto = detalle.mensaje ?? detalle.message ?? detalle.detail ?? detalle.reason;
   if (typeof texto === 'string') return texto;
   const claves = Object.keys(detalle);

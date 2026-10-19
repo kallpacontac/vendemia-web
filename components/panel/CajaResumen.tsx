@@ -5,7 +5,7 @@ import { isoLocal, soles } from '@/lib/panel/format';
 
 export default function CajaResumen({ dia, hoy, alDia, calculo }: {
   dia: string; hoy: string; alDia: (dia: string) => void;
-  calculo: { cobrado: number; gastado: number; neto: number } | null;
+  calculo: { cobrado: number; adelantado: number; gastado: number; neto: number } | null;
 }) {
   function mover(n: number) {
     const fecha = new Date(`${dia}T12:00:00`);
@@ -26,6 +26,8 @@ export default function CajaResumen({ dia, hoy, alDia, calculo }: {
     </div>
     <dl className="caja-totales" aria-live="polite">
       <div><dt>Cobrado</dt><dd>{calculo ? soles(calculo.cobrado) : '—'}</dd></div>
+      {/* Aparte, y fuera del neto: un adelanto no es un cobro (Alvaro, 19-oct-2026). */}
+      {calculo && calculo.adelantado > 0 && <div><dt>Adelantos</dt><dd>{soles(calculo.adelantado)}</dd></div>}
       <div><dt>Gastos</dt><dd>{calculo ? soles(calculo.gastado) : '—'}</dd></div>
       <div><dt>Neto del día</dt><dd>{calculo ? soles(calculo.neto) : '—'}</dd></div>
     </dl>
