@@ -8,11 +8,17 @@
 -- Conserva: la fila de `companies`, la membresía, `loyalty_settings` (slug y
 -- nombre; el estilo de la página vuelve a '{}'), sucursales y equipo.
 --
--- Solo clientes: con v_solo_clientes = true borra únicamente los suscritos y
--- lo suyo (saldos, premios, canjes, pases de Wallet, push, envíos pendientes).
--- Página, programa, clase de Wallet, campañas y placas quedan intactos.
+-- v_alcance elige cuánto se borra:
+--   'clientes' · solo los suscritos y lo suyo (saldos, premios, canjes, pases
+--                de Wallet, push, envíos pendientes). Página, programa, clase
+--                de Wallet y placas quedan intactos.
+--   'programa' · lo anterior + programas, versiones y clase de Wallet. Página
+--                y placas quedan intactas; el panel vuelve al modo «enlaces»
+--                hasta que publiques otro programa.
+--   'todo'     · lo anterior + página y placas (lo descrito arriba).
+-- En los tres se borran las campañas y sus eventos.
 --
--- Placas: con v_liberar_placas = true vuelven al inventario sin dueño y el
+-- Placas (solo con 'todo'): con v_liberar_placas = true vuelven al inventario sin dueño y el
 -- MISMO código de la tarjeta (individual o de pedido) las vuelve a activar.
 -- Con false siguen siendo del negocio, pero sin página asignada.
 --
@@ -34,10 +40,13 @@ alter table public.loyalty_ledger disable trigger tr_loyalty_ledger_inmutable;
 do $$
 declare
     v_slug            text    := 'kallpa';   -- ← slug del negocio
-    v_solo_clientes   boolean := false;
+    v_alcance         text    := 'programa'; -- 'clientes' · 'programa' · 'todo'
     v_liberar_placas  boolean := true;
     c                 text;
 begin
+    if v_alcance not in ('clientes', 'programa', 'todo') then
+        raise exception 'v_alcance debe ser clientes, programa o todo (no «%»)', v_alcance;
+    end if;
     select company_id into c from public.loyalty_settings where slug = v_slug;
     if c is null then
         -- Sin slug exacto: vale si UN solo negocio lo contiene en slug o nombre
@@ -64,7 +73,7 @@ begin
     delete from public.loyalty_consents           where company_id = c;
     delete from public.loyalty_members            where company_id = c;
 
-    if v_solo_clientes then
+    if v_alcance = 'clientes' then
         -- Lo que el worker intentaría enviar a clientes que ya no existen
         delete from public.loyalty_outbox
          where company_id = c and kind in ('wallet.object.sync', 'push.send');
@@ -78,6 +87,14 @@ begin
     update public.loyalty_programs set current_version_id = null where company_id = c;
     delete from public.loyalty_program_versions   where company_id = c;
     delete from public.loyalty_programs           where company_id = c;
+
+    if v_alcance = 'programa' then
+        -- Todo el outbox es de Wallet o push: sin programa ni clientes, sobra
+        delete from public.loyalty_outbox        where company_id = c;
+        delete from public.loyalty_public_events where company_id = c and member_id is not null;
+        raise notice 'Programa y clientes de % (%) borrados; página y placas intactas', v_slug, c;
+        return;
+    end if;
 
     -- Placas
     if v_liberar_placas then
