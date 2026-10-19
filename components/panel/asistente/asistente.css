@@ -25,6 +25,13 @@
 .asis-b--aviso{background:#FFFBEB;border-color:#FDE68A;color:#92400E}
 .asis-b--espera{display:flex;align-items:center;gap:9px;color:var(--ink-soft);font-size:13.5px}
 .asis-b--espera .spin{margin:0;flex:none}
+/* Esperando a que se libere la pregunta anterior: el texto y «Descartar» debajo. */
+.asis-b--espera>span{display:inline}
+.asis-b--espera>span .spin{display:inline-block;vertical-align:-2px;margin-right:6px}
+.asis-b--espera:has(.asis-b__descartar){flex-direction:column;align-items:flex-start;gap:8px}
+.asis-b__descartar{border:1px solid var(--line-2);background:#fff;border-radius:999px;padding:5px 12px;
+  font:600 12.5px 'Plus Jakarta Sans';color:var(--ink);cursor:pointer}
+.asis-b__descartar:hover{background:var(--bg-soft)}
 
 .asis-b__mio{white-space:pre-wrap}
 .asis-b__nota{display:inline-flex;align-items:center;gap:6px;font-weight:700}

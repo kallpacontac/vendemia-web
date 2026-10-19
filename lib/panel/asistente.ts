@@ -75,6 +75,16 @@ export const BITS_POR_SEGUNDO = 32000;
 /** 3-5 s con el bot encendido; 8-12 s si hay que transcribir un audio. */
 const ESPERA_RESPUESTA_MS = 45_000;
 
+/**
+ * La base no deja entrar una pregunta si la misma PERSONA tiene otra sin
+ * contestar de hace menos de 60 s (0039 del bot), en ESTE negocio o en otro:
+ * cuenta por `created_by`, no por compañía. Pasado el minuto deja pasar
+ * siempre, y el bot cierra la vieja como caducada. Así que no se le devuelve el
+ * problema al dueño: se reintenta solo cada 10 s, y como mucho 75 s.
+ */
+export const REINTENTO_EN_CURSO_MS = 10_000;
+export const ESPERA_EN_CURSO_MS = 75_000;
+
 /** El audio llega 3-6 s después del texto. Se relee la fila cada segundo. */
 const SONDEO_AUDIO_MS = 1000;
 const INTENTOS_AUDIO = 25;
@@ -107,8 +117,9 @@ export type Desenlace =
   | { tipo: 'no_enviada' }
   /**
    * La base no la dejó entrar porque la anterior sigue sin contestar (migración
-   * 0039 del bot). Se ve tras un timeout: la pregunta de antes sigue `pending`
-   * hasta un minuto, y mientras tanto no cabe otra.
+   * 0039 del bot). Se ve tras un timeout, o al cambiar de negocio con una
+   * pregunta en vuelo: la de antes sigue `pending` hasta un minuto, y mientras
+   * tanto no cabe otra. Ver ESPERA_EN_CURSO_MS.
    */
   | { tipo: 'en_curso'; mensaje: string }
   /** El payload pasa de 1,5 MB: un audio demasiado largo. */

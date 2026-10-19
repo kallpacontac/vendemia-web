@@ -61,6 +61,20 @@ export const plataforma = (): 'ios' | 'android' | 'otra' => {
   return /Android/i.test(ua) ? 'android' : 'otra';
 };
 
+/**
+ * ¿Chrome tiene puesto «Sitio de escritorio» para el panel?
+ *
+ * Con eso activado el celular finge una pantalla de 980 px, ignora el
+ * `viewport` y se pinta el panel de computadora en miniatura. Desde aquí no se
+ * puede desactivar: solo detectarlo y decir dónde se quita. La app instalada
+ * hereda el ajuste de Chrome para el sitio.
+ */
+export const vistaDeEscritorio = (): boolean =>
+  typeof window !== 'undefined' &&
+  navigator.maxTouchPoints > 0 &&
+  screen.width <= 820 &&
+  document.documentElement.clientWidth > screen.width * 1.5;
+
 function etiqueta(tag: 'link' | 'meta', attrs: Record<string, string>) {
   const clave = tag === 'link' ? `link[rel="${attrs.rel}"]` : `meta[name="${attrs.name}"]`;
   const existente = document.head.querySelector(clave);

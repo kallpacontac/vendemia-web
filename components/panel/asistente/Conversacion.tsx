@@ -27,13 +27,20 @@
  * Mientras Mia no contesta con el TEXTO, no se puede mandar otra. El audio no
  * bloquea: llega después, sobre la misma burbuja, y mientras se puede seguir
  * preguntando.
+ *
+ * Si la base dice que hay otra pregunta abierta —la de antes del timeout, o una
+ * hecha en otro negocio hace segundos—, esta espera sola a que se libere (menos
+ * de un minuto) y sale. Mientras espera NO está en la cola, así que se puede
+ * descartar sin dejar nada detrás.
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ArrowUp, Mic, Trash2, Volume2, X } from 'lucide-react';
 import {
+  ESPERA_EN_CURSO_MS,
   MAX_AUDIO_BYTES,
   MAX_GRABACION_S,
   MAX_PREGUNTA,
+  REINTENTO_EN_CURSO_MS,
   aBase64,
   descargarAudio,
   duracion,
@@ -98,12 +105,18 @@ export default function Conversacion({
   const [burbujas, setBurbujas] = useState<Burbuja[]>([]);
   const [enVuelo, setEnVuelo] = useState(false);
   const [borrador, setBorrador] = useState('');
+  /** La pregunta espera a que se libere la anterior: todavía no está en la cola. */
+  const [esperaAnterior, setEsperaAnterior] = useState(false);
   /** «Tu negocio aún no tiene la voz de Mia activada». Una vez por visita. */
   const [avisoVoz, setAvisoVoz] = useState(false);
 
   const vivo = useRef(true);
   /** Lo mismo que `enVuelo`, pero legible en el mismo instante: dos Enter seguidos no son dos preguntas. */
   const ocupado = useRef(false);
+  /** Cada envío y cada «Descartar» lo suben: un envío que ya no es el último se calla. */
+  const turno = useRef(0);
+  /** La pregunta que está esperando, para devolverla a la caja si se descarta. */
+  const esperando = useRef<{ id: number; texto: string | null } | null>(null);
   /** Cada `blob:` creado, para revocarlo al salir. */
   const audios = useRef(new Set<string>());
   /** Respuestas SEGUIDAS en las que se pidió voz y el bot dijo que no hay. */
@@ -197,12 +210,34 @@ export default function Conversacion({
         return;
       }
       const mio = siguienteId++;
+      const yo = ++turno.current;
       setBurbujas((l) => [...l, { id: mio, de: 'yo', ...lo }]);
       ocupado.current = true;
       setEnVuelo(true);
 
-      const d = await preguntar(companyId, p);
-      if (!vivo.current) return;
+      let d = await preguntar(companyId, p);
+      if (d.tipo === 'en_curso') {
+        esperando.current = { id: mio, texto: lo.texto };
+        setEsperaAnterior(true);
+        const hasta = Date.now() + ESPERA_EN_CURSO_MS;
+        while (d.tipo === 'en_curso' && Date.now() < hasta) {
+          await new Promise((r) => setTimeout(r, REINTENTO_EN_CURSO_MS));
+          if (!vivo.current || turno.current !== yo) return;
+          // Mientras se intenta no se puede descartar: si entra, ya está en la
+          // cola y esperar su respuesta es «revisando tus números».
+          esperando.current = null;
+          setEsperaAnterior(false);
+          d = await preguntar(companyId, p);
+          if (!vivo.current || turno.current !== yo) return;
+          if (d.tipo === 'en_curso') {
+            esperando.current = { id: mio, texto: lo.texto };
+            setEsperaAnterior(true);
+          }
+        }
+        esperando.current = null;
+        setEsperaAnterior(false);
+      }
+      if (!vivo.current || turno.current !== yo) return;
       ocupado.current = false;
       setEnVuelo(false);
 
@@ -253,6 +288,19 @@ export default function Conversacion({
     },
     [companyId, cambiar, diceMia, traerVoz, alNoDisponible, alSinPermiso, alSinSesion],
   );
+
+  /** Descarta la pregunta que espera a la anterior. No llegó a la cola: no deja nada. */
+  const descartar = useCallback(() => {
+    const e = esperando.current;
+    if (!e) return;
+    turno.current++;
+    esperando.current = null;
+    ocupado.current = false;
+    setEsperaAnterior(false);
+    setEnVuelo(false);
+    setBurbujas((l) => l.filter((b) => b.id !== e.id));
+    if (e.texto) setBorrador((b) => b || e.texto!);
+  }, []);
 
   const preguntarTexto = useCallback(
     (crudo: string) => {
@@ -347,9 +395,20 @@ export default function Conversacion({
           ),
         )}
 
-        {enVuelo && (
+        {enVuelo && !esperaAnterior && (
           <div className="asis-b asis-b--mia asis-b--espera" role="status">
             <i className="spin spin--sm" /> Mia está revisando tus números…
+          </div>
+        )}
+        {enVuelo && esperaAnterior && (
+          <div className="asis-b asis-b--mia asis-b--espera" role="status">
+            <span>
+              <i className="spin spin--sm" /> Termino con tu pregunta anterior (aquí o en otro negocio) y voy con esta. Menos
+              de un minuto.
+            </span>
+            <button type="button" className="asis-b__descartar" onClick={descartar}>
+              Descartar
+            </button>
           </div>
         )}
       </div>

@@ -17,6 +17,10 @@
  *                            → «Activar avisos»: pide el permiso EN ESE TOQUE y
  *                              guarda todo con lo de por defecto.
  *
+ *   · Chrome con «Sitio de escritorio» → cómo quitarlo. Va antes que todo y no
+ *                              cuenta en la mesura: con eso puesto el panel se
+ *                              ve en miniatura, y no es una oferta sino un fallo.
+ *
  * Mesura: aparece a los 4 s (no de golpe al entrar), «Ahora no» lo esconde 7
  * días y tras dos «Ahora no» no vuelve. Si lo hizo, no vuelve nunca. Ajustes
  * sigue teniendo la versión completa (qué avisos, silencio, prueba).
@@ -25,10 +29,10 @@ import { useEffect, useState } from 'react';
 import { Bell, Download, EllipsisVertical, Share, X } from 'lucide-react';
 import { useSesion } from './Sesion';
 import { useAvisar } from './Avisos';
-import { enModoApp, plataforma, useInstalarAndroid } from './Instalable';
+import { enModoApp, plataforma, useInstalarAndroid, vistaDeEscritorio } from './Instalable';
 import { activarAvisos, soportaAvisos, suscripcionActual } from '@/lib/panel/suscribirAvisos';
 
-type Variante = 'instalar' | 'ios' | 'android-manual' | 'activar';
+type Variante = 'escritorio' | 'instalar' | 'ios' | 'android-manual' | 'activar';
 
 const CLAVE = 'vm-banner-app';
 const SIETE_DIAS = 7 * 24 * 3600 * 1000;
@@ -75,14 +79,23 @@ export default function BannerApp() {
     }
   }, []);
 
+  /** «Entendido» en el aviso de escritorio: no vuelve hasta la próxima visita. */
+  const [escritorioVisto, setEscritorioVisto] = useState(false);
+
   useEffect(() => {
-    if (!companyId || !permitido(leer())) return;
+    if (!companyId) return;
+    const conVista = !escritorioVisto && vistaDeEscritorio();
+    if (!conVista && !permitido(leer())) return;
     let vivo = true;
     const reloj = setTimeout(async () => {
       const so = plataforma();
       setSo(so);
       const app = enModoApp();
       let v: Variante | null = null;
+      if (conVista) {
+        if (vivo) setVariante('escritorio');
+        return;
+      }
       // Primero instalar (es lo que la deja a mano), luego los avisos.
       if (so === 'ios' && !app) v = 'ios';
       // Chrome (Android o computadora) ofreció instalar: el diálogo nativo.
@@ -100,13 +113,17 @@ export default function BannerApp() {
       clearTimeout(reloj);
     };
     // `instalar` llega tarde (el evento de Android): se vuelve a evaluar entonces.
-  }, [companyId, instalar]);
+  }, [companyId, instalar, escritorioVisto]);
 
   if (!variante) return null;
 
   const ahoraNo = () => {
     const m = leer();
     escribir({ ...m, veces: m.veces + 1, hasta: Date.now() + SIETE_DIAS });
+    setVariante(null);
+  };
+  const entendidoEscritorio = () => {
+    setEscritorioVisto(true);
     setVariante(null);
   };
   const hecho = () => {
@@ -153,6 +170,25 @@ export default function BannerApp() {
             </small>
           </>
         )}
+        {variante === 'escritorio' && (
+          <>
+            <b>Estás viendo la versión de computadora</b>
+            <small>
+              {enModoApp() ? (
+                <>
+                  Abre Chrome, toca <EllipsisVertical size={13} aria-label="menú" /> → <b>Configuración</b> →{' '}
+                  <b>Configuración de sitios</b> → <b>Sitio de escritorio</b> y desactívalo. Luego cierra Vendemia y vuelve a
+                  abrirla.
+                </>
+              ) : (
+                <>
+                  Toca <EllipsisVertical size={13} aria-label="menú" /> arriba a la derecha y desmarca{' '}
+                  <b>«Sitio de escritorio»</b>.
+                </>
+              )}
+            </small>
+          </>
+        )}
         {variante === 'android-manual' && (
           <>
             <b>Instala Vendemia en tu celular</b>
@@ -179,7 +215,11 @@ export default function BannerApp() {
         )}
       </div>
       <div className="banner-app__acciones">
-        {variante === 'ios' || variante === 'android-manual' ? (
+        {variante === 'escritorio' ? (
+          <button type="button" className="btn btn-primary btn-sm" onClick={entendidoEscritorio}>
+            Entendido
+          </button>
+        ) : variante === 'ios' || variante === 'android-manual' ? (
           <button type="button" className="btn btn-primary btn-sm" onClick={ahoraNo}>
             Entendido
           </button>
@@ -189,13 +229,18 @@ export default function BannerApp() {
             {variante === 'instalar' ? 'Instalar' : ocupado ? 'Activando…' : 'Activar'}
           </button>
         )}
-        {variante !== 'ios' && variante !== 'android-manual' && (
+        {variante !== 'ios' && variante !== 'android-manual' && variante !== 'escritorio' && (
           <button type="button" className="banner-app__no" onClick={ahoraNo}>
             Ahora no
           </button>
         )}
       </div>
-      <button type="button" className="banner-app__cerrar" onClick={ahoraNo} aria-label="Cerrar">
+      <button
+        type="button"
+        className="banner-app__cerrar"
+        onClick={variante === 'escritorio' ? entendidoEscritorio : ahoraNo}
+        aria-label="Cerrar"
+      >
         <X size={16} />
       </button>
     </div>
