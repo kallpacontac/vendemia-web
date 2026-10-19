@@ -48,22 +48,22 @@ export async function POST(req: Request) {
     const pagina = await paginaDe(c.slug);
     if (!pagina?.secciones.catalogo) return responder({ status: 'not_found' }, 404);
 
-    const r = await rpc<{ status: string; codigo?: string; total?: number; lineas?: unknown; producto?: string; quedan?: number }>(
-      servidor(),
-      'pedido_srv_crear',
-      {
-        p_slug: c.slug,
-        p_idem: c.idem,
-        p_datos: {
-          nombre: c.nombre.trim(),
-          telefono: c.telefono,
-          entrega: c.entrega,
-          direccion: c.entrega === 'delivery' ? c.direccion.trim() : '',
-          referencia: c.entrega === 'delivery' ? c.referencia.trim() : '',
-          lineas: c.lineas.map((l) => ({ catalog_id: l.item, variante_id: l.opcion, cantidad: l.cantidad })),
-        },
+    type Respuesta = { status: string; codigo?: string; total?: number; lineas?: unknown; producto?: string; quedan?: number };
+    const args = {
+      p_slug: c.slug,
+      p_idem: c.idem,
+      p_datos: {
+        nombre: c.nombre.trim(),
+        telefono: c.telefono,
+        entrega: c.entrega,
+        direccion: c.entrega === 'delivery' ? c.direccion.trim() : '',
+        referencia: c.entrega === 'delivery' ? c.referencia.trim() : '',
+        lineas: c.lineas.map((l) => ({ catalog_id: l.item, variante_id: l.opcion, cantidad: l.cantidad })),
       },
-    );
+    };
+    // Con la agenda en la nube (0004) es un pedido de verdad (orders, con el stock descontado); si no, pedidos_web.
+    let r = await rpc<Respuesta>(servidor(), 'agenda_srv_pedir', args);
+    if (r.status === 'no_es_nube') r = await rpc<Respuesta>(servidor(), 'pedido_srv_crear', args);
     if (r.status !== 'ok') return responder(r, r.status === 'sin_stock' ? 409 : 400);
     revalidateTag(`tu-pagina:${c.slug.toLowerCase()}`);
     return responder({ status: 'ok', codigo: r.codigo, total: r.total, lineas: r.lineas });

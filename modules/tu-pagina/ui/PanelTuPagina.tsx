@@ -88,11 +88,20 @@ export default function PanelTuPagina() {
     if (error) throw new Error(error.message);
     return (data as Pagina | null) ?? null;
   }, [companyId]);
+  // Con la agenda en la nube (modules/datos/sql/0004) lo que llega por la página entra en la
+  // Agenda y en Pedidos del panel, no en pedidos_web / reservas_web: esas pestañas sobran.
+  const [agendaNube, setAgendaNube] = useState(false);
+  useEffect(() => {
+    if (!companyId) return;
+    void supabase()
+      .rpc('agenda_en_nube', { p_company: companyId })
+      .then(({ data }) => setAgendaNube(data === true));
+  }, [companyId]);
   const sinPagina = !cargando && !error && !pagina?.publicada;
   const s = pagina?.publicada ? pagina.secciones ?? {} : {};
   const pestanas = [
-    ...(s.catalogo ? [{ id: 'pedidos' as const, nombre: 'Pedidos' }] : []),
-    ...(s.reservar ? [{ id: 'reservas' as const, nombre: esRecurrente(compania?.business_mode) ? 'Cupos' : 'Reservas' }] : []),
+    ...(s.catalogo && !agendaNube ? [{ id: 'pedidos' as const, nombre: 'Pedidos' }] : []),
+    ...(s.reservar && !agendaNube ? [{ id: 'reservas' as const, nombre: esRecurrente(compania?.business_mode) ? 'Cupos' : 'Reservas' }] : []),
     ...(s.envios ? [{ id: 'envios' as const, nombre: 'Envíos' }] : []),
     { id: 'pagina' as const, nombre: 'La página' },
   ];

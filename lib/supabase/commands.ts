@@ -555,6 +555,24 @@ const RPC_DE_CONFIG: Partial<Record<TipoComando, (p: Record<string, unknown>) =>
 };
 
 /**
+ * LA AGENDA, igual (etapa 4, modules/datos/sql/0004): en un negocio con
+ * `agenda_en_nube`, citas, cobros, asistencia, fichas y gastos los escribe
+ * Postgres con las `agenda_*`, que copian las reglas de los handlers del bot y
+ * devuelven su mismo `result`. Ninguna pantalla cambia.
+ */
+const RPC_DE_AGENDA: Partial<Record<TipoComando, (p: Record<string, unknown>) => [string, Record<string, unknown>]>> = {
+  crear_cita: (p) => ['agenda_crear_cita', { p_datos: p }],
+  modificar_cita: (p) => ['agenda_modificar_cita', { p_datos: p }],
+  marcar_pagado: (p) => ['agenda_marcar_pagado', { p_datos: p }],
+  marcar_cumplido: (p) => ['agenda_marcar_cumplido', { p_datos: p }],
+  // Sin id de comando que deduplique: uno nuevo por llamada (el botón ya se bloquea mientras guarda).
+  registrar_pago: (p) => ['agenda_registrar_pago', { p_datos: p, p_op: crypto.randomUUID() }],
+  actualizar_lead: (p) => ['agenda_lead_actualizar', { p_datos: p }],
+  upsert_gasto: (p) => ['agenda_gasto_guardar', { p_gasto: p.gasto ?? {} }],
+  delete_gasto: (p) => ['agenda_gasto_borrar', { p_id: p.id }],
+};
+
+/**
  * Quién manda en cada negocio cambia muy de vez en cuando (el corte de la
  * etapa 2, negocio a negocio), así que se pregunta una vez por minuto, no en
  * cada guardado. Si en ese minuto el negocio volviera al bot, la `cfg_*`
@@ -565,23 +583,28 @@ const quienManda = new Map<string, { nube: boolean; hasta: number }>();
 
 class YaNoEsDeLaNube extends Error {}
 
+const deQuien = (type: TipoComando): 'config' | 'agenda' | null =>
+  RPC_DE_CONFIG[type] ? 'config' : RPC_DE_AGENDA[type] ? 'agenda' : null;
+
 async function vaALaNube(companyId: string, type: TipoComando): Promise<boolean> {
-  if (!RPC_DE_CONFIG[type]) return false;
-  const visto = quienManda.get(companyId);
+  const dominio = deQuien(type);
+  if (!dominio) return false;
+  const clave = `${dominio}:${companyId}`;
+  const visto = quienManda.get(clave);
   if (visto && visto.hasta > Date.now()) return visto.nube;
-  const { data, error } = await supabase().rpc('config_en_nube', { p_company: companyId });
+  const { data, error } = await supabase().rpc(dominio === 'config' ? 'config_en_nube' : 'agenda_en_nube', { p_company: companyId });
   // Sin respuesta (la función no existe, red), lo seguro es lo de siempre: la cola.
   const nube = !error && data === true;
-  quienManda.set(companyId, { nube, hasta: Date.now() + VIGENCIA_MS });
+  quienManda.set(clave, { nube, hasta: Date.now() + VIGENCIA_MS });
   return nube;
 }
 
 async function aplicarEnNube<T>(companyId: string, type: TipoComando, payload: Record<string, unknown>): Promise<T> {
-  const [fn, args] = RPC_DE_CONFIG[type]!(payload);
+  const [fn, args] = (RPC_DE_CONFIG[type] ?? RPC_DE_AGENDA[type])!(payload);
   const { data, error } = await supabase().rpc(fn, { p_company: companyId, ...args });
   if (error) {
     if (error.code === '55000') {
-      quienManda.delete(companyId);
+      quienManda.delete(`${deQuien(type)}:${companyId}`);
       throw new YaNoEsDeLaNube();
     }
     // El mensaje es de Postgres y ya está en palabras del panel («horario inválido: …»).

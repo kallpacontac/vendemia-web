@@ -79,7 +79,7 @@ export async function POST(req: Request) {
       };
     }
 
-    const r = await rpc<{ status: string; codigo?: string }>(servidor(), 'reserva_srv_crear', {
+    const args = {
       p_slug: c.slug,
       p_idem: c.idem,
       p_datos: {
@@ -89,7 +89,10 @@ export async function POST(req: Request) {
         telefono: c.telefono,
         beneficiario: (c.beneficiario ?? '').trim(),
       },
-    });
+    };
+    // Con la agenda en la nube (0004) la reserva entra directo en la agenda real; si no, en reservas_web.
+    let r = await rpc<{ status: string; codigo?: string }>(servidor(), 'agenda_srv_reservar', args);
+    if (r.status === 'no_es_nube') r = await rpc<{ status: string; codigo?: string }>(servidor(), 'reserva_srv_crear', args);
     if (r.status !== 'ok') return responder(r, r.status === 'lleno' || r.status === 'pasada' ? 409 : 400);
     revalidateTag(`tu-pagina:${c.slug.toLowerCase()}`);
     return responder({ status: 'ok', codigo: r.codigo });
