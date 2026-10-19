@@ -36,8 +36,17 @@ function tintaSobre(hex: string): string {
   return 1.05 / (l + 0.05) >= (l + 0.05) / 0.055 ? '#FFFFFF' : '#1A0A00';
 }
 
-export function pagina(o: { titulo: string; marca?: MarcaPublica | null; cuerpo: string; status?: number; indexable?: boolean }) {
+export function pagina(o: {
+  titulo: string;
+  marca?: MarcaPublica | null;
+  cuerpo: string;
+  status?: number;
+  indexable?: boolean;
+  /** Cabecera horizontal de Vendemia para estados propios de la plataforma. */
+  variante?: 'normal' | 'vendemia';
+}) {
   const c = color(o.marca?.bg_color);
+  const esVendemia = o.variante === 'vendemia';
   const html = `<!doctype html>
 <html lang="es-PE"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
@@ -50,6 +59,9 @@ ${o.indexable ? '' : '<meta name="robots" content="noindex,nofollow">'}
 body{font:16px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:var(--fondo);color:var(--tinta);min-height:100vh;display:flex;flex-direction:column;align-items:center}
 .cab{width:100%;background:var(--marca);color:var(--sobre);padding:32px 16px 56px;text-align:center}
 .logo{width:88px;height:88px;border-radius:50%;object-fit:cover;background:#fff;border:3px solid #fff;display:block;margin:0 auto 12px}
+.cab--vendemia{background:var(--fondo);color:var(--tinta);padding:22px 16px 54px}
+.logo--horizontal{width:min(260px,78vw);height:84px;border:0;border-radius:0;object-fit:contain;background:transparent;margin:0 auto 4px}
+.cab--vendemia h1{display:inline-flex;padding:5px 11px;border-radius:999px;background:#FFEFE7;color:#C83D1F;font-size:12px;letter-spacing:.08em;text-transform:uppercase}
 h1{font-size:22px;line-height:1.2}
 .lema{opacity:.9;margin-top:6px;font-size:15px}
 main{width:100%;max-width:440px;padding:0 16px 32px;margin-top:-32px}
@@ -61,11 +73,25 @@ label{display:block;font-weight:600;font-size:14px;margin:14px 0 6px}
 input[type=text]{width:100%;min-height:50px;border:1.5px solid #DEDED9;border-radius:12px;padding:10px 14px;font:16px system-ui,sans-serif}
 .nota{color:var(--suave);font-size:13.5px;margin-top:10px}
 .premio{font-size:18px;font-weight:700;margin:6px 0}
+.placa-pendiente{text-align:center;padding:24px}
+.placa-pendiente__icono{width:58px;height:58px;display:grid;place-items:center;margin:0 auto 12px;border-radius:18px;background:#FFEFE7;color:#D9471D}
+.placa-pendiente__icono svg{width:29px;height:29px}
+.placa-pendiente__etiqueta{color:#C83D1F;font-size:11px;font-weight:800;letter-spacing:.09em;text-transform:uppercase}
+.placa-pendiente h2{margin-top:5px;font-size:25px;line-height:1.15;letter-spacing:-.03em}
+.placa-pendiente__intro{max-width:31ch;margin:8px auto 18px;color:var(--suave);font-size:14px}
+.placa-pendiente__pasos{list-style:none;display:grid;gap:8px;padding:0;margin:0 0 18px;text-align:left}
+.placa-pendiente__pasos li{display:grid;grid-template-columns:30px minmax(0,1fr);align-items:center;gap:10px;min-height:48px;padding:8px 11px;border-radius:13px;background:#F5F5F1;color:#35352F;font-size:13.5px}
+.placa-pendiente__pasos span{width:30px;height:30px;display:grid;place-items:center;border-radius:10px;background:#fff;color:#C83D1F;font-weight:800;box-shadow:0 1px 4px rgba(10,10,10,.06)}
+.placa-pendiente .btn.prim{background:#22231D;border-color:#22231D;color:#fff;box-shadow:0 7px 18px rgba(34,35,29,.16)}
+.placa-pendiente .btn--soporte{gap:8px;color:#176B45;border-color:#CBE5D7;background:#F3FBF7}
+.placa-pendiente .btn--soporte svg{width:20px;height:20px;flex:none}
+.placa-pendiente__pie{margin-top:16px;padding-top:14px;border-top:1px solid #ECECE7;color:#77776F;font-size:12.5px}
 .pie{color:#93938C;font-size:12px;margin:8px 0 24px;text-align:center}
 .pie a{color:inherit}
+@media(max-width:420px){.cab--vendemia{padding-top:16px}.logo--horizontal{height:72px}.placa-pendiente{padding:20px 16px}.placa-pendiente h2{font-size:23px}}
 </style></head><body>
-<header class="cab">
-${o.marca?.logo_url ? `<img class="logo" src="${esc(o.marca.logo_url)}" alt="" width="88" height="88">` : ''}
+<header class="cab${esVendemia ? ' cab--vendemia' : ''}">
+${o.marca?.logo_url ? `<img class="logo${esVendemia ? ' logo--horizontal' : ''}" src="${esc(o.marca.logo_url)}" alt="${esVendemia ? 'Vendemia' : ''}" width="${esVendemia ? '260' : '88'}" height="${esVendemia ? '84' : '88'}">` : ''}
 <h1>${esc(o.marca?.display_name ?? 'Vendemia Fideliza')}</h1>
 ${o.marca?.tagline ? `<p class="lema">${esc(o.marca.tagline)}</p>` : ''}
 </header>

@@ -7,7 +7,8 @@
  * y la vista previa del editor (en un iframe del panel). No hay dos versiones
  * que puedan desincronizarse: lo que el dueño ve es lo que verá su cliente.
  *
- * HTML y CSS planos, sin JavaScript: abre al instante en un Android de gama
+ * HTML y CSS planos y JavaScript mínimo solo para interacciones locales (como
+ * copiar un número de Yape / Plin): abre al instante en un Android de gama
  * media con datos móviles. Todo texto pasa por esc(); los colores llegan
  * validados (#RRGGBB) y las imágenes solo si son https.
  */
@@ -37,6 +38,19 @@ export const escHtml = (s: unknown) =>
   String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
 const esc = escHtml;
 const https = (u: string | null | undefined) => (u && /^https:\/\/[^\s"'<>]+$/.test(u) ? u : '');
+
+/** Extrae únicamente el celular peruano de nuestras URL canónicas de pago. */
+function numeroPagoMovil(url: string): string {
+  const segura = https(url);
+  if (!segura) return '';
+  try {
+    const u = new URL(segura);
+    if (u.hostname !== 'fideliza.vendemias.com') return '';
+    return u.pathname.match(/^\/pagar\/(9\d{8})\/?$/)?.[1] ?? '';
+  } catch {
+    return '';
+  }
+}
 
 /**
  * Cloudinary conserva el original de 1000 px para Google Wallet, pero la
@@ -213,11 +227,72 @@ export function htmlPagina(d: DatosPagina, o: { vista?: boolean; indexable?: boo
     .map((b) => {
       const sub = b.subtitulo ? `<small>${esc(b.subtitulo)}</small>` : '';
       const cls = `bt${b.destacado ? ' bt--dest' : ''}`;
-      return tarjeta
-        ? `<a class="${cls} bt--tarjeta" href="${esc(b.url)}" rel="noopener"><span class="tile">${icono(b.tipo)}</span><span class="tx"><b>${esc(b.label)}</b>${sub}</span><span class="fl">${icono('flecha')}</span></a>`
-        : `<a class="${cls} bt--pildora" href="${esc(b.url)}" rel="noopener"><span class="ic">${icono(b.tipo)}</span><span class="tx"><b>${esc(b.label)}</b>${sub}</span></a>`;
+      const contenido = tarjeta
+        ? `<span class="tile">${icono(b.tipo)}</span><span class="tx"><b>${esc(b.label)}</b>${sub}</span><span class="fl">${icono('flecha')}</span>`
+        : `<span class="ic">${icono(b.tipo)}</span><span class="tx"><b>${esc(b.label)}</b>${sub}</span>`;
+      const numero = b.tipo === 'yape' ? numeroPagoMovil(b.url) : '';
+      if (numero) {
+        return `<button type="button" class="${cls} ${tarjeta ? 'bt--tarjeta' : 'bt--pildora'} pago-abrir" data-numero="${numero}" aria-haspopup="dialog">${contenido}</button>`;
+      }
+      return `<a class="${cls} ${tarjeta ? 'bt--tarjeta' : 'bt--pildora'}" href="${esc(b.url)}" rel="noopener">${contenido}</a>`;
     })
     .join('');
+
+  const tienePagoMovil = d.botones.some((b) => b.tipo === 'yape' && Boolean(numeroPagoMovil(b.url)));
+  const modalBg = e.plantilla === 'oscura' ? '#151617' : e.plantilla === 'marco' ? '#211B18' : e.plantilla === 'color' ? p.card : '#FFFFFF';
+  const modalInk =
+    e.plantilla === 'oscura' || e.plantilla === 'marco'
+      ? '#F4F4F2'
+      : e.plantilla === 'color' && p.card !== '#FFFFFF'
+        ? '#FFFFFF'
+        : '#14110F';
+  const modalMuted = modalInk === '#FFFFFF' ? 'rgba(255,255,255,.72)' : '#66625E';
+  const modalRadio = e.forma === 'recto' ? '12px' : '24px';
+  const modalPago = tienePagoMovil
+    ? `<dialog class="pago-modal" id="pago-modal" aria-labelledby="pago-titulo">
+  <div class="pago-modal__cab"><span class="pago-modal__icon" aria-hidden="true">${icono('yape')}</span><button type="button" class="pago-cerrar" aria-label="Cerrar">&times;</button></div>
+  <p class="pago-modal__etiqueta">Yape / Plin</p>
+  <h2 id="pago-titulo">Paga por número</h2>
+  <p class="pago-modal__ayuda">Copia el celular y pégalo en Yape o Plin.</p>
+  <output class="pago-numero" id="pago-numero" aria-live="polite"></output>
+  <button type="button" class="pago-copiar" id="pago-copiar">Copiar número</button>
+  <p class="pago-estado" id="pago-estado" aria-live="polite">Antes de pagar, verifica el nombre del negocio en tu app.</p>
+</dialog>`
+    : '';
+  const scriptPago =
+    tienePagoMovil && !o.vista
+      ? `<script>
+(function(){
+  var modal=document.getElementById('pago-modal');
+  var numero=document.getElementById('pago-numero');
+  var copiar=document.getElementById('pago-copiar');
+  var estado=document.getElementById('pago-estado');
+  if(!modal||!numero||!copiar||!estado||typeof modal.showModal!=='function')return;
+  document.querySelectorAll('.pago-abrir').forEach(function(abrir){
+    abrir.addEventListener('click',function(){
+      var raw=abrir.getAttribute('data-numero')||'';
+      numero.textContent=raw.replace(/(\d{3})(\d{3})(\d{3})/,'$1 $2 $3');
+      numero.setAttribute('data-raw',raw);
+      copiar.textContent='Copiar número';
+      estado.textContent='Antes de pagar, verifica el nombre del negocio en tu app.';
+      modal.showModal();
+    });
+  });
+  modal.querySelector('.pago-cerrar').addEventListener('click',function(){modal.close();});
+  modal.addEventListener('click',function(evento){if(evento.target===modal)modal.close();});
+  function copiado(){copiar.textContent='Número copiado';estado.textContent='Listo. Abre Yape o Plin y pega el número.';}
+  function respaldo(raw){
+    var campo=document.createElement('textarea');campo.value=raw;campo.setAttribute('readonly','');campo.style.position='fixed';campo.style.opacity='0';document.body.appendChild(campo);campo.select();
+    try{document.execCommand('copy');copiado();}catch(error){estado.textContent='Mantén presionado el número para copiarlo.';}
+    document.body.removeChild(campo);
+  }
+  copiar.addEventListener('click',function(){
+    var raw=numero.getAttribute('data-raw')||'';if(!raw)return;
+    if(navigator.clipboard&&window.isSecureContext){navigator.clipboard.writeText(raw).then(copiado).catch(function(){respaldo(raw);});}else{respaldo(raw);}
+  });
+})();
+</script>`
+      : '';
 
   const titulo = esc(o.titulo || d.nombre || 'Mi página');
   const serif = e.plantilla === 'foto' || e.plantilla === 'marco';
@@ -253,7 +328,7 @@ h1{font-size:${serif ? '28px' : '24px'};font-weight:${serif ? '500' : '800'};mar
 .redes a:active{transform:scale(.94)}
 .redes svg{width:21px;height:21px}
 .lista{display:flex;flex-direction:column;gap:12px;margin-top:18px}
-.bt{display:flex;align-items:center;gap:12px;text-decoration:none;color:${btnInk};background:${btnBg};border:1.5px solid ${btnBorde};border-radius:${radio};min-height:58px;padding:10px 14px;${btnBlur}box-shadow:${e.plantilla === 'vidrio' ? '0 6px 18px rgba(20,20,40,.10),inset 0 1px 0 rgba(255,255,255,.7)' : tarjeta && e.plantilla === 'clasica' ? '0 2px 10px rgba(10,10,10,.04)' : 'none'};transition:transform .12s}
+.bt{display:flex;width:100%;align-items:center;gap:12px;text-align:left;font:inherit;cursor:pointer;text-decoration:none;color:${btnInk};background:${btnBg};border:1.5px solid ${btnBorde};border-radius:${radio};min-height:58px;padding:10px 14px;${btnBlur}box-shadow:${e.plantilla === 'vidrio' ? '0 6px 18px rgba(20,20,40,.10),inset 0 1px 0 rgba(255,255,255,.7)' : tarjeta && e.plantilla === 'clasica' ? '0 2px 10px rgba(10,10,10,.04)' : 'none'};transition:transform .12s}
 .bt:active{transform:scale(.985)}
 .bt svg{width:22px;height:22px;flex-shrink:0}
 .bt .tx{flex:1;display:flex;flex-direction:column;min-width:0}
@@ -268,17 +343,33 @@ h1{font-size:${serif ? '28px' : '24px'};font-weight:${serif ? '500' : '800'};mar
 .bt--pildora b{${serif ? 'text-transform:uppercase;letter-spacing:.12em;font-size:13.5px;font-weight:600;' : ''}}
 .bt--dest{background:${destBg};color:${tintaSobre(destBg)};border-color:${destBg}}
 .bt--dest .tile{background:rgba(255,255,255,.2);color:${tintaSobre(destBg)}}
+.pago-modal{width:min(420px,calc(100% - 32px));padding:24px;border:1.5px solid ${e.plantilla === 'color' ? 'transparent' : p.borde};border-radius:${modalRadio};background:${modalBg};color:${modalInk};box-shadow:0 24px 70px rgba(0,0,0,.32);font:15px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+.pago-modal::backdrop{background:rgba(10,10,10,.56);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px)}
+.pago-modal[open]{animation:pago-entra .18s ease-out}
+@keyframes pago-entra{from{opacity:0;transform:translateY(12px) scale(.98)}to{opacity:1;transform:none}}
+.pago-modal__cab{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.pago-modal__icon{width:48px;height:48px;border-radius:15px;display:grid;place-items:center;background:${mezcla(acc, '#FFFFFF', 0.84)};color:${esOscuro(acc) ? acc : mezcla(acc, '#000000', 0.34)}}
+.pago-modal__icon svg{width:25px;height:25px}
+.pago-cerrar{width:40px;height:40px;border:0;border-radius:50%;display:grid;place-items:center;background:${modalInk === '#FFFFFF' ? 'rgba(255,255,255,.10)' : '#F2F0EC'};color:${modalInk};font:400 28px/1 system-ui;cursor:pointer}
+.pago-modal__etiqueta{color:${acc};font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase}
+.pago-modal h2{font-size:25px;line-height:1.15;margin-top:3px}
+.pago-modal__ayuda{color:${modalMuted};margin-top:7px}
+.pago-numero{display:block;margin:20px 0 12px;padding:16px;text-align:center;border:1.5px solid ${modalInk === '#FFFFFF' ? 'rgba(255,255,255,.18)' : '#E7E3DD'};border-radius:${e.forma === 'recto' ? '8px' : '16px'};font-size:29px;font-weight:800;letter-spacing:.055em;color:${modalInk};background:${modalInk === '#FFFFFF' ? 'rgba(255,255,255,.07)' : '#FAF8F4'};user-select:all}
+.pago-copiar{width:100%;min-height:52px;border:0;border-radius:${radio};background:${acc};color:${tintaSobre(acc)};font:700 16px system-ui;cursor:pointer}
+.pago-estado{min-height:34px;margin-top:12px;text-align:center;color:${modalMuted};font-size:12.5px}
+.pago-cerrar:focus-visible,.pago-copiar:focus-visible,.pago-abrir:focus-visible{outline:3px solid ${acc};outline-offset:3px}
+@media(max-width:520px){.pago-modal{width:calc(100% - 24px);margin:auto auto 12px;padding:22px}.pago-modal h2{font-size:23px}.pago-numero{font-size:27px}}
 ${fondoVidrio}
 .pie{margin-top:auto;padding-top:28px;text-align:center;font-size:11.5px;color:${p.muted};opacity:.8;text-decoration:none}
 .pie:hover{opacity:1;text-decoration:underline}
 .vacio{text-align:center;color:${p.muted};font-size:14px;margin-top:20px}
 a:focus-visible{outline:3px solid ${p.ink};outline-offset:2px}
-${o.vista ? 'a{pointer-events:none}' : ''}
+${o.vista ? 'a{pointer-events:none}.pago-abrir{pointer-events:none}' : ''}
 </style></head><body><main class="pg">
 <div class="portada"></div>
 <header class="cab">${avatar}<h1>${esc(d.nombre || 'Tu negocio')}</h1>${e.categoria ? `<p class="cat">${esc(e.categoria)}</p>` : ''}${d.bio ? `<p class="bio">${esc(d.bio)}</p>` : ''}${e.redes === 'arriba' ? redes : ''}</header>
 <section class="lista">${botones || (o.vista ? '<p class="vacio">Aquí aparecerán tus botones</p>' : '')}</section>
 ${e.redes === 'abajo' ? redes : ''}
 <a class="pie" href="https://vendemias.com" rel="noopener" aria-label="Visitar Vendemia">Creado con Vendemia</a>
-</main></body></html>`;
+</main>${modalPago}${scriptPago}</body></html>`;
 }

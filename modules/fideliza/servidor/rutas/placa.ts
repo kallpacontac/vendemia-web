@@ -18,6 +18,7 @@ import { FIDELIZA_URL } from '@/modules/fideliza/dominio/config';
 import { destino, esc, noDisponible, pagina, paginaDeEnlaces, type EnlacePublico, type MarcaPublica } from '@/modules/fideliza/servidor/html';
 import { huellaIp, limitar, log, NO_CACHE } from '@/modules/fideliza/servidor/http';
 import { rpc, servidor } from '@/modules/fideliza/servidor/supabase';
+import { whatsappUrl } from '@/lib/content';
 
 
 interface Resuelto {
@@ -66,13 +67,29 @@ export async function GET(req: Request, { params }: { params: { token: string } 
  * enseñar esto a un desconocido no le da nada.
  */
 function sinActivar() {
-  const panel = `${(process.env.NEXT_PUBLIC_SITE_URL || 'https://vendemias.com').replace(/\/+$/, '')}/panel/fideliza/placas?activar=1&origen=placa`;
+  const sitio = (process.env.NEXT_PUBLIC_SITE_URL || 'https://vendemias.com').replace(/\/+$/, '');
+  const panel = `${sitio}/panel/fideliza/placas?activar=1&origen=placa`;
+  const soporte = whatsappUrl('Hola 👋 Necesito ayuda para activar una placa de Vendemia Fideliza.');
   return pagina({
     titulo: 'Placa sin activar',
-    marca: null,
-    cuerpo: `<div class="caja"><p class="premio">Esta placa aún no está activada.</p>
-<p class="nota">¿Es tuya? Actívala en un minuto: entra con Google o con tu correo (si no tienes cuenta, la creas ahí mismo) y escribe el código de la tarjeta que vino en la caja (si compraste varias, el código del pedido las activa todas). O escanea el QR de esa tarjeta y se activa sola.</p>
+    variante: 'vendemia',
+    marca: {
+      display_name: 'Fideliza',
+      logo_url: `${sitio}/assets/logos/logo-naranja.webp`,
+      bg_color: '#FF4900',
+    },
+    cuerpo: `<section class="caja placa-pendiente" aria-labelledby="titulo-placa">
+<div class="placa-pendiente__icono" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 18h.01M10 18h.01M14 18h.01M18 18h.01"/><rect x="3" y="3" width="18" height="18" rx="4"/><path d="M8 13a4 4 0 0 1 4-4M8 9a8 8 0 0 1 8 8"/></svg></div>
+<p class="placa-pendiente__etiqueta">Placa sin activar</p>
+<h2 id="titulo-placa">Activa tu placa</h2>
+<p class="placa-pendiente__intro">Vincúlala con tu negocio. Toma menos de un minuto.</p>
+<ol class="placa-pendiente__pasos">
+  <li><span>1</span>Entra o crea tu cuenta Vendemia.</li>
+  <li><span>2</span>Escribe el código de la tarjeta.</li>
+</ol>
 <a class="btn prim" href="${esc(panel)}">Activar mi placa</a>
-<p class="nota">Si no es tuya, pregunta en el local: todavía no lleva a ninguna parte.</p></div>`,
+<a class="btn btn--soporte" href="${esc(soporte)}" target="_blank" rel="noopener noreferrer"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 11.5a8.4 8.4 0 0 1-9 8.5 9.5 9.5 0 0 1-4-.9L3 21l1.7-4.6A9 9 0 1 1 21 11.5Z"/><path d="M9 9.2c.4 2 1.8 3.5 3.8 4"/></svg>Hablar con soporte</a>
+<p class="placa-pendiente__pie">¿No es tuya? Déjala aquí: todavía no dirige a ningún negocio.</p>
+</section>`,
   });
 }

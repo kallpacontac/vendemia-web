@@ -179,7 +179,7 @@ export default function MiPagina() {
         .map((b) => ({
           tipo: b.tipo,
           label: b.label || defDe(b.tipo).label,
-          url: '#',
+          url: b.tipo === 'yape' ? aUrl(b.tipo, b.valor) || '#' : '#',
           subtitulo: b.subtitulo || undefined,
           destacado: b.destacado,
         })),

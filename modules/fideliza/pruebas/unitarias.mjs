@@ -295,3 +295,24 @@ test('20 · las imágenes de plantillas usan variantes pequeñas y precargadas',
   assert.ok(html.includes('width="104" height="104"'));
   assert.ok(!html.includes(`src="${original}"`), 'no descarga el PNG original de 1000 px en el avatar');
 });
+
+test('21 · Yape / Plin se abre y copia dentro de la plantilla', () => {
+  const datos = {
+    nombre: 'Negocio',
+    color: '#FF4900',
+    estilo: { plantilla: 'clasica' },
+    redes: [],
+    botones: [{ tipo: 'yape', label: 'Yape / Plin', url: 'https://fideliza.vendemias.com/pagar/987654321' }],
+  };
+  const html = pagina.htmlPagina(datos);
+  assert.ok(html.includes('class="bt bt--tarjeta pago-abrir"'));
+  assert.ok(html.includes('data-numero="987654321"'));
+  assert.ok(html.includes('<dialog class="pago-modal"'));
+  assert.ok(html.includes('Copiar número'));
+  assert.ok(html.includes('modal.showModal()'));
+  assert.ok(!html.includes('href="https://fideliza.vendemias.com/pagar/987654321"'));
+
+  const vista = pagina.htmlPagina(datos, { vista: true });
+  assert.ok(vista.includes('.pago-abrir{pointer-events:none}'));
+  assert.ok(!vista.includes('<script>'), 'el iframe de vista previa no necesita ejecutar JavaScript');
+});
