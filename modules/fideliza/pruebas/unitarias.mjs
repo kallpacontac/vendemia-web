@@ -312,6 +312,9 @@ test('21 · Yape / Plin se abre y copia dentro de la plantilla', () => {
   assert.ok(html.includes('<dialog class="pago-modal"'));
   assert.ok(html.includes('Copiar número'));
   assert.ok(html.includes('modal.showModal()'));
+  assert.ok(html.includes('background:#FFFFFF;color:#14110F'), 'el popup siempre conserva fondo blanco y texto negro');
+  assert.ok(html.includes('.pago-cerrar{') && html.includes('background:#FFFFFF;color:#14110F'));
+  assert.ok(html.includes('color:#14110F;background:#FAF8F4'), 'el número nunca queda blanco sobre blanco');
   assert.ok(!html.includes('href="https://fideliza.vendemias.com/pagar/987654321"'));
 
   const vista = pagina.htmlPagina(datos, { vista: true });

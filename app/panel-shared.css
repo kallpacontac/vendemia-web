@@ -154,12 +154,25 @@ body .main .panel-header .topbar__actions { display: flex; flex-wrap: nowrap; wi
   body .sidebar { bottom: 0; height: calc(66px + env(safe-area-inset-bottom)); padding-bottom: calc(6px + env(safe-area-inset-bottom)); }
   body .main .panel-header .topbar__title { margin-top: 12px; }
   body .main .panel-header .topbar__actions { max-width: 100%; }
+  /* En el dashboard la cuenta pertenece a la misma fila visual que el saludo.
+     La navegación móvil ya vive abajo: conservar una fila superior vacía solo
+     empujaba el título y dejaba el menú flotando demasiado arriba. */
+  body .main--dashboard .panel-header .topbar { position: absolute; top: 0; right: 0; z-index: 2; width: auto; min-height: 44px; }
+  body .main--dashboard .panel-header .topbar__actions { width: auto; }
+  body .main--dashboard .panel-header .topbar__title { margin-top: 0; }
+  body .main--dashboard .panel-header .topbar__title > div:first-child { min-height: 50px; padding-right: 60px; }
   body .main--inbox .inbox { height: calc(100dvh - 108px - env(safe-area-inset-bottom)); }
   body:has(.demo-banda) .main--inbox .inbox { height: calc(100dvh - 148px - env(safe-area-inset-bottom)); }
   .main :is(.btn,.view-toggle button,.fz-tabs a,.dia-pieza) { min-height: 44px; }
   /* 16px impide el zoom automático al escribir en iOS. */
   .main :is(.input,.select,.textarea,.search input) { font-size: 16px; min-height: 44px; }
   .main .form-nueva { grid-template-columns: repeat(2,minmax(0,1fr)); }
+}
+@container (max-width: 480px) {
+  /* Si el título necesita ese ancho, el logo deja de competir con él. La
+     flecha conserva visible y accesible el menú de cuenta. */
+  .main .panel-header .profile .avatar { display: none; }
+  .main .panel-header .profile { width: 44px; min-width: 44px; padding: 0; justify-content: center; }
 }
 @media (max-width: 560px) {
   .main .toolbar > :is(.search,.select) { flex: 1 1 100%; width: 100%; }

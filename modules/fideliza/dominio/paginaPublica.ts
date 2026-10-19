@@ -239,14 +239,6 @@ export function htmlPagina(d: DatosPagina, o: { vista?: boolean; indexable?: boo
     .join('');
 
   const tienePagoMovil = d.botones.some((b) => b.tipo === 'yape' && Boolean(numeroPagoMovil(b.url)));
-  const modalBg = e.plantilla === 'oscura' ? '#151617' : e.plantilla === 'marco' ? '#211B18' : e.plantilla === 'color' ? p.card : '#FFFFFF';
-  const modalInk =
-    e.plantilla === 'oscura' || e.plantilla === 'marco'
-      ? '#F4F4F2'
-      : e.plantilla === 'color' && p.card !== '#FFFFFF'
-        ? '#FFFFFF'
-        : '#14110F';
-  const modalMuted = modalInk === '#FFFFFF' ? 'rgba(255,255,255,.72)' : '#66625E';
   const modalRadio = e.forma === 'recto' ? '12px' : '24px';
   const modalPago = tienePagoMovil
     ? `<dialog class="pago-modal" id="pago-modal" aria-labelledby="pago-titulo">
@@ -343,21 +335,21 @@ h1{font-size:${serif ? '28px' : '24px'};font-weight:${serif ? '500' : '800'};mar
 .bt--pildora b{${serif ? 'text-transform:uppercase;letter-spacing:.12em;font-size:13.5px;font-weight:600;' : ''}}
 .bt--dest{background:${destBg};color:${tintaSobre(destBg)};border-color:${destBg}}
 .bt--dest .tile{background:rgba(255,255,255,.2);color:${tintaSobre(destBg)}}
-.pago-modal{width:min(420px,calc(100% - 32px));padding:24px;border:1.5px solid ${e.plantilla === 'color' ? 'transparent' : p.borde};border-radius:${modalRadio};background:${modalBg};color:${modalInk};box-shadow:0 24px 70px rgba(0,0,0,.32);font:15px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+.pago-modal{width:min(420px,calc(100% - 32px));padding:24px;border:1.5px solid #E7E3DD;border-radius:${modalRadio};background:#FFFFFF;color:#14110F;box-shadow:0 24px 70px rgba(0,0,0,.32);font:15px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
 .pago-modal::backdrop{background:rgba(10,10,10,.56);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px)}
 .pago-modal[open]{animation:pago-entra .18s ease-out}
 @keyframes pago-entra{from{opacity:0;transform:translateY(12px) scale(.98)}to{opacity:1;transform:none}}
 .pago-modal__cab{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
-.pago-modal__icon{width:48px;height:48px;border-radius:15px;display:grid;place-items:center;background:${mezcla(acc, '#FFFFFF', 0.84)};color:${esOscuro(acc) ? acc : mezcla(acc, '#000000', 0.34)}}
+.pago-modal__icon{width:48px;height:48px;border-radius:15px;display:grid;place-items:center;background:#FFF0EA;color:#C83D1F}
 .pago-modal__icon svg{width:25px;height:25px}
-.pago-cerrar{width:40px;height:40px;border:0;border-radius:50%;display:grid;place-items:center;background:${modalInk === '#FFFFFF' ? 'rgba(255,255,255,.10)' : '#F2F0EC'};color:${modalInk};font:400 28px/1 system-ui;cursor:pointer}
-.pago-modal__etiqueta{color:${acc};font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase}
+.pago-cerrar{width:40px;height:40px;border:1px solid #E7E3DD;border-radius:50%;display:grid;place-items:center;background:#FFFFFF;color:#14110F;font:400 28px/1 system-ui;cursor:pointer}
+.pago-modal__etiqueta{color:#C83D1F;font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase}
 .pago-modal h2{font-size:25px;line-height:1.15;margin-top:3px}
-.pago-modal__ayuda{color:${modalMuted};margin-top:7px}
-.pago-numero{display:block;margin:20px 0 12px;padding:16px;text-align:center;border:1.5px solid ${modalInk === '#FFFFFF' ? 'rgba(255,255,255,.18)' : '#E7E3DD'};border-radius:${e.forma === 'recto' ? '8px' : '16px'};font-size:29px;font-weight:800;letter-spacing:.055em;color:${modalInk};background:${modalInk === '#FFFFFF' ? 'rgba(255,255,255,.07)' : '#FAF8F4'};user-select:all}
-.pago-copiar{width:100%;min-height:52px;border:0;border-radius:${radio};background:${acc};color:${tintaSobre(acc)};font:700 16px system-ui;cursor:pointer}
-.pago-estado{min-height:34px;margin-top:12px;text-align:center;color:${modalMuted};font-size:12.5px}
-.pago-cerrar:focus-visible,.pago-copiar:focus-visible,.pago-abrir:focus-visible{outline:3px solid ${acc};outline-offset:3px}
+.pago-modal__ayuda{color:#66625E;margin-top:7px}
+.pago-numero{display:block;margin:20px 0 12px;padding:16px;text-align:center;border:1.5px solid #E7E3DD;border-radius:${e.forma === 'recto' ? '8px' : '16px'};font-size:29px;font-weight:800;letter-spacing:.055em;color:#14110F;background:#FAF8F4;user-select:all}
+.pago-copiar{width:100%;min-height:52px;border:0;border-radius:${radio};background:#F2552C;color:#14110F;font:700 16px system-ui;cursor:pointer}
+.pago-estado{min-height:34px;margin-top:12px;text-align:center;color:#66625E;font-size:12.5px}
+.pago-cerrar:focus-visible,.pago-copiar:focus-visible,.pago-abrir:focus-visible{outline:3px solid #C83D1F;outline-offset:3px}
 @media(max-width:520px){.pago-modal{width:calc(100% - 24px);margin:auto auto 12px;padding:22px}.pago-modal h2{font-size:23px}.pago-numero{font-size:27px}}
 ${fondoVidrio}
 .pie{margin-top:auto;padding-top:28px;text-align:center;font-size:11.5px;color:${p.muted};opacity:.8;text-decoration:none}
