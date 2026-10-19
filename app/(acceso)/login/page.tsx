@@ -33,8 +33,19 @@ import { FALTAN_CLAVES, supabase } from '@/lib/supabase/client';
 import BotonGoogle from '@/components/panel/BotonGoogle';
 import { MENSAJE_CADUCIDAD } from '@/lib/panel/caducidad';
 import { tomarDestino, verDestino, vieneDePlaca } from '@/lib/panel/destino';
+import { fuenteDeRuta, rutaActivacionPlaca, type FuentePlaca } from '@/modules/fideliza/dominio/activacion';
 
 type Modo = 'entrar' | 'crear' | 'recuperar';
+
+/** Retoma el panel pedido; la query cubre navegadores sin localStorage. */
+function destinoTrasAcceso(fuente: FuentePlaca | null): string {
+  const guardado = tomarDestino();
+  if (guardado) return guardado;
+  const params = new URLSearchParams(window.location.search);
+  const desdePlaca = fuente || params.get('origen') === 'placa';
+  if (!desdePlaca) return '/panel';
+  return rutaActivacionPlaca(fuente ?? (params.get('fuente') === 'qr' ? 'qr' : 'nfc'));
+}
 
 export default function Login() {
   const router = useRouter();
@@ -47,6 +58,7 @@ export default function Login() {
   const [ok, setOk] = useState<string | null>(null);
   /** Por qué se cerró la sesión, si la cerró el panel. No es un error: no va en rojo. */
   const [aviso, setAviso] = useState<string | null>(null);
+  const [fuentePlaca, setFuentePlaca] = useState<FuentePlaca | null>(null);
 
   /**
    * El panel manda aquí con `?caducada=inactividad|tope` cuando cierra la
@@ -65,7 +77,17 @@ export default function Login() {
      * cuenta todavía: se le dice que puede crearla aquí mismo, y al terminar
      * vuelve solo a «Activar placa» (lib/panel/destino.ts).
      */
-    else if (verDestino()?.includes('activar=')) {
+    else {
+      const guardado = verDestino();
+      const params = new URLSearchParams(window.location.search);
+      const desdePlaca = vieneDePlaca(guardado ?? '') || params.get('origen') === 'placa';
+      if (!desdePlaca) return;
+      const fuente = params.get('fuente') === 'qr' ? 'qr' : fuenteDeRuta(guardado ?? '');
+      setFuentePlaca(fuente);
+      // La mayoría llega con una placa nueva y aún no tiene cuenta. Google
+      // sigue sirviendo para entrar si ya existe; por correo puede cambiar a
+      // «Entra» con un toque.
+      setModo('crear');
       setAviso('Para activar tu placa, entra con Google o con tu correo. ¿Aún no tienes cuenta? Créala aquí: al terminar vuelves solo a tu placa.');
     }
   }, []);
@@ -76,8 +98,11 @@ export default function Login() {
     void supabase()
       .auth.getSession()
       .then(({ data }) => {
-        if (data.session) router.replace(tomarDestino() ?? '/panel');
+        if (data.session) router.replace(destinoTrasAcceso(fuentePlaca));
       });
+    // La query se lee dentro de destinoTrasAcceso; repetir al actualizar el
+    // estado podría consumir dos veces el destino y provocar otra navegación.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router]);
 
   async function enviar(e: React.FormEvent) {
@@ -92,7 +117,7 @@ export default function Login() {
       if (modo === 'entrar') {
         const { error } = await sb.auth.signInWithPassword({ email, password: clave });
         if (error) throw error;
-        router.replace(tomarDestino() ?? '/panel');
+        router.replace(destinoTrasAcceso(fuentePlaca));
       } else if (modo === 'recuperar') {
         /**
          * `redirectTo` tiene que estar en la lista blanca de Supabase
@@ -142,7 +167,7 @@ export default function Login() {
              * navegador. Si confirma el correo en el celular, el alta pide el
              * código igual (AltaNegocio.tsx). El código en sí no se guarda.
              */
-            ...(vieneDePlaca(verDestino() ?? '') ? { data: { origen: 'placa' } } : {}),
+            ...(fuentePlaca || vieneDePlaca(verDestino() ?? '') ? { data: { origen: 'placa' } } : {}),
           },
         });
         if (error) throw error;
@@ -151,7 +176,7 @@ export default function Login() {
          * entra directo, sin esperar ningún correo. Es el alta más rápida.
          */
         if (data.session) {
-          router.replace(tomarDestino() ?? '/panel');
+          router.replace(destinoTrasAcceso(fuentePlaca));
           return;
         }
         /**

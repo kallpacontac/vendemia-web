@@ -31,6 +31,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useSesionDeLaUrl } from '@/components/panel/useSesionDeLaUrl';
 import { tomarDestino } from '@/lib/panel/destino';
+import { rutaActivacionPlaca, type FuentePlaca } from '@/modules/fideliza/dominio/activacion';
 
 export default function Callback() {
   const router = useRouter();
@@ -38,7 +39,12 @@ export default function Callback() {
 
   useEffect(() => {
     // Vuelta de Google o del correo de confirmación: retoma lo que se pidió. Ver lib/panel/destino.ts.
-    if (estado === 'con-sesion') router.replace(tomarDestino() ?? '/panel');
+    if (estado === 'con-sesion') {
+      const params = new URLSearchParams(window.location.search);
+      const fuente: FuentePlaca = params.get('fuente') === 'qr' ? 'qr' : 'nfc';
+      const respaldo = params.get('origen') === 'placa' ? rutaActivacionPlaca(fuente) : '/panel';
+      router.replace(tomarDestino() ?? respaldo);
+    }
   }, [estado, router]);
 
   if (estado === 'sin-sesion') {

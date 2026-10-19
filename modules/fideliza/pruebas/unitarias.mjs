@@ -24,6 +24,7 @@ const formato = cargar('modules/fideliza/dominio/formato.ts');
 const errores = cargar('modules/fideliza/dominio/errores.ts');
 const botones = cargar('modules/fideliza/dominio/botones.ts');
 const pagina = cargar('modules/fideliza/dominio/paginaPublica.ts');
+const activacion = cargar('modules/fideliza/dominio/activacion.ts');
 
 const MIEMBRO_ID = '9f1c2d3e-4b5a-4c6d-8e7f-001122334455';
 const marca = { slug: 'barberia-centro', display_name: 'Barbería Centro', logo_url: 'https://x.com/l.png', bg_color: '#112233', support_url: null };
@@ -315,4 +316,21 @@ test('21 · Yape / Plin se abre y copia dentro de la plantilla', () => {
   const vista = pagina.htmlPagina(datos, { vista: true });
   assert.ok(vista.includes('.pago-abrir{pointer-events:none}'));
   assert.ok(!vista.includes('<script>'), 'el iframe de vista previa no necesita ejecutar JavaScript');
+});
+
+test('22 · una placa libre entra directo al alta de Fideliza conservando QR o NFC', () => {
+  assert.equal(
+    activacion.rutaActivacionPlaca('nfc'),
+    '/panel/fideliza/placas?activar=1&origen=placa&fuente=nfc',
+  );
+  assert.equal(
+    activacion.rutaActivacionPlaca('qr'),
+    '/panel/fideliza/placas?activar=1&origen=placa&fuente=qr',
+  );
+  assert.equal(activacion.fuenteDeRuta('/panel/fideliza/placas?activar=1&origen=placa&fuente=qr'), 'qr');
+  assert.equal(activacion.fuenteDeRuta('/panel/fideliza/placas?activar=1&origen=placa'), 'nfc');
+
+  const ruta = readFileSync(join(raiz, 'modules/fideliza/servidor/rutas/placa.ts'), 'utf8');
+  assert.match(ruta, /r\.status === 'unclaimed'\) return irAlAlta\(origen\)/);
+  assert.match(ruta, /status:\s*302/);
 });

@@ -13,6 +13,7 @@ import Link from 'next/link';
 import { RUTA_GLOBAL_POR_DEFECTO, esRutaGlobal, inicioDe, rutaPermitida } from '@/lib/panel/rutas';
 import { puedeVer } from '@/lib/panel/roles';
 import { guardarDestino, rutaActual, vieneDePlaca } from '@/lib/panel/destino';
+import { fuenteDeRuta } from '@/modules/fideliza/dominio/activacion';
 import AltaNegocio from '@/components/panel/AltaNegocio';
 import Instalable from '@/components/panel/Instalable';
 import BannerApp from '@/components/panel/BannerApp';
@@ -61,8 +62,11 @@ function Guardia({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!cargando && !reconectando && !session) {
       // Al volver del login (o de Google) se retoma esta pantalla. Ver lib/panel/destino.ts.
-      guardarDestino(rutaActual());
-      router.replace('/login');
+      const destino = rutaActual();
+      guardarDestino(destino);
+      // La query es respaldo si el navegador bloquea localStorage o Google
+      // vuelve sin él. No contiene el token ni el código privado de la placa.
+      router.replace(vieneDePlaca(destino) ? `/login?origen=placa&fuente=${fuenteDeRuta(destino)}` : '/login');
     }
   }, [cargando, reconectando, session, router]);
 
