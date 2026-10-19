@@ -11,7 +11,7 @@
  *   · La página la dirección, el WhatsApp a donde llega todo y qué secciones
  *               se enseñan. Si todavía no hay página, se abre aquí.
  *
- * Por fuera el producto se llama «Pide» (Alvaro, 19-oct-2026; antes «Tu página»).
+ * Por fuera el producto se llama «Mi página» (Alvaro, 19-oct-2026; fue «Tu página» y, unas horas, «Pide»).
  * Por dentro sigue siendo tu-pagina: módulo, tablas, API y rutas.
  * El host del enlace depende del modo: dominio/config.ts.
  *
@@ -30,6 +30,14 @@ import { supabase } from '@/lib/supabase/client';
 import { COLORES } from '@/modules/fideliza/dominio/estilo';
 import { urlPagina, urlEnvio } from '@/modules/tu-pagina/dominio/config';
 import { esEcommerce, esRecurrente } from '@/lib/panel/modo';
+import { PLANTILLAS, defPlantilla, esPlantilla, plantillaPorDefecto, type Plantilla } from '@/modules/tu-pagina/dominio/plantillas';
+
+/**
+ * La página con otra plantilla o color, sin guardar: se sirve en el dominio del
+ * panel (hosts.ts no la manda a tienda.*) para poder ir en un iframe.
+ */
+const urlVista = (slug: string, plantilla: string, color: string) =>
+  `/tu-pagina/${slug}?vista=1&plantilla=${plantilla}&color=${encodeURIComponent(color)}`;
 import { Pedidos, Reservas } from '@/modules/tu-pagina/ui/PedidosYReservas';
 import {
   ESTADOS,
@@ -52,6 +60,7 @@ interface Pagina {
   whatsapp: string;
   secciones: { catalogo?: boolean; reservar?: boolean; envios?: boolean };
   color: string;
+  plantilla: string;
   distritos: string[];
   publicada: boolean;
 }
@@ -97,7 +106,7 @@ export default function PanelTuPagina() {
   return (
     <main className="main">
       <div className="wrap">
-        <Topbar titulo="Pide" sub="El enlace para que tus clientes te pidan, y lo que te piden" />
+        <Topbar titulo="Mi página" sub="El enlace para que tus clientes te pidan, y lo que te piden" />
         {error && <p className="vacio">No se pudo cargar: {error}</p>}
         {cargando && !pagina && <p className="vacio">Cargando…</p>}
         {!cargando && !error && companyId && (
@@ -144,6 +153,8 @@ function MiPagina({ companyId, nombre, pagina, alGuardar }: { companyId: string;
   const [reservar, setReservar] = useState(pagina ? Boolean(pagina.secciones?.reservar) : !tienda);
   const [distritos, setDistritos] = useState((pagina?.distritos ?? []).join(', '));
   const [color, setColor] = useState(pagina?.color ?? '#FF4900');
+  // Una página que nunca eligió trae la de la base ('vitrina'); la nueva, la que va con su negocio.
+  const [plantilla, setPlantilla] = useState<Plantilla>(esPlantilla(pagina?.plantilla) ? pagina!.plantilla as Plantilla : plantillaPorDefecto(modo));
   const [libre, setLibre] = useState<boolean | null>(null);
   const [guardando, setGuardando] = useState(false);
 
@@ -169,6 +180,7 @@ function MiPagina({ companyId, nombre, pagina, alGuardar }: { companyId: string;
           frase: frase.trim(),
           whatsapp: telefonoNormal(whatsapp),
           color,
+          plantilla,
           secciones: { envios, catalogo: tienda && catalogo, reservar: !tienda && reservar },
           distritos: distritos.split(/[,\n]/).map((d) => d.trim()).filter(Boolean),
         },
@@ -194,7 +206,7 @@ function MiPagina({ companyId, nombre, pagina, alGuardar }: { companyId: string;
   return (
     <div className="tp-panel-grid">
       <section className="card">
-        <div className="card-mini-head"><h3>{publicada ? 'Tu Pide' : 'Crea tu Pide en un minuto'}</h3></div>
+        <div className="card-mini-head"><h3>{publicada ? 'Mi página' : 'Crea tu página en un minuto'}</h3></div>
 
         <label className="tp-panel-campo">
           <span>Nombre que verán tus clientes</span>
@@ -251,6 +263,35 @@ function MiPagina({ companyId, nombre, pagina, alGuardar }: { companyId: string;
         )}
 
         <div className="tp-panel-campo">
+          <span>Plantilla</span>
+          <div className="tp-panel-plantillas" role="radiogroup" aria-label="Plantilla">
+            {PLANTILLAS.map((p) => (
+              <button
+                key={p.id}
+                type="button"
+                role="radio"
+                aria-checked={plantilla === p.id}
+                className={`tp-panel-plantilla${plantilla === p.id ? ' activa' : ''}`}
+                onClick={() => setPlantilla(p.id)}
+              >
+                <span className="tp-panel-plantilla__mini">
+                  {publicada ? (
+                    <iframe title={p.nombre} src={urlVista(pagina!.slug, p.id, color)} tabIndex={-1} loading="lazy" />
+                  ) : (
+                    <span className={`tp-panel-esquema tp-panel-esquema--${p.id}`} style={{ ['--c' as string]: color }} aria-hidden="true">
+                      <i /><i /><i /><i />
+                    </span>
+                  )}
+                </span>
+                <b>{p.nombre}</b>
+                <small className="muted">{p.para}</small>
+              </button>
+            ))}
+          </div>
+          <small className="muted">{defPlantilla(plantilla).describe}.{!publicada && ' Al publicar verás cada una con tus productos.'}</small>
+        </div>
+
+        <div className="tp-panel-campo">
           <span>Color</span>
           <div className="tp-panel-colores">
             {COLORES.map((c) => (
@@ -260,11 +301,27 @@ function MiPagina({ companyId, nombre, pagina, alGuardar }: { companyId: string;
         </div>
 
         <button className="btn btn-primary" disabled={guardando || libre === false || !whatsapp.trim()} onClick={() => void guardar()}>
-          {guardando ? 'Publicando…' : publicada ? 'Guardar cambios' : 'Publicar mi Pide'}
+          {guardando ? 'Publicando…' : publicada ? 'Guardar cambios' : 'Publicar mi página'}
         </button>
       </section>
 
-      {publicada && <Compartir slug={pagina!.slug} envios={Boolean(pagina!.secciones?.envios)} />}
+      <div className="tp-panel-lado">
+        {publicada && (
+          <section className="card">
+            <div className="card-mini-head">
+              <h3>Así se ve</h3>
+              <a className="btn btn-sm btn-ghost" href={urlVista(pagina!.slug, plantilla, color)} target="_blank" rel="noopener"><ExternalLink size={14} /> En grande</a>
+            </div>
+            <div className="tp-panel-vista">
+              <iframe title="Vista previa de tu página" src={urlVista(pagina!.slug, plantilla, color)} />
+            </div>
+            {(plantilla !== pagina!.plantilla || color !== pagina!.color) && (
+              <small className="muted">Vista previa sin guardar: tus clientes la verán al pulsar «Guardar cambios».</small>
+            )}
+          </section>
+        )}
+        {publicada && <Compartir slug={pagina!.slug} envios={Boolean(pagina!.secciones?.envios)} />}
+      </div>
     </div>
   );
 }
@@ -272,7 +329,7 @@ function MiPagina({ companyId, nombre, pagina, alGuardar }: { companyId: string;
 function Compartir({ slug, envios }: { slug: string; envios: boolean }) {
   const avisar = useAvisar();
   const modo = useSesion().compania?.business_mode;
-  const enlaces = [{ nombre: 'Tu Pide', url: urlPagina(slug, modo) }, ...(envios ? [{ nombre: 'Directo a envíos', url: urlEnvio(slug, modo) }] : [])];
+  const enlaces = [{ nombre: 'Mi página', url: urlPagina(slug, modo) }, ...(envios ? [{ nombre: 'Directo a envíos', url: urlEnvio(slug, modo) }] : [])];
   async function bajarQr(url: string) {
     const png = await QRCode.toDataURL(url, { width: 1024, margin: 2, errorCorrectionLevel: 'M' });
     const a = document.createElement('a');
@@ -379,9 +436,9 @@ function Envios({ companyId, pagina, nombre, codigo, alConfigurar }: {
     return (
       <section className="card">
         <p className="vacio">
-          Todavía no recibes envíos. Publica tu Pide con «Agendar un envío» encendido y comparte el enlace.
+          Todavía no recibes envíos. Publica tu página con «Agendar un envío» encendido y comparte el enlace.
         </p>
-        <button className="btn btn-primary" onClick={alConfigurar}>Configurar mi Pide</button>
+        <button className="btn btn-primary" onClick={alConfigurar}>Configurar mi página</button>
       </section>
     );
   }

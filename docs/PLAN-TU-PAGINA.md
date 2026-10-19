@@ -171,6 +171,13 @@ Las fases 1 y 2 van en paralelo con las etapas 0–2 de la arquitectura.
 
 ## 8 · Decidido
 
+- **19-oct: por fuera se llama «Mi página»** (Alvaro; esa misma tarde se probó «Pide» y se descartó).
+  Cambiado solo lo que ve el usuario en el panel (menú, título, botones). Por dentro sigue `tu-pagina`
+  (módulo, tablas, API, rutas) y los hosts siguen siendo `tienda.*` / `agenda.*`. «Mis enlaces» de
+  Fideliza no cambia.
+- **19-oct: tienda y reservas desde la página** (Alvaro, para las demos): el cliente separa su cupo o su
+  pedido en la página y después avisa por WhatsApp. `pedidos_web` / `reservas_web` (0002) hasta la
+  etapa 4; el bot no las ve.
 - Nombre: **«Tu página»**; hosts **tienda** y **agenda**, la misma página en los dos (Alvaro, 15-oct;
   sustituye a «Pide» / `pide.vendemias.com`, decidido esa misma mañana). En el panel: `/panel/tu-pagina`. Por dentro, el mismo nombre (sin «Pide» en el código ni en la base).
   La pestaña «Mi página» de Fideliza (el Linktree) pasó a «Mis enlaces» para no chocar.

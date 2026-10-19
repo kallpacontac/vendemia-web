@@ -20,6 +20,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Check, ChevronLeft, ChevronRight, Clock, MessageCircle, Minus, Plus, ShoppingBag, Trash2, Users, X } from 'lucide-react';
 import { cap, vocabulario } from '@/lib/panel/vocabulario';
+import type { Disposicion } from '@/modules/tu-pagina/dominio/plantillas';
 import { abreEl, horasLibres, sumarDias, sumarMin } from '@/modules/tu-pagina/dominio/agenda';
 import { fechaCorta, urlWhatsApp } from '@/modules/tu-pagina/dominio/envio';
 import {
@@ -41,6 +42,8 @@ interface Props {
   /** Con «catalogo» se puede pedir; con «reservar», separar citas y cupos. */
   puedePedir: boolean;
   puedeReservar: boolean;
+  /** Lo decide la plantilla (dominio/plantillas.ts). */
+  disposicion: Disposicion;
 }
 
 interface EnCarrito {
@@ -96,7 +99,7 @@ const MENSAJE_FALLO: Record<string, string> = {
   not_found: 'Esta página ya no recibe reservas en línea. Escríbenos por WhatsApp.',
 };
 
-export default function Escaparate({ esc, slug, whatsapp, puedePedir, puedeReservar }: Props) {
+export default function Escaparate({ esc, slug, whatsapp, puedePedir, puedeReservar, disposicion }: Props) {
   const v = vocabulario(esc.modo);
   const router = useRouter();
   const [familia, setFamilia] = useState('');
@@ -151,6 +154,18 @@ export default function Escaparate({ esc, slug, whatsapp, puedePedir, puedeReser
     <>
       <section className="tp-catalogo" aria-label={cap(v.items)}>
         <h2 className="tp-seccion">{cap(v.items)}</h2>
+        {disposicion === 'carta' ? (
+          // La carta no filtra: enseña todo, por secciones, como un menú.
+          [...new Set(esc.items.map((i) => i.familia))].map((f) => (
+            <div key={f || '-'} className="tp-carta">
+              {f && <h3 className="tp-carta__seccion">{f}</h3>}
+              {esc.items.filter((i) => i.familia === f).map((i) => (
+                <FilaCarta key={i.id} item={i} alAbrir={() => setAbierto(i.id)} />
+              ))}
+            </div>
+          ))
+        ) : (
+          <>
         {esc.familias.length > 1 && (
           <div className="tp-familias" role="group" aria-label="Filtrar">
             <button type="button" className="tp-chip" aria-pressed={!familia} onClick={() => setFamilia('')}>Todo</button>
@@ -159,12 +174,14 @@ export default function Escaparate({ esc, slug, whatsapp, puedePedir, puedeReser
             ))}
           </div>
         )}
-        <div className={`tp-grid${esc.modo === 'ecommerce' ? '' : ' tp-grid--lista'}`}>
+        <div className={`tp-grid${disposicion === 'cuadricula' ? '' : ' tp-grid--lista'}`}>
           {visibles.map((i) => (
             <Tarjeta key={i.id} item={i} alAbrir={() => setAbierto(i.id)} />
           ))}
         </div>
         {visibles.length === 0 && <p className="tp-vacio">Pronto habrá {v.items} aquí.</p>}
+          </>
+        )}
       </section>
 
       {lineas.length > 0 && !verCarrito && !item && (
@@ -260,6 +277,26 @@ function Tarjeta({ item, alAbrir }: { item: Item; alAbrir: () => void }) {
           {sub && <small>{sub}</small>}
         </span>
       </span>
+    </button>
+  );
+}
+
+/** Una línea de la carta: nombre … precio, la descripción debajo y, si hay, la foto al lado. */
+function FilaCarta({ item, alAbrir }: { item: Item; alAbrir: () => void }) {
+  const agotado = item.tipo === 'producto' && (item.opciones.length ? item.opciones.every((o) => o.quedan === 0) : item.quedan === 0);
+  return (
+    <button type="button" className={`tp-carta__fila${agotado ? ' tp-tarjeta--agotado' : ''}`} onClick={alAbrir}>
+      <span className="tp-carta__texto">
+        <span className="tp-carta__linea">
+          <b>{item.nombre}</b>
+          <i aria-hidden="true" />
+          <b>{soles(item.precio)}</b>
+        </span>
+        {item.descripcion && <span className="tp-carta__desc">{item.descripcion}</span>}
+        {agotado && <small>Agotado</small>}
+        {item.tipo === 'cita' && <small>{item.duracion} min</small>}
+      </span>
+      {item.fotos[0] && <span className="tp-carta__foto" style={{ backgroundImage: `url("${item.fotos[0]}")` }} aria-hidden="true" />}
     </button>
   );
 }

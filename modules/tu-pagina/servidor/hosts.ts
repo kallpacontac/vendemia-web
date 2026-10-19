@@ -54,7 +54,9 @@ export function hostsTuPagina(req: NextRequest): NextResponse | null {
   const hostTienda = hostDe(tienda);
   if (!tienda || !hostTienda) return null;
   if (local(host) || local(hostTienda) || host.endsWith('.vercel.app')) return null;
-  if (ruta === '/tu-pagina' || ruta.startsWith('/tu-pagina/')) {
+  // La vista previa del panel (?vista=1) se queda en el dominio principal: tiene que
+  // poder ir en un iframe del panel, y X-Frame-Options es SAMEORIGIN.
+  if ((ruta === '/tu-pagina' || ruta.startsWith('/tu-pagina/')) && !req.nextUrl.searchParams.has('vista')) {
     return NextResponse.redirect(new URL((ruta.slice('/tu-pagina'.length) || '/') + req.nextUrl.search, tienda), 308);
   }
   return null;

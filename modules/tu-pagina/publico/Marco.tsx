@@ -4,6 +4,7 @@
  */
 import { colorValido, tintaSobre } from '@/modules/fideliza/dominio/estilo';
 import type { PaginaPublica } from '@/modules/tu-pagina/servidor/pagina';
+import { defPlantilla } from '@/modules/tu-pagina/dominio/plantillas';
 import '@/modules/tu-pagina/estilos/publica.css';
 
 export function estiloDe(p: Pick<PaginaPublica, 'color'>): React.CSSProperties {
@@ -13,7 +14,7 @@ export function estiloDe(p: Pick<PaginaPublica, 'color'>): React.CSSProperties {
 
 export default function Marco({ pagina, children }: { pagina: PaginaPublica; children: React.ReactNode }) {
   return (
-    <div className="tp" style={estiloDe(pagina)}>
+    <div className="tp" data-plantilla={defPlantilla(pagina.plantilla).id} style={estiloDe(pagina)}>
       {children}
       <p className="tp-pie">
         Hecho con <a href="https://vendemias.com/?utm_source=tu-pagina" rel="noopener">Vendemia</a>

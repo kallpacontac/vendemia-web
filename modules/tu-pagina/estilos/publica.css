@@ -14,6 +14,7 @@
   --tp-texto: #16130f;
   --tp-suave: #6b645c;
   --tp-borde: #e4e0da;
+  --tp-campo: #ffffff;
   --tp-error: #c62828;
   --tp-radio: 14px;
   min-height: 100dvh;
@@ -77,7 +78,7 @@
 .tp-campo small { color: var(--tp-suave); font-size: 13px; }
 .tp-campo input, .tp-campo select, .tp-campo textarea {
   width: 100%; min-height: 48px; padding: 12px 14px; font: inherit; color: inherit;
-  background: #fff; border: 1px solid var(--tp-borde); border-radius: 10px; appearance: none;
+  background: var(--tp-campo); border: 1px solid var(--tp-borde); border-radius: 10px; appearance: none;
 }
 .tp-campo textarea { min-height: 72px; resize: vertical; }
 .tp-campo input:focus, .tp-campo select:focus, .tp-campo textarea:focus { outline: 2px solid var(--tp-color); outline-offset: 1px; border-color: transparent; }
@@ -88,16 +89,16 @@
 
 .tp-opciones { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 8px; }
 .tp-opcion {
-  min-height: 56px; padding: 8px 10px; border-radius: 10px; border: 1px solid var(--tp-borde); background: #fff;
+  min-height: 56px; padding: 8px 10px; border-radius: 10px; border: 1px solid var(--tp-borde); background: var(--tp-campo); color: inherit;
   font: inherit; text-align: center; cursor: pointer; display: grid; align-content: center;
 }
 .tp-opcion small { color: var(--tp-suave); font-size: 12px; }
-.tp-opcion[aria-pressed='true'] { border-color: var(--tp-color); outline: 2px solid var(--tp-color); background: color-mix(in srgb, var(--tp-color) 8%, #fff); font-weight: 700; }
+.tp-opcion[aria-pressed='true'] { border-color: var(--tp-color); outline: 2px solid var(--tp-color); background: color-mix(in srgb, var(--tp-color) 12%, var(--tp-campo)); font-weight: 700; }
 .tp-dias { display: flex; gap: 8px; overflow-x: auto; padding: 3px 3px 6px; margin: 0 -3px; scrollbar-width: none; }
 .tp-dias .tp-opcion { flex: none; width: 78px; }
 
 .tp-contador { display: flex; align-items: center; gap: 12px; }
-.tp-contador button { width: 48px; height: 48px; border-radius: 10px; border: 1px solid var(--tp-borde); background: #fff; font-size: 22px; cursor: pointer; }
+.tp-contador button { width: 48px; height: 48px; border-radius: 10px; border: 1px solid var(--tp-borde); background: var(--tp-campo); color: inherit; font-size: 22px; cursor: pointer; }
 .tp-contador output { min-width: 28px; text-align: center; font-weight: 700; font-size: 18px; }
 
 .tp-aviso { padding: 12px 14px; border-radius: 10px; background: #fdecea; color: var(--tp-error); font-weight: 600; margin-bottom: 14px; }
@@ -182,7 +183,7 @@
 @keyframes tp-sube { from { transform: translateY(24px); } to { transform: none; } }
 .tp-hojita__cerrar {
   position: sticky; top: 10px; float: right; margin: 10px 10px -46px 0; z-index: 2; width: 36px; height: 36px; border-radius: 50%;
-  border: 0; background: rgba(255, 255, 255, .92); box-shadow: 0 1px 6px rgba(0, 0, 0, .15); display: grid; place-items: center; cursor: pointer; color: var(--tp-texto);
+  border: 0; background: rgba(255, 255, 255, .92); box-shadow: 0 1px 6px rgba(0, 0, 0, .15); display: grid; place-items: center; cursor: pointer; color: #16130f;
 }
 .tp-ficha { padding: 18px 16px 0; }
 .tp-ficha__nombre { margin: 0 44px 4px 0; font-size: 22px; font-weight: 800; letter-spacing: -.01em; }
@@ -195,7 +196,7 @@
 .tp-galeria img { display: block; width: 100%; aspect-ratio: 1 / 1; object-fit: cover; }
 .tp-galeria__btn {
   position: absolute; top: 50%; transform: translateY(-50%); width: 36px; height: 36px; border-radius: 50%; border: 0;
-  background: rgba(255, 255, 255, .9); display: grid; place-items: center; cursor: pointer; color: var(--tp-texto);
+  background: rgba(255, 255, 255, .9); display: grid; place-items: center; cursor: pointer; color: #16130f;
 }
 .tp-galeria__btn--izq { left: 10px; }
 .tp-galeria__btn--der { right: 10px; }
@@ -214,14 +215,14 @@
 .tp-grupos { display: grid; gap: 8px; }
 .tp-grupo {
   display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 60px; padding: 10px 14px; text-align: left;
-  border: 1px solid var(--tp-borde); border-radius: 12px; background: #fff; font: inherit; cursor: pointer; color: inherit;
+  border: 1px solid var(--tp-borde); border-radius: 12px; background: var(--tp-campo); font: inherit; cursor: pointer; color: inherit;
 }
 .tp-grupo span { display: grid; }
 .tp-grupo small { color: var(--tp-suave); font-size: 13px; }
 .tp-grupo em { flex: none; font-style: normal; font-size: 13px; font-weight: 700; color: #138a43; }
 .tp-grupo em.pocos { color: #b26b00; }
 .tp-grupo em.lleno { color: var(--tp-suave); }
-.tp-grupo[aria-pressed="true"] { border-color: var(--tp-color); outline: 2px solid var(--tp-color); background: color-mix(in srgb, var(--tp-color) 6%, #fff); }
+.tp-grupo[aria-pressed="true"] { border-color: var(--tp-color); outline: 2px solid var(--tp-color); background: color-mix(in srgb, var(--tp-color) 12%, var(--tp-campo)); }
 .tp-grupo:disabled { opacity: .5; cursor: not-allowed; }
 
 .tp-lineas { list-style: none; margin: 0 0 8px; padding: 0; display: grid; gap: 10px; }
@@ -230,9 +231,96 @@
 .tp-lineas__texto { flex: 1; min-width: 0; display: grid; }
 .tp-lineas__texto small { color: var(--tp-suave); font-size: 13px; }
 .tp-lineas__cant { display: flex; align-items: center; gap: 6px; }
-.tp-lineas__cant button { width: 34px; height: 34px; border-radius: 8px; border: 1px solid var(--tp-borde); background: #fff; display: grid; place-items: center; cursor: pointer; color: var(--tp-texto); }
+.tp-lineas__cant button { width: 34px; height: 34px; border-radius: 8px; border: 1px solid var(--tp-borde); background: var(--tp-campo); display: grid; place-items: center; cursor: pointer; color: var(--tp-texto); }
 .tp-lineas__cant button:disabled { opacity: .4; }
 .tp-lineas__cant output { min-width: 20px; text-align: center; font-weight: 700; }
 .tp-total { display: flex; justify-content: space-between; align-items: baseline; margin: 12px 2px 16px; font-size: 18px; }
 .tp-total b { font-size: 22px; }
 .tp-aviso--suave { background: #f3f1ee; color: var(--tp-suave); }
+
+/* La carta (plantilla «Carta»): por secciones, nombre … precio. */
+.tp-carta { margin-bottom: 22px; }
+.tp-carta__seccion { margin: 0 0 6px; padding-bottom: 6px; font-size: 13px; letter-spacing: .14em; text-transform: uppercase; color: var(--tp-color); border-bottom: 1px solid var(--tp-borde); }
+.tp-carta__fila {
+  display: flex; gap: 12px; align-items: center; width: 100%; padding: 12px 0; text-align: left; cursor: pointer;
+  background: none; border: 0; border-bottom: 1px dashed var(--tp-borde); font: inherit; color: inherit;
+}
+.tp-carta__texto { flex: 1; min-width: 0; display: grid; gap: 2px; }
+.tp-carta__linea { display: flex; align-items: baseline; gap: 8px; }
+.tp-carta__linea b:first-child { font-size: 16px; }
+.tp-carta__linea i { flex: 1; min-width: 12px; border-bottom: 2px dotted var(--tp-borde); transform: translateY(-4px); }
+.tp-carta__linea b:last-child { white-space: nowrap; }
+.tp-carta__desc { color: var(--tp-suave); font-size: 14px; }
+.tp-carta__texto small { color: var(--tp-suave); font-size: 12px; }
+.tp-carta__foto { flex: none; width: 64px; height: 64px; border-radius: 10px; background: center / cover no-repeat; }
+
+/* El envío como primera acción (plantilla «Envíos»). */
+.tp-accion--grande { min-height: 96px; padding: 20px; background: var(--tp-color); border-color: var(--tp-color); color: var(--tp-tinta); }
+.tp-accion--grande .tp-accion__icono { width: 52px; height: 52px; background: color-mix(in srgb, var(--tp-tinta) 18%, transparent); color: var(--tp-tinta); }
+.tp-accion--grande .tp-accion__texto b { font-size: 20px; }
+.tp-accion--grande .tp-accion__texto span { color: inherit; opacity: .85; }
+
+/* ══════════════════════════════════════════════════════════════════════════
+   LAS PLANTILLAS · cada una un diseño cerrado (dominio/plantillas.ts)
+   Solo cambian variables y unos pocos detalles: la estructura es la misma,
+   así una mejora en el escaparate llega a todas.
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/* Vitrina · clara, fotos grandes y portada en el color del negocio. */
+.tp[data-plantilla='vitrina'] .tp-portada { height: 150px; background-image: linear-gradient(135deg, var(--tp-color), color-mix(in srgb, var(--tp-color) 70%, #000)); }
+.tp[data-plantilla='vitrina'] .tp-tarjeta { border: 0; box-shadow: 0 1px 2px rgba(0, 0, 0, .05), 0 6px 18px rgba(0, 0, 0, .05); border-radius: 18px; }
+
+/* Lista · blanca, cabecera en fila, productos como filas separadas por líneas. */
+.tp[data-plantilla='lista'] { --tp-fondo: #ffffff; --tp-borde: #ebe8e3; }
+.tp[data-plantilla='lista'] .tp-portada { height: 88px; }
+.tp[data-plantilla='lista'] .tp-cabeza { display: grid; grid-template-columns: auto 1fr; column-gap: 14px; align-items: center; text-align: left; margin-top: 12px; }
+.tp[data-plantilla='lista'] .tp-logo { width: 72px; height: 72px; margin: -46px 0 0; grid-row: span 2; align-self: start; font-size: 28px; }
+.tp[data-plantilla='lista'] .tp-titulo { font-size: 22px; }
+.tp[data-plantilla='lista'] .tp-grid--lista { gap: 0; }
+.tp[data-plantilla='lista'] .tp-grid--lista .tp-tarjeta { border: 0; border-bottom: 1px solid var(--tp-borde); border-radius: 0; padding: 12px 0; }
+.tp[data-plantilla='lista'] .tp-grid--lista .tp-tarjeta__foto { width: 72px; min-height: 72px; height: 72px; border-radius: 12px; }
+.tp[data-plantilla='lista'] .tp-accion { border-radius: 12px; }
+
+/* Carta · papel cálido, letra con serifa, como un menú impreso. */
+.tp[data-plantilla='carta'] { --tp-fondo: #fbf7ef; --tp-papel: #fffdf8; --tp-texto: #2a2118; --tp-suave: #7a6a58; --tp-borde: #e3d7c3; --tp-campo: #fffdf8; }
+.tp[data-plantilla='carta'] .tp-titulo,
+.tp[data-plantilla='carta'] .tp-seccion,
+.tp[data-plantilla='carta'] .tp-h1,
+.tp[data-plantilla='carta'] .tp-ficha__nombre,
+.tp[data-plantilla='carta'] .tp-carta__linea b:first-child { font-family: Georgia, 'Times New Roman', serif; font-weight: 700; letter-spacing: 0; }
+.tp[data-plantilla='carta'] .tp-titulo { font-size: 30px; }
+.tp[data-plantilla='carta'] .tp-seccion { text-align: center; font-size: 22px; }
+.tp[data-plantilla='carta'] .tp-seccion::after { content: ''; display: block; width: 48px; height: 2px; margin: 8px auto 0; background: var(--tp-color); }
+.tp[data-plantilla='carta'] .tp-portada { height: 110px; background-image: repeating-linear-gradient(45deg, transparent 0 10px, rgba(255, 255, 255, .08) 10px 20px); }
+.tp[data-plantilla='carta'] .tp-logo { border-color: var(--tp-fondo); }
+
+/* Agenda · oscura y elegante: barberías, salones, spas. */
+.tp[data-plantilla='agenda'] {
+  --tp-fondo: #0e0f11; --tp-papel: #17191c; --tp-texto: #f3f2ef; --tp-suave: #a6a39d; --tp-borde: rgba(255, 255, 255, .1);
+  --tp-campo: #1e2024; --tp-error: #ff6b6b;
+}
+.tp[data-plantilla='agenda'] .tp-portada { height: 170px; background-image: linear-gradient(180deg, color-mix(in srgb, var(--tp-color) 55%, #0e0f11), #0e0f11); }
+.tp[data-plantilla='agenda'] .tp-logo { background-color: #17191c; border-color: #0e0f11; box-shadow: 0 0 0 2px var(--tp-color); }
+.tp[data-plantilla='agenda'] .tp-titulo { letter-spacing: .02em; }
+.tp[data-plantilla='agenda'] .tp-tarjeta__foto { background-color: color-mix(in srgb, var(--tp-color) 22%, #17191c); }
+.tp[data-plantilla='agenda'] .tp-accion__icono,
+.tp[data-plantilla='agenda'] .tp-chip:not([aria-pressed='true']) { background-color: rgba(255, 255, 255, .06); }
+.tp[data-plantilla='agenda'] .tp-aviso { background: rgba(255, 107, 107, .12); }
+.tp[data-plantilla='agenda'] .tp-aviso--suave { background: rgba(255, 255, 255, .06); color: var(--tp-suave); }
+.tp[data-plantilla='agenda'] .tp-hecho__marca { background: rgba(37, 211, 102, .14); color: #3ddc84; }
+.tp[data-plantilla='agenda'] .tp-grupo em { color: #3ddc84; }
+.tp[data-plantilla='agenda'] .tp-velo { background: rgba(0, 0, 0, .6); }
+
+/* Clases · cabecera grande en tu color, tarjetas con su raya y cupos a la vista. */
+.tp[data-plantilla='clases'] { --tp-fondo: #f3f5f7; --tp-borde: #e2e6ea; }
+.tp[data-plantilla='clases'] .tp-portada { height: 190px; background-image: linear-gradient(135deg, var(--tp-color), color-mix(in srgb, var(--tp-color) 55%, #000)); border-radius: 0 0 28px 28px; }
+.tp[data-plantilla='clases'] .tp-titulo { font-size: 28px; }
+.tp[data-plantilla='clases'] .tp-tarjeta { border-left: 5px solid var(--tp-color); border-radius: 16px; }
+.tp[data-plantilla='clases'] .tp-tarjeta__foto { background-color: color-mix(in srgb, var(--tp-color) 14%, #fff); }
+.tp[data-plantilla='clases'] .tp-tarjeta__pie small { font-weight: 700; color: var(--tp-color); }
+.tp[data-plantilla='clases'] .tp-grupo { border-radius: 14px; }
+
+/* Envíos · directo al formulario: el envío es lo primero y lo más grande. */
+.tp[data-plantilla='envios'] { --tp-fondo: #f4f4f1; }
+.tp[data-plantilla='envios'] .tp-portada { height: 96px; }
+.tp[data-plantilla='envios'] .tp-acciones:first-child { margin-top: 20px; }
