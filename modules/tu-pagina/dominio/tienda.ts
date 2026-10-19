@@ -8,10 +8,13 @@
  * página pinta sin pensar. Se ejecuta en el servidor; al navegador solo llega
  * el resultado, sin un solo dato de otro cliente.
  *
- * Qué es cada ítem lo decide el modo del negocio:
- *   · ecommerce               → producto: al carrito (con sus opciones y stock).
- *   · con grupos (schedule_slots) → grupo: separar cupo en un horario semanal.
- *   · el resto en un negocio de citas → cita: día, hora y, si se pide, profesional.
+ * Qué es cada ítem lo decide la PÁGINA, no el tipo de negocio (Alvaro, 19-oct-2026):
+ * una página es Agenda, Tienda o Las dos, y eso se elige en Mi página.
+ *   · Tienda (solo `catalogo`)  → todo es producto: al carrito.
+ *   · Agenda (solo `reservar`)  → con grupos (schedule_slots) es grupo; si no, cita.
+ *   · Las dos                   → lo que el dueño marcó en `tipos`; lo que no, la
+ *     regla del modo (una tienda que da citas: lo que tiene duración es cita).
+ * Ver `tipoDe`.
  *
  * Y los mensajes de WhatsApp que el cliente manda al terminar: llevan TODO,
  * porque sin bot es lo único que lee el dueño.
@@ -68,6 +71,49 @@ export interface DatosCrudos {
 /* ── Lo que pinta la página ──────────────────────────────────────────────── */
 
 export type TipoItem = 'producto' | 'cita' | 'grupo';
+
+/** Lo que el dueño marcó en Mi página (solo en «Las dos»): id del catálogo → tipo. */
+export type TiposDePagina = Record<string, TipoItem>;
+
+/** Lo de la página que decide qué es cada ítem: sus secciones. */
+export interface ComoSeOfrece {
+  catalogo?: boolean;
+  reservar?: boolean;
+  tipos?: TiposDePagina;
+}
+
+/** Una cosa del catálogo, lo justo para decidir su tipo. */
+interface Pieza {
+  conGrupos: boolean;
+  duracion: number | null;
+}
+
+/** El tipo en «Las dos» cuando el dueño no marcó nada. */
+export function tipoPorDefecto(modo: BusinessMode | null | undefined, k: Pieza): TipoItem {
+  if (k.conGrupos) return 'grupo';
+  if (modo === 'ecommerce') return k.duracion && k.duracion > 0 ? 'cita' : 'producto';
+  return 'cita';
+}
+
+/** El tipo de un ítem en una página. Sin secciones (página antigua), la regla del modo de siempre. */
+export function tipoDe(modo: BusinessMode | null | undefined, k: Pieza, como?: ComoSeOfrece | null, id = ''): TipoItem {
+  const vende = Boolean(como?.catalogo);
+  const reserva = Boolean(como?.reservar);
+  const deAgenda: TipoItem = k.conGrupos ? 'grupo' : 'cita';
+  if (vende && !reserva) return 'producto';
+  if (reserva && !vende) return deAgenda;
+  if (vende && reserva) {
+    const m = como?.tipos?.[id];
+    if (m === 'producto') return 'producto';
+    if (m === 'cita' || m === 'grupo') return deAgenda;
+    return tipoPorDefecto(modo, k);
+  }
+  return modo === 'ecommerce' ? 'producto' : deAgenda;
+}
+
+/** El modo cuyo vocabulario corresponde a un tipo: «productos», «servicios», «clases». */
+export const modoDelTipo = (t: TipoItem): BusinessMode =>
+  t === 'producto' ? 'ecommerce' : t === 'grupo' ? 'recurring_appointment' : 'appointment';
 
 export interface Opcion {
   id: string;
@@ -148,7 +194,7 @@ export function cuandoGrupo(dias: number[], hora: string): string {
   return `${d.filter(Boolean).join(', ')}${hora ? ` · ${hora}` : ''}`;
 }
 
-export function armarEscaparate(c: DatosCrudos): Escaparate {
+export function armarEscaparate(c: DatosCrudos, como?: ComoSeOfrece | null): Escaparate {
   const modo = c.negocio.modo;
   const paso = c.negocio.slot_minutes && c.negocio.slot_minutes > 0 ? c.negocio.slot_minutes : 60;
 
@@ -177,7 +223,7 @@ export function armarEscaparate(c: DatosCrudos): Escaparate {
     .filter((k) => vigenteHoy(k.promo_vigencia, c.hoy))
     .map((k) => {
       const franjas = json<FranjaRecurrente[]>(k.grupos, []);
-      const tipo: TipoItem = modo === 'ecommerce' ? 'producto' : franjas.length > 0 ? 'grupo' : 'cita';
+      const tipo = tipoDe(modo, { conGrupos: franjas.length > 0, duracion: k.duracion }, como, k.id);
       const quedanDe = (stock: number | null, variante: string) =>
         stock === null || stock === undefined ? null : Math.max(0, stock - (c.apartado[`${k.id}|${variante}`] ?? 0));
       const opciones = c.variantes

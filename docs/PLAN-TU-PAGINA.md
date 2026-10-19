@@ -164,10 +164,53 @@ devuelve solo campos públicos. Nunca PII de otros clientes: los cupos salen com
 | **0** | Dominios `tienda.vendemias.com` y `agenda.vendemias.com` (código y Vercel el 15-oct; faltan los CNAME) | Alvaro |
 | **1** | Envíos completo: formulario, panel, etiquetas | Nada: las tablas nacen en la nube |
 | **2** | Página + plantillas + catálogo + opciones + carrito → WhatsApp | Leer: nada. Que un negocio **sin bot** edite su catálogo: etapa 2 de la arquitectura |
+| **2b** | Catálogo en PDF: descargar + enlace fijo `…/<negocio>/catalogo.pdf`; luego campos de mayorista (§7.1) | Fase 2 (catálogo en la nube) |
 | **3** | Reservar e inscribirse | Etapa 4 de la arquitectura (servicio de reservas) |
 | Después | Pedido de Tu página convertido en `orders` real, pago con seña, dominio propio del negocio | |
 
 Las fases 1 y 2 van en paralelo con las etapas 0–2 de la arquitectura.
+
+### 7.1 · Fase 2b · Catálogo en PDF (19-oct)
+
+**Por qué.** Dizi (dizicatalogo.com, el competidor directo en catálogos) lo cobra desde S/19,90:
+*«Exportación PDF Vectorial. Con un solo clic generas un catálogo profesional imprimible con tu
+logotipo.»* Es un archivo, no un enlace. Los mayoristas lo piden en PDF porque lo reenvían, lo ven sin
+internet, lo imprimen y comparan proveedores. En Pide va **incluido**: *«En Dizi el PDF es de pago. En
+Pide viene incluido y se actualiza solo.»* Análisis completo: `vendemia-dizi-analisis.md` (proyecto).
+
+**Qué se entrega — las dos cosas, que Dizi no junta:**
+
+1. **«Descargar PDF»** en `/panel/tu-pagina`: el archivo con logo, nombre, fotos, precios y un QR al Pide
+   del negocio. El dueño lo manda por WhatsApp como documento o lo imprime.
+2. **Enlace fijo** `tienda|agenda.vendemias.com/<negocio>/catalogo.pdf` que siempre devuelve el PDF
+   **con los precios de hoy**: se comparte como link y no circulan PDFs viejos.
+
+**Contenido del PDF:**
+
+| Qué | Para qué | Hoy |
+|---|---|---|
+| Logo, nombre, WhatsApp | Portada | Existe (`tu_pagina`, `companies`) |
+| Foto, nombre, descripción breve, precio | Lo básico | Existe (`catalog`, `catalog_media`) |
+| Agrupado por `catalog.familia` | Que se lea como catálogo | Existe |
+| «Precios válidos al dd/mm/aaaa» | Que no reclamen un precio viejo | Se genera |
+| QR al Pide (y a WhatsApp) | Pasar del PDF al pedido | Se genera |
+| **Precio por mayor** («desde 12 u.: S/ 18») | La razón de pedir el PDF | **Falta**: campo nuevo |
+| **Pedido mínimo** | No recibir pedidos de 1 unidad | **Falta**: campo nuevo |
+| **Código del producto** («P-015») | Pedir rápido por WhatsApp | **Falta**: campo nuevo |
+
+**Cómo.** `@react-pdf/renderer` en un Route Handler (`/api/tu-pagina/publico/pdf` o la ruta
+`/<negocio>/catalogo.pdf`), con `runtime = 'nodejs'`. **No** Playwright/Chromium: en Vercel es pesado y
+lento. Caché por negocio que se invalida al cambiar el catálogo. Fotos reducidas antes de meterlas al PDF: que pese poco para mandarlo por WhatsApp con datos
+móviles (§6).
+
+**En dos pasos:**
+
+| Paso | Qué | Estimado |
+|---|---|---|
+| **2b-1** | PDF con lo que ya tiene el catálogo + botón + enlace fijo | 1–2 días |
+| **2b-2** | Campos de mayorista (precio por mayor, pedido mínimo, código) en la base, el panel y el PDF | 1–2 días más |
+
+Los estimados son de planificación, no medidos.
 
 ## 8 · Decidido
 
@@ -190,6 +233,9 @@ Las fases 1 y 2 van en paralelo con las etapas 0–2 de la arquitectura.
 
 ## 9 · Abierto
 
+- **PDF / mayoristas:** ¿el precio por mayor se ve también en la página web o solo en el PDF? ¿Un
+  segundo PDF «solo mayoristas» (con un enlace aparte) para no mostrarle ese precio al cliente final?
+- **PDF:** ¿en todos los planes que incluyen Pide, o solo desde Starter?
 - **«El primero libre»** en reservas: ¿por orden o repartido?
 - **Slugs reservados:** `panel`, `api`, `login`, `admin`, `ayuda`… no se pueden dar a un negocio.
   Hoy `tienda.vendemias.com/panel` muestra una página de negocio llamada «panel» (no el panel, que nunca

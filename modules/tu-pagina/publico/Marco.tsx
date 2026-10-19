@@ -4,17 +4,34 @@
  */
 import { colorValido, tintaSobre } from '@/modules/fideliza/dominio/estilo';
 import type { PaginaPublica } from '@/modules/tu-pagina/servidor/pagina';
-import { defPlantilla } from '@/modules/tu-pagina/dominio/plantillas';
+import { tipoPagina, type TipoPagina } from '@/modules/tu-pagina/dominio/plantillas';
+import { colorO } from '@/modules/tu-pagina/dominio/apariencia';
 import '@/modules/tu-pagina/estilos/publica.css';
 
-export function estiloDe(p: Pick<PaginaPublica, 'color'>): React.CSSProperties {
-  const color = colorValido(p.color);
-  return { ['--tp-color' as string]: color, ['--tp-tinta' as string]: tintaSobre(color) };
+export function estiloDe(p: Pick<PaginaPublica, 'color' | 'secciones'>): React.CSSProperties {
+  const principal = colorValido(p.color);
+  const a = p.secciones.apariencia ?? {};
+  const tienda = colorO(a.colorTienda, '#111111');
+  const fondoAgenda = colorO(a.fondoAgenda, '#F8F9FB');
+  const fondoTienda = colorO(a.fondoTienda, '#FFFFFF');
+  const portada = colorO(a.colorBanner, principal);
+  return {
+    ['--tp-color' as string]: principal,
+    ['--tp-tinta' as string]: tintaSobre(principal),
+    ['--tp-tienda' as string]: tienda,
+    ['--tp-tinta-tienda' as string]: tintaSobre(tienda),
+    ['--tp-fondo-agenda' as string]: fondoAgenda,
+    ['--tp-fondo-tienda' as string]: fondoTienda,
+    ['--tp-texto-agenda' as string]: tintaSobre(fondoAgenda) === '#FFFFFF' ? '#FFFFFF' : '#0B3558',
+    ['--tp-texto-tienda' as string]: tintaSobre(fondoTienda),
+    ['--tp-portada-color' as string]: portada,
+    ['--tp-portada-tinta' as string]: tintaSobre(portada),
+  };
 }
 
-export default function Marco({ pagina, children }: { pagina: PaginaPublica; children: React.ReactNode }) {
+export default function Marco({ pagina, children, vista }: { pagina: PaginaPublica; children: React.ReactNode; vista?: TipoPagina }) {
   return (
-    <div className="tp" data-plantilla={defPlantilla(pagina.plantilla).id} style={estiloDe(pagina)}>
+    <div className="tp" data-diseno={vista ?? tipoPagina(pagina.secciones)} style={estiloDe(pagina)}>
       {children}
       <p className="tp-pie">
         Hecho con <a href="https://vendemias.com/?utm_source=tu-pagina" rel="noopener">Vendemia</a>
@@ -25,11 +42,15 @@ export default function Marco({ pagina, children }: { pagina: PaginaPublica; chi
 
 export function Cabecera({ pagina }: { pagina: PaginaPublica }) {
   const inicial = pagina.titulo.trim().charAt(0).toUpperCase() || '·';
+  const a = pagina.secciones.apariencia ?? {};
+  const banner = a.mostrarBanner !== false;
   return (
     <>
-      <div className="tp-portada" style={pagina.portada_url ? { backgroundImage: `url("${pagina.portada_url}")` } : undefined} />
+      {banner && <div className="tp-portada" style={pagina.portada_url ? { backgroundImage: `url("${pagina.portada_url}")` } : undefined}>
+        {a.tituloBanner && <span className="tp-portada__titulo">{a.tituloBanner}</span>}
+      </div>}
       <div className="tp-hoja">
-        <header className="tp-cabeza">
+        <header className={`tp-cabeza${banner ? '' : ' tp-cabeza--sin-banner'}`}>
           <div
             className="tp-logo"
             style={pagina.logo_url ? { backgroundImage: `url("${pagina.logo_url}")` } : undefined}

@@ -324,3 +324,117 @@
 .tp[data-plantilla='envios'] { --tp-fondo: #f4f4f1; }
 .tp[data-plantilla='envios'] .tp-portada { height: 96px; }
 .tp[data-plantilla='envios'] .tp-acciones:first-child { margin-top: 20px; }
+
+
+/* Agenda: superficies claras y azules, siguiendo la referencia Calendly.
+   Tienda: fotografía protagonista, tarjetas planas y botones tipo píldora. */
+.tp[data-diseno='agenda'], .tp[data-diseno='ambos'] {
+  --tp-fondo: var(--tp-fondo-agenda); --tp-papel: #fff; --tp-texto: var(--tp-texto-agenda);
+  --tp-suave: #476788; --tp-borde: #d4e0ed; --tp-campo: #fff; --tp-radio: 16px;
+  font-family: 'Manrope', 'Plus Jakarta Sans', system-ui, sans-serif;
+}
+.tp[data-diseno='tienda'] {
+  --tp-fondo: var(--tp-fondo-tienda); --tp-papel: #fff; --tp-texto: var(--tp-texto-tienda);
+  --tp-suave: #707072; --tp-borde: #e5e5e5; --tp-campo: #f5f5f5; --tp-radio: 0px;
+  font-family: 'Helvetica Neue', Arial, system-ui, sans-serif;
+}
+.tp[data-diseno='agenda'] .tp-hoja, .tp[data-diseno='ambos'] .tp-hoja { max-width: 1160px; }
+.tp[data-diseno='tienda'] .tp-hoja { max-width: 1440px; padding-inline: clamp(20px, 4vw, 56px); }
+.tp[data-diseno='agenda'] .tp-portada, .tp[data-diseno='ambos'] .tp-portada {
+  height: clamp(140px, 24vw, 260px); background-color: var(--tp-portada-color);
+  background-image: none; position: relative; display: flex; align-items: flex-end;
+}
+.tp[data-diseno='tienda'] .tp-portada {
+  height: clamp(240px, 37vw, 480px); background-color: var(--tp-portada-color);
+  background-image: none; position: relative; display: flex; align-items: flex-end;
+}
+.tp-portada__titulo {
+  display: block; width: min(100%, 1200px); margin: auto; padding: 32px clamp(22px, 5vw, 68px);
+  color: var(--tp-portada-tinta); font-size: clamp(32px, 6vw, 76px); font-weight: 700; line-height: 1.02;
+}
+.tp[data-diseno='agenda'] .tp-portada__titulo, .tp[data-diseno='ambos'] .tp-portada__titulo { font-size: clamp(30px, 5vw, 64px); }
+.tp-cabeza--sin-banner { margin-top: 24px; }
+.tp[data-diseno='agenda'] .tp-cabeza, .tp[data-diseno='ambos'] .tp-cabeza {
+  position: relative; margin-inline: auto; padding: 16px 20px 20px; max-width: 800px;
+  background: var(--tp-papel); border: 1px solid var(--tp-borde); border-radius: 24px;
+  box-shadow: 0 16px 44px rgba(71,103,136,.09); color: #0b3558;
+}
+.tp[data-diseno='agenda'] .tp-cabeza--sin-banner, .tp[data-diseno='ambos'] .tp-cabeza--sin-banner { margin-top: 24px; }
+.tp[data-diseno='agenda'] .tp-logo, .tp[data-diseno='ambos'] .tp-logo { margin-top: -44px; border-radius: 18px; }
+.tp[data-diseno='tienda'] .tp-cabeza { margin: 0; padding: 22px 0 12px; text-align: left; }
+.tp[data-diseno='tienda'] .tp-logo { width: 64px; height: 64px; margin: -52px 0 12px; border-radius: 0; box-shadow: none; }
+.tp[data-diseno='tienda'] .tp-cabeza--sin-banner .tp-logo { margin-top: 0; }
+.tp[data-diseno='agenda'] .tp-titulo, .tp[data-diseno='ambos'] .tp-titulo { font-size: clamp(28px, 4vw, 46px); letter-spacing: -.045em; }
+.tp[data-diseno='tienda'] .tp-titulo { font-size: clamp(30px, 5vw, 64px); font-weight: 700; line-height: 1; text-transform: uppercase; }
+.tp[data-diseno='agenda'] .tp-acciones, .tp[data-diseno='ambos'] .tp-acciones { max-width: 800px; margin: 24px auto 0; }
+.tp[data-diseno='agenda'] .tp-accion, .tp[data-diseno='ambos'] .tp-accion {
+  border-radius: 16px; box-shadow: 0 12px 32px rgba(71,103,136,.06); color: #0b3558;
+}
+.tp[data-diseno='agenda'] .tp-accion--grande, .tp[data-diseno='ambos'] .tp-accion--grande {
+  border-radius: 16px; background: var(--tp-color); color: var(--tp-tinta);
+}
+.tp[data-diseno='agenda'] .tp-accion--grande .tp-accion__texto span, .tp[data-diseno='ambos'] .tp-accion--grande .tp-accion__texto span { color: inherit; }
+.tp[data-diseno='tienda'] .tp-acciones { display: flex; flex-wrap: wrap; }
+.tp[data-diseno='tienda'] .tp-accion { min-height: 48px; width: auto; border-radius: 999px; padding: 7px 16px; }
+.tp[data-diseno='tienda'] .tp-accion__icono { width: 30px; height: 30px; background: transparent; }
+.tp[data-diseno='tienda'] .tp-accion__texto span { display: none; }
+.tp[data-diseno='agenda'] .tp-catalogo, .tp[data-diseno='ambos'] .tp-catalogo { margin-top: 56px; }
+.tp[data-diseno='tienda'] .tp-catalogo { margin-top: 48px; }
+.tp[data-diseno='agenda'] .tp-seccion, .tp[data-diseno='ambos'] .tp-seccion { font-size: clamp(28px, 4vw, 44px); letter-spacing: -.04em; }
+.tp[data-diseno='tienda'] .tp-seccion { font-size: clamp(24px, 3vw, 36px); font-weight: 500; }
+.tp[data-diseno='agenda'] .tp-chip, .tp[data-diseno='agenda'] .tp-boton, .tp[data-diseno='ambos'] .tp-chip, .tp[data-diseno='ambos'] .tp-boton { border-radius: 8px; }
+.tp[data-diseno='agenda'] .tp-tarjeta { border-radius: 16px; box-shadow: 0 10px 32px rgba(71,103,136,.07); }
+.tp[data-diseno='tienda'] .tp-tarjeta, .tp[data-diseno='ambos'] .tp-modulo--tienda .tp-tarjeta {
+  border: 0; border-radius: 0; box-shadow: none; background: transparent;
+}
+.tp[data-diseno='tienda'] .tp-tarjeta__foto, .tp[data-diseno='ambos'] .tp-modulo--tienda .tp-tarjeta__foto {
+  background-color: #f5f5f5; border-radius: 0;
+}
+.tp[data-diseno='tienda'] .tp-tarjeta__texto, .tp[data-diseno='ambos'] .tp-modulo--tienda .tp-tarjeta__texto { padding: 12px 0 20px; }
+.tp[data-diseno='tienda'] .tp-boton, .tp[data-diseno='tienda'] .tp-chip,
+.tp[data-diseno='ambos'] .tp-modulo--tienda .tp-chip { border-radius: 999px; }
+.tp[data-diseno='ambos'] .tp-modulo { padding: 32px clamp(16px, 3vw, 36px); margin: 0 0 32px; }
+.tp[data-diseno='ambos'] .tp-modulo--agenda { background: var(--tp-fondo-agenda); border-radius: 24px; }
+.tp[data-diseno='ambos'] .tp-modulo--tienda {
+  --tp-color: var(--tp-tienda); --tp-tinta: var(--tp-tinta-tienda);
+  background: var(--tp-fondo-tienda); color: var(--tp-texto-tienda);
+  border: 1px solid #e5e5e5; border-radius: 0;
+  font-family: 'Helvetica Neue', Arial, system-ui, sans-serif;
+}
+.tp[data-diseno='ambos'] .tp-modulo--tienda .tp-seccion { font-size: clamp(24px, 3vw, 36px); font-weight: 500; }
+.tp[data-diseno='tienda'] .tp-barra { background: var(--tp-color); color: var(--tp-tinta); border-radius: 999px; }
+@media (max-width: 600px) {
+  .tp[data-diseno='agenda'] .tp-cabeza, .tp[data-diseno='ambos'] .tp-cabeza { padding-inline: 16px; }
+  .tp[data-diseno='ambos'] .tp-modulo { padding: 20px 14px; margin-inline: -16px; }
+  .tp[data-diseno='tienda'] .tp-portada { height: 260px; }
+  .tp[data-diseno='tienda'] .tp-acciones { margin-top: 14px; }
+}
+
+/* Un fondo avanzado puede ser oscuro; las superficies blancas mantienen tinta legible. */
+.tp[data-diseno='agenda'] .tp-bloque, .tp[data-diseno='ambos'] .tp-bloque,
+.tp[data-diseno='agenda'] .tp-tarjeta, .tp[data-diseno='ambos'] .tp-modulo--agenda .tp-tarjeta {
+  color: #0b3558;
+}
+.tp[data-diseno='ambos'] .tp-barra, .tp[data-diseno='ambos'] .tp-hecho--tienda .tp-boton {
+  background: var(--tp-tienda); color: var(--tp-tinta-tienda); border-radius: 999px;
+}
+.tp[data-diseno='ambos'] .tp-hojita--tienda, .tp[data-diseno='ambos'] .tp-hecho--tienda {
+  --tp-color: var(--tp-tienda); --tp-tinta: var(--tp-tinta-tienda);
+  --tp-fondo: var(--tp-fondo-tienda); --tp-texto: var(--tp-texto-tienda);
+  --tp-suave: #707072; --tp-borde: #e5e5e5; --tp-campo: #f5f5f5; --tp-radio: 0px;
+  background: var(--tp-fondo-tienda); color: var(--tp-texto-tienda);
+  font-family: 'Helvetica Neue', Arial, system-ui, sans-serif;
+}
+.tp[data-diseno='ambos'] .tp-hojita--tienda .tp-boton { border-radius: 999px; }
+.tp-portada__titulo { text-shadow: 0 2px 12px rgba(0,0,0,.25); }
+
+/* La elección de día se lee como un calendario compacto en la agenda. */
+.tp[data-diseno='agenda'] .tp-dias, .tp[data-diseno='ambos'] .tp-hojita--agenda .tp-dias {
+  display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 7px;
+  overflow: visible; margin: 0; padding: 3px;
+}
+.tp[data-diseno='agenda'] .tp-dias .tp-opcion, .tp[data-diseno='ambos'] .tp-hojita--agenda .tp-dias .tp-opcion { width: auto; min-width: 0; border-radius: 8px; }
+.tp[data-diseno='agenda'] .tp-hojita, .tp[data-diseno='ambos'] .tp-hojita--agenda { max-width: 760px; }
+@media (min-width: 640px) {
+  .tp[data-diseno='agenda'] .tp-dias, .tp[data-diseno='ambos'] .tp-hojita--agenda .tp-dias { grid-template-columns: repeat(7, minmax(0, 1fr)); }
+}

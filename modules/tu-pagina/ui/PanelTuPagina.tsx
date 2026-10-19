@@ -26,16 +26,30 @@ import { useAvisar } from '@/components/panel/Avisos';
 import { useCargar } from '@/components/panel/useCargar';
 import { supabase } from '@/lib/supabase/client';
 import { COLORES } from '@/modules/fideliza/dominio/estilo';
-import { urlPagina, urlEnvio } from '@/modules/tu-pagina/dominio/config';
-import { esEcommerce, esRecurrente } from '@/lib/panel/modo';
-import { PLANTILLAS, defPlantilla, esPlantilla, plantillaPorDefecto, type Plantilla } from '@/modules/tu-pagina/dominio/plantillas';
+import Link from 'next/link';
+import { urlPagina, urlEnvio, urlReservar } from '@/modules/tu-pagina/dominio/config';
+import { esAppointmentFamily, esEcommerce, esRecurrente } from '@/lib/panel/modo';
+import { tipoPorDefecto, type TiposDePagina } from '@/modules/tu-pagina/dominio/tienda';
+import type { BusinessMode } from '@/lib/supabase/types';
+import { EXPERIENCIAS, plantillaGuardada, tipoPagina, tipoPorDefecto as tipoPaginaPorDefecto, type TipoPagina } from '@/modules/tu-pagina/dominio/plantillas';
+import { esHex, esUrlPublica, type AparienciaPagina } from '@/modules/tu-pagina/dominio/apariencia';
+import { subirImagenMarca } from '@/modules/fideliza/cliente/imagenMarca';
 
 /**
  * La página con otra plantilla o color, sin guardar: se sirve en el dominio del
  * panel (hosts.ts no la manda a tienda.*) para poder ir en un iframe.
  */
-const urlVista = (slug: string, plantilla: string, color: string) =>
-  `/tu-pagina/${slug}?vista=1&plantilla=${plantilla}&color=${encodeURIComponent(color)}`;
+const urlVista = (slug: string, valores: {
+  tipo: TipoPagina; color: string; apariencia: AparienciaPagina;
+}) => {
+  const q = new URLSearchParams({ vista: '1', tipo: valores.tipo, color: valores.color,
+    ct: valores.apariencia.colorTienda ?? '', fa: valores.apariencia.fondoAgenda ?? '',
+    ft: valores.apariencia.fondoTienda ?? '', cb: valores.apariencia.colorBanner ?? '',
+    mb: valores.apariencia.mostrarBanner === false ? '0' : '1',
+    mw: valores.apariencia.mostrarWhatsapp === false ? '0' : '1',
+  });
+  return `/tu-pagina/${slug}?${q.toString()}`;
+};
 import { Pedidos, Reservas } from '@/modules/tu-pagina/ui/PedidosYReservas';
 import {
   ESTADOS,
@@ -56,7 +70,9 @@ interface Pagina {
   titulo: string;
   frase: string;
   whatsapp: string;
-  secciones: { catalogo?: boolean; reservar?: boolean; envios?: boolean };
+  secciones: { catalogo?: boolean; reservar?: boolean; envios?: boolean; tipos?: TiposDePagina; apariencia?: AparienciaPagina };
+  logo_url: string | null;
+  portada_url: string | null;
   color: string;
   plantilla: string;
   distritos: string[];
@@ -66,6 +82,11 @@ interface Pagina {
 const POR_PAGINA = 50;
 
 type Pestana = 'pedidos' | 'reservas' | 'envios' | 'pagina';
+
+type Es = TipoPagina;
+const ES = EXPERIENCIAS;
+const esDe = (s: Pagina['secciones'] | undefined): Es | null =>
+  s?.catalogo || s?.reservar ? tipoPagina(s) : null;
 
 const mensajeDe = (e: unknown) => {
   const m = e instanceof Error ? e.message : String((e as { message?: string })?.message ?? e);
@@ -128,7 +149,7 @@ export default function PanelTuPagina() {
               </div>
             )}
             {activa === 'pagina' ? (
-              <MiPagina companyId={companyId} nombre={compania?.nombre ?? ''} pagina={pagina ?? null} alGuardar={releer} />
+              <MiPagina companyId={companyId} nombre={compania?.nombre ?? ''} pagina={pagina ?? null} agendaNube={agendaNube} alGuardar={releer} />
             ) : activa === 'pedidos' ? (
               <Pedidos companyId={companyId} nombre={pagina?.titulo || compania?.nombre || ''} />
             ) : activa === 'reservas' ? (
@@ -147,7 +168,9 @@ export default function PanelTuPagina() {
    LA PÁGINA
    ═══════════════════════════════════════════════════════════════════════ */
 
-function MiPagina({ companyId, nombre, pagina, alGuardar }: { companyId: string; nombre: string; pagina: Pagina | null; alGuardar: () => void }) {
+function MiPagina({ companyId, nombre, pagina, agendaNube, alGuardar }: {
+  companyId: string; nombre: string; pagina: Pagina | null; agendaNube: boolean; alGuardar: () => void;
+}) {
   const avisar = useAvisar();
   const { compania } = useSesion();
   const [titulo, setTitulo] = useState(pagina?.titulo || nombre);
@@ -158,12 +181,17 @@ function MiPagina({ companyId, nombre, pagina, alGuardar }: { companyId: string;
   const tienda = esEcommerce(modo);
   const [envios, setEnvios] = useState(pagina?.secciones?.envios ?? false);
   // Por defecto, lo que hace cada negocio: la tienda vende, el de citas o clases reserva.
-  const [catalogo, setCatalogo] = useState(pagina ? Boolean(pagina.secciones?.catalogo) : tienda);
-  const [reservar, setReservar] = useState(pagina ? Boolean(pagina.secciones?.reservar) : !tienda);
+  // Una página antigua solo de envíos no es ninguna de las tres, y así se queda si no se elige.
+  const [es, setEs] = useState<Es>(pagina ? esDe(pagina.secciones) ?? tipoPaginaPorDefecto(modo) : tienda ? 'tienda' : 'agenda');
+  const [tipos, setTipos] = useState<TiposDePagina>(pagina?.secciones?.tipos ?? {});
+  const catalogo = es === 'tienda' || es === 'ambos';
+  const reservar = es === 'agenda' || es === 'ambos';
   const [distritos, setDistritos] = useState((pagina?.distritos ?? []).join(', '));
-  const [color, setColor] = useState(pagina?.color ?? '#FF4900');
-  // Una página que nunca eligió trae la de la base ('vitrina'); la nueva, la que va con su negocio.
-  const [plantilla, setPlantilla] = useState<Plantilla>(esPlantilla(pagina?.plantilla) ? pagina!.plantilla as Plantilla : plantillaPorDefecto(modo));
+  const [color, setColor] = useState(pagina?.color ?? (tienda ? '#111111' : '#006BFF'));
+  const [logo, setLogo] = useState(pagina?.logo_url ?? '');
+  const [portada, setPortada] = useState(pagina?.portada_url ?? '');
+  const [apariencia, setApariencia] = useState<AparienciaPagina>(pagina?.secciones?.apariencia ?? {});
+  const [subiendo, setSubiendo] = useState<'logo' | 'portada' | null>(null);
   const [libre, setLibre] = useState<boolean | null>(null);
   const [errorSlug, setErrorSlug] = useState(false);
   const [guardando, setGuardando] = useState(false);
@@ -189,7 +217,22 @@ function MiPagina({ companyId, nombre, pagina, alGuardar }: { companyId: string;
     };
   }, [slug, companyId, pagina?.slug]);
 
+  async function subirImagen(file: File, destino: 'logo' | 'portada') {
+    setSubiendo(destino);
+    try {
+      const url = await subirImagenMarca(file, companyId, destino === 'logo' ? 'brand' : 'catalog');
+      if (destino === 'logo') setLogo(url);
+      else setPortada(url);
+      avisar('Imagen lista. Guarda los cambios para publicarla.');
+    } catch (e) {
+      avisar(mensajeDe(e), 'error');
+    } finally {
+      setSubiendo(null);
+    }
+  }
+
   async function guardar() {
+    if (!esUrlPublica(logo) || !esUrlPublica(portada)) { avisar('El logo y la portada deben tener un enlace público https.', 'error'); return; }
     setGuardando(true);
     try {
       const { error } = await supabase().rpc('tu_pagina_guardar', {
@@ -201,8 +244,10 @@ function MiPagina({ companyId, nombre, pagina, alGuardar }: { companyId: string;
           frase: frase.trim(),
           whatsapp: telefonoNormal(whatsapp),
           color,
-          plantilla,
-          secciones: { envios, catalogo: tienda && catalogo, reservar: !tienda && reservar },
+          plantilla: plantillaGuardada(es),
+          logo_url: logo.trim(),
+          portada_url: portada.trim(),
+          secciones: { envios, catalogo, reservar, tipos: es === 'ambos' ? tipos : {}, apariencia },
           distritos: distritos.split(/[,\n]/).map((d) => d.trim()).filter(Boolean),
         },
       });
@@ -223,6 +268,7 @@ function MiPagina({ companyId, nombre, pagina, alGuardar }: { companyId: string;
   }
 
   const publicada = pagina?.publicada && pagina.slug;
+  const vista = urlVista(slug, { tipo: es, color, apariencia });
 
   return (
     <div className="tp-panel-grid">
@@ -241,6 +287,14 @@ function MiPagina({ companyId, nombre, pagina, alGuardar }: { companyId: string;
           <span>Tu WhatsApp, a donde te llegará todo</span>
           <input className="input" value={whatsapp} inputMode="tel" placeholder="987 654 321" onChange={(e) => setWhatsapp(e.target.value)} />
         </label>
+        <div className="tp-panel-campo"><span>Logo</span>
+          <label className="tp-panel-subir">{subiendo === 'logo' ? 'Subiendo…' : logo ? 'Cambiar logo' : 'Subir logo'}
+            <input type="file" accept="image/*" disabled={subiendo !== null} onChange={(e) => { const file = e.target.files?.[0]; if (file) void subirImagen(file, 'logo'); e.target.value = ''; }} />
+          </label>
+          {logo && esUrlPublica(logo) && <img className="tp-panel-imagen tp-panel-imagen--logo" src={logo} alt="Vista previa del logo" />}
+          <label className="tp-panel-enlace-imagen">O pega un enlace HTTPS<input className="input" type="url" value={logo} placeholder="https://…/mi-logo.png" onChange={(e) => setLogo(e.target.value)} /></label>
+        </div>
+
         <label className="tp-panel-campo">
           <span>Tu dirección</span>
           <div className="tp-panel-slug">
@@ -253,75 +307,56 @@ function MiPagina({ companyId, nombre, pagina, alGuardar }: { companyId: string;
         </label>
 
         <div className="tp-panel-campo">
-          <span>Qué pueden hacer tus clientes</span>
-          {tienda ? (
-            <label className="tp-panel-check">
-              <input type="checkbox" checked={catalogo} onChange={(e) => setCatalogo(e.target.checked)} />
-              <span><b>Ver mi catálogo y pedir</b><small className="muted">Eligen producto, opción y cantidad; el stock queda separado y te avisan por WhatsApp</small></span>
-            </label>
-          ) : esRecurrente(modo) ? (
-            <label className="tp-panel-check">
-              <input type="checkbox" checked={reservar} onChange={(e) => setReservar(e.target.checked)} />
-              <span><b>Separar su cupo en un grupo</b><small className="muted">Ven tus niveles con los cupos que quedan; el cupo queda separado y te avisan por WhatsApp</small></span>
-            </label>
-          ) : (
-            <label className="tp-panel-check">
-              <input type="checkbox" checked={reservar} onChange={(e) => setReservar(e.target.checked)} />
-              <span><b>Reservar una cita</b><small className="muted">Eligen servicio, día y hora libres; el hueco queda separado y te avisan por WhatsApp</small></span>
-            </label>
-          )}
-          <label className="tp-panel-check">
-            <input type="checkbox" checked={envios} onChange={(e) => setEnvios(e.target.checked)} />
-            <span><b>Agendar un envío</b><small className="muted">Te llega con todo: dirección, distrito, fecha de recojo</small></span>
-          </label>
-        </div>
-
-        {envios && (
-          <label className="tp-panel-campo">
-            <span>Distritos que atiendes <small className="muted">(vacío = cualquiera)</small></span>
-            <textarea className="input" rows={2} value={distritos} placeholder="Miraflores, Surco, San Isidro" onChange={(e) => setDistritos(e.target.value)} />
-          </label>
-        )}
-
-        <div className="tp-panel-campo">
-          <span>Plantilla</span>
-          <div className="tp-panel-plantillas" role="radiogroup" aria-label="Plantilla">
-            {PLANTILLAS.map((p) => (
-              <button
-                key={p.id}
-                type="button"
-                role="radio"
-                aria-checked={plantilla === p.id}
-                className={`tp-panel-plantilla${plantilla === p.id ? ' activa' : ''}`}
-                onClick={() => setPlantilla(p.id)}
-              >
-                <span className="tp-panel-plantilla__mini">
-                  {publicada ? (
-                    <iframe title={p.nombre} src={urlVista(pagina!.slug, p.id, color)} tabIndex={-1} loading="lazy" />
-                  ) : (
-                    <span className={`tp-panel-esquema tp-panel-esquema--${p.id}`} style={{ ['--c' as string]: color }} aria-hidden="true">
-                      <i /><i /><i /><i />
-                    </span>
-                  )}
-                </span>
-                <b>{p.nombre}</b>
-                <small className="muted">{p.para}</small>
+          <span>¿Qué harán tus clientes en tu página?</span>
+          <div className="tp-panel-es" role="radiogroup" aria-label="Tu página es">
+            {ES.map((o) => (
+              <button key={o.id} type="button" role="radio" aria-checked={es === o.id} className={es === o.id ? 'activa' : ''} onClick={() => setEs(o.id)}>
+                <span className={`tp-panel-es__mini tp-panel-es__mini--${o.id}`} aria-hidden="true"><i /><i /><i /></span>
+                <b>{o.nombre}</b>
+                <small>{o.id === 'agenda' && esRecurrente(modo) ? 'Separan cupos y eligen horario.' : o.describe}</small>
               </button>
             ))}
           </div>
-          <small className="muted">{defPlantilla(plantilla).describe}.{!publicada && ' Al publicar verás cada una con tus productos.'}</small>
+          {es && <small className="muted">{dondeLlega(es, modo, agendaNube)}</small>}
         </div>
+
+        {es === 'ambos' && <QueSeReserva companyId={companyId} tipos={tipos} alCambiar={setTipos} />}
 
         <div className="tp-panel-campo">
-          <span>Color</span>
+          <span>Color principal</span>
           <div className="tp-panel-colores">
-            {COLORES.map((c) => (
-              <button key={c} type="button" aria-label={c} aria-pressed={color === c} style={{ background: c }} onClick={() => setColor(c)} />
-            ))}
+            {COLORES.map((c) => <button key={c} type="button" aria-label={`Elegir ${c}`} aria-pressed={color.toUpperCase() === c} style={{ background: c }} onClick={() => setColor(c)} />)}
+            <label className="tp-panel-color-libre"><input type="color" value={esHex(color) ? color : '#006BFF'} onChange={(e) => setColor(e.target.value.toUpperCase())} /><span>Otro color</span></label>
           </div>
+          <small className="muted">Se aplica a botones y selecciones. En “Agenda y tienda”, la tienda mantiene un contraste propio que puedes ajustar abajo.</small>
         </div>
 
-        <button className="btn btn-primary" disabled={guardando || libre !== true || !whatsapp.trim()} onClick={() => void guardar()}>
+        <details className="tp-panel-avanzado">
+          <summary>Personalizar más <small>Portada, secciones y colores específicos</small></summary>
+          <div className="tp-panel-avanzado__contenido">
+            <div className="tp-panel-campo"><span>Imagen de portada <small className="muted">(opcional)</small></span>
+              <label className="tp-panel-subir">{subiendo === 'portada' ? 'Subiendo…' : portada ? 'Cambiar portada' : 'Subir portada'}
+                <input type="file" accept="image/*" disabled={subiendo !== null} onChange={(e) => { const file = e.target.files?.[0]; if (file) void subirImagen(file, 'portada'); e.target.value = ''; }} />
+              </label>
+              {portada && esUrlPublica(portada) && <img className="tp-panel-imagen tp-panel-imagen--portada" src={portada} alt="Vista previa de la portada" />}
+              <label className="tp-panel-enlace-imagen">O pega un enlace HTTPS<input className="input" type="url" value={portada} placeholder="https://…/portada.jpg" onChange={(e) => setPortada(e.target.value)} /></label>
+            </div>
+            <label className="tp-panel-check"><input type="checkbox" checked={apariencia.mostrarBanner !== false} onChange={(e) => setApariencia({ ...apariencia, mostrarBanner: e.target.checked })} /><span><b>Mostrar portada</b><small className="muted">Puede llevar imagen o un color de fondo.</small></span></label>
+            {apariencia.mostrarBanner !== false && <label className="tp-panel-campo"><span>Título de la portada <small className="muted">(opcional)</small></span><input className="input" maxLength={80} value={apariencia.tituloBanner ?? ''} placeholder="Algo nuevo te espera" onChange={(e) => setApariencia({ ...apariencia, tituloBanner: e.target.value })} /></label>}
+            <label className="tp-panel-check"><input type="checkbox" checked={apariencia.mostrarWhatsapp !== false} onChange={(e) => setApariencia({ ...apariencia, mostrarWhatsapp: e.target.checked })} /><span><b>Mostrar botón de WhatsApp</b><small className="muted">Los pedidos y reservas siguen enviando su aviso.</small></span></label>
+
+            <label className="tp-panel-check"><input type="checkbox" checked={envios} onChange={(e) => setEnvios(e.target.checked)} /><span><b>También agendar envíos</b><small className="muted">Dirección, distrito y fecha de recojo.</small></span></label>
+            {envios && <label className="tp-panel-campo"><span>Distritos que atiendes <small className="muted">(vacío = cualquiera)</small></span><textarea className="input" rows={2} value={distritos} placeholder="Miraflores, Surco, San Isidro" onChange={(e) => setDistritos(e.target.value)} /></label>}
+
+            <div className="tp-panel-colores-avanzados">
+              {(es !== 'agenda' ? [{ key: 'colorTienda', label: 'Botones de tienda', fallback: '#111111' }, { key: 'fondoTienda', label: 'Fondo de tienda', fallback: '#FFFFFF' }] : []).concat(es !== 'tienda' ? [{ key: 'fondoAgenda', label: 'Fondo de agenda', fallback: '#F8F9FB' }] : [], [{ key: 'colorBanner', label: 'Color de portada', fallback: color }]).map((item) => (
+                <label key={item.key}><span>{item.label}</span><input type="color" value={esHex(apariencia[item.key as keyof AparienciaPagina]) ? apariencia[item.key as keyof AparienciaPagina] as string : item.fallback} onChange={(e) => setApariencia({ ...apariencia, [item.key]: e.target.value.toUpperCase() })} /></label>
+              ))}
+            </div>
+          </div>
+        </details>
+
+        <button className="btn btn-primary" disabled={guardando || subiendo !== null || libre !== true || !whatsapp.trim() || !titulo.trim() || !esUrlPublica(logo) || !esUrlPublica(portada)} onClick={() => void guardar()}>
           {guardando ? 'Publicando…' : publicada ? 'Guardar cambios' : 'Publicar mi página'}
         </button>
       </section>
@@ -331,26 +366,30 @@ function MiPagina({ companyId, nombre, pagina, alGuardar }: { companyId: string;
           <section className="card">
             <div className="card-mini-head">
               <h3>Así se ve</h3>
-              <a className="btn btn-sm btn-ghost" href={urlVista(pagina!.slug, plantilla, color)} target="_blank" rel="noopener"><ExternalLink size={14} /> En grande</a>
+              <a className="btn btn-sm btn-ghost" href={vista} target="_blank" rel="noopener"><ExternalLink size={14} /> En grande</a>
             </div>
             <div className="tp-panel-vista">
-              <iframe title="Vista previa de tu página" src={urlVista(pagina!.slug, plantilla, color)} />
+              <iframe title="Vista previa de tu página" src={vista} />
             </div>
-            {(plantilla !== pagina!.plantilla || color !== pagina!.color) && (
-              <small className="muted">Vista previa sin guardar: tus clientes la verán al pulsar «Guardar cambios».</small>
+            {(es !== tipoPagina(pagina!.secciones) || color !== pagina!.color || titulo !== pagina!.titulo || frase !== pagina!.frase || logo !== (pagina!.logo_url ?? '') || portada !== (pagina!.portada_url ?? '') || JSON.stringify(apariencia) !== JSON.stringify(pagina!.secciones.apariencia ?? {})) && (
+              <small className="muted">Vista previa del diseño. El nombre y las imágenes se actualizarán al guardar.</small>
             )}
           </section>
         )}
-        {publicada && <Compartir slug={pagina!.slug} envios={Boolean(pagina!.secciones?.envios)} />}
+        {publicada && <Compartir slug={pagina!.slug} envios={Boolean(pagina!.secciones?.envios)} reservar={Boolean(pagina!.secciones?.reservar)} />}
       </div>
     </div>
   );
 }
 
-function Compartir({ slug, envios }: { slug: string; envios: boolean }) {
+function Compartir({ slug, envios, reservar }: { slug: string; envios: boolean; reservar: boolean }) {
   const avisar = useAvisar();
   const modo = useSesion().compania?.business_mode;
-  const enlaces = [{ nombre: 'Mi página', url: urlPagina(slug, modo) }, ...(envios ? [{ nombre: 'Directo a envíos', url: urlEnvio(slug, modo) }] : [])];
+  const enlaces = [
+    { nombre: 'Mi página', url: urlPagina(slug, modo) },
+    ...(reservar ? [{ nombre: 'Directo a reservar', url: urlReservar(slug, modo) }] : []),
+    ...(envios ? [{ nombre: 'Directo a envíos', url: urlEnvio(slug, modo) }] : []),
+  ];
   async function bajarQr(url: string) {
     const png = await QRCode.toDataURL(url, { width: 1024, margin: 2, errorCorrectionLevel: 'M' });
     const a = document.createElement('a');
@@ -375,6 +414,89 @@ function Compartir({ slug, envios }: { slug: string; envios: boolean }) {
     </section>
   );
 }
+
+/**
+ * Dónde ve el dueño lo que llega. Con la agenda en la nube, en la Agenda y en
+ * Pedidos del panel aunque su negocio sea de otro tipo (el menú no las enseña:
+ * de ahí el enlace); sin ella, en las pestañas de aquí arriba.
+ */
+function dondeLlega(es: Es, modo: BusinessMode | null | undefined, agendaNube: boolean) {
+  const citas = es !== 'tienda';
+  const pedidos = es !== 'agenda';
+  if (!agendaNube) {
+    return `Te avisan por WhatsApp y lo ves aquí, en ${citas && pedidos ? '«Reservas» y «Pedidos»' : citas ? '«Reservas»' : '«Pedidos»'}.`;
+  }
+  return (
+    <>
+      Te avisan por WhatsApp y entra en{' '}
+      {citas && <Link href="/panel/agenda">{esAppointmentFamily(modo) ? 'tu Agenda' : 'la Agenda'}</Link>}
+      {citas && pedidos && ' y en '}
+      {pedidos && <Link href="/panel/pedidos">Pedidos</Link>}.
+    </>
+  );
+}
+
+const POR_PAGINA_RESERVA = 12;
+
+/**
+ * En «Las dos», qué se reserva y qué se compra: una casilla por cosa del
+ * catálogo. Sin marcar, lo que diría el modo (dominio/tienda.ts, tipoPorDefecto).
+ */
+function QueSeReserva({ companyId, tipos, alCambiar }: { companyId: string; tipos: TiposDePagina; alCambiar: (t: TiposDePagina) => void }) {
+  const modo = useSesion().compania?.business_mode;
+  const [limite, setLimite] = useState(POR_PAGINA_RESERVA);
+  const { datos, cargando, error } = useCargar(async () => {
+    const { data, error } = await supabase()
+      .from('catalog')
+      .select('id, name, duration_minutes, schedule_slots, is_active')
+      .eq('company_id', companyId)
+      .order('sort_order', { ascending: true });
+    if (error) throw new Error(error.message);
+    type Fila = { id: string; name: string; duration_minutes: number | null; schedule_slots: string | null; is_active: number | null };
+    return ((data ?? []) as Fila[])
+      .filter((k) => k.is_active !== 0)
+      .map((k) => ({ id: k.id, nombre: k.name, duracion: k.duration_minutes, conGrupos: conFranjas(k.schedule_slots) }));
+  }, [companyId]);
+
+  const items = datos ?? [];
+  const seReserva = (k: (typeof items)[number]) => {
+    const m = tipos[k.id];
+    return m ? m !== 'producto' : tipoPorDefecto(modo, k) !== 'producto';
+  };
+
+  return (
+    <div className="tp-panel-campo">
+      <span>¿Qué se reserva?</span>
+      <small className="muted">Lo marcado se reserva con día y hora; lo demás se compra.</small>
+      {cargando && !datos && <small className="muted">Cargando tu catálogo…</small>}
+      {error && <small className="tp-panel-mal">No se pudo cargar tu catálogo.</small>}
+      {datos && items.length === 0 && <small className="muted">Tu catálogo está vacío. Agrega lo que ofreces en <Link href="/panel/catalogo">Catálogo</Link>.</small>}
+      <div className="tp-panel-reserva">
+        {items.slice(0, limite).map((k) => (
+          <label key={k.id} className="tp-panel-reserva__fila">
+            <input type="checkbox" checked={seReserva(k)} onChange={(e) => alCambiar({ ...tipos, [k.id]: e.target.checked ? 'cita' : 'producto' })} />
+            <span>{k.nombre}</span>
+            {seReserva(k) && <small className="muted">{k.conGrupos ? 'por grupos' : k.duracion ? `${k.duracion} min` : 'un turno'}</small>}
+          </label>
+        ))}
+      </div>
+      {items.length > limite && (
+        <button type="button" className="btn btn-sm btn-ghost" onClick={() => setLimite((n) => n + POR_PAGINA_RESERVA * 4)}>
+          Ver más ({items.length - limite})
+        </button>
+      )}
+    </div>
+  );
+}
+
+const conFranjas = (raw: string | null) => {
+  try {
+    const v = raw ? JSON.parse(raw) : [];
+    return Array.isArray(v) && v.length > 0;
+  } catch {
+    return false;
+  }
+};
 
 /** «Barbería El Centro» → barberia-el-centro. Mientras se escribe, deja el guion final. */
 function sugerirSlug(v: string, escribiendo = false): string {

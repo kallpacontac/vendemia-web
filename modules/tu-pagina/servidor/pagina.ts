@@ -2,11 +2,16 @@ import 'server-only';
 import { unstable_cache } from 'next/cache';
 import { rpc, servidor, log } from '@/modules/tu-pagina/servidor/supabase';
 import { SLUG } from '@/modules/tu-pagina/dominio/config';
+import type { TiposDePagina } from '@/modules/tu-pagina/dominio/tienda';
+import type { AparienciaPagina } from '@/modules/tu-pagina/dominio/apariencia';
 
 export interface Secciones {
   catalogo?: boolean;
   reservar?: boolean;
   envios?: boolean;
+  /** Qué es cada cosa del catálogo en esta página, si no es lo que diría el modo (dominio/tienda.ts). */
+  tipos?: TiposDePagina;
+  apariencia?: AparienciaPagina;
 }
 
 export interface PaginaPublica {

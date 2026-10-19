@@ -25,7 +25,7 @@ export function problemaImagenMarca(file: File): string | null {
   return null;
 }
 
-export async function subirImagenMarca(file: File, companyId: string): Promise<string> {
+export async function subirImagenMarca(file: File, companyId: string, destino: 'brand' | 'catalog' = 'brand'): Promise<string> {
   const problema = problemaImagenMarca(file);
   if (problema) throw new Error(problema);
 
@@ -35,7 +35,7 @@ export async function subirImagenMarca(file: File, companyId: string): Promise<s
   const firma = await fetch('/api/cloudinary/firma', {
     method: 'POST',
     headers: { 'content-type': 'application/json', authorization: `Bearer ${sesion.access_token}` },
-    body: JSON.stringify({ companyId, destino: 'brand' }),
+    body: JSON.stringify({ companyId, destino }),
   }).then(async (r) => {
     const j = await r.json();
     if (!r.ok) throw new Error(j.error ?? 'No se pudo preparar la subida');

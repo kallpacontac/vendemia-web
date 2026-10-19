@@ -12,6 +12,9 @@
  *   · Cita     → profesional (si se pide) → día → hora → datos → cita separada.
  *   · Grupo    → horario con «quedan N» → datos → cupo separado.
  *
+ * Cada ítem trae su tipo (lo marcó el dueño en Mi página o sale del modo): si
+ * hay de más de uno, se enseñan en secciones aparte, «Productos» y «Servicios».
+ *
  * Todo termina igual: código, resumen y «Avisar por WhatsApp» con el mensaje
  * ya escrito. Lo del cliente (nombre, celular) y el carrito se recuerdan en
  * ESTE navegador, nunca en nuestra base hasta que confirma.
@@ -33,6 +36,8 @@ import {
   type Escaparate as Datos,
   type Item,
   type LineaPedido,
+  type TipoItem,
+  modoDelTipo,
 } from '@/modules/tu-pagina/dominio/tienda';
 
 interface Props {
@@ -44,7 +49,14 @@ interface Props {
   puedeReservar: boolean;
   /** Lo decide la plantilla (dominio/plantillas.ts). */
   disposicion: Disposicion;
+  /** «reservas»: solo lo que se reserva (la página /reservar). */
+  solo?: 'reservas';
 }
+
+const ORDEN_TIPOS: TipoItem[] = ['cita', 'grupo', 'producto'];
+/** Sin ítems, el vocabulario del modo del negocio. */
+const modoTipo = (m: Datos['modo']): TipoItem => (m === 'ecommerce' ? 'producto' : m === 'recurring_appointment' ? 'grupo' : 'cita');
+const vocabularioDe = (t: TipoItem) => vocabulario(modoDelTipo(t));
 
 interface EnCarrito {
   item: string;
@@ -53,6 +65,7 @@ interface EnCarrito {
 }
 
 interface Hecho {
+  variante?: 'agenda' | 'tienda';
   titulo: string;
   codigo: string;
   mensaje: string;
@@ -99,8 +112,15 @@ const MENSAJE_FALLO: Record<string, string> = {
   not_found: 'Esta página ya no recibe reservas en línea. Escríbenos por WhatsApp.',
 };
 
-export default function Escaparate({ esc, slug, whatsapp, puedePedir, puedeReservar, disposicion }: Props) {
-  const v = vocabulario(esc.modo);
+export default function Escaparate({ esc: todo, slug, whatsapp, puedePedir, puedeReservar, disposicion, solo }: Props) {
+  const esc = useMemo(
+    () => (solo === 'reservas' ? { ...todo, items: todo.items.filter((i) => i.tipo !== 'producto') } : todo),
+    [todo, solo],
+  );
+  // Los tipos que hay, en orden; con uno solo, el título es el suyo y no hay secciones.
+  const tipos = ORDEN_TIPOS.filter((t) => esc.items.some((i) => i.tipo === t));
+  const v = vocabularioDe(tipos[0] ?? modoTipo(esc.modo));
+  const familias = useMemo(() => [...new Set(esc.items.map((i) => i.familia).filter(Boolean))], [esc.items]);
   const router = useRouter();
   const [familia, setFamilia] = useState('');
   const [abierto, setAbierto] = useState<string | null>(null);
@@ -133,7 +153,7 @@ export default function Escaparate({ esc, slug, whatsapp, puedePedir, puedeReser
 
   if (hecho) {
     return (
-      <section className="tp-hecho" aria-live="polite">
+      <section className={`tp-hecho${hecho.variante === 'tienda' ? ' tp-hecho--tienda' : ''}`} aria-live="polite">
         <div className="tp-hecho__marca"><Check size={36} aria-hidden="true" /></div>
         <h2 className="tp-h1">{hecho.titulo}</h2>
         <p className="tp-lead">Tu código es</p>
@@ -152,8 +172,8 @@ export default function Escaparate({ esc, slug, whatsapp, puedePedir, puedeReser
 
   return (
     <>
-      <section className="tp-catalogo" aria-label={cap(v.items)}>
-        <h2 className="tp-seccion">{cap(v.items)}</h2>
+      <section className="tp-catalogo" aria-label={tipos.length > 1 ? 'Lo que ofrecemos' : cap(v.items)}>
+        {tipos.length <= 1 && <h2 className="tp-seccion">{cap(v.items)}</h2>}
         {disposicion === 'carta' ? (
           // La carta no filtra: enseña todo, por secciones, como un menú.
           [...new Set(esc.items.map((i) => i.familia))].map((f) => (
@@ -166,19 +186,28 @@ export default function Escaparate({ esc, slug, whatsapp, puedePedir, puedeReser
           ))
         ) : (
           <>
-        {esc.familias.length > 1 && (
+        {familias.length > 1 && (
           <div className="tp-familias" role="group" aria-label="Filtrar">
             <button type="button" className="tp-chip" aria-pressed={!familia} onClick={() => setFamilia('')}>Todo</button>
-            {esc.familias.map((f) => (
+            {familias.map((f) => (
               <button key={f} type="button" className="tp-chip" aria-pressed={familia === f} onClick={() => setFamilia(f)}>{f}</button>
             ))}
           </div>
         )}
-        <div className={`tp-grid${disposicion === 'cuadricula' ? '' : ' tp-grid--lista'}`}>
-          {visibles.map((i) => (
-            <Tarjeta key={i.id} item={i} alAbrir={() => setAbierto(i.id)} />
-          ))}
-        </div>
+        {(tipos.length > 1 ? tipos : [null]).map((t) => {
+          const deEste = t ? visibles.filter((i) => i.tipo === t) : visibles;
+          if (t && deEste.length === 0) return null;
+          return (
+            <div key={t ?? 'todo'} className={`tp-modulo tp-modulo--${(t ?? tipos[0]) === 'producto' ? 'tienda' : 'agenda'}`}>
+              {t && <h2 className="tp-seccion">{cap(vocabularioDe(t).items)}</h2>}
+              <div className={`tp-grid${disposicion === 'cuadricula' ? '' : ' tp-grid--lista'}`}>
+                {deEste.map((i) => (
+                  <Tarjeta key={i.id} item={i} alAbrir={() => setAbierto(i.id)} />
+                ))}
+              </div>
+            </div>
+          );
+        })}
         {visibles.length === 0 && <p className="tp-vacio">Pronto habrá {v.items} aquí.</p>}
           </>
         )}
@@ -193,7 +222,7 @@ export default function Escaparate({ esc, slug, whatsapp, puedePedir, puedeReser
       )}
 
       {item && (
-        <Hoja titulo={item.nombre} alCerrar={() => setAbierto(null)}>
+        <Hoja titulo={item.nombre} variante={item.tipo === 'producto' ? 'tienda' : 'agenda'} alCerrar={() => setAbierto(null)}>
           {item.tipo === 'producto' ? (
             <FichaProducto
               item={item}
@@ -218,13 +247,13 @@ export default function Escaparate({ esc, slug, whatsapp, puedePedir, puedeReser
           ) : item.tipo === 'cita' ? (
             <Reservar item={item} esc={esc} slug={slug} alTerminar={terminar} />
           ) : (
-            <Inscribir item={item} slug={slug} persona={v.persona} alTerminar={terminar} />
+            <Inscribir item={item} slug={slug} persona={vocabularioDe('grupo').persona} alTerminar={terminar} />
           )}
         </Hoja>
       )}
 
       {verCarrito && (
-        <Hoja titulo="Tu pedido" alCerrar={() => setVerCarrito(false)}>
+        <Hoja titulo="Tu pedido" variante="tienda" alCerrar={() => setVerCarrito(false)}>
           <Carrito
             lineas={lineas}
             porId={porId}
@@ -233,7 +262,7 @@ export default function Escaparate({ esc, slug, whatsapp, puedePedir, puedeReser
             alCambiar={ponerCarrito}
             alTerminar={(h) => {
               ponerCarrito([]);
-              terminar(h);
+              terminar({ ...h, variante: 'tienda' });
             }}
           />
         </Hoja>
@@ -301,7 +330,7 @@ function FilaCarta({ item, alAbrir }: { item: Item; alAbrir: () => void }) {
   );
 }
 
-function Hoja({ titulo, alCerrar, children }: { titulo: string; alCerrar: () => void; children: React.ReactNode }) {
+function Hoja({ titulo, alCerrar, children, variante }: { titulo: string; alCerrar: () => void; children: React.ReactNode; variante: 'agenda' | 'tienda' }) {
   useEffect(() => {
     const antes = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
@@ -314,7 +343,7 @@ function Hoja({ titulo, alCerrar, children }: { titulo: string; alCerrar: () => 
   }, [alCerrar]);
   return (
     <div className="tp-velo" onClick={alCerrar}>
-      <div className="tp-hojita" role="dialog" aria-modal="true" aria-label={titulo} onClick={(e) => e.stopPropagation()}>
+      <div className={`tp-hojita tp-hojita--${variante}`} role="dialog" aria-modal="true" aria-label={titulo} onClick={(e) => e.stopPropagation()}>
         <button type="button" className="tp-hojita__cerrar" aria-label="Cerrar" onClick={alCerrar}><X size={20} /></button>
         {children}
       </div>

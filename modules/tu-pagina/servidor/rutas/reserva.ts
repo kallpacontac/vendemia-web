@@ -51,7 +51,7 @@ export async function POST(req: Request) {
     if (!pagina?.secciones.reservar) return responder({ status: 'not_found' }, 404);
     const crudos = await datosFrescos(c.slug);
     if (!crudos) return responder({ status: 'not_found' }, 404);
-    const esc = armarEscaparate(crudos);
+    const esc = armarEscaparate(crudos, pagina.secciones);
     const item = esc.items.find((i) => i.id === c.item);
     if (!item || item.tipo === 'producto') return responder({ status: 'no_existe' }, 404);
 

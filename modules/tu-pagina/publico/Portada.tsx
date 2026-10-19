@@ -1,7 +1,7 @@
 /**
  * tienda.vendemias.com/<negocio> · la portada (o agenda.*: es la misma).
  *
- * Cabecera, los atajos (envío, WhatsApp) y el escaparate: lo que el negocio
+ * Cabecera, los atajos (reservar, envío, WhatsApp) y el escaparate: lo que el negocio
  * vende, reserva o inscribe, sacado de su catálogo del panel. El escaparate es
  * la única isla con JavaScript; lo demás llega en HTML.
  *
@@ -11,15 +11,16 @@
  */
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
-import { MessageCircle, Package } from 'lucide-react';
+import { CalendarDays, MessageCircle, Package } from 'lucide-react';
 import Marco, { Cabecera } from '@/modules/tu-pagina/publico/Marco';
 import Escaparate from '@/modules/tu-pagina/publico/Escaparate';
 import { paginaDe, type PaginaPublica } from '@/modules/tu-pagina/servidor/pagina';
 import { escaparateDe } from '@/modules/tu-pagina/servidor/escaparate';
 import { urlWhatsApp } from '@/modules/tu-pagina/dominio/envio';
-import { defPlantilla, esPlantilla } from '@/modules/tu-pagina/dominio/plantillas';
+import { tipoPagina, type TipoPagina } from '@/modules/tu-pagina/dominio/plantillas';
+import { esHex } from '@/modules/tu-pagina/dominio/apariencia';
 
-type Props = { params: { slug: string }; searchParams?: { vista?: string; plantilla?: string; color?: string } };
+type Props = { params: { slug: string }; searchParams?: Record<string, string | undefined> };
 
 export async function generateMetadata({ params, searchParams }: Props): Promise<Metadata> {
   const p = await paginaDe(params.slug).catch(() => null);
@@ -32,13 +33,26 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
   };
 }
 
-/** La vista previa del panel: otra plantilla u otro color, sin tocar lo guardado. */
+/** La vista previa cambia contenido y diseño solo en esta respuesta. */
 function conVista(p: PaginaPublica, q: Props['searchParams']): PaginaPublica {
-  if (!q?.vista) return p;
+  if (q?.vista !== '1') return p;
+  const tipo: TipoPagina = q.tipo === 'agenda' || q.tipo === 'tienda' || q.tipo === 'ambos' ? q.tipo : tipoPagina(p.secciones);
+  const anterior = p.secciones.apariencia ?? {};
   return {
     ...p,
-    plantilla: esPlantilla(q.plantilla) ? q.plantilla : p.plantilla,
-    color: q.color && /^#[0-9A-Fa-f]{6}$/.test(q.color) ? q.color : p.color,
+    color: esHex(q.color) ? q.color : p.color,
+    secciones: {
+      ...p.secciones, catalogo: tipo !== 'agenda', reservar: tipo !== 'tienda',
+      apariencia: {
+        ...anterior,
+        colorTienda: esHex(q.ct) ? q.ct : anterior.colorTienda,
+        fondoAgenda: esHex(q.fa) ? q.fa : anterior.fondoAgenda,
+        fondoTienda: esHex(q.ft) ? q.ft : anterior.fondoTienda,
+        colorBanner: esHex(q.cb) ? q.cb : anterior.colorBanner,
+        mostrarBanner: q.mb === '0' ? false : q.mb === '1' ? true : anterior.mostrarBanner,
+        mostrarWhatsapp: q.mw === '0' ? false : q.mw === '1' ? true : anterior.mostrarWhatsapp,
+      },
+    },
   };
 }
 
@@ -46,11 +60,26 @@ export default async function Portada({ params, searchParams }: Props) {
   const guardada = await paginaDe(params.slug);
   if (!guardada) notFound();
   const p = conVista(guardada, searchParams);
-  const plantilla = defPlantilla(p.plantilla);
+  const tipo = tipoPagina(p.secciones);
   const conEscaparate = Boolean(p.secciones.catalogo || p.secciones.reservar);
-  const esc = conEscaparate ? await escaparateDe(p.slug) : null;
+  const esc = conEscaparate ? await escaparateDe(p.slug, p.secciones) : null;
   const hayItems = Boolean(esc && esc.items.length > 0);
-  const envioPrimero = plantilla.primero === 'envio' && p.secciones.envios;
+  const envioPrimero = !conEscaparate && Boolean(p.secciones.envios);
+  // Lo que se reserva tiene su atajo arriba y su enlace propio (/reservar): en un
+  // salón es lo primero que se busca, no algo a lo que se llega bajando.
+  const reservables = p.secciones.reservar ? (esc?.items ?? []).filter((i) => i.tipo !== 'producto') : [];
+  const soloGrupos = reservables.length > 0 && reservables.every((i) => i.tipo === 'grupo');
+  const reservaGrande = !envioPrimero && tipo !== 'tienda';
+
+  const reservar = reservables.length > 0 && (
+    <a className={`tp-accion${reservaGrande ? ' tp-accion--grande' : ''}`} href={`./${p.slug}/reservar`}>
+      <span className="tp-accion__icono"><CalendarDays size={22} aria-hidden="true" /></span>
+      <span className="tp-accion__texto">
+        <b>{soloGrupos ? 'Separar mi cupo' : 'Reservar una cita'}</b>
+        <span>{soloGrupos ? 'Elige tu horario y separa tu lugar' : 'Elige el servicio, el día y la hora'}</span>
+      </span>
+    </a>
+  );
 
   const envio = p.secciones.envios && (
     <a className={`tp-accion${envioPrimero ? ' tp-accion--grande' : ''}`} href={`./${p.slug}/envio`}>
@@ -68,22 +97,24 @@ export default async function Portada({ params, searchParams }: Props) {
       <div className="tp-hoja">
         {/* Enlaces relativos a propósito: valen igual en tienda o agenda (host/<negocio>) y en /tu-pagina/<negocio>. */}
         {envioPrimero && <div className="tp-acciones">{envio}</div>}
+        {reservaGrande && reservar && <div className="tp-acciones">{reservar}</div>}
         <nav className={`tp-acciones${hayItems || envioPrimero ? ' tp-acciones--fila' : ''}`} aria-label="Qué quieres hacer">
+          {!reservaGrande && reservar}
           {!envioPrimero && envio}
-          <a className="tp-accion" href={urlWhatsApp(p.whatsapp, `Hola ${p.titulo}`)} rel="noopener">
+          {p.secciones.apariencia?.mostrarWhatsapp !== false && <a className="tp-accion" href={urlWhatsApp(p.whatsapp, `Hola ${p.titulo}`)} rel="noopener">
             <span className="tp-accion__icono"><MessageCircle size={22} aria-hidden="true" /></span>
             <span className="tp-accion__texto">
               <b>Escríbenos por WhatsApp</b>
               <span>Te respondemos ahí</span>
             </span>
-          </a>
+          </a>}
         </nav>
         {esc && hayItems && (
           <Escaparate
             esc={esc}
             slug={p.slug}
             whatsapp={p.whatsapp}
-            disposicion={plantilla.disposicion}
+            disposicion={tipo === 'tienda' || tipo === 'ambos' ? 'cuadricula' : 'filas'}
             puedePedir={Boolean(p.secciones.catalogo)}
             puedeReservar={Boolean(p.secciones.reservar)}
           />
