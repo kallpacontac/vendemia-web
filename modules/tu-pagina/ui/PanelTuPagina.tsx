@@ -5,11 +5,9 @@
  * TU PÁGINA EN EL PANEL · la página del negocio y sus envíos
  * ══════════════════════════════════════════════════════════════════════════
  *
- * Dos pestañas:
- *   · Envíos    lo que llegó desde la página, para imprimir etiquetas y
- *               llevar la cuenta de qué se recogió y qué se entregó.
- *   · La página la dirección, el WhatsApp a donde llega todo y qué secciones
- *               se enseñan. Si todavía no hay página, se abre aquí.
+ * Cuando hay operaciones separadas (pedidos, reservas o envíos), se muestran
+ * como pestañas junto al editor. Si solo está el editor, no se dibuja una
+ * pestaña redundante: el título de la pantalla ya explica dónde está el usuario.
  *
  * Por fuera el producto se llama «Mi página» (Alvaro, 19-oct-2026; fue «Tu página» y, unas horas, «Pide»).
  * Por dentro sigue siendo tu-pagina: módulo, tablas, API y rutas.
@@ -120,13 +118,15 @@ export default function PanelTuPagina() {
         {cargando && !pagina && <p className="vacio">Cargando…</p>}
         {!cargando && !error && companyId && (
           <>
-            <div className="chip-tabs tp-panel-tabs" role="tablist">
-              {pestanas.map((p) => (
-                <button key={p.id} role="tab" aria-selected={activa === p.id} className={activa === p.id ? 'active' : ''} onClick={() => setPestana(p.id)}>
-                  {p.nombre}
-                </button>
-              ))}
-            </div>
+            {pestanas.length > 1 && (
+              <div className="tp-panel-tabs" role="tablist" aria-label="Secciones de Mi página">
+                {pestanas.map((p) => (
+                  <button key={p.id} role="tab" aria-selected={activa === p.id} className={activa === p.id ? 'active' : ''} onClick={() => setPestana(p.id)}>
+                    {p.nombre}
+                  </button>
+                ))}
+              </div>
+            )}
             {activa === 'pagina' ? (
               <MiPagina companyId={companyId} nombre={compania?.nombre ?? ''} pagina={pagina ?? null} alGuardar={releer} />
             ) : activa === 'pedidos' ? (
@@ -165,16 +165,28 @@ function MiPagina({ companyId, nombre, pagina, alGuardar }: { companyId: string;
   // Una página que nunca eligió trae la de la base ('vitrina'); la nueva, la que va con su negocio.
   const [plantilla, setPlantilla] = useState<Plantilla>(esPlantilla(pagina?.plantilla) ? pagina!.plantilla as Plantilla : plantillaPorDefecto(modo));
   const [libre, setLibre] = useState<boolean | null>(null);
+  const [errorSlug, setErrorSlug] = useState(false);
   const [guardando, setGuardando] = useState(false);
 
   useEffect(() => {
-    if (slug === pagina?.slug) return setLibre(true);
+    if (slug === pagina?.slug) {
+      setErrorSlug(false);
+      setLibre(true);
+      return;
+    }
+    let vigente = true;
     setLibre(null);
+    setErrorSlug(false);
     const t = setTimeout(async () => {
-      const { data } = await supabase().rpc('tu_pagina_slug_libre', { p_company: companyId, p_slug: slug });
-      setLibre(Boolean(data));
+      const { data, error } = await supabase().rpc('tu_pagina_slug_libre', { p_company: companyId, p_slug: slug });
+      if (!vigente) return;
+      setErrorSlug(Boolean(error));
+      setLibre(error ? null : data === true);
     }, 400);
-    return () => clearTimeout(t);
+    return () => {
+      vigente = false;
+      clearTimeout(t);
+    };
   }, [slug, companyId, pagina?.slug]);
 
   async function guardar() {
@@ -235,8 +247,8 @@ function MiPagina({ companyId, nombre, pagina, alGuardar }: { companyId: string;
             <span className="muted">{urlPagina('', compania?.business_mode).replace(/^https?:\/\//, '')}</span>
             <input className="input" value={slug} maxLength={40} onChange={(e) => setSlug(sugerirSlug(e.target.value, true))} />
           </div>
-          <small className={libre === false ? 'tp-panel-mal' : 'muted'}>
-            {libre === null ? 'Comprobando…' : libre ? 'Disponible' : 'No disponible: prueba con otra'}
+          <small className={libre === false || errorSlug ? 'tp-panel-mal' : 'muted'}>
+            {errorSlug ? 'No se pudo comprobar. Intenta nuevamente.' : libre === null ? 'Comprobando…' : libre ? 'Disponible' : 'No disponible: prueba con otra'}
           </small>
         </label>
 
@@ -309,7 +321,7 @@ function MiPagina({ companyId, nombre, pagina, alGuardar }: { companyId: string;
           </div>
         </div>
 
-        <button className="btn btn-primary" disabled={guardando || libre === false || !whatsapp.trim()} onClick={() => void guardar()}>
+        <button className="btn btn-primary" disabled={guardando || libre !== true || !whatsapp.trim()} onClick={() => void guardar()}>
           {guardando ? 'Publicando…' : publicada ? 'Guardar cambios' : 'Publicar mi página'}
         </button>
       </section>
