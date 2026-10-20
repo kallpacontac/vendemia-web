@@ -3,7 +3,7 @@ import { entorno } from '../entorno';
 import { rpc, servidor } from '../supabase';
 import { urlNegocio } from '../../dominio/config';
 import { cuerpoClase, cuerpoObjeto, huella, idClase, type DatosClase, type DatosObjeto } from '../../dominio/wallet-payload';
-import { datosArteWallet } from '../../dominio/wallet-arte';
+import { datosArteWallet, esCartilla } from '../../dominio/wallet-arte';
 import { resolverEstilo } from '../../dominio/estilo';
 import { urlArteWallet } from './arte';
 import { enlaceGuardar, ErrorWallet, guardadaEnWallet, upsert } from './google';
@@ -116,14 +116,19 @@ async function subirObjeto(d: DatosObjetoRpc) {
       ({ classId } = await sincronizarClase(programaDe(d)));
     }
     const demo = Boolean(d.class?.is_demo);
-    const fondo = demo ? '' : resolverEstilo(d.brand.style).fondo;
+    const tipo = d.program?.rule_type ?? 'stamps';
+    const meta = d.program?.threshold ?? 0;
+    // La cartilla con los sellos del cliente manda sobre la foto de fondo.
+    const fondo = demo || esCartilla(tipo, meta) ? '' : resolverEstilo(d.brand.style).fondo;
     const cuerpo = cuerpoObjeto(d, classId!, {
       urlNegocio: urlNegocio(d.brand.slug),
       urlArte: fondo || urlArteWallet(datosArteWallet(
         demo ? '#FF4900' : d.brand.bg_color,
         demo ? { plantilla: 'color' } : d.brand.style,
-        d.program?.rule_type ?? 'stamps',
-        d.program?.threshold ?? 0,
+        tipo,
+        meta,
+        // Cuántos lleva: la cartilla se llena con cada compra (una imagen por avance, no por cliente).
+        d.member.balance,
       )),
     });
     await upsert('loyaltyObject', d.pass.object_id, cuerpo, { hasUsers: false });

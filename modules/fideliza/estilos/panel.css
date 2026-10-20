@@ -44,7 +44,12 @@
 .fz-prev-wallet__avance{font-size:12px;font-weight:800;letter-spacing:.07em;margin:9px 0 5px}
 .fz-prev-wallet__premio{font-size:11px;line-height:1.35;min-height:30px}
 .fz-prev-wallet__qr{width:87px;height:87px;margin:13px auto;border:7px solid #fff;border-radius:7px;background:repeating-conic-gradient(#171716 0 25%,#fff 0 50%) 0 0/12px 12px}
-.fz-prev-wallet__arte{display:block;width:100%;height:auto;aspect-ratio:1032/812;object-fit:cover;border-radius:11px}
+.fz-prev-wallet__arte{display:block;width:100%;height:auto;aspect-ratio:1032/336;object-fit:cover;border-radius:11px}
+.fz-sellos{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:6px}
+.fz-sello{display:flex;flex-direction:column;align-items:center;gap:4px;min-width:64px;padding:8px 6px;border:1px solid var(--line,#e5e5e5);border-radius:12px;background:transparent;cursor:pointer;font-size:12px;color:inherit}
+.fz-sello svg{width:26px;height:26px}
+.fz-sello[aria-pressed="true"]{border-color:#FF4900;box-shadow:0 0 0 2px rgba(255,73,0,.18);font-weight:600}
+.fz-sello:disabled{opacity:.5;cursor:default}
 /* La caja: pensada para una mano, en el móvil. */
 .fz-caja{max-width:560px}
 .fz-gran{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;min-height:60px;border-radius:16px;border:none;font:800 17px 'Plus Jakarta Sans';cursor:pointer}

@@ -1,7 +1,7 @@
 import 'server-only';
 import { createHmac, timingSafeEqual } from 'crypto';
 import { FIDELIZA_URL } from '../../dominio/config';
-import { validarArteWallet, type ArteWallet } from '../../dominio/wallet-arte';
+import { leerDatosArte, type ArteWallet } from '../../dominio/wallet-arte';
 import { entorno, FaltaConfiguracion } from '../entorno';
 
 const firma = (datos: string) => {
@@ -10,7 +10,7 @@ const firma = (datos: string) => {
   return createHmac('sha256', clave).update(`fideliza-wallet-arte:v1:${datos}`).digest('base64url');
 };
 
-/** Imagen pública del programa: solo color, plantilla, regla y meta; nunca saldo ni miembro. */
+/** Imagen pública del pase: color, plantilla, regla, meta, icono y cuántos sellos van; nunca quién es el cliente. */
 export function urlArteWallet(arte: ArteWallet): string {
   const datos = Buffer.from(JSON.stringify(arte)).toString('base64url');
   const u = new URL('/api/fideliza/publico/wallet-arte', FIDELIZA_URL);
@@ -27,7 +27,7 @@ export function leerArteWallet(datos: string | null, sello: string | null): Arte
     const bruto = Buffer.from(datos, 'base64url');
     if (bruto.toString('base64url') !== datos) return null;
     const arte: unknown = JSON.parse(bruto.toString('utf8'));
-    return validarArteWallet(arte) ? arte : null;
+    return leerDatosArte(arte);
   } catch {
     return null;
   }

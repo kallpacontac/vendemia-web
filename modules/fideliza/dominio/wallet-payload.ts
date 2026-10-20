@@ -16,6 +16,7 @@
 import { createHash } from 'crypto';
 import { UNIDAD, type TipoRegla } from './formato';
 import { colorValido, resolverEstilo, type Estilo } from './estilo';
+import { esCartilla } from './wallet-arte';
 
 export interface Marca {
   slug: string;
@@ -52,7 +53,9 @@ export function cuerpoClase(
   const nombreEmisor = demo ? 'Vendemia' : d.brand.display_name;
   const programa = demo ? 'Vendemia Fideliza' : d.program_name;
   const estilo = resolverEstilo(d.brand.style);
-  const portada = !demo && estilo.fondo ? estilo.fondo : opciones.urlArte ?? null;
+  // Con cartilla de sellos manda la cartilla; la foto de fondo, solo para puntos.
+  const cartilla = esCartilla(d.rule_type ?? 'stamps', d.threshold ?? 0);
+  const portada = !demo && estilo.fondo && !cartilla ? estilo.fondo : opciones.urlArte ?? null;
   const campo = (fieldPath: string) => ({ firstValue: { fields: [{ fieldPath }] } });
   const saldo = (campoBase: string) => ({
     firstValue: { fields: [{ fieldPath: `object.${campoBase}.label` }] },

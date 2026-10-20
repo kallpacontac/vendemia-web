@@ -90,10 +90,20 @@ test('4b · cada comercio lleva su paleta, portada y saldos visibles en Google W
       brand: { ...marca, bg_color: '#305A70', style: { plantilla: 'foto', fondo: 'https://ejemplo.com/cafe.jpg' } },
       logo_valido: true,
     },
-    { urlNegocio: 'https://fideliza.vendemias.com/n/barberia-centro', logoVendemia: 'https://vendemias.com/logo.png', demo: false },
+    { urlNegocio: 'https://fideliza.vendemias.com/n/barberia-centro', logoVendemia: 'https://vendemias.com/logo.png', demo: false, urlArte: 'https://fideliza.vendemias.com/api/fideliza/publico/wallet-arte?d=x' },
   );
   assert.equal(clase.hexBackgroundColor, '#305A70');
-  assert.equal(clase.heroImage.sourceUri.uri, 'https://ejemplo.com/cafe.jpg');
+  // Con sellos manda la cartilla; la foto de fondo queda para los programas de puntos.
+  assert.match(clase.heroImage.sourceUri.uri, /wallet-arte/);
+  const conPuntos = payload.cuerpoClase(
+    {
+      program_id: 'p', program_name: 'Club del Café', reward: 'Café gratis', threshold: 100, rule_type: 'points',
+      brand: { ...marca, bg_color: '#305A70', style: { plantilla: 'foto', fondo: 'https://ejemplo.com/cafe.jpg' } },
+      logo_valido: true,
+    },
+    { urlNegocio: 'https://fideliza.vendemias.com/n/barberia-centro', logoVendemia: 'https://vendemias.com/logo.png', demo: false },
+  );
+  assert.equal(conPuntos.heroImage.sourceUri.uri, 'https://ejemplo.com/cafe.jpg');
   const filas = clase.classTemplateInfo.cardTemplateOverride.cardRowTemplateInfos;
   assert.equal(filas[0].twoItems.startItem.secondValue.fields[0].fieldPath, 'object.loyaltyPoints.balance');
   assert.equal(filas[0].twoItems.endItem.secondValue.fields[0].fieldPath, 'object.secondaryLoyaltyPoints.balance');
@@ -118,15 +128,26 @@ test('4c · el pase explica cuánto falta según la regla y el saldo real', () =
   assert.match(o.textModulesData[0].body, /Te faltan 2 puntos para Un café/);
 });
 
-test('4d · la ilustración pública de Wallet nunca contiene saldo ni datos del titular', () => {
-  const d = walletArte.datosArteWallet('#CB5C2F', { plantilla: 'color' }, 'stamps', 10);
-  assert.deepEqual(Object.keys(d).sort(), ['color', 'plantilla', 'tipo', 'umbral']);
+test('4d · la cartilla de Wallet lleva el avance, nunca quién es el cliente', () => {
+  const estilo = { plantilla: 'color', sello: 'corazon' };
+  const d = walletArte.datosArteWallet('#CB5C2F', estilo, 'stamps', 10, 7);
+  assert.deepEqual(Object.keys(d).sort(), ['color', 'llenos', 'plantilla', 'sello', 'tipo', 'umbral']);
   assert.equal(walletArte.validarArteWallet(d), true);
   assert.equal(walletArte.validarArteWallet({ ...d, balance: 7, alias: 'Ana' }), false);
+  assert.equal(walletArte.validarArteWallet({ ...d, llenos: 11 }), false, 'más llenos que la meta');
+  assert.equal(walletArte.validarArteWallet({ ...d, sello: '<script>' }), false);
+  // Los pases emitidos antes siguen teniendo imagen.
+  assert.deepEqual(walletArte.leerDatosArte({ color: '#CB5C2F', plantilla: 'color', tipo: 'stamps', umbral: 10 })?.llenos, 0);
   const svg = walletArte.svgArteWallet(d);
-  assert.match(svg, /width="1032" height="812"/);
-  assert.equal((svg.match(/r="58"/g) ?? []).length, 10);
+  assert.match(svg, /width="1032" height="336"/);
+  assert.equal((svg.match(/class="lleno"/g) ?? []).length, 7);
+  assert.equal((svg.match(/class="vacio"/g) ?? []).length, 3);
   assert.ok(!svg.includes('Ana'));
+  // Acotado: nunca más llenos que la meta.
+  assert.equal(walletArte.datosArteWallet('#CB5C2F', estilo, 'stamps', 10, 40).llenos, 10);
+  // Puntos: barra, no cartilla.
+  assert.equal(walletArte.esCartilla('points', 10), false);
+  assert.match(walletArte.svgArteWallet(walletArte.datosArteWallet('#CB5C2F', estilo, 'points', 100, 18)), /class="lleno"/);
 });
 
 test('4e · el objeto de Wallet recibe su arte y los sellos reales solo en el texto privado', () => {

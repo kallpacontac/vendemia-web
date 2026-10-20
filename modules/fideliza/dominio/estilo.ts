@@ -11,6 +11,8 @@
  * principal sigue siendo loyalty_settings.bg_color, que es el que usa también
  * la tarjeta de Google Wallet.
  */
+import type { Sello } from './sellos';
+
 export type Plantilla = 'clasica' | 'oscura' | 'vidrio' | 'foto' | 'marco' | 'color';
 export type EstiloBotones = 'auto' | 'relleno' | 'contorno' | 'vidrio';
 export type Forma = 'auto' | 'pildora' | 'redondeado' | 'recto';
@@ -31,6 +33,8 @@ export interface Estilo {
   place_nombre?: string;
   /** Red que se abre al tocar el avatar. Vacío = el avatar no es enlace. */
   historia?: RedHistoria | '';
+  /** Icono del sello de la tarjeta de puntos (Google Wallet). */
+  sello?: Sello;
 }
 
 export const PLANTILLAS: { id: Plantilla; nombre: string; describe: string }[] = [

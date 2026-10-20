@@ -20,7 +20,8 @@ import { urlAyuda } from '@/modules/fideliza/dominio/botones';
 import { urlNegocio } from '@/modules/fideliza/dominio/config';
 import { aCentimos, fecha, fraseRegla, soles, unidades, type TipoRegla } from '@/modules/fideliza/dominio/formato';
 import { resolverEstilo, tintaSobre, type Estilo } from '@/modules/fideliza/dominio/estilo';
-import { datosArteWallet, svgArteWallet } from '@/modules/fideliza/dominio/wallet-arte';
+import { datosArteWallet, esCartilla, svgArteWallet } from '@/modules/fideliza/dominio/wallet-arte';
+import { SELLOS, selloValido, type Sello } from '@/modules/fideliza/dominio/sellos';
 
 const PASOS = ['Negocio y sucursal', 'Objetivo', 'Tipo de regla', 'Beneficio', 'Marca', 'Probar y publicar'];
 const OBJETIVOS = [
@@ -107,7 +108,7 @@ function ProgramaPagina() {
 
   // ── Borrador local ────────────────────────────────────────────────────
   const [negocio, setNegocio] = useState({ display_name: '', slug: '', tagline: '' });
-  const [marca, setMarca] = useState({ bg_color: '#FF4900', logo_url: '', support_url: '', require_external_ref: false });
+  const [marca, setMarca] = useState({ bg_color: '#FF4900', logo_url: '', support_url: '', require_external_ref: false, sello: 'check' as Sello });
   const [prog, setProg] = useState({ name: '', description: '', objective: null as string | null });
   const [b, setB] = useState<Borrador>({ rule_type: 'stamps', stamps_per_purchase: 1, points_per_unit: 1, unit_cents: 100, rounding: 'floor', min_purchase_cents: 0 });
   const [textos, setTextos] = useState({ min: '', unidad: '1,00', ejemplo: '50' });
@@ -122,6 +123,7 @@ function ProgramaPagina() {
         logo_url: ajustes.logo_url ?? '',
         support_url: ajustes.support_url ?? '',
         require_external_ref: ajustes.require_external_ref,
+        sello: selloValido((ajustes.page_style as Partial<Estilo> | null)?.sello),
       });
       if (ajustes.logo_checked) setLogo({ ok: Boolean(ajustes.logo_checked.ok), errores: ajustes.logo_checked.errores ?? [], avisos: ajustes.logo_checked.avisos ?? [] });
     }
@@ -220,6 +222,11 @@ function ProgramaPagina() {
         companyId,
         datos: { bg_color: marca.bg_color, logo_url: marca.logo_url, support_url: supportUrl, require_external_ref: marca.require_external_ref },
       });
+      const estiloActual = (ajustes?.page_style ?? null) as Partial<Estilo> | null;
+      if (selloValido(estiloActual?.sello) !== marca.sello) {
+        // page_style se guarda entero: se conserva lo de «Mi página» y solo cambia el sello.
+        await accion('estilo.guardar', { companyId, estilo: { plantilla: 'clasica', ...(estiloActual ?? {}), sello: marca.sello } });
+      }
       setMarca((actual) => ({ ...actual, support_url: supportUrl }));
       setLogo(r.logo);
       const malo = Boolean(r.logo && !r.logo.ok);
@@ -360,6 +367,11 @@ function ProgramaPagina() {
   const p = datos?.programa;
   const metaVistaWallet = b.reward_threshold && b.reward_threshold > 0 ? b.reward_threshold : 10;
   const saldoVistaWallet = Math.min(3, metaVistaWallet);
+  const estiloVistaWallet = { ...((ajustes?.page_style ?? {}) as Partial<Estilo>), sello: marca.sello };
+  const fondoVistaWallet = esCartilla(b.rule_type ?? 'stamps', metaVistaWallet) ? '' : resolverEstilo(estiloVistaWallet).fondo;
+  const arteVistaWallet =
+    fondoVistaWallet ||
+    `data:image/svg+xml,${encodeURIComponent(svgArteWallet(datosArteWallet(marca.bg_color, estiloVistaWallet, b.rule_type ?? 'stamps', metaVistaWallet, saldoVistaWallet)))}`;
   return (
     <>
       {p && (
@@ -562,6 +574,27 @@ function ProgramaPagina() {
                   <span>{logo.ok ? 'El logo sirve para Google Wallet.' : logo.errores.join(' ')} {logo.avisos.join(' ')}</span>
                 </div>
               )}
+              {b.rule_type !== 'points' && (
+                <div className="fz-campo">
+                  <label className="field-label">Icono del sello</label>
+                  <div className="fz-sellos" role="group" aria-label="Icono del sello">
+                    {SELLOS.map((s) => (
+                      <button
+                        key={s.id}
+                        type="button"
+                        className="fz-sello"
+                        aria-pressed={marca.sello === s.id}
+                        disabled={!editable}
+                        onClick={() => setMarca({ ...marca, sello: s.id })}
+                      >
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" dangerouslySetInnerHTML={{ __html: s.trazo }} />
+                        {s.nombre}
+                      </button>
+                    ))}
+                  </div>
+                  <small>Se marca uno por cada sello que gana el cliente. La última casilla siempre es un regalo: el premio.</small>
+                </div>
+              )}
               {campo(
                 'Web o ayuda (opcional)',
                 <input
@@ -580,7 +613,7 @@ function ProgramaPagina() {
               )}
               <small className="fz-def">Al pulsar «Guardar y seguir» comprobamos si el logo sirve para Google Wallet.</small>
               <p className="fz-def" style={{ marginTop: 12 }}>
-                La plantilla e imagen que elijas en <a href="/panel/fideliza/mi-pagina">Mi página</a> también visten tu pase de Google Wallet. El avance real se muestra con los datos que Google actualiza en cada tarjeta.
+                En Google Wallet, la imagen de abajo es la cartilla del cliente: se van llenando los sellos con cada compra. Con puntos, una barra de avance (o la foto de fondo de <a href="/panel/fideliza/mi-pagina">Mi página</a>, si pusiste una).
               </p>
             </div>
             <div>
@@ -606,7 +639,7 @@ function ProgramaPagina() {
                 <p className="fz-prev-wallet__premio">{b.reward_description ? `Próximo premio: ${b.reward_description}` : 'Configura tu próximo premio'}</p>
                 <div className="fz-prev-wallet__qr" aria-label="Vista ilustrativa del QR" />
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img className="fz-prev-wallet__arte" alt="" src={resolverEstilo((ajustes?.page_style ?? null) as Partial<Estilo> | null).fondo || `data:image/svg+xml,${encodeURIComponent(svgArteWallet(datosArteWallet(marca.bg_color, (ajustes?.page_style ?? null) as Partial<Estilo> | null, b.rule_type ?? 'stamps', b.reward_threshold ?? 10)))}`} />
+                <img className="fz-prev-wallet__arte" alt="" src={arteVistaWallet} />
               </div>
               <p className="fz-def">Vista orientativa con saldo de ejemplo. Google decide la apariencia exacta de la pantalla «Agregar» y del pase guardado.</p>
             </div>

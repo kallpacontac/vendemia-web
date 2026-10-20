@@ -146,6 +146,7 @@ export const ACCIONES = {
           place_id: z.string().max(200).regex(/^[A-Za-z0-9_-]*$/).optional(),
           place_nombre: textoCorto(120).optional(),
           historia: z.enum(['instagram', 'tiktok', '']).optional(),
+          sello: z.enum(['check', 'corazon', 'estrella', 'cafe', 'tijera', 'regalo']).optional(),
         })
         .strict(),
     }),
