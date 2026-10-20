@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import ClinicaDentalEjemplo, { esDisenoClinica } from '@/modules/tu-pagina/publico/ClinicaDentalEjemplo';
+import ClinicaDentalEjemplo from '@/modules/tu-pagina/publico/ClinicaDentalEjemplo';
 
 export const metadata: Metadata = {
   title: 'Clínica Sonrisa Norte · Ejemplos de agenda | Vendemia',
@@ -7,7 +7,7 @@ export const metadata: Metadata = {
 };
 
 export default function PaginaClinica({ searchParams }: { searchParams?: { diseno?: string } }) {
-  const diseno = esDisenoClinica(searchParams?.diseno) ? searchParams.diseno : 'clara';
+  const diseno = searchParams?.diseno === 'editorial' || searchParams?.diseno === 'tienda' ? searchParams.diseno : 'clara';
   const hoy = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Lima', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
   return <ClinicaDentalEjemplo diseno={diseno} hoy={hoy} />;
 }

@@ -5,7 +5,6 @@ import { ArrowRight, CalendarDays, Check, ChevronLeft, ChevronRight, Clock3, Inf
 import './negocios-ejemplo.css';
 
 export type DisenoClinica = 'clara' | 'editorial' | 'tienda';
-export const esDisenoClinica = (valor: unknown): valor is DisenoClinica => valor === 'clara' || valor === 'editorial' || valor === 'tienda';
 
 const SERVICIOS = [
   { id: 0, nombre: 'Evaluación dental', descripcion: 'Conoce el estado de tu sonrisa y recibe un plan claro para cuidarla.', duracion: 30, precio: 60, categoria: 'Diagnóstico' },
