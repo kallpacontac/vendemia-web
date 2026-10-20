@@ -5,8 +5,9 @@
  *
  * Lo primero que se ve es cuánto falta para responder: el plazo legal son 15
  * días hábiles improrrogables. El dueño escribe su respuesta aquí (queda en la
- * hoja, que no se borra) y la manda él por WhatsApp o por correo, con el texto
- * ya puesto: Vendemia no envía correos.
+ * hoja, que no se borra) y la manda por correo (Resend, lib/correo.ts; queda la
+ * fecha de envío como constancia) o por WhatsApp con el texto ya puesto. Sin
+ * Resend configurado, «Enviar por correo» abre el correo del dueño.
  */
 import { useMemo, useState } from 'react';
 import { Mail, MessageCircle } from 'lucide-react';
@@ -36,6 +37,7 @@ export default function Reclamos({ companyId }: { companyId: string }) {
   const [abierto, setAbierto] = useState<string | null>(null);
   const [borrador, setBorrador] = useState<Record<string, string>>({});
   const [guardando, setGuardando] = useState(false);
+  const [enviando, setEnviando] = useState<string | null>(null);
   const hoy = useMemo(hoyLima, []);
 
   const { datos, cargando, error, releer } = useCargar(async () => {
@@ -61,6 +63,31 @@ export default function Reclamos({ companyId }: { companyId: string }) {
     if (error) return avisar(error.code === '42501' ? 'Esto lo responde el dueño o el administrador.' : 'No se pudo guardar la respuesta.', 'error');
     avisar('Respuesta guardada en la hoja. Ahora envíasela al cliente.');
     releer();
+  }
+
+  async function porCorreo(r: Reclamo, texto: string) {
+    const mailto = `mailto:${r.consumidor.email}?subject=${encodeURIComponent(`Respuesta a tu hoja de reclamación ${numeroHoja(r.numero, r.creado_at)}`)}&body=${encodeURIComponent(mensaje(r, texto))}`;
+    if (!r.respuesta || r.respuesta.trim() !== texto) return avisar('Guarda primero la respuesta: es la que se envía.', 'error');
+    setEnviando(r.id);
+    try {
+      const { data } = await supabase().auth.getSession();
+      const res = await fetch('/api/tu-pagina/panel/reclamo-respuesta', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', authorization: `Bearer ${data.session?.access_token ?? ''}` },
+        body: JSON.stringify({ company_id: companyId, id: r.id }),
+      });
+      const j = (await res.json().catch(() => ({}))) as { status?: string };
+      if (j.status === 'ok') {
+        avisar(`Respuesta enviada a ${r.consumidor.email}`);
+        releer();
+      } else if (j.status === 'sin_correo') {
+        window.location.href = mailto;
+      } else {
+        avisar('No se pudo enviar el correo. Prueba de nuevo o envíalo por WhatsApp.', 'error');
+      }
+    } finally {
+      setEnviando(null);
+    }
   }
 
   const mensaje = (r: Reclamo, texto: string) =>
@@ -101,7 +128,7 @@ export default function Reclamos({ companyId }: { companyId: string }) {
             </button>
             {abiertoEste && (
               <div className="tp-rec-hoja">
-                <h4>Consumidor</h4>
+                <h4>Consumidor{r.copia_enviada_at ? ' · recibió su copia por correo' : ''}</h4>
                 <p>{r.consumidor.nombre} · {r.consumidor.tipo_doc} {r.consumidor.num_doc}</p>
                 <p>{r.consumidor.domicilio} · {telefonoBonito(r.consumidor.telefono)}{r.consumidor.email ? ` · ${r.consumidor.email}` : ''}</p>
                 {r.consumidor.menor && <p>Menor de edad. Apoderado: {r.consumidor.apoderado}</p>}
@@ -112,7 +139,10 @@ export default function Reclamos({ companyId }: { companyId: string }) {
                 <p>{r.detalle}</p>
                 <h4>Lo que pide</h4>
                 <p>{r.pedido}</p>
-                <h4>Tu respuesta{r.respondido_at ? ` · guardada el ${fecha(r.respondido_at)}` : ''}</h4>
+                <h4>
+                  Tu respuesta{r.respondido_at ? ` · guardada el ${fecha(r.respondido_at)}` : ''}
+                  {r.respuesta_enviada_at ? ` · enviada por correo el ${fecha(r.respuesta_enviada_at)}` : ''}
+                </h4>
                 <textarea
                   className="input"
                   rows={4}
@@ -132,12 +162,9 @@ export default function Reclamos({ companyId }: { companyId: string }) {
                         <MessageCircle size={15} /> Enviar por WhatsApp
                       </a>
                       {r.consumidor.email && (
-                        <a
-                          className="btn btn-sm btn-ghost"
-                          href={`mailto:${r.consumidor.email}?subject=${encodeURIComponent(`Respuesta a tu hoja de reclamación ${numeroHoja(r.numero, r.creado_at)}`)}&body=${encodeURIComponent(mensaje(r, texto.trim()))}`}
-                        >
-                          <Mail size={15} /> Enviar por correo
-                        </a>
+                        <button className="btn btn-sm btn-ghost" disabled={enviando === r.id} onClick={() => void porCorreo(r, texto.trim())}>
+                          <Mail size={15} /> {enviando === r.id ? 'Enviando…' : r.respuesta_enviada_at ? 'Reenviar por correo' : 'Enviar por correo'}
+                        </button>
                       )}
                     </>
                   )}

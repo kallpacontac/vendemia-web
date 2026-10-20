@@ -18,6 +18,10 @@
 --   proveedor {razon_social, ruc, direccion}       lo que encabeza cada hoja
 -- Cada hoja guarda una COPIA del proveedor: si cambia de dirección mañana, las
 -- hojas de ayer siguen diciendo lo que decían.
+--
+-- Correos (Resend, lib/correo.ts): la web manda la copia al consumidor y el aviso
+-- al dueño al crear la hoja, y la respuesta desde el panel. Aquí solo se anota
+-- CUÁNDO salieron (copia_enviada_at, respuesta_enviada_at): es la constancia.
 -- ═══════════════════════════════════════════════════════════════════════════════
 
 begin;
@@ -38,6 +42,8 @@ create table if not exists public.reclamos (
     estado         text not null default 'pendiente' check (estado in ('pendiente', 'respondido')),
     respuesta      text check (respuesta is null or char_length(respuesta) <= 3000),
     respondido_at  timestamptz,
+    copia_enviada_at      timestamptz,
+    respuesta_enviada_at  timestamptz,
     idem           text not null,
     unique (company_id, numero),
     unique (company_id, idem)
@@ -139,7 +145,12 @@ begin
         p_idem)
     returning * into v_fila;
 
-    return jsonb_build_object('status', 'ok', 'numero', v_fila.numero, 'fecha', v_fila.creado_at, 'vence', v_fila.vence);
+    -- A quién avisar: dueños y administradores del negocio. Solo lo ve el servidor (clave srv).
+    return jsonb_build_object('status', 'ok', 'numero', v_fila.numero, 'fecha', v_fila.creado_at, 'vence', v_fila.vence,
+        'avisar', coalesce((
+            select jsonb_agg(distinct u.email)
+              from public.memberships m join auth.users u on u.id::text = m.auth_user_id
+             where m.company_id = v_pag.company_id and m.role in ('owner', 'admin') and coalesce(u.email, '') <> ''), '[]'::jsonb));
 exception
     when invalid_text_representation or numeric_value_out_of_range or check_violation then
         return jsonb_build_object('status', 'datos_invalidos');
@@ -158,7 +169,30 @@ begin
     return jsonb_build_object('status', 'ok');
 end $$;
 
+-- La copia al consumidor salió (la anota el servidor tras enviarla).
+create or replace function public.reclamo_srv_copia_enviada(p_slug text, p_idem text)
+returns void language plpgsql security definer set search_path = public as $$
+begin
+    perform public.loyalty_srv_check();
+    update public.reclamos r set copia_enviada_at = coalesce(r.copia_enviada_at, now())
+      from public.tu_pagina p
+     where p.slug = lower(p_slug) and r.company_id = p.company_id and r.idem = p_idem;
+end $$;
+
+-- La respuesta salió por correo desde el panel: constancia de la comunicación.
+create or replace function public.reclamos_respuesta_enviada(p_company text, p_id uuid)
+returns void language plpgsql security definer set search_path = public as $$
+begin
+    perform public.tu_pagina_autorizar(p_company);
+    update public.reclamos set respuesta_enviada_at = now()
+     where id = p_id and company_id = p_company and estado = 'respondido';
+end $$;
+
 revoke execute on function public.reclamo_vence(date) from public, anon, authenticated;
+revoke execute on function public.reclamo_srv_copia_enviada(text, text) from public, authenticated;
+grant  execute on function public.reclamo_srv_copia_enviada(text, text) to anon;
+revoke execute on function public.reclamos_respuesta_enviada(text, uuid) from public, anon;
+grant  execute on function public.reclamos_respuesta_enviada(text, uuid) to authenticated;
 revoke execute on function public.reclamos_responder(text, uuid, text) from public, anon;
 grant  execute on function public.reclamos_responder(text, uuid, text) to authenticated;
 revoke execute on function public.reclamo_srv_crear(text, jsonb, text) from public, authenticated;

@@ -43,7 +43,7 @@ export default function FormularioReclamo({ slug, whatsapp, titulo, proveedor }:
   const [errores, setErrores] = useState<ErroresHoja>({});
   const [enviando, setEnviando] = useState(false);
   const [fallo, setFallo] = useState('');
-  const [hecho, setHecho] = useState<{ numero: number; fecha: string; vence: string } | null>(null);
+  const [hecho, setHecho] = useState<{ numero: number; fecha: string; vence: string; copia: boolean } | null>(null);
   const idem = useRef(nuevoIdem());
   const formulario = useRef<HTMLFormElement>(null);
 
@@ -74,9 +74,9 @@ export default function FormularioReclamo({ slug, whatsapp, titulo, proveedor }:
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ slug, idem: idem.current, web: trampa, hoja: h }),
       });
-      const j = (await r.json().catch(() => ({}))) as { status?: string; numero?: number; fecha?: string; vence?: string; errores?: ErroresHoja };
+      const j = (await r.json().catch(() => ({}))) as { status?: string; numero?: number; fecha?: string; vence?: string; copia?: boolean; errores?: ErroresHoja };
       if (j.status === 'ok' && j.numero && j.fecha && j.vence) {
-        setHecho({ numero: j.numero, fecha: j.fecha, vence: j.vence });
+        setHecho({ numero: j.numero, fecha: j.fecha, vence: j.vence, copia: Boolean(j.copia) });
         window.scrollTo({ top: 0 });
         return;
       }
@@ -101,7 +101,10 @@ export default function FormularioReclamo({ slug, whatsapp, titulo, proveedor }:
         <div className="tp-hecho tp-no-imprimir">
           <div className="tp-hecho__marca"><Check size={36} aria-hidden="true" /></div>
           <h2 className="tp-h1">Hoja registrada</h2>
-          <p className="tp-lead">Tienes respuesta a más tardar el <b>{fecha(hecho.vence)}</b>. Guarda tu copia:</p>
+          <p className="tp-lead">
+            Tienes respuesta a más tardar el <b>{fecha(hecho.vence)}</b>.{' '}
+            {hecho.copia ? <>Te enviamos una copia a <b>{c.email}</b>. También puedes guardarla aquí:</> : 'Guarda tu copia:'}
+          </p>
           <button type="button" className="tp-boton" onClick={() => window.print()}>
             <Printer size={20} aria-hidden="true" /> Imprimir o guardar en PDF
           </button>
@@ -160,7 +163,7 @@ export default function FormularioReclamo({ slug, whatsapp, titulo, proveedor }:
         {campo('num_doc', 'Número de documento', <input id="tp-r-num_doc" value={c.num_doc} inputMode={c.tipo_doc === 'DNI' || c.tipo_doc === 'RUC' ? 'numeric' : 'text'} maxLength={15} onChange={(e) => ponerC('num_doc', e.target.value)} />)}
         {campo('domicilio', 'Domicilio', <input id="tp-r-domicilio" value={c.domicilio} autoComplete="street-address" maxLength={200} onChange={(e) => ponerC('domicilio', e.target.value)} />)}
         {campo('telefono', 'Celular', <input id="tp-r-telefono" value={c.telefono} inputMode="tel" autoComplete="tel" placeholder="987 654 321" onChange={(e) => ponerC('telefono', e.target.value)} />)}
-        {campo('email', 'Correo', <input id="tp-r-email" value={c.email} type="email" autoComplete="email" maxLength={120} onChange={(e) => ponerC('email', e.target.value)} />, 'Opcional: para responderte por escrito')}
+        {campo('email', 'Correo', <input id="tp-r-email" value={c.email} type="email" autoComplete="email" maxLength={120} onChange={(e) => ponerC('email', e.target.value)} />, 'Opcional: te llega una copia de tu hoja y la respuesta')}
         <div className="tp-campo">
           <label id="tp-r-menor-l">¿Eres menor de edad?</label>
           <div className="tp-opciones" role="group" aria-labelledby="tp-r-menor-l">

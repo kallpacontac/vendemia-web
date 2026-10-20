@@ -52,6 +52,9 @@ export interface Reclamo {
   estado: 'pendiente' | 'respondido';
   respuesta: string | null;
   respondido_at: string | null;
+  /** Cuándo salieron por correo (sql/0006): la constancia. */
+  copia_enviada_at?: string | null;
+  respuesta_enviada_at?: string | null;
 }
 
 export const TIPOS_DOC: TipoDoc[] = ['DNI', 'CE', 'Pasaporte', 'RUC'];
