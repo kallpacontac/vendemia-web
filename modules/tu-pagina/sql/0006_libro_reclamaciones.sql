@@ -48,6 +48,10 @@ create table if not exists public.reclamos (
     unique (company_id, numero),
     unique (company_id, idem)
 );
+-- Por si la tabla ya existía de la primera versión de esta migración (sin los correos).
+-- Todo el fichero se puede volver a correr: lo que ya está, se queda igual.
+alter table public.reclamos add column if not exists copia_enviada_at timestamptz;
+alter table public.reclamos add column if not exists respuesta_enviada_at timestamptz;
 create index if not exists reclamos_company_creado on public.reclamos (company_id, creado_at desc);
 
 alter table public.reclamos enable row level security;
