@@ -37,8 +37,9 @@ tocar ese repositorio. No chocan: todo usa el prefijo `loyalty_`.
 | `0008_estilo_y_redes.sql` | Plantillas de la página (`page_style`) y, en cada enlace, icono, subtítulo y si es red social o botón |
 | `0009_alta_rapida.sql` | Alta propia del negocio desde el panel (`loyalty_business_create`) y código de **pedido**: uno solo activa todas las placas de un lote (`loyalty_admin_device_order`). Pruebas: `tests/pruebas_0009.sql` |
 | `0010_enlace_libre.sql` | Guarda de duplicados en el alta: `loyalty_business_slug_check` dice qué enlace le toca al negocio y si el natural ya está ocupado, antes de crearlo |
+| `0011_wallet_resync_existentes.sql` | Permite actualizar en Google Wallet también clases y pases que Postgres marca «al día» después de un cambio de diseño |
 
-**Aplicar:** SQL Editor de Supabase, en orden (0001 → 0010), cada fichero entero. Primero en
+**Aplicar:** SQL Editor de Supabase, en orden (0001 → 0011), cada fichero entero. Primero en
 staging, y allí pegar `tests/pruebas.sql` (no deja nada escrito: acaba en
 `ROLLBACK`). Tiene que terminar con «TODAS LAS PRUEBAS PASARON».
 
@@ -121,6 +122,11 @@ después de cada operación y con «Sincronizar ahora». En Pro, cambiar a
   El saldo, premios y progreso real van en los campos nativos del objeto de
   Google Wallet y se actualizan al sincronizarlo. Si se eligió portada en
   «Mi página», se usa esa imagen. Google decide el diseño de «Agregar».
+- Después de desplegar un cambio en el diseño del pase, aplicar la migración
+  `0011_wallet_resync_existentes.sql` y pulsar «Actualizar pases existentes en
+  Google Wallet» en Fideliza → Ajustes. El botón vuelve a poner en cola también
+  los pases que aparecían «al día»; el avance se ve al abrir el pase guardado,
+  no en la pantalla de confirmación «Agregar» de Google.
 - Las clases se crean con `reviewStatus: UNDER_REVIEW` (en `DRAFT` Google no
   deja crear objetos). Con el emisor en modo demo, solo funcionan las cuentas
   añadidas como *test accounts* en la Google Pay & Wallet Console.

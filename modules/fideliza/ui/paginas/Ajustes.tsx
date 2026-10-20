@@ -107,13 +107,13 @@ export default function Ajustes() {
               {c.state === 'synced' ? `al día (${c.review_status ?? 'sin estado de revisión'})` : c.state === 'error' ? `error — ${c.last_error}` : 'pendiente de crear'}
               {c.last_synced_at ? ` · ${fechaHora(c.last_synced_at)}` : ''}
             </span>
-            {puede('wallet.manage') && (
-              <button className="btn btn-ghost btn-sm" onClick={() => void hacer('wallet.resincronizar', { memberId: null }, 'En cola').then(() => sincronizar())}>
-                Reintentar
-              </button>
-            )}
           </div>
         ))}
+        {puede('wallet.manage') && datos.clases.length > 0 && (
+          <button className="btn btn-ghost btn-sm" disabled={sincronizando} style={{ marginTop: 12 }} onClick={() => void hacer('wallet.resincronizar', { memberId: null }, 'Tarjetas en cola para actualizar').then((r) => { if (r !== null) void sincronizar(); })}>
+            Actualizar pases existentes en Google Wallet
+          </button>
+        )}
         {rol === 'platform_admin' && ajustes && (
           <label className="check-inline" style={{ display: 'block', marginTop: 12 }}>
             <input
