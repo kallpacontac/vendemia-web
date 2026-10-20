@@ -7,7 +7,8 @@
 .ne-aviso-demo { min-height: 42px; display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 8px max(18px, calc((100vw - 1200px)/2)); background: #142338; color: white; font-size: 12px; }
 .ne-aviso-demo span, .ne-aviso-demo a { display: inline-flex; align-items: center; gap: 7px; }
 .ne-aviso-demo a { text-decoration: none; font-weight: 700; white-space: nowrap; }
-.ne-ejemplos { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 12px max(18px, calc((100vw - 1200px)/2)); background: #fff; border-bottom: 1px solid #e6e9ed; font-size: 12px; }
+.ne-ejemplos { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 12px max(18px, calc((100vw - 1200px)/2)); background: #fff; border-bottom: 1px solid #e6e9ed; font-size: 12px; scrollbar-width: none; }
+.ne-ejemplos::-webkit-scrollbar { display: none; }
 .ne-ejemplos b { margin-right: auto; color: #314558; }
 .ne-ejemplos a { flex: none; padding: 7px 10px; border: 1px solid #dce3ea; border-radius: 999px; background: #fff; text-decoration: none; font-weight: 700; }
 .ne-ejemplos a[aria-current='page'] { background: #0b3558; border-color: #0b3558; color: #fff; }
