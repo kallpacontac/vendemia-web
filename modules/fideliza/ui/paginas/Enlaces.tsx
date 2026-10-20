@@ -13,11 +13,12 @@ import { ArrowDown, ArrowUp, ExternalLink, Plus, Trash2 } from 'lucide-react';
 import { useFideliza } from '@/modules/fideliza/ui/Contexto';
 import { Cargando, Fallo, Vacio } from '@/modules/fideliza/ui/Estados';
 import LinkPublico from '@/modules/fideliza/ui/LinkPublico';
-import { esHttps, useValidacion, type Errores } from '@/modules/fideliza/ui/Validacion';
+import { esWeb, useValidacion, type Errores } from '@/modules/fideliza/ui/Validacion';
 import { useAvisar } from '@/components/panel/Avisos';
 import { useCargar } from '@/components/panel/useCargar';
 import { accion, ErrorFideliza, lecturas, mensaje, type Enlace } from '@/modules/fideliza/cliente/api';
 import { urlNegocio } from '@/modules/fideliza/dominio/config';
+import { urlSuelta } from '@/modules/fideliza/dominio/botones';
 import { fechaHora } from '@/modules/fideliza/dominio/formato';
 
 const SUGERIDOS = ['Mi tarjeta y beneficios', 'Reservar por WhatsApp', 'Cómo llegar', 'Dejar una reseña'];
@@ -77,8 +78,8 @@ export default function Enlaces() {
       const quien = l.label.trim() ? `«${l.label.trim()}»` : `El botón ${i + 1}`;
       if (!l.label.trim()) errores[`enlace-${i}-texto`] = `El botón ${i + 1}: falta el texto que ve el cliente.`;
       if (l.kind === 'url') {
-        if (!(l.url ?? '').trim()) errores[`enlace-${i}-url`] = `${quien}: falta la dirección (https://…).`;
-        else if (!esHttps(l.url ?? '')) errores[`enlace-${i}-url`] = `${quien}: la dirección tiene que empezar por https://`;
+        if (!(l.url ?? '').trim()) errores[`enlace-${i}-url`] = `${quien}: falta la dirección (ej. tunegocio.com).`;
+        else if (!esWeb(l.url ?? '')) errores[`enlace-${i}-url`] = `${quien}: «${(l.url ?? '').trim()}» no parece una dirección web (ej. tunegocio.com).`;
       } else if (datos && !datos.programaActivo && l.is_active) {
         errores[`enlace-${i}-url`] = `${quien} lleva al alta en la tarjeta, pero no tienes un programa de puntos activo. Publica el programa o quita este botón.`;
       }
@@ -125,7 +126,7 @@ export default function Enlaces() {
         links: borrador.links.map(({ label, kind, url, is_active, is_primary, starts_at, ends_at, icon, subtitle, placement }) => ({
           label: label.trim(),
           kind,
-          url: kind === 'url' ? (url ?? '').trim() : null,
+          url: kind === 'url' ? urlSuelta(url ?? '') : null,
           is_active,
           is_primary,
           starts_at,
@@ -249,7 +250,7 @@ export default function Enlaces() {
                 </div>
                 {v.error(`enlace-${i}-texto`)}
                 {l.kind === 'url' && (
-                  <input {...v.campo(`enlace-${i}-url`)} className="input" style={{ marginTop: 8 }} placeholder="https://…" value={l.url ?? ''} disabled={!editable} onChange={(e) => cambiar(i, { url: e.target.value.trim() })} aria-label="Dirección" />
+                  <input {...v.campo(`enlace-${i}-url`)} className="input" style={{ marginTop: 8 }} placeholder="tunegocio.com" value={l.url ?? ''} disabled={!editable} onChange={(e) => cambiar(i, { url: e.target.value.trim() })} aria-label="Dirección" />
                 )}
                 {v.error(`enlace-${i}-url`)}
                 <div className="fz-fila" style={{ marginTop: 8, fontSize: 13 }}>

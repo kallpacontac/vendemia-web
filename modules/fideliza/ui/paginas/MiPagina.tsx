@@ -22,7 +22,7 @@ import { ArrowDown, ArrowUp, Eye, EyeOff, ImagePlus, Plus, Search, Star, Trash2 
 import { useFideliza } from '@/modules/fideliza/ui/Contexto';
 import { Cargando, Fallo, SinPermiso } from '@/modules/fideliza/ui/Estados';
 import LinkPublico from '@/modules/fideliza/ui/LinkPublico';
-import { esHttps, idCampo, motivoSlug, useValidacion, type Errores } from '@/modules/fideliza/ui/Validacion';
+import { esWeb, idCampo, motivoSlug, useValidacion, type Errores } from '@/modules/fideliza/ui/Validacion';
 import AvisoSinPlaca from '@/modules/fideliza/ui/AvisoSinPlaca';
 import { useAvisar } from '@/components/panel/Avisos';
 import { useCargar } from '@/components/panel/useCargar';
@@ -41,6 +41,7 @@ import {
   urlMapa,
   urlResenas,
   type TipoBoton,
+  urlSuelta,
 } from '@/modules/fideliza/dominio/botones';
 import { COLORES, PLANTILLAS, resolverEstilo, type Estilo, type Plantilla } from '@/modules/fideliza/dominio/estilo';
 import { ICONOS } from '@/modules/fideliza/dominio/iconos';
@@ -213,16 +214,16 @@ export default function MiPagina() {
     const r = redes[d.tipo];
     if (!r?.activa) continue;
     if (!r.valor.trim()) errores[`red-${d.tipo}`] = `${d.nombre}: escribe ${d.pide.toLowerCase()}, o desmárcalo.`;
-    else if (!aUrl(d.tipo, r.valor)) errores[`red-${d.tipo}`] = `${d.nombre}: «${r.valor.trim()}» no parece válido (ej. ${d.placeholder}).`;
+    else if (!esWeb(aUrl(d.tipo, r.valor))) errores[`red-${d.tipo}`] = `${d.nombre}: «${r.valor.trim()}» no parece válido (ej. ${d.placeholder}).`;
   }
   for (const b of botones) {
     const nombreBoton = b.label.trim() || defDe(b.tipo).nombre;
     if (!b.label.trim()) errores[`boton-${b.clave}-texto`] = `Botón de ${defDe(b.tipo).nombre}: falta el texto del botón.`;
     if (b.tipo === 'tarjeta') continue;
     if (!b.valor.trim()) errores[`boton-${b.clave}-dato`] = `«${nombreBoton}»: falta ${defDe(b.tipo).pide.toLowerCase()}.`;
-    else if (!aUrl(b.tipo, b.valor)) errores[`boton-${b.clave}-dato`] = `«${nombreBoton}»: «${b.valor.trim()}» no parece válido (ej. ${defDe(b.tipo).placeholder}).`;
+    else if (!esWeb(aUrl(b.tipo, b.valor))) errores[`boton-${b.clave}-dato`] = `«${nombreBoton}»: «${b.valor.trim()}» no parece válido (ej. ${defDe(b.tipo).placeholder}).`;
   }
-  if (estilo.fondo && !esHttps(estilo.fondo)) errores.fondo = 'La foto de fondo tiene que ser un enlace que empiece por https://';
+  if (estilo.fondo && !esWeb(estilo.fondo)) errores.fondo = 'La foto de fondo no parece una dirección web (ej. tunegocio.com/foto.jpg).';
   const v = useValidacion(errores);
 
   if (!puede('program.read')) return <SinPermiso que="tu página" />;
@@ -350,7 +351,8 @@ export default function MiPagina() {
       });
       let sinEstilo = false;
       try {
-        await accion('estilo.guardar', { companyId, estilo: { ...estilo, categoria: estilo.categoria?.trim() ?? '' } });
+        await accion('estilo.guardar', { companyId, estilo: { ...estilo, fondo: estilo.fondo ? urlSuelta(estilo.fondo) : '', categoria: estilo.categoria?.trim() ?? '' } });
+        if (estilo.fondo) setEstilo((x) => ({ ...x, fondo: urlSuelta(x.fondo ?? '') }));
       } catch (e) {
         // Una instalación anterior puede no tener el RPC de sql/0008. Cualquier
         // otro fallo se conserva para no diagnosticar una migración inexistente.
@@ -739,7 +741,7 @@ export default function MiPagina() {
             <p className="fz-def">Cada plantilla ya trae lo suyo. Cambia esto solo si quieres algo distinto.</p>
             <div className="fz-campo">
               <label className="field-label" htmlFor={idCampo('fondo')}>Foto de portada o de fondo</label>
-              <input {...v.campo('fondo')} className="input" value={estilo.fondo ?? ''} disabled={!editable} placeholder="https://…/foto.jpg" onChange={(ev) => setEstilo({ ...estilo, fondo: ev.target.value.trim() })} />
+              <input {...v.campo('fondo')} className="input" value={estilo.fondo ?? ''} disabled={!editable} placeholder="tunegocio.com/foto.jpg" onChange={(ev) => setEstilo({ ...estilo, fondo: ev.target.value.trim() })} />
               {v.error('fondo')}
               <small>En «Clásica» y «Oscura» es la franja de arriba; en «Vidrio», «Foto de fondo» y «Marco», el fondo entero. Mejor horizontal y de buena calidad.</small>
             </div>

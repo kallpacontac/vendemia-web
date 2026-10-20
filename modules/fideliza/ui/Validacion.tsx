@@ -97,7 +97,7 @@ export function useValidacion(errores: Errores, opciones: OpcionesValidacion = {
 
 // ── Reglas comunes ──────────────────────────────────────────────────────────
 
-export const esHttps = (u: string) => /^https:\/\/[^\s/$.?#].[^\s]*$/i.test(u.trim());
+export { esWeb } from '@/modules/fideliza/dominio/botones';
 export const esSlug = (s: string) => /^[a-z0-9](?:[a-z0-9-]{1,38}[a-z0-9])$/.test(s);
 export const motivoSlug = (s: string) =>
   !s

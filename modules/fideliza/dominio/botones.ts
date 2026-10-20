@@ -67,9 +67,9 @@ export const BOTONES: DefBoton[] = [
     placeholder: 'https://maps.app.goo.gl/…',
     ayuda: 'En Google Maps: busca tu negocio → Compartir → copiar enlace.',
   },
-  { tipo: 'carta', nombre: 'Carta o menú', label: 'Ver la carta', pide: 'Enlace a tu carta o catálogo', placeholder: 'https://…' },
+  { tipo: 'carta', nombre: 'Carta o menú', label: 'Ver la carta', pide: 'Enlace a tu carta o catálogo', placeholder: 'tunegocio.com/carta' },
   { tipo: 'web', nombre: 'Tu web', label: 'Nuestra web', pide: 'Tu página web', placeholder: 'tunegocio.com' },
-  { tipo: 'enlace', nombre: 'Otro enlace', label: 'Más información', pide: 'El enlace', placeholder: 'https://…' },
+  { tipo: 'enlace', nombre: 'Otro enlace', label: 'Más información', pide: 'El enlace', placeholder: 'tunegocio.com' },
 ];
 
 /**
@@ -118,13 +118,16 @@ export const urlMapa = (placeId: string, nombre: string) =>
 const sinArroba = (v: string) => v.trim().replace(/^@+/, '').replace(/\s+/g, '');
 
 /** Una URL «a mano»: sin esquema se le pone https; http se sube a https. */
-function urlSuelta(v: string): string {
+export function urlSuelta(v: string): string {
   const t = v.trim();
   if (!t) return '';
   if (/^https:\/\//i.test(t)) return t;
   if (/^http:\/\//i.test(t)) return 'https://' + t.slice(7);
   return 'https://' + t.replace(/^\/+/, '');
 }
+
+/** ¿Parece una dirección web? Con o sin https:// (se completa solo); el dominio necesita un punto. */
+export const esWeb = (u: string) => /^https:\/\/(?:[^\s/$.?#@]+\.)+[a-z]{2,}(?:[/?#:][^\s]*)?$/i.test(urlSuelta(u));
 
 /** Número de Perú: 9 dígitos que empiezan por 9 → se le pone el 51. */
 export function numeroWhatsApp(v: string): string {

@@ -12,12 +12,12 @@ import { useSearchParams } from 'next/navigation';
 import { Check, Plus } from 'lucide-react';
 import { useFideliza } from '@/modules/fideliza/ui/Contexto';
 import VistaTarjeta from '@/modules/fideliza/ui/VistaTarjeta';
-import { esHttps, irACampo, motivoSlug, useValidacion, type Errores } from '@/modules/fideliza/ui/Validacion';
+import { esWeb, irACampo, motivoSlug, useValidacion, type Errores } from '@/modules/fideliza/ui/Validacion';
 import { Cargando, Fallo, SinPermiso } from '@/modules/fideliza/ui/Estados';
 import { useAvisar } from '@/components/panel/Avisos';
 import { useCargar } from '@/components/panel/useCargar';
 import { accion, ErrorFideliza, lecturas, mensaje, sincronizarEnSegundoPlano, type Programa, type Version } from '@/modules/fideliza/cliente/api';
-import { urlAyuda } from '@/modules/fideliza/dominio/botones';
+import { urlAyuda, urlSuelta } from '@/modules/fideliza/dominio/botones';
 import { urlNegocio } from '@/modules/fideliza/dominio/config';
 import { aCentimos, fecha, fraseRegla, soles, unidades, type TipoRegla } from '@/modules/fideliza/dominio/formato';
 import { resolverEstilo, tintaSobre, type Estilo } from '@/modules/fideliza/dominio/estilo';
@@ -218,7 +218,7 @@ function ProgramaPagina() {
     pon('fin', 3, 'La fecha de fin ya pasó: con ella nadie acumularía. Cámbiala o déjala vacía.');
   }
   if (b.location_ids && b.location_ids.length === 0) pon('sucursales', 3, 'Marca al menos una sucursal donde suma el programa.');
-  if (marca.logo_url && !esHttps(marca.logo_url)) pon('logo', 4, 'El logo tiene que ser un enlace que empiece por https://');
+  if (marca.logo_url && !esWeb(marca.logo_url)) pon('logo', 4, 'El logo no parece una dirección web (ej. tunegocio.com/logo.png).');
   if (marca.support_url.trim() && !urlAyuda(marca.support_url)) pon('ayuda', 4, 'Web o ayuda: escribe un WhatsApp (987 654 321) o una web (tunegocio.com).');
   const v = useValidacion(errores, {
     // El campo puede estar en otro paso: primero se va al paso y luego al campo.
@@ -266,14 +266,14 @@ function ProgramaPagina() {
     try {
       const r = await accion<{ logo: { ok: boolean; errores: string[]; avisos: string[] } | null }>('ajustes.guardar', {
         companyId,
-        datos: { bg_color: marca.bg_color, logo_url: marca.logo_url, support_url: supportUrl, require_external_ref: marca.require_external_ref },
+        datos: { bg_color: marca.bg_color, logo_url: marca.logo_url ? urlSuelta(marca.logo_url) : '', support_url: supportUrl, require_external_ref: marca.require_external_ref },
       });
       const estiloActual = (ajustes?.page_style ?? null) as Partial<Estilo> | null;
       if (selloValido(estiloActual?.sello) !== marca.sello) {
         // page_style se guarda entero: se conserva lo de «Mi página» y solo cambia el sello.
         await accion('estilo.guardar', { companyId, estilo: { plantilla: 'clasica', ...(estiloActual ?? {}), sello: marca.sello } });
       }
-      setMarca((actual) => ({ ...actual, support_url: supportUrl }));
+      setMarca((actual) => ({ ...actual, support_url: supportUrl, logo_url: actual.logo_url ? urlSuelta(actual.logo_url) : '' }));
       setLogo(r.logo);
       const malo = Boolean(r.logo && !r.logo.ok);
       avisar(malo ? 'Guardado. El logo no sirve para Google Wallet: mira el motivo abajo.' : 'Marca guardada', malo ? 'espera' : 'ok');
@@ -638,7 +638,7 @@ function ProgramaPagina() {
           <div className="fz-col2">
             <div>
               {campo('Color de fondo', <input className="input" type="color" value={marca.bg_color} disabled={!editable} onChange={(e) => setMarca({ ...marca, bg_color: e.target.value.toUpperCase() })} style={{ height: 48, padding: 4 }} />)}
-              {campo('Logo cuadrado (URL https pública)', <input className="input" value={marca.logo_url} disabled={!editable} onChange={(e) => setMarca({ ...marca, logo_url: e.target.value.trim() })} placeholder="https://…/logo.png" />, 'PNG cuadrado, mínimo 660×660, con margen alrededor: Google lo recorta en círculo.', 'logo')}
+              {campo('Logo cuadrado (dirección de la imagen)', <input className="input" value={marca.logo_url} disabled={!editable} onChange={(e) => setMarca({ ...marca, logo_url: e.target.value.trim() })} placeholder="tunegocio.com/logo.png" />, 'PNG cuadrado, mínimo 660×660, con margen alrededor: Google lo recorta en círculo.', 'logo')}
               {logo && (
                 <div className={`fz-panel-aviso ${logo.ok ? 'fz-panel-aviso--ok' : 'fz-panel-aviso--error'}`}>
                   <span>{logo.ok ? 'El logo sirve para Google Wallet.' : logo.errores.join(' ')} {logo.avisos.join(' ')}</span>

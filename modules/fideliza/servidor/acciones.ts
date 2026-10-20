@@ -6,7 +6,7 @@ import { rpc, servidor } from './supabase';
 import { comprobarLogo } from './logo';
 import { buscarLugares } from './lugares';
 import { drenar } from './worker';
-import { urlAyuda } from '../dominio/botones';
+import { urlAyuda, urlSuelta } from '../dominio/botones';
 
 /**
  * ══════════════════════════════════════════════════════════════════════════
@@ -21,7 +21,11 @@ const compania = z.string().regex(/^[A-Za-z0-9_-]{1,64}$/);
 const uuid = z.string().uuid();
 const idem = z.string().min(8).max(80).regex(/^[A-Za-z0-9_-]+$/);
 const textoCorto = (max: number) => z.string().trim().max(max);
-const urlHttps = z.string().trim().max(600).regex(/^https:\/\/\S+$/, 'https');
+/** Con o sin https:// (se completa solo; http se sube a https). Vacío sigue siendo vacío. */
+const urlHttps = z.preprocess(
+  (v) => (typeof v === 'string' && v.trim() ? urlSuelta(v) : v),
+  z.string().trim().max(600).regex(/^https:\/\/\S+$/, 'https'),
+);
 
 const borrador = z
   .object({

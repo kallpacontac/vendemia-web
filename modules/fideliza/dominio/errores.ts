@@ -12,7 +12,7 @@ export const MENSAJES: Record<string, string> = {
   not_found: 'No existe o ya no está disponible.',
   invalid_phone: 'Ese teléfono no parece válido.',
   invalid_email: 'Ese correo no parece válido.',
-  invalid_url: 'El enlace tiene que empezar por https:// y no puede apuntar a otra placa.',
+  invalid_url: 'Ese enlace no es válido (ej. tunegocio.com). Tampoco puede apuntar a otra placa.',
   invalid_settings: 'Revisa los datos del negocio: alguno no es válido.',
   slug_taken: 'Esa dirección ya la usa otro negocio. Prueba con otra.',
   settings_missing: 'Primero completa los datos del negocio (paso 1).',
@@ -84,8 +84,8 @@ export function codigoDe(mensaje: string | undefined | null): string | null {
 /** Mensajes más precisos cuando la base dice qué campo falló (`codigo:campo`). */
 export const MENSAJES_CAMPO: Record<string, string> = {
   'invalid_url:support_url': 'Web o ayuda: escribe un WhatsApp (987 654 321) o una web (tunegocio.com), o déjalo vacío.',
-  'invalid_url:logo_url': 'El logo tiene que ser una imagen con enlace https://. Súbela otra vez o quítala.',
-  'invalid_url:fondo': 'La foto de fondo tiene que ser un enlace que empiece por https://, o déjala vacía.',
+  'invalid_url:logo_url': 'El logo no es una dirección de imagen válida (ej. tunegocio.com/logo.png). Súbelo otra vez o quítalo.',
+  'invalid_url:fondo': 'La foto de fondo no es una dirección válida (ej. tunegocio.com/foto.jpg), o déjala vacía.',
   'invalid_settings:page_style': 'El diseño de la página tiene un dato no válido. Recarga e inténtalo otra vez.',
 };
 

@@ -436,3 +436,13 @@ test('16 · el error de enlace dice qué campo falló', () => {
   assert.equal(errores.mensajeDe('invalid_url', 'otro'), errores.MENSAJES.invalid_url);
   assert.equal(errores.mensajeDe('invalid_url'), errores.MENSAJES.invalid_url);
 });
+
+test('17 · las direcciones web se aceptan sin https://', () => {
+  const v = botones;
+  for (const ok of ['tunegocio.com', 'www.tunegocio.com/carta', 'http://tunegocio.pe', 'https://maps.app.goo.gl/abc', 'tienda.mi-negocio.com.pe/foto.jpg?x=1'])
+    assert.equal(v.esWeb(ok), true, ok);
+  for (const mal of ['hola', 'tunegocio', 'https://', 'mi negocio.com', 'correo@tunegocio'])
+    assert.equal(v.esWeb(mal), false, mal);
+  assert.equal(botones.urlSuelta('tunegocio.com'), 'https://tunegocio.com');
+  assert.equal(botones.urlSuelta('http://tunegocio.com'), 'https://tunegocio.com');
+});
