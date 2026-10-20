@@ -24,6 +24,7 @@
 .ce-selector nav { display: flex; gap: 7px; overflow-x: auto; }
 .ce-selector nav a { flex: none; padding: 9px 13px; border: 1px solid #ded7ce; border-radius: 999px; text-decoration: none; background: #fff; font-size: 12px; font-weight: 700; }
 .ce-selector nav a[aria-current='page'] { background: var(--ce-acento); color: #fff; border-color: var(--ce-acento); }
+.ce-negocios { max-width: 1180px; margin: 0 auto; padding: 12px 20px; display: flex; flex-wrap: wrap; align-items: center; gap: 9px; font-size: 12px; }.ce-negocios > span { color: var(--ce-suave); }.ce-negocios a { display: inline-flex; align-items: center; gap: 4px; padding: 6px 10px; border: 1px solid var(--ce-linea); border-radius: 999px; background: var(--ce-papel); text-decoration: none; font-weight: 700; }
 .ce-tienda { max-width: 1440px; margin: auto; background: var(--ce-fondo); }
 .ce-cabecera { max-width: 1180px; height: 82px; margin: auto; padding: 0 24px; display: flex; align-items: center; justify-content: space-between; gap: 16px; }
 .ce-cabecera__marca, .ce-cabecera__acciones { display: flex; align-items: center; gap: 12px; }

@@ -1,4 +1,4 @@
-import type { PlantillaGuardada } from './plantillas';
+import type { PlantillaGuardada, TipoPagina } from './plantillas';
 
 export type PlantillaEjemplo = Extract<PlantillaGuardada, 'vitrina' | 'lista' | 'carta' | 'agenda'>;
 
@@ -14,3 +14,9 @@ export const esPlantillaEjemplo = (valor: unknown): valor is PlantillaEjemplo =>
 
 export const urlEjemplo = (plantilla: PlantillaEjemplo = 'vitrina') =>
   `/ejemplos/catalogo?plantilla=${plantilla}`;
+
+export const urlEjemploPara = (tipo: TipoPagina, plantilla: PlantillaGuardada) => {
+  if (tipo === 'agenda') return `/ejemplos/clinica-dental?diseno=${plantilla === 'lista' ? 'editorial' : 'clara'}`;
+  if (tipo === 'tienda' && plantilla === 'agenda') return '/ejemplos/cafeteria';
+  return urlEjemplo(esPlantillaEjemplo(plantilla) ? plantilla : 'vitrina');
+};

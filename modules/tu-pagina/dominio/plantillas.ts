@@ -13,6 +13,13 @@ export const PLANTILLAS: { id: PlantillaGuardada; nombre: string; describe: stri
   { id: 'agenda', nombre: 'Nocturna', describe: 'Fondo oscuro y acentos luminosos.' },
 ];
 
+/** Dos lecturas claras para negocios que atienden con cita. Reutilizan IDs ya
+ * admitidos por la base de datos y no alteran las plantillas de tienda. */
+export const PLANTILLAS_AGENDA: { id: PlantillaGuardada; nombre: string; describe: string }[] = [
+  { id: 'agenda', nombre: 'Agenda clara', describe: 'Tarjetas blancas, espacio y reservas fáciles de encontrar.' },
+  { id: 'lista', nombre: 'Agenda editorial', describe: 'Servicios en lista y una presentación más fotográfica.' },
+];
+
 export const plantillaValida = (valor: unknown): valor is PlantillaGuardada =>
   valor === 'vitrina' || valor === 'lista' || valor === 'carta' ||
   valor === 'agenda' || valor === 'clases' || valor === 'envios';

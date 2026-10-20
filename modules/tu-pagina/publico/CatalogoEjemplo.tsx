@@ -45,6 +45,7 @@ export default function CatalogoEjemplo({ plantilla, incrustado = false, reclamo
           </nav>
         </div>
       )}
+      {!incrustado && <div className="ce-negocios"><span>¿Quieres ver un negocio completo?</span><a href="/ejemplos/cafeteria">Cafetería · tienda <ArrowRight size={14} /></a><a href="/ejemplos/clinica-dental?diseno=clara">Clínica dental · agenda <ArrowRight size={14} /></a></div>}
       <div className="ce-tienda">
         <header className="ce-cabecera">
           <div className="ce-cabecera__marca"><span className="ce-monograma">{incrustado ? 'V' : 'A'}</span><span><b>{marca}</b><small>Objetos para disfrutar lo cotidiano</small></span></div>

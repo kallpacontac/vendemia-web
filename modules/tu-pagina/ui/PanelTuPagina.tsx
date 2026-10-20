@@ -31,9 +31,9 @@ import { urlPagina, urlEnvio, urlReservar } from '@/modules/tu-pagina/dominio/co
 import { esAppointmentFamily, esEcommerce, esRecurrente } from '@/lib/panel/modo';
 import { tipoPorDefecto, type TiposDePagina } from '@/modules/tu-pagina/dominio/tienda';
 import type { BusinessMode } from '@/lib/supabase/types';
-import { EXPERIENCIAS, PLANTILLAS, plantillaPorDefecto, plantillaValida, tipoPagina, tipoPorDefecto as tipoPaginaPorDefecto, type PlantillaGuardada, type TipoPagina } from '@/modules/tu-pagina/dominio/plantillas';
+import { EXPERIENCIAS, PLANTILLAS, PLANTILLAS_AGENDA, plantillaPorDefecto, plantillaValida, tipoPagina, tipoPorDefecto as tipoPaginaPorDefecto, type PlantillaGuardada, type TipoPagina } from '@/modules/tu-pagina/dominio/plantillas';
 import { esHex, esUrlPublica, type AparienciaPagina } from '@/modules/tu-pagina/dominio/apariencia';
-import { esPlantillaEjemplo, urlEjemplo } from '@/modules/tu-pagina/dominio/ejemplo';
+import { urlEjemploPara } from '@/modules/tu-pagina/dominio/ejemplo';
 import { subirImagenMarca } from '@/modules/fideliza/cliente/imagenMarca';
 
 /**
@@ -306,9 +306,10 @@ function MiPagina({ companyId, nombre, pagina, agendaNube, alGuardar }: {
   const publicada = pagina?.publicada && pagina.slug;
   const vista = urlVista(pagina?.slug ?? slug, { tipo: es, plantilla, plantillaActiva: !pagina?.publicada || plantillaManual || apariencia.plantillaActiva === true || pagina?.secciones?.apariencia?.plantillaActiva === true, color, apariencia });
   const verPaso = (numero: 1 | 2 | 3) => Boolean(publicada || paso === numero);
-  const plantillas = plantillaValida(pagina?.plantilla) && !PLANTILLAS.some((p) => p.id === pagina.plantilla)
-    ? [...PLANTILLAS, { id: pagina.plantilla, nombre: pagina.plantilla === 'clases' ? 'Clases' : 'Envíos', describe: 'Diseño anterior de tu página.' }]
-    : PLANTILLAS;
+  const opcionesBase = es === 'agenda' ? PLANTILLAS_AGENDA : PLANTILLAS;
+  const plantillas = plantillaValida(pagina?.plantilla) && es === tipoPagina(pagina.secciones) && !opcionesBase.some((p) => p.id === pagina.plantilla)
+    ? [...opcionesBase, { id: pagina.plantilla, nombre: pagina.plantilla === 'clases' ? 'Clases' : pagina.plantilla === 'envios' ? 'Envíos' : 'Diseño anterior', describe: 'Diseño que ya tiene tu página.' }]
+    : opcionesBase;
 
   return (
     <div className="tp-panel-grid">
@@ -351,7 +352,7 @@ function MiPagina({ companyId, nombre, pagina, agendaNube, alGuardar }: {
                     <span className={`tp-panel-plantilla__dibujo tp-panel-plantilla__dibujo--${opcion.id}`} style={{ ['--c' as string]: color }} aria-hidden="true"><i /><i /><i /><i /></span>
                     <b>{opcion.nombre}</b><small>{opcion.describe}</small>
                   </button>
-                  {esPlantillaEjemplo(opcion.id) && <a href={urlEjemplo(opcion.id)} target="_blank" rel="noopener">Ver ejemplo completo <ExternalLink size={13} /></a>}
+                  <a href={urlEjemploPara(es, opcion.id)} target="_blank" rel="noopener">Ver ejemplo completo <ExternalLink size={13} /></a>
                 </div>
               ))}
             </div>
@@ -464,7 +465,7 @@ function MiPagina({ companyId, nombre, pagina, agendaNube, alGuardar }: {
       </section>
 
       <div className="tp-panel-lado">
-        {!publicada && paso === 2 && <VistaBorrador plantilla={plantilla} />}
+        {!publicada && paso === 2 && <VistaBorrador plantilla={plantilla} tipo={es} />}
         {publicada && (
           <section className="card">
             <div className="card-mini-head">
@@ -474,7 +475,7 @@ function MiPagina({ companyId, nombre, pagina, agendaNube, alGuardar }: {
             <div className="tp-panel-vista">
               <iframe title="Vista previa de tu página" src={vista} />
             </div>
-            {esPlantillaEjemplo(plantilla) && <a className="tp-panel-demo-link" href={urlEjemplo(plantilla)} target="_blank" rel="noopener">Ver esta plantilla con productos de muestra <ExternalLink size={14} /></a>}
+            <a className="tp-panel-demo-link" href={urlEjemploPara(es, plantilla)} target="_blank" rel="noopener">Ver esta plantilla con un negocio de ejemplo <ExternalLink size={14} /></a>
             {(es !== tipoPagina(pagina!.secciones) || plantilla !== pagina!.plantilla || (plantillaManual && !pagina!.secciones.apariencia?.plantillaActiva) || color !== pagina!.color || titulo !== pagina!.titulo || frase !== pagina!.frase || logo !== (pagina!.logo_url ?? '') || portada !== (pagina!.portada_url ?? '') || JSON.stringify(apariencia) !== JSON.stringify(pagina!.secciones.apariencia ?? {})) && (
               <small className="muted">Vista previa del diseño. El nombre y las imágenes se actualizarán al guardar.</small>
             )}
@@ -487,15 +488,15 @@ function MiPagina({ companyId, nombre, pagina, agendaNube, alGuardar }: {
 }
 
 /** Demo real, con fotos, búsqueda y fichas; el catálogo propio aparece al publicar. */
-function VistaBorrador({ plantilla }: { plantilla: PlantillaGuardada }) {
-  const ejemplo = esPlantillaEjemplo(plantilla) ? plantilla : 'vitrina';
+function VistaBorrador({ plantilla, tipo }: { plantilla: PlantillaGuardada; tipo: TipoPagina }) {
+  const ejemplo = urlEjemploPara(tipo, plantilla);
   return (
     <section className="card">
-      <div className="card-mini-head"><h3>Explora el ejemplo</h3><a className="btn btn-sm btn-ghost" href={urlEjemplo(ejemplo)} target="_blank" rel="noopener"><ExternalLink size={14} /> Abrir</a></div>
+      <div className="card-mini-head"><h3>Explora el ejemplo</h3><a className="btn btn-sm btn-ghost" href={ejemplo} target="_blank" rel="noopener"><ExternalLink size={14} /> Abrir</a></div>
       <div className="tp-panel-vista">
-        <iframe title={`Catálogo de ejemplo ${ejemplo}`} src={urlEjemplo(ejemplo)} />
+        <iframe title="Página de negocio de ejemplo" src={ejemplo} />
       </div>
-      <small className="muted">Ejemplo con productos ilustrativos. Al publicar, aparecerán el nombre, las fotos y los precios de tu negocio.</small>
+      <small className="muted">Ejemplo con fotos y datos ilustrativos. Al publicar, aparecerán los datos y servicios o productos de tu negocio.</small>
     </section>
   );
 }

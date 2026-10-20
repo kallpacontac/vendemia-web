@@ -532,6 +532,54 @@
   .tp[data-plantilla='vitrina'] .tp-grid, .tp[data-plantilla='agenda'] .tp-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
 }
 
+/* Dos diseños de agenda con superficies claras, tinta azul y reservas visibles. */
+.tp[data-diseno='agenda'][data-plantilla='agenda'],
+.tp[data-diseno='agenda'][data-plantilla='lista'] {
+  --tp-fondo: #f8f9fb; --tp-papel: #fff; --tp-texto: #0b3558;
+  --tp-suave: #476788; --tp-borde: #d4e0ed; --tp-campo: #f0f3f8;
+  --tp-radio: 16px; font-family: 'Manrope', 'Plus Jakarta Sans', system-ui, sans-serif;
+}
+.tp[data-diseno='agenda'][data-plantilla='agenda'] .tp-portada,
+.tp[data-diseno='agenda'][data-plantilla='lista'] .tp-portada { height: clamp(220px, 30vw, 350px); background-color: #dce9f7; }
+.tp[data-diseno='agenda'][data-plantilla='agenda'] .tp-cabeza,
+.tp[data-diseno='agenda'][data-plantilla='lista'] .tp-cabeza {
+  max-width: none; min-height: 110px; margin: 18px 0 0; padding: 24px;
+  display: grid; grid-template-columns: 64px 1fr; align-items: center; column-gap: 16px;
+  border: 1px solid var(--tp-borde); border-radius: 24px; background: var(--tp-papel);
+  color: var(--tp-texto); text-align: left;
+  box-shadow: rgba(71,103,136,.04) 0 4px 5px, rgba(71,103,136,.03) 0 8px 15px, rgba(71,103,136,.08) 0 30px 50px;
+}
+.tp[data-diseno='agenda'][data-plantilla='agenda'] .tp-logo,
+.tp[data-diseno='agenda'][data-plantilla='lista'] .tp-logo { width: 58px; height: 58px; margin: 0; grid-row: span 2; border: 0; border-radius: 12px; background-color: var(--tp-color); color: var(--tp-tinta); box-shadow: none; }
+.tp[data-diseno='agenda'][data-plantilla='agenda'] .tp-titulo,
+.tp[data-diseno='agenda'][data-plantilla='lista'] .tp-titulo { align-self: end; font-size: clamp(24px, 3vw, 34px); line-height: 1.1; letter-spacing: -.04em; }
+.tp[data-diseno='agenda'][data-plantilla='agenda'] .tp-frase,
+.tp[data-diseno='agenda'][data-plantilla='lista'] .tp-frase { grid-column: 2; align-self: start; margin: 2px 0 0; color: var(--tp-suave); font-size: 14px; }
+.tp[data-diseno='agenda'][data-plantilla='agenda'] .tp-accion,
+.tp[data-diseno='agenda'][data-plantilla='lista'] .tp-accion { border: 1px solid var(--tp-borde); border-radius: 16px; background: #fff; color: var(--tp-texto); box-shadow: rgba(71,103,136,.04) 0 4px 5px, rgba(71,103,136,.05) 0 10px 20px; }
+.tp[data-diseno='agenda'][data-plantilla='agenda'] .tp-accion--grande,
+.tp[data-diseno='agenda'][data-plantilla='lista'] .tp-accion--grande { background: var(--tp-color); color: var(--tp-tinta); border-color: var(--tp-color); }
+.tp[data-diseno='agenda'][data-plantilla='agenda'] .tp-tarjeta,
+.tp[data-diseno='agenda'][data-plantilla='lista'] .tp-tarjeta { border: 1px solid var(--tp-borde); border-radius: 16px; background: #fff; color: var(--tp-texto); box-shadow: rgba(71,103,136,.04) 0 4px 5px, rgba(71,103,136,.03) 0 8px 15px, rgba(71,103,136,.08) 0 30px 50px; }
+.tp[data-diseno='agenda'][data-plantilla='agenda'] .tp-tarjeta__foto,
+.tp[data-diseno='agenda'][data-plantilla='lista'] .tp-tarjeta__foto { background-color: #eaf2f9; }
+.tp[data-diseno='agenda'][data-plantilla='agenda'] .tp-bloque,
+.tp[data-diseno='agenda'][data-plantilla='lista'] .tp-bloque { background: #fff; color: var(--tp-texto); border-color: var(--tp-borde); }
+.tp[data-diseno='agenda'][data-plantilla='agenda'] .tp-catalogo__layout { display: block; }
+.tp[data-diseno='agenda'][data-plantilla='agenda'] .tp-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.tp[data-diseno='agenda'][data-plantilla='lista'] .tp-cabeza { border-radius: 12px; }
+.tp[data-diseno='agenda'][data-plantilla='lista'] .tp-tarjeta { border-radius: 12px; box-shadow: none; }
+.tp[data-diseno='agenda'][data-plantilla='lista'] .tp-grid { grid-template-columns: 1fr; gap: 10px; }
+.tp[data-diseno='agenda'][data-plantilla='lista'] .tp-grid .tp-tarjeta { flex-direction: row; }
+.tp[data-diseno='agenda'][data-plantilla='lista'] .tp-grid .tp-tarjeta__foto { width: 120px; min-height: 120px; height: 120px; flex: none; aspect-ratio: auto; border-radius: 12px 0 0 12px; }
+.tp[data-diseno='agenda'][data-plantilla='lista'] .tp-grid .tp-tarjeta__texto { flex: 1; padding: 15px; }
+@media (max-width: 760px) {
+  .tp[data-diseno='agenda'][data-plantilla='agenda'] .tp-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .tp[data-diseno='agenda'][data-plantilla='lista'] .tp-grid .tp-tarjeta__foto { width: 88px; min-height: 88px; height: 88px; }
+  .tp[data-diseno='agenda'][data-plantilla='agenda'] .tp-cabeza,
+  .tp[data-diseno='agenda'][data-plantilla='lista'] .tp-cabeza { padding: 16px; }
+}
+
 /* ══════════════════════════════════════════════════════════════════════════
    LIBRO DE RECLAMACIONES (sql/0006)
    ══════════════════════════════════════════════════════════════════════════ */
