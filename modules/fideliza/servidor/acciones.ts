@@ -115,6 +115,8 @@ export const ACCIONES = {
         .strict(),
     }),
     ejecutar: async (d, { sb }) => {
+      // Vacío = quitarlo. La base distingue: '' falla la comprobación de URL y null la borra.
+      for (const k of ['logo_url', 'support_url'] as const) if (d.datos[k] === '') (d.datos as Record<string, unknown>)[k] = null;
       const guardado = await rpc<{ logo_url: string | null }>(sb, 'loyalty_settings_save', {
         p_company: d.companyId,
         p_data: d.datos,

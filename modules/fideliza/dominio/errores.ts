@@ -81,6 +81,14 @@ export function codigoDe(mensaje: string | undefined | null): string | null {
   return m ? m[1] : null;
 }
 
-export function mensajeDe(codigo: string | null | undefined): string {
-  return (codigo && MENSAJES[codigo]) || 'No se pudo completar. Inténtalo otra vez.';
+/** Mensajes más precisos cuando la base dice qué campo falló (`codigo:campo`). */
+export const MENSAJES_CAMPO: Record<string, string> = {
+  'invalid_url:support_url': 'Web o ayuda: escribe un WhatsApp (987 654 321) o una web (tunegocio.com), o déjalo vacío.',
+  'invalid_url:logo_url': 'El logo tiene que ser una imagen con enlace https://. Súbela otra vez o quítala.',
+  'invalid_url:fondo': 'La foto de fondo tiene que ser un enlace que empiece por https://, o déjala vacía.',
+  'invalid_settings:page_style': 'El diseño de la página tiene un dato no válido. Recarga e inténtalo otra vez.',
+};
+
+export function mensajeDe(codigo: string | null | undefined, detalle?: string | null): string {
+  return (codigo && detalle && MENSAJES_CAMPO[`${codigo}:${detalle}`]) || (codigo && MENSAJES[codigo]) || 'No se pudo completar. Inténtalo otra vez.';
 }

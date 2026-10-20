@@ -98,16 +98,32 @@ export default function Caja() {
         if (!video.current) return;
         video.current.srcObject = flujo;
         await video.current.play();
-        const det = new window.BarcodeDetector!({ formats: ['qr_code'] });
-        while (vivo) {
-          const r = await det.detect(video.current).catch(() => []);
-          if (r[0]?.rawValue) {
+        // Con lector nativo (Chrome en Android) se usa ese; si no (Chrome en
+        // Windows, iPhone, Firefox…), jsQR lee el fotograma desde un canvas.
+        const nativo = window.BarcodeDetector ? new window.BarcodeDetector({ formats: ['qr_code'] }) : null;
+        const jsQR = nativo ? null : (await import('jsqr')).default;
+        const lienzo = document.createElement('canvas');
+        const ctx = lienzo.getContext('2d', { willReadFrequently: true });
+        const leer = async (v: HTMLVideoElement): Promise<string | null> => {
+          if (nativo) return (await nativo.detect(v).catch(() => []))[0]?.rawValue ?? null;
+          if (!jsQR || !ctx || !v.videoWidth) return null;
+          // Basta con 640 px de ancho: más grande solo gasta batería.
+          const escala = Math.min(1, 640 / v.videoWidth);
+          lienzo.width = Math.round(v.videoWidth * escala);
+          lienzo.height = Math.round(v.videoHeight * escala);
+          ctx.drawImage(v, 0, 0, lienzo.width, lienzo.height);
+          const img = ctx.getImageData(0, 0, lienzo.width, lienzo.height);
+          return jsQR(img.data, img.width, img.height, { inversionAttempts: 'dontInvert' })?.data || null;
+        };
+        while (vivo && video.current) {
+          const valor = await leer(video.current);
+          if (valor) {
             setCamara(false);
-            setQ(r[0].rawValue);
-            void buscar(r[0].rawValue);
+            setQ(valor);
+            void buscar(valor);
             break;
           }
-          await new Promise((res) => setTimeout(res, 250));
+          await new Promise((res) => setTimeout(res, 200));
         }
       } catch {
         avisar('No se pudo abrir la cámara. Escribe el código de la tarjeta.', 'error');
@@ -123,7 +139,8 @@ export default function Caja() {
 
   if (!puede('ops.record')) return <SinPermiso que="la caja" />;
   if (!companyId) return <Cargando />;
-  const escanerPosible = typeof window !== 'undefined' && Boolean(window.BarcodeDetector) && Boolean(navigator.mediaDevices);
+  // Cualquier navegador con cámara: el lector nativo o, si no hay, jsQR.
+  const escanerPosible = typeof window !== 'undefined' && Boolean(navigator.mediaDevices?.getUserMedia);
 
   async function buscar(texto = q) {
     if (!texto.trim()) return;
@@ -290,7 +307,7 @@ export default function Caja() {
             </button>
           )}
         </div>
-        {!escanerPosible && <p className="fz-def">Este navegador no lee QR con la cámara (iPhone): escribe el código que sale bajo el QR.</p>}
+        {!escanerPosible && <p className="fz-def">Este navegador no puede usar la cámara (o la página no se abrió con https): escribe el código que sale bajo el QR.</p>}
         {escanerPosible && (
           <button className="btn btn-ghost btn-sm" style={{ marginTop: 10 }} onClick={() => setAlta({ alias: '', phone: '', verificado: false, clave: nuevaClave() })}>
             <Plus size={14} /> Nuevo cliente

@@ -53,7 +53,7 @@ export function servidor(): SupabaseClient {
 /** Llama a una RPC y devuelve su `data`, o lanza un Error con el mensaje de Postgres. */
 export async function rpc<T>(sb: SupabaseClient, fn: string, args: Record<string, unknown>): Promise<T> {
   const { data, error } = await sb.rpc(fn, args);
-  if (error) throw new ErrorRpc(error.message, error.code);
+  if (error) throw new ErrorRpc(error.message, error.code, error.details || undefined);
   return data as T;
 }
 
@@ -61,6 +61,8 @@ export class ErrorRpc extends Error {
   constructor(
     message: string,
     public code?: string,
+    /** El segundo argumento de loyalty_err: casi siempre, el campo. */
+    public detalle?: string,
   ) {
     super(message);
   }

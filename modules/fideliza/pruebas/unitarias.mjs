@@ -428,3 +428,11 @@ test('23 · el chip y el QR declaran su origen con el mismo parámetro', () => {
   assert.equal(config.urlPlaca('TOKEN'), `${config.FIDELIZA_URL}/t/TOKEN?o=nfc`);
   assert.equal(config.urlPlacaQr('TOKEN'), `${config.FIDELIZA_URL}/t/TOKEN?o=qr`);
 });
+
+test('16 · el error de enlace dice qué campo falló', () => {
+  assert.match(errores.mensajeDe('invalid_url', 'support_url'), /Web o ayuda/);
+  assert.match(errores.mensajeDe('invalid_url', 'logo_url'), /logo/);
+  // Sin detalle conocido, el mensaje general de siempre.
+  assert.equal(errores.mensajeDe('invalid_url', 'otro'), errores.MENSAJES.invalid_url);
+  assert.equal(errores.mensajeDe('invalid_url'), errores.MENSAJES.invalid_url);
+});

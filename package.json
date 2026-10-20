@@ -16,6 +16,7 @@
     "@react-pdf/renderer": "^4.9.0",
     "@supabase/supabase-js": "^2.112.3",
     "gsap": "^3.12.5",
+    "jsqr": "^1.4.0",
     "lenis": "^1.1.13",
     "lucide-react": "^0.427.0",
     "next": "14.2.5",

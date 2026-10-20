@@ -17,8 +17,8 @@ export function ok(datos: unknown, status = 200) {
   return Response.json(datos, { status, headers: NO_CACHE });
 }
 
-export function fallo(codigo: string, status = 400, extra?: Record<string, unknown>) {
-  return Response.json({ codigo, error: mensajeDe(codigo), ...extra }, { status, headers: NO_CACHE });
+export function fallo(codigo: string, status = 400, extra?: Record<string, unknown>, detalle?: string) {
+  return Response.json({ codigo, error: mensajeDe(codigo, detalle), ...(detalle ? { campo: detalle } : {}), ...extra }, { status, headers: NO_CACHE });
 }
 
 export function log(evento: string, datos: Record<string, unknown> = {}) {
@@ -44,7 +44,7 @@ export function desdeError(e: unknown, ruta: string) {
         : codigo.endsWith('not_found')
           ? 404
           : 409;
-    return fallo(codigo, status);
+    return fallo(codigo, status, undefined, e instanceof ErrorRpc && e.detalle && /^[a-z_]{1,40}$/.test(e.detalle) ? e.detalle : undefined);
   }
   if (e instanceof ErrorRpc && e.code === 'PGRST301') return fallo('unauthenticated', 401);
   const ref = randomUUID().slice(0, 8);
