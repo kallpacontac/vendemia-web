@@ -19,7 +19,8 @@ import { accion, lecturas, mensaje, sincronizarEnSegundoPlano, type Programa, ty
 import { urlAyuda } from '@/modules/fideliza/dominio/botones';
 import { urlNegocio } from '@/modules/fideliza/dominio/config';
 import { aCentimos, fecha, fraseRegla, soles, unidades, type TipoRegla } from '@/modules/fideliza/dominio/formato';
-import type { Estilo } from '@/modules/fideliza/dominio/estilo';
+import { resolverEstilo, tintaSobre, type Estilo } from '@/modules/fideliza/dominio/estilo';
+import { datosArteWallet, svgArteWallet } from '@/modules/fideliza/dominio/wallet-arte';
 
 const PASOS = ['Negocio y sucursal', 'Objetivo', 'Tipo de regla', 'Beneficio', 'Marca', 'Probar y publicar'];
 const OBJETIVOS = [
@@ -357,6 +358,8 @@ function ProgramaPagina() {
   };
 
   const p = datos?.programa;
+  const metaVistaWallet = b.reward_threshold && b.reward_threshold > 0 ? b.reward_threshold : 10;
+  const saldoVistaWallet = Math.min(3, metaVistaWallet);
   return (
     <>
       {p && (
@@ -577,28 +580,35 @@ function ProgramaPagina() {
               )}
               <small className="fz-def">Al pulsar «Guardar y seguir» comprobamos si el logo sirve para Google Wallet.</small>
               <p className="fz-def" style={{ marginTop: 12 }}>
-                La plantilla e imagen que elijas en <a href="/panel/fideliza/mi-pagina">Mi página</a> también visten la tarjeta web. La tarjeta de Google Wallet usa tu color, logo y, si existe, la imagen de portada.
+                La plantilla e imagen que elijas en <a href="/panel/fideliza/mi-pagina">Mi página</a> también visten tu pase de Google Wallet. El avance real se muestra con los datos que Google actualiza en cada tarjeta.
               </p>
             </div>
             <div>
               <label className="field-label">Vista previa</label>
-              <div className="fz-prev" style={{ background: marca.bg_color }}>
-                <div className="fz-fila">
+              <div className="fz-prev fz-prev-wallet" style={{ background: marca.bg_color, color: tintaSobre(marca.bg_color) }}>
+                <div className="fz-prev-wallet__cab">
                   {marca.logo_url ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img className="fz-prev__logo" src={marca.logo_url} alt="" />
                   ) : (
-                    <div className="fz-prev__logo" />
+                    <div className="fz-prev__logo fz-prev-wallet__inicial">{(negocio.display_name || 'T').slice(0, 1).toUpperCase()}</div>
                   )}
-                  <b style={{ background: '#fff', padding: '2px 8px', borderRadius: 8 }}>{negocio.display_name || 'Tu negocio'}</b>
+                  <b>{negocio.display_name || 'Tu negocio'}</b>
                 </div>
-                <div style={{ marginTop: 14, background: 'rgba(255,255,255,.92)', padding: 10, borderRadius: 10, fontSize: 13, color: '#171716' }}>
-                  <b>{prog.name || 'Tu programa'}</b>
-                  <p style={{ marginTop: 7 }}>{unidades(3, b.rule_type)} · 0 premios</p>
-                  <small>{b.reward_description ? `Próximo premio: ${b.reward_description}` : 'Configura tu próximo premio'}</small>
+                <h3>{prog.name || 'Tu programa'}</h3>
+                <div className="fz-prev-wallet__datos">
+                  <span><small>{b.rule_type === 'points' ? 'PUNTOS' : b.rule_type === 'visits' ? 'VISITAS' : 'SELLOS'}</small><b>{saldoVistaWallet}</b></span>
+                  <span><small>PREMIOS</small><b>0</b></span>
                 </div>
+                <p className="fz-prev-wallet__avance">{b.rule_type === 'stamps' && metaVistaWallet <= 12
+                  ? `${'●'.repeat(saldoVistaWallet)}${'○'.repeat(metaVistaWallet - saldoVistaWallet)} · ${saldoVistaWallet}/${metaVistaWallet}`
+                  : `${saldoVistaWallet}/${metaVistaWallet} ${b.rule_type === 'points' ? 'puntos' : 'visitas'}`}</p>
+                <p className="fz-prev-wallet__premio">{b.reward_description ? `Próximo premio: ${b.reward_description}` : 'Configura tu próximo premio'}</p>
+                <div className="fz-prev-wallet__qr" aria-label="Vista ilustrativa del QR" />
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img className="fz-prev-wallet__arte" alt="" src={resolverEstilo((ajustes?.page_style ?? null) as Partial<Estilo> | null).fondo || `data:image/svg+xml,${encodeURIComponent(svgArteWallet(datosArteWallet(marca.bg_color, (ajustes?.page_style ?? null) as Partial<Estilo> | null, b.rule_type ?? 'stamps', b.reward_threshold ?? 10)))}`} />
               </div>
-              <p className="fz-def">Vista orientativa de la tarjeta guardada. Google Wallet decide la apariencia de la pantalla «Agregar».</p>
+              <p className="fz-def">Vista orientativa con saldo de ejemplo. Google decide la apariencia exacta de la pantalla «Agregar» y del pase guardado.</p>
             </div>
           </div>
         )}

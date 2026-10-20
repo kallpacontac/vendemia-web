@@ -20,6 +20,7 @@ const raiz = new URL('../../../', import.meta.url).pathname.replace(/^\/([A-Za-z
 const cargar = (p) => jiti(join(raiz, p));
 
 const payload = cargar('modules/fideliza/dominio/wallet-payload.ts');
+const walletArte = cargar('modules/fideliza/dominio/wallet-arte.ts');
 const formato = cargar('modules/fideliza/dominio/formato.ts');
 const errores = cargar('modules/fideliza/dominio/errores.ts');
 const botones = cargar('modules/fideliza/dominio/botones.ts');
@@ -45,6 +46,7 @@ test('1 · el objeto de Wallet lleva el token opaco en el QR y nunca el id inter
   assert.equal(o.state, 'ACTIVE');
   assert.deepEqual(o.loyaltyPoints.balance, { int: 7 });
   assert.match(o.textModulesData[0].body, /Tienes 1 premio para canjear/);
+  assert.match(o.textModulesData[0].body, /●{7}○{3} · 7\/10/);
   assert.ok(!JSON.stringify(o).includes(MIEMBRO_ID));
   assert.ok(!('rewardsTier' in o), 'no se usa rewards tier para simular saldos');
 });
@@ -112,7 +114,34 @@ test('4c · el pase explica cuánto falta según la regla y el saldo real', () =
     { urlNegocio: 'https://fideliza.vendemias.com/n/barberia-centro' },
   );
   assert.equal(o.loyaltyPoints.label, 'Puntos');
+  assert.match(o.textModulesData[0].body, /18\/20 puntos/);
   assert.match(o.textModulesData[0].body, /Te faltan 2 puntos para Un café/);
+});
+
+test('4d · la ilustración pública de Wallet nunca contiene saldo ni datos del titular', () => {
+  const d = walletArte.datosArteWallet('#CB5C2F', { plantilla: 'color' }, 'stamps', 10);
+  assert.deepEqual(Object.keys(d).sort(), ['color', 'plantilla', 'tipo', 'umbral']);
+  assert.equal(walletArte.validarArteWallet(d), true);
+  assert.equal(walletArte.validarArteWallet({ ...d, balance: 7, alias: 'Ana' }), false);
+  const svg = walletArte.svgArteWallet(d);
+  assert.match(svg, /width="1032" height="812"/);
+  assert.equal((svg.match(/r="58"/g) ?? []).length, 10);
+  assert.ok(!svg.includes('Ana'));
+});
+
+test('4e · el objeto de Wallet recibe su arte y los sellos reales solo en el texto privado', () => {
+  const o = payload.cuerpoObjeto(
+    {
+      member: { public_code: 'VDM-A7K9P2', alias: 'Ana', status: 'active', balance: 3, rewards_available: 0, qr_token: 'vq' + 'x'.repeat(24) },
+      program: { name: 'Club', status: 'active', rule_type: 'stamps', threshold: 8, reward: 'Un café' },
+      brand: marca,
+    },
+    '3388000000023213846.vf_x',
+    { urlNegocio: 'https://fideliza.vendemias.com/n/barberia-centro', urlArte: 'https://fideliza.vendemias.com/api/fideliza/publico/wallet-arte?d=programa' },
+  );
+  assert.match(o.textModulesData[0].body, /●{3}○{5} · 3\/8/);
+  assert.match(o.heroImage.sourceUri.uri, /wallet-arte/);
+  assert.ok(!o.heroImage.sourceUri.uri.includes('Ana'));
 });
 
 test('5 · importes en céntimos, sin decimales flotantes', () => {

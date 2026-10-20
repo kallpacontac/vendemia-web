@@ -32,6 +32,19 @@
 .fz-pasos button.done{color:#0A7A4B}
 .fz-prev{border-radius:18px;padding:18px;color:#1A0A00;max-width:340px}
 .fz-prev__logo{width:56px;height:56px;border-radius:50%;background:#fff;object-fit:cover;border:2px solid #fff}
+.fz-prev-wallet{overflow:hidden;padding:16px;box-shadow:0 12px 28px rgba(0,0,0,.12)}
+.fz-prev-wallet__cab{display:flex;align-items:center;gap:9px;font-size:13px}
+.fz-prev-wallet__cab .fz-prev__logo{width:36px;height:36px;flex:0 0 36px}
+.fz-prev-wallet__inicial{display:grid;place-items:center;color:#171716;font-weight:800}
+.fz-prev-wallet h3{margin:16px 0;font-size:21px;line-height:1.15}
+.fz-prev-wallet__datos{display:flex;gap:25px;margin:12px 0}
+.fz-prev-wallet__datos span{display:flex;flex-direction:column;gap:1px}
+.fz-prev-wallet__datos small{font-size:9px;font-weight:800;letter-spacing:.08em;opacity:.75}
+.fz-prev-wallet__datos b{font-size:23px}
+.fz-prev-wallet__avance{font-size:12px;font-weight:800;letter-spacing:.07em;margin:9px 0 5px}
+.fz-prev-wallet__premio{font-size:11px;line-height:1.35;min-height:30px}
+.fz-prev-wallet__qr{width:87px;height:87px;margin:13px auto;border:7px solid #fff;border-radius:7px;background:repeating-conic-gradient(#171716 0 25%,#fff 0 50%) 0 0/12px 12px}
+.fz-prev-wallet__arte{display:block;width:100%;height:auto;aspect-ratio:1032/812;object-fit:cover;border-radius:11px}
 /* La caja: pensada para una mano, en el móvil. */
 .fz-caja{max-width:560px}
 .fz-gran{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;min-height:60px;border-radius:16px;border:none;font:800 17px 'Plus Jakarta Sans';cursor:pointer}

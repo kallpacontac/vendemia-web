@@ -45,13 +45,14 @@ const texto = (valor: string) => ({ defaultValue: { language: 'es-PE', value: va
 
 export function cuerpoClase(
   d: DatosClase,
-  opciones: { urlNegocio: string; logoVendemia: string; demo: boolean },
+  opciones: { urlNegocio: string; logoVendemia: string; demo: boolean; urlArte?: string },
 ): Record<string, unknown> {
   const demo = opciones.demo;
   const logo = !demo && d.logo_valido && d.brand.logo_url ? d.brand.logo_url : opciones.logoVendemia;
   const nombreEmisor = demo ? 'Vendemia' : d.brand.display_name;
   const programa = demo ? 'Vendemia Fideliza' : d.program_name;
   const estilo = resolverEstilo(d.brand.style);
+  const portada = !demo && estilo.fondo ? estilo.fondo : opciones.urlArte ?? null;
   const campo = (fieldPath: string) => ({ firstValue: { fields: [{ fieldPath }] } });
   const saldo = (campoBase: string) => ({
     firstValue: { fields: [{ fieldPath: `object.${campoBase}.label` }] },
@@ -62,8 +63,7 @@ export function cuerpoClase(
     programName: programa.slice(0, 40),
     programLogo: { sourceUri: { uri: logo }, contentDescription: texto(`Logo de ${nombreEmisor}`) },
     hexBackgroundColor: demo ? '#FF4900' : colorValido(d.brand.bg_color),
-    // null elimina una portada anterior al hacer PATCH cuando el comercio la quita.
-    heroImage: estilo.fondo && !demo ? { sourceUri: { uri: estilo.fondo }, contentDescription: texto(`Imagen de ${nombreEmisor}`) } : null,
+    heroImage: portada ? { sourceUri: { uri: portada }, contentDescription: texto(`Diseño de fidelidad de ${nombreEmisor}`) } : null,
     classTemplateInfo: {
       cardTemplateOverride: {
         cardRowTemplateInfos: [
@@ -96,17 +96,24 @@ export interface DatosObjeto {
   brand: Marca;
 }
 
-export function cuerpoObjeto(d: DatosObjeto, classId: string, opciones: { urlNegocio: string }): Record<string, unknown> {
+export function cuerpoObjeto(d: DatosObjeto, classId: string, opciones: { urlNegocio: string; urlArte?: string }): Record<string, unknown> {
   const activo = d.member.status === 'active';
   const tipo = d.program?.rule_type ?? 'stamps';
   const premios = d.member.rewards_available;
-  const faltan = Math.max(0, (d.program?.threshold ?? 0) - d.member.balance);
-  const frase =
+  const umbral = d.program?.threshold ?? 0;
+  const faltan = Math.max(0, umbral - d.member.balance);
+  const avance = umbral > 0
+    ? tipo === 'stamps' && umbral <= 12
+      ? `${'●'.repeat(Math.min(Math.max(d.member.balance, 0), umbral))}${'○'.repeat(Math.max(0, umbral - d.member.balance))} · ${d.member.balance}/${umbral}`
+      : `${d.member.balance}/${umbral} ${UNIDAD[tipo].varias}`
+    : '';
+  const premio =
     premios > 0
       ? `Tienes ${premios} premio${premios > 1 ? 's' : ''} para canjear: ${d.program?.reward ?? ''}`
-      : d.program?.threshold
-        ? `Te faltan ${faltan} ${faltan === 1 ? UNIDAD[tipo].una : UNIDAD[tipo].varias} para ${d.program.reward ?? 'tu premio'}`
+      : umbral
+        ? `Te faltan ${faltan} ${faltan === 1 ? UNIDAD[tipo].una : UNIDAD[tipo].varias} para ${d.program?.reward ?? 'tu premio'}`
         : '';
+  const frase = [avance, premio].filter(Boolean).join(' · ');
   return {
     classId,
     state: activo ? 'ACTIVE' : 'INACTIVE',
@@ -114,10 +121,12 @@ export function cuerpoObjeto(d: DatosObjeto, classId: string, opciones: { urlNeg
     accountName: (d.member.status === 'deleted' ? 'Tarjeta dada de baja' : d.member.alias || 'Cliente').slice(0, 40),
     loyaltyPoints: { label: UNIDAD[tipo].corta, balance: { int: d.member.balance } },
     secondaryLoyaltyPoints: { label: 'Premios', balance: { int: premios } },
+    // En demo, la clase es compartida: la ilustración específica del programa va en el objeto.
+    heroImage: opciones.urlArte ? { sourceUri: { uri: opciones.urlArte }, contentDescription: texto(`Diseño de fidelidad de ${d.brand.display_name}`) } : null,
     barcode: activo
       ? { type: 'QR_CODE', value: d.member.qr_token, alternateText: d.member.public_code }
       : undefined,
-    textModulesData: frase ? [{ id: 'premio', header: premios > 0 ? 'Premio disponible' : 'Próximo premio', body: frase.slice(0, 200) }] : [],
+    textModulesData: frase ? [{ id: 'premio', header: premios > 0 ? 'Premio disponible' : 'Tu avance y premio', body: frase.slice(0, 200) }] : [],
     linksModuleData: {
       uris: [
         { id: 'negocio', uri: opciones.urlNegocio, description: d.brand.display_name.slice(0, 40) },

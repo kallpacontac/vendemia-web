@@ -115,6 +115,12 @@ después de cada operación y con «Sincronizar ahora». En Pro, cambiar a
 - **Un objeto por miembro** (`<issuer>.vf_<id de la emisión>`), con el código
   VDM-… y el QR con un token opaco. Crear/actualizar es PATCH → si 404 INSERT →
   si 409 PATCH: reintentar nunca crea un segundo objeto.
+- El pase usa el color, logo y plantilla del negocio. La ilustración PNG de
+  sellos/visitas/puntos solo contiene configuración pública del programa
+  (color, plantilla, tipo de regla y meta); nunca el saldo ni datos del titular.
+  El saldo, premios y progreso real van en los campos nativos del objeto de
+  Google Wallet y se actualizan al sincronizarlo. Si se eligió portada en
+  «Mi página», se usa esa imagen. Google decide el diseño de «Agregar».
 - Las clases se crean con `reviewStatus: UNDER_REVIEW` (en `DRAFT` Google no
   deja crear objetos). Con el emisor en modo demo, solo funcionan las cuentas
   añadidas como *test accounts* en la Google Pay & Wallet Console.

@@ -3,6 +3,9 @@ import { entorno } from '../entorno';
 import { rpc, servidor } from '../supabase';
 import { urlNegocio } from '../../dominio/config';
 import { cuerpoClase, cuerpoObjeto, huella, idClase, type DatosClase, type DatosObjeto } from '../../dominio/wallet-payload';
+import { datosArteWallet } from '../../dominio/wallet-arte';
+import { resolverEstilo } from '../../dominio/estilo';
+import { urlArteWallet } from './arte';
 import { enlaceGuardar, ErrorWallet, guardadaEnWallet, upsert } from './google';
 import { CredencialesInvalidas } from './credenciales';
 
@@ -37,7 +40,15 @@ export async function sincronizarClase(programId: string): Promise<{ classId: st
     const logoValido = await logoComprobado(d.brand.logo_url);
     const cuerpo = cuerpoClase(
       { ...d, logo_valido: logoValido },
-      { urlNegocio: urlNegocio(d.brand.slug), logoVendemia: entorno.walletLogoVendemia(), demo },
+      {
+        urlNegocio: urlNegocio(d.brand.slug), logoVendemia: entorno.walletLogoVendemia(), demo,
+        urlArte: urlArteWallet(datosArteWallet(
+          demo ? '#FF4900' : d.brand.bg_color,
+          demo ? { plantilla: 'color' } : d.brand.style,
+          demo ? 'points' : d.rule_type ?? 'stamps',
+          demo ? 0 : d.threshold ?? 0,
+        )),
+      },
     );
     const h = huella(cuerpo);
     if (d.class?.state === 'synced' && d.class.config_hash === h && d.class.class_id === classId) {
@@ -104,7 +115,17 @@ async function subirObjeto(d: DatosObjetoRpc) {
     if (!classId || d.class?.state !== 'synced') {
       ({ classId } = await sincronizarClase(programaDe(d)));
     }
-    const cuerpo = cuerpoObjeto(d, classId!, { urlNegocio: urlNegocio(d.brand.slug) });
+    const demo = Boolean(d.class?.is_demo);
+    const fondo = demo ? '' : resolverEstilo(d.brand.style).fondo;
+    const cuerpo = cuerpoObjeto(d, classId!, {
+      urlNegocio: urlNegocio(d.brand.slug),
+      urlArte: fondo || urlArteWallet(datosArteWallet(
+        demo ? '#FF4900' : d.brand.bg_color,
+        demo ? { plantilla: 'color' } : d.brand.style,
+        d.program?.rule_type ?? 'stamps',
+        d.program?.threshold ?? 0,
+      )),
+    });
     await upsert('loyaltyObject', d.pass.object_id, cuerpo, { hasUsers: false });
     await rpc(sb, 'loyalty_srv_wallet_pass_mark', {
       p_member: d.member.id,
