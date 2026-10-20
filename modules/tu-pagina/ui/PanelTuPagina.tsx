@@ -31,18 +31,20 @@ import { urlPagina, urlEnvio, urlReservar } from '@/modules/tu-pagina/dominio/co
 import { esAppointmentFamily, esEcommerce, esRecurrente } from '@/lib/panel/modo';
 import { tipoPorDefecto, type TiposDePagina } from '@/modules/tu-pagina/dominio/tienda';
 import type { BusinessMode } from '@/lib/supabase/types';
-import { EXPERIENCIAS, plantillaGuardada, tipoPagina, tipoPorDefecto as tipoPaginaPorDefecto, type TipoPagina } from '@/modules/tu-pagina/dominio/plantillas';
+import { disposicionDe, EXPERIENCIAS, PLANTILLAS, plantillaPorDefecto, plantillaValida, tipoPagina, tipoPorDefecto as tipoPaginaPorDefecto, type PlantillaGuardada, type TipoPagina } from '@/modules/tu-pagina/dominio/plantillas';
 import { esHex, esUrlPublica, type AparienciaPagina } from '@/modules/tu-pagina/dominio/apariencia';
 import { subirImagenMarca } from '@/modules/fideliza/cliente/imagenMarca';
+import Marco, { Cabecera } from '@/modules/tu-pagina/publico/Marco';
+import type { PaginaPublica } from '@/modules/tu-pagina/servidor/pagina';
 
 /**
  * La página con otra plantilla o color, sin guardar: se sirve en el dominio del
  * panel (hosts.ts no la manda a tienda.*) para poder ir en un iframe.
  */
 const urlVista = (slug: string, valores: {
-  tipo: TipoPagina; color: string; apariencia: AparienciaPagina;
+  tipo: TipoPagina; plantilla: PlantillaGuardada; plantillaActiva: boolean; color: string; apariencia: AparienciaPagina;
 }) => {
-  const q = new URLSearchParams({ vista: '1', tipo: valores.tipo, color: valores.color,
+  const q = new URLSearchParams({ vista: '1', tipo: valores.tipo, plantilla: valores.plantilla, pa: valores.plantillaActiva ? '1' : '0', color: valores.color,
     ct: valores.apariencia.colorTienda ?? '', fa: valores.apariencia.fondoAgenda ?? '',
     ft: valores.apariencia.fondoTienda ?? '', cb: valores.apariencia.colorBanner ?? '',
     mb: valores.apariencia.mostrarBanner === false ? '0' : '1',
@@ -131,7 +133,11 @@ export default function PanelTuPagina() {
     { id: 'pagina' as const, nombre: 'La página' },
   ];
   const [pestana, setPestana] = useState<Pestana | null>(null);
-  const activa: Pestana = pestana && pestanas.some((p) => p.id === pestana) ? pestana : codigoBuscado ? 'envios' : pestanas[0].id;
+  // ?ver=reclamos: el enlace del correo que avisa de una hoja nueva.
+  const pedida = params.get('ver') as Pestana | null;
+  const activa: Pestana = pestana && pestanas.some((p) => p.id === pestana)
+    ? pestana
+    : codigoBuscado ? 'envios' : pedida && pestanas.some((p) => p.id === pedida) ? pedida : pestanas[0].id;
 
   useEffect(() => {
     if (sinPagina) setPestana('pagina');
@@ -184,11 +190,13 @@ function MiPagina({ companyId, nombre, pagina, agendaNube, alGuardar }: {
   const [titulo, setTitulo] = useState(pagina?.titulo || nombre);
   const [frase, setFrase] = useState(pagina?.frase ?? '');
   const [slug, setSlug] = useState(pagina?.slug ?? sugerirSlug(nombre || companyId));
+  const [slugManual, setSlugManual] = useState(false);
   const [whatsapp, setWhatsapp] = useState(telefonoBonito(pagina?.whatsapp ?? ''));
   const modo = compania?.business_mode;
   const tienda = esEcommerce(modo);
   const [envios, setEnvios] = useState(pagina?.secciones?.envios ?? false);
   const [reclamos, setReclamos] = useState(pagina?.secciones?.reclamos ?? false);
+  const [funcionesAbiertas, setFuncionesAbiertas] = useState(Boolean(pagina?.secciones?.envios || pagina?.secciones?.reclamos));
   const [proveedor, setProveedor] = useState<Proveedor>({
     razon_social: pagina?.secciones?.proveedor?.razon_social ?? '',
     ruc: pagina?.secciones?.proveedor?.ruc ?? '',
@@ -197,6 +205,11 @@ function MiPagina({ companyId, nombre, pagina, agendaNube, alGuardar }: {
   // Por defecto, lo que hace cada negocio: la tienda vende, el de citas o clases reserva.
   // Una página antigua solo de envíos no es ninguna de las tres, y así se queda si no se elige.
   const [es, setEs] = useState<Es>(pagina ? esDe(pagina.secciones) ?? tipoPaginaPorDefecto(modo) : tienda ? 'tienda' : 'agenda');
+  const [plantilla, setPlantilla] = useState<PlantillaGuardada>(
+    plantillaValida(pagina?.plantilla) ? pagina.plantilla : plantillaPorDefecto(pagina ? esDe(pagina.secciones) ?? tipoPaginaPorDefecto(modo) : tienda ? 'tienda' : 'agenda'),
+  );
+  const [plantillaManual, setPlantillaManual] = useState(false);
+  const [paso, setPaso] = useState<1 | 2 | 3>(1);
   const [tipos, setTipos] = useState<TiposDePagina>(pagina?.secciones?.tipos ?? {});
   const catalogo = es === 'tienda' || es === 'ambos';
   const reservar = es === 'agenda' || es === 'ambos';
@@ -247,7 +260,9 @@ function MiPagina({ companyId, nombre, pagina, agendaNube, alGuardar }: {
 
   async function guardar() {
     if (!esUrlPublica(logo) || !esUrlPublica(portada)) { avisar('El logo y la portada deben tener un enlace público https.', 'error'); return; }
+    if (!/^\d{8,15}$/.test(telefonoNormal(whatsapp))) { avisar('Revisa el número de WhatsApp antes de publicar.', 'error'); return; }
     if (reclamos && !proveedorCompleto(proveedor)) { avisar('Para el Libro de Reclamaciones faltan tu razón social, un RUC válido (11 cifras) y la dirección.', 'error'); return; }
+    const aparienciaPublicada = { ...apariencia, plantillaActiva: !pagina?.publicada || plantillaManual || apariencia.plantillaActiva === true };
     setGuardando(true);
     try {
       const { error } = await supabase().rpc('tu_pagina_guardar', {
@@ -259,11 +274,12 @@ function MiPagina({ companyId, nombre, pagina, agendaNube, alGuardar }: {
           frase: frase.trim(),
           whatsapp: telefonoNormal(whatsapp),
           color,
-          plantilla: plantillaGuardada(es),
+          plantilla,
           logo_url: logo.trim(),
           portada_url: portada.trim(),
           secciones: {
-            envios, catalogo, reservar, tipos: es === 'ambos' ? tipos : {}, apariencia,
+            envios, catalogo, reservar, tipos: es === 'ambos' ? tipos : {},
+            apariencia: aparienciaPublicada,
             reclamos,
             proveedor: { razon_social: proveedor.razon_social.trim(), ruc: proveedor.ruc.replace(/\D/g, ''), direccion: proveedor.direccion.trim() },
           },
@@ -277,6 +293,8 @@ function MiPagina({ companyId, nombre, pagina, agendaNube, alGuardar }: {
         headers: { 'content-type': 'application/json', authorization: `Bearer ${data.session?.access_token ?? ''}` },
         body: JSON.stringify({ company_id: companyId }),
       }).catch(() => undefined);
+      setApariencia(aparienciaPublicada);
+      setPlantillaManual(false);
       avisar('Publicada. Ya la pueden abrir tus clientes.');
       alGuardar();
     } catch (e) {
@@ -287,49 +305,83 @@ function MiPagina({ companyId, nombre, pagina, agendaNube, alGuardar }: {
   }
 
   const publicada = pagina?.publicada && pagina.slug;
-  const vista = urlVista(slug, { tipo: es, color, apariencia });
+  const vista = urlVista(pagina?.slug ?? slug, { tipo: es, plantilla, plantillaActiva: !pagina?.publicada || plantillaManual || apariencia.plantillaActiva === true || pagina?.secciones?.apariencia?.plantillaActiva === true, color, apariencia });
+  const verPaso = (numero: 1 | 2 | 3) => Boolean(publicada || paso === numero);
+  const plantillas = plantillaValida(pagina?.plantilla) && !PLANTILLAS.some((p) => p.id === pagina.plantilla)
+    ? [...PLANTILLAS, { id: pagina.plantilla, nombre: pagina.plantilla === 'clases' ? 'Clases' : 'Envíos', describe: 'Diseño anterior de tu página.' }]
+    : PLANTILLAS;
 
   return (
     <div className="tp-panel-grid">
       <section className="card">
-        <div className="card-mini-head"><h3>{publicada ? 'Mi página' : 'Crea tu página en un minuto'}</h3></div>
+        <div className="card-mini-head"><h3>{publicada ? 'Mi página' : 'Crea tu página en 3 pasos'}</h3></div>
+        {!publicada && (
+          <nav className="tp-panel-progreso" aria-label="Pasos para publicar">
+            {(['Tu negocio', 'Tu diseño', 'Publica'] as const).map((nombrePaso, indice) => {
+              const numero = (indice + 1) as 1 | 2 | 3;
+              return <button key={numero} type="button" className={paso === numero ? 'activo' : ''} aria-current={paso === numero ? 'step' : undefined} disabled={numero > paso} onClick={() => setPaso(numero)}><span>{numero < paso ? '✓' : numero}</span>{nombrePaso}</button>;
+            })}
+          </nav>
+        )}
 
+        <div className="tp-panel-paso" hidden={!verPaso(1)}>
         <label className="tp-panel-campo">
           <span>Nombre que verán tus clientes</span>
-          <input className="input" value={titulo} maxLength={60} onChange={(e) => setTitulo(e.target.value)} />
+          <input className="input" value={titulo} maxLength={60} onChange={(e) => { setTitulo(e.target.value); if (!pagina?.publicada && !slugManual) setSlug(sugerirSlug(e.target.value)); }} />
         </label>
         <label className="tp-panel-campo">
           <span>Una línea debajo <small className="muted">(opcional)</small></span>
           <input className="input" value={frase} maxLength={120} placeholder="Envíos en todo Lima, recojo el mismo día" onChange={(e) => setFrase(e.target.value)} />
         </label>
+        </div>
+        <div className="tp-panel-paso" hidden={!verPaso(3)}>
         <label className="tp-panel-campo">
           <span>Tu WhatsApp, a donde te llegará todo</span>
           <input className="input" value={whatsapp} inputMode="tel" placeholder="987 654 321" onChange={(e) => setWhatsapp(e.target.value)} />
         </label>
-        <div className="tp-panel-campo"><span>Logo</span>
+        </div>
+        <div className="tp-panel-paso" hidden={!verPaso(2)}>
+          <div className="tp-panel-campo">
+            <span>Elige un diseño para tu página</span>
+            <small className="muted">Puedes cambiarlo después. El diseño sugerido ya está seleccionado.</small>
+            {publicada && !pagina?.secciones?.apariencia?.plantillaActiva && !plantillaManual && <small className="muted">Tu página conserva su aspecto actual. Elige un diseño para activar el nuevo estilo.</small>}
+            <div className="tp-panel-plantillas" role="radiogroup" aria-label="Diseño de la página">
+              {plantillas.map((opcion) => (
+                <button key={opcion.id} type="button" role="radio" aria-checked={plantilla === opcion.id} className={`tp-panel-plantilla${plantilla === opcion.id ? ' activa' : ''}`} onClick={() => { setPlantilla(opcion.id); setPlantillaManual(true); }}>
+                  <span className={`tp-panel-plantilla__dibujo tp-panel-plantilla__dibujo--${opcion.id}`} style={{ ['--c' as string]: color }} aria-hidden="true"><i /><i /><i /><i /></span>
+                  <b>{opcion.nombre}</b><small>{opcion.describe}</small>
+                </button>
+              ))}
+            </div>
+          </div>
+        <div className="tp-panel-campo"><span>Logo <small className="muted">(opcional)</small></span>
           <label className="tp-panel-subir">{subiendo === 'logo' ? 'Subiendo…' : logo ? 'Cambiar logo' : 'Subir logo'}
             <input type="file" accept="image/*" disabled={subiendo !== null} onChange={(e) => { const file = e.target.files?.[0]; if (file) void subirImagen(file, 'logo'); e.target.value = ''; }} />
           </label>
           {logo && esUrlPublica(logo) && <img className="tp-panel-imagen tp-panel-imagen--logo" src={logo} alt="Vista previa del logo" />}
-          <label className="tp-panel-enlace-imagen">O pega un enlace HTTPS<input className="input" type="url" value={logo} placeholder="https://…/mi-logo.png" onChange={(e) => setLogo(e.target.value)} /></label>
+          {publicada && <label className="tp-panel-enlace-imagen">O pega un enlace HTTPS<input className="input" type="url" value={logo} placeholder="https://…/mi-logo.png" onChange={(e) => setLogo(e.target.value)} /></label>}
+        </div>
         </div>
 
+        <div className="tp-panel-paso" hidden={!verPaso(3)}>
         <label className="tp-panel-campo">
           <span>Tu dirección</span>
           <div className="tp-panel-slug">
             <span className="muted">{urlPagina('', compania?.business_mode).replace(/^https?:\/\//, '')}</span>
-            <input className="input" value={slug} maxLength={40} onChange={(e) => setSlug(sugerirSlug(e.target.value, true))} />
+            <input className="input" value={slug} maxLength={40} onChange={(e) => { setSlugManual(true); setSlug(sugerirSlug(e.target.value, true)); }} />
           </div>
           <small className={libre === false || errorSlug ? 'tp-panel-mal' : 'muted'}>
             {errorSlug ? 'No se pudo comprobar. Intenta nuevamente.' : libre === null ? 'Comprobando…' : libre ? 'Disponible' : 'No disponible: prueba con otra'}
           </small>
         </label>
+        </div>
 
+        <div className="tp-panel-paso" hidden={!verPaso(1)}>
         <div className="tp-panel-campo">
           <span>¿Qué harán tus clientes en tu página?</span>
           <div className="tp-panel-es" role="radiogroup" aria-label="Tu página es">
             {ES.map((o) => (
-              <button key={o.id} type="button" role="radio" aria-checked={es === o.id} className={es === o.id ? 'activa' : ''} onClick={() => setEs(o.id)}>
+              <button key={o.id} type="button" role="radio" aria-checked={es === o.id} className={es === o.id ? 'activa' : ''} onClick={() => { setEs(o.id); if (!plantillaManual) setPlantilla(plantillaPorDefecto(o.id)); }}>
                 <span className={`tp-panel-es__mini tp-panel-es__mini--${o.id}`} aria-hidden="true"><i /><i /><i /></span>
                 <b>{o.nombre}</b>
                 <small>{o.id === 'agenda' && esRecurrente(modo) ? 'Separan cupos y eligen horario.' : o.describe}</small>
@@ -340,7 +392,9 @@ function MiPagina({ companyId, nombre, pagina, agendaNube, alGuardar }: {
         </div>
 
         {es === 'ambos' && <QueSeReserva companyId={companyId} tipos={tipos} alCambiar={setTipos} />}
+        </div>
 
+        <div className="tp-panel-paso" hidden={!verPaso(2)}>
         <div className="tp-panel-campo">
           <span>Color principal</span>
           <div className="tp-panel-colores">
@@ -349,7 +403,9 @@ function MiPagina({ companyId, nombre, pagina, agendaNube, alGuardar }: {
           </div>
           <small className="muted">Se aplica a botones y selecciones. En “Agenda y tienda”, la tienda mantiene un contraste propio que puedes ajustar abajo.</small>
         </div>
+        </div>
 
+        <div className="tp-panel-paso" hidden={!verPaso(3)}>
         <details className="tp-panel-avanzado">
           <summary>Personalizar más <small>Portada, secciones y colores específicos</small></summary>
           <div className="tp-panel-avanzado__contenido">
@@ -374,6 +430,9 @@ function MiPagina({ companyId, nombre, pagina, agendaNube, alGuardar }: {
         </details>
 
         {/* Lo que no todos necesitan: se enciende si se quiere y solo entonces pide sus datos. */}
+        <details className="tp-panel-avanzado" open={funcionesAbiertas} onToggle={(e) => setFuncionesAbiertas(e.currentTarget.open)}>
+          <summary>Agregar funciones <small>Envíos y Libro de Reclamaciones, si los necesitas</small></summary>
+          <div className="tp-panel-avanzado__contenido">
         <div className="tp-panel-campo">
           <span>Apartados opcionales</span>
           <div className="tp-panel-apartados">
@@ -391,13 +450,19 @@ function MiPagina({ companyId, nombre, pagina, agendaNube, alGuardar }: {
             </Apartado>
           </div>
         </div>
+          </div>
+        </details>
+        </div>
 
-        <button className="btn btn-primary" disabled={guardando || subiendo !== null || libre !== true || !whatsapp.trim() || !titulo.trim() || !esUrlPublica(logo) || !esUrlPublica(portada)} onClick={() => void guardar()}>
+        {!publicada && paso < 3 && <button type="button" className="btn btn-primary tp-panel-siguiente" disabled={paso === 1 && !titulo.trim()} onClick={() => setPaso(paso === 1 ? 2 : 3)}>Siguiente paso →</button>}
+        {!publicada && paso > 1 && <button type="button" className="btn btn-ghost tp-panel-volver" onClick={() => setPaso(paso === 3 ? 2 : 1)}>← Volver</button>}
+        {(publicada || paso === 3) && <button className="btn btn-primary tp-panel-siguiente" disabled={guardando || subiendo !== null || libre !== true || !whatsapp.trim() || !titulo.trim() || !esUrlPublica(logo) || !esUrlPublica(portada)} onClick={() => void guardar()}>
           {guardando ? 'Publicando…' : publicada ? 'Guardar cambios' : 'Publicar mi página'}
-        </button>
+        </button>}
       </section>
 
       <div className="tp-panel-lado">
+        {!publicada && paso === 2 && <VistaBorrador titulo={titulo} frase={frase} color={color} logo={logo} portada={portada} plantilla={plantilla} tipo={es} apariencia={apariencia} />}
         {publicada && (
           <section className="card">
             <div className="card-mini-head">
@@ -407,7 +472,7 @@ function MiPagina({ companyId, nombre, pagina, agendaNube, alGuardar }: {
             <div className="tp-panel-vista">
               <iframe title="Vista previa de tu página" src={vista} />
             </div>
-            {(es !== tipoPagina(pagina!.secciones) || color !== pagina!.color || titulo !== pagina!.titulo || frase !== pagina!.frase || logo !== (pagina!.logo_url ?? '') || portada !== (pagina!.portada_url ?? '') || JSON.stringify(apariencia) !== JSON.stringify(pagina!.secciones.apariencia ?? {})) && (
+            {(es !== tipoPagina(pagina!.secciones) || plantilla !== pagina!.plantilla || (plantillaManual && !pagina!.secciones.apariencia?.plantillaActiva) || color !== pagina!.color || titulo !== pagina!.titulo || frase !== pagina!.frase || logo !== (pagina!.logo_url ?? '') || portada !== (pagina!.portada_url ?? '') || JSON.stringify(apariencia) !== JSON.stringify(pagina!.secciones.apariencia ?? {})) && (
               <small className="muted">Vista previa del diseño. El nombre y las imágenes se actualizarán al guardar.</small>
             )}
           </section>
@@ -415,6 +480,46 @@ function MiPagina({ companyId, nombre, pagina, agendaNube, alGuardar }: {
         {publicada && <Compartir slug={pagina!.slug} envios={Boolean(pagina!.secciones?.envios)} reservar={Boolean(pagina!.secciones?.reservar)} conCatalogo={Boolean(pagina!.secciones?.catalogo || pagina!.secciones?.reservar)} />}
       </div>
     </div>
+  );
+}
+
+/** Misma cabecera y estilos públicos; los artículos de muestra solo enseñan la disposición. */
+function VistaBorrador({ titulo, frase, color, logo, portada, plantilla, tipo, apariencia }: {
+  titulo: string; frase: string; color: string; logo: string; portada: string;
+  plantilla: PlantillaGuardada; tipo: TipoPagina; apariencia: AparienciaPagina;
+}) {
+  const pagina: PaginaPublica = {
+    slug: 'ejemplo', version: 0, titulo: titulo.trim() || 'Tu negocio', frase, whatsapp: '51987654321',
+    color, logo_url: esUrlPublica(logo) && logo ? logo : null,
+    portada_url: esUrlPublica(portada) && portada ? portada : null,
+    plantilla, distritos: [],
+    secciones: { catalogo: tipo !== 'agenda', reservar: tipo !== 'tienda', apariencia: { ...apariencia, plantillaActiva: true } },
+  };
+  const disposicion = disposicionDe(plantilla, tipo);
+  return (
+    <section className="card">
+      <div className="card-mini-head"><h3>Así se verá tu diseño</h3></div>
+      <div className="tp-panel-vista tp-panel-vista--borrador" aria-hidden="true" inert>
+        <div className="tp-panel-vista__escala">
+          <Marco pagina={pagina} portada>
+            <Cabecera pagina={pagina} />
+            <div className="tp-hoja">
+              <section className="tp-catalogo">
+                <h2 className="tp-seccion">{tipo === 'agenda' ? 'Servicios' : 'Productos'}</h2>
+                {disposicion === 'carta' ? (
+                  <div className="tp-carta"><h3 className="tp-carta__seccion">Destacados</h3>{[1, 2, 3].map((n) => <div className="tp-carta__fila" key={n}><span className="tp-carta__texto"><span className="tp-carta__linea"><b>{n === 1 ? 'Primera opción' : n === 2 ? 'Otra opción' : 'Especial'}</b><i /><b>S/ 25</b></span></span></div>)}</div>
+                ) : (
+                  <div className={`tp-grid${disposicion === 'cuadricula' ? '' : ' tp-grid--lista'}`}>
+                    {[1, 2, 3, 4].map((n) => <div className="tp-tarjeta" key={n}><span className="tp-tarjeta__foto tp-panel-muestra-foto" /><span className="tp-tarjeta__texto"><b>{tipo === 'agenda' ? `Servicio ${n}` : `Producto ${n}`}</b><span className="tp-tarjeta__pie"><b>S/ {n * 15}</b></span></span></div>)}
+                  </div>
+                )}
+              </section>
+            </div>
+          </Marco>
+        </div>
+      </div>
+      <small className="muted">Artículos de muestra. El nombre, color y diseño son los que elegiste.</small>
+    </section>
   );
 }
 
@@ -448,6 +553,7 @@ function Compartir({ slug, envios, reservar, conCatalogo }: { slug: string; envi
         </div>
       ))}
       {conCatalogo && <CatalogoPdf url={`${urlPagina(slug, modo)}/catalogo.pdf`} />}
+      {conCatalogo && <div className="tp-panel-proximo"><b>¿Qué sigue?</b><p>Agrega o actualiza lo que ofreces para que aparezca en tu página.</p><Link className="btn btn-sm btn-primary" href="/panel/catalogo">Ir a mi catálogo</Link></div>}
     </section>
   );
 }

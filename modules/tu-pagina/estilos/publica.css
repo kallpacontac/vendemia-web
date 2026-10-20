@@ -439,6 +439,29 @@
   .tp[data-diseno='agenda'] .tp-dias, .tp[data-diseno='ambos'] .tp-hojita--agenda .tp-dias { grid-template-columns: repeat(7, minmax(0, 1fr)); }
 }
 
+/* La plantilla elegida modifica la página real, sin cambiar si vende o reserva. */
+.tp[data-plantilla='vitrina'] .tp-tarjeta { border-radius: 18px; overflow: hidden; background: var(--tp-papel); box-shadow: 0 8px 28px rgba(18, 24, 33, .09); }
+.tp[data-plantilla='vitrina'] .tp-tarjeta__foto { border-radius: 0; }
+.tp[data-plantilla='vitrina'] .tp-tarjeta__texto { padding: 12px 14px 16px; }
+.tp[data-plantilla='lista'] .tp-grid { grid-template-columns: 1fr; gap: 0; }
+.tp[data-plantilla='lista'] .tp-tarjeta { flex-direction: row; align-items: stretch; border: 0; border-bottom: 1px solid var(--tp-borde); border-radius: 0; box-shadow: none; background: transparent; padding: 10px 0; }
+.tp[data-plantilla='lista'] .tp-tarjeta__foto { width: 88px; min-height: 88px; height: 88px; flex: none; aspect-ratio: auto; border-radius: 10px; }
+.tp[data-plantilla='lista'] .tp-tarjeta__texto { flex: 1; align-content: center; padding: 6px 12px; }
+.tp[data-plantilla='carta'] { --tp-fondo: #fbf7ef; --tp-papel: #fffdf8; --tp-texto: #2a2118; --tp-suave: #756958; --tp-borde: #e3d7c3; --tp-campo: #fffdf8; }
+.tp[data-plantilla='carta'] .tp-titulo, .tp[data-plantilla='carta'] .tp-seccion, .tp[data-plantilla='carta'] .tp-ficha__nombre { font-family: Georgia, 'Times New Roman', serif; text-transform: none; }
+.tp[data-plantilla='carta'] .tp-carta__fila { padding-block: 16px; }
+.tp[data-plantilla='agenda'] { --tp-fondo: #11181e; --tp-papel: #1d2830; --tp-texto: #f5f7f8; --tp-suave: #b1bec6; --tp-borde: #394952; --tp-campo: #26333c; }
+.tp[data-plantilla='agenda'] .tp-cabeza { background: var(--tp-papel); color: var(--tp-texto); border-color: var(--tp-borde); }
+.tp[data-plantilla='agenda'] .tp-bloque { color: var(--tp-texto); }
+.tp[data-plantilla='agenda'] .tp-tarjeta { background: var(--tp-papel); color: var(--tp-texto); border-color: var(--tp-borde); }
+.tp[data-diseno='ambos'][data-plantilla='agenda'] .tp-modulo--agenda .tp-tarjeta { color: var(--tp-texto); }
+.tp[data-plantilla='agenda'] .tp-accion { background: var(--tp-papel); color: var(--tp-texto); border-color: var(--tp-borde); }
+.tp[data-plantilla='agenda'] .tp-accion--grande { background: var(--tp-color); color: var(--tp-tinta); }
+.tp[data-plantilla='agenda'] .tp-accion--grande .tp-accion__texto span { color: inherit; }
+.tp[data-plantilla='agenda'] .tp-hojita { background: var(--tp-fondo); color: var(--tp-texto); }
+.tp[data-plantilla='clases'] .tp-tarjeta { border-left: 5px solid var(--tp-color); }
+.tp[data-plantilla='envios'] .tp-portada { height: 100px; }
+
 /* ══════════════════════════════════════════════════════════════════════════
    LIBRO DE RECLAMACIONES (sql/0006)
    ══════════════════════════════════════════════════════════════════════════ */

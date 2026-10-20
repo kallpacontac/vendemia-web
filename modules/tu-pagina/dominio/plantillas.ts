@@ -1,10 +1,21 @@
-/** Tres experiencias públicas. Los valores de plantilla en Postgres se mantienen
- * por compatibilidad con páginas publicadas; el tipo de página decide el diseño. */
+/** La función de la página y su diseño son elecciones independientes.
+ * Los seis valores siguen siendo los aceptados por tu_pagina.plantilla en Postgres. */
 import type { BusinessMode } from '@/lib/supabase/types';
 
 export type TipoPagina = 'agenda' | 'tienda' | 'ambos';
 export type Disposicion = 'cuadricula' | 'filas' | 'carta';
-export type PlantillaGuardada = 'agenda' | 'vitrina' | 'lista';
+export type PlantillaGuardada = 'agenda' | 'vitrina' | 'lista' | 'carta' | 'clases' | 'envios';
+
+export const PLANTILLAS: { id: PlantillaGuardada; nombre: string; describe: string }[] = [
+  { id: 'vitrina', nombre: 'Vitrina', describe: 'Fotos grandes en cuadrícula.' },
+  { id: 'lista', nombre: 'Lista', describe: 'Productos y servicios fáciles de comparar.' },
+  { id: 'carta', nombre: 'Carta cálida', describe: 'Categorías y precios como en un menú.' },
+  { id: 'agenda', nombre: 'Agenda', describe: 'Reservas y servicios en primer plano.' },
+];
+
+export const plantillaValida = (valor: unknown): valor is PlantillaGuardada =>
+  valor === 'vitrina' || valor === 'lista' || valor === 'carta' ||
+  valor === 'agenda' || valor === 'clases' || valor === 'envios';
 
 export const EXPERIENCIAS: { id: TipoPagina; nombre: string; describe: string }[] = [
   { id: 'agenda', nombre: 'Agenda', describe: 'Reservas claras, con servicios, día y hora.' },
@@ -18,6 +29,10 @@ export const tipoPagina = (secciones: { catalogo?: boolean; reservar?: boolean }
 export const tipoPorDefecto = (modo: BusinessMode | null | undefined): TipoPagina =>
   modo === 'ecommerce' ? 'tienda' : 'agenda';
 
-/** Valores aceptados por el CHECK existente de tu_pagina.plantilla. */
-export const plantillaGuardada = (tipo: TipoPagina): PlantillaGuardada =>
+/** Sugerencia inicial; cambiar la función no sobrescribe un diseño elegido. */
+export const plantillaPorDefecto = (tipo: TipoPagina): PlantillaGuardada =>
   tipo === 'agenda' ? 'agenda' : tipo === 'ambos' ? 'lista' : 'vitrina';
+
+export const disposicionDe = (plantilla: PlantillaGuardada, tipo: TipoPagina): Disposicion =>
+  plantilla === 'carta' ? 'carta' : plantilla === 'lista' || plantilla === 'agenda' || plantilla === 'clases'
+    ? 'filas' : plantilla === 'vitrina' ? 'cuadricula' : tipo === 'agenda' ? 'filas' : 'cuadricula';

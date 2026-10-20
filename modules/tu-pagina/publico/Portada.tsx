@@ -17,7 +17,7 @@ import Escaparate from '@/modules/tu-pagina/publico/Escaparate';
 import { paginaDe, type PaginaPublica } from '@/modules/tu-pagina/servidor/pagina';
 import { escaparateDe } from '@/modules/tu-pagina/servidor/escaparate';
 import { urlWhatsApp } from '@/modules/tu-pagina/dominio/envio';
-import { tipoPagina, type TipoPagina } from '@/modules/tu-pagina/dominio/plantillas';
+import { disposicionDe, plantillaPorDefecto, plantillaValida, tipoPagina, type TipoPagina } from '@/modules/tu-pagina/dominio/plantillas';
 import { esHex } from '@/modules/tu-pagina/dominio/apariencia';
 
 type Props = { params: { slug: string }; searchParams?: Record<string, string | undefined> };
@@ -41,10 +41,12 @@ function conVista(p: PaginaPublica, q: Props['searchParams']): PaginaPublica {
   return {
     ...p,
     color: esHex(q.color) ? q.color : p.color,
+    plantilla: plantillaValida(q.plantilla) ? q.plantilla : p.plantilla,
     secciones: {
       ...p.secciones, catalogo: tipo !== 'agenda', reservar: tipo !== 'tienda',
       apariencia: {
         ...anterior,
+        plantillaActiva: q.pa === '1',
         colorTienda: esHex(q.ct) ? q.ct : anterior.colorTienda,
         fondoAgenda: esHex(q.fa) ? q.fa : anterior.fondoAgenda,
         fondoTienda: esHex(q.ft) ? q.ft : anterior.fondoTienda,
@@ -61,6 +63,7 @@ export default async function Portada({ params, searchParams }: Props) {
   if (!guardada) notFound();
   const p = conVista(guardada, searchParams);
   const tipo = tipoPagina(p.secciones);
+  const plantilla = plantillaValida(p.plantilla) ? p.plantilla : plantillaPorDefecto(tipo);
   const conEscaparate = Boolean(p.secciones.catalogo || p.secciones.reservar);
   const esc = conEscaparate ? await escaparateDe(p.slug, p.secciones) : null;
   const hayItems = Boolean(esc && esc.items.length > 0);
@@ -114,7 +117,7 @@ export default async function Portada({ params, searchParams }: Props) {
             esc={esc}
             slug={p.slug}
             whatsapp={p.whatsapp}
-            disposicion={tipo === 'tienda' || tipo === 'ambos' ? 'cuadricula' : 'filas'}
+            disposicion={p.secciones.apariencia?.plantillaActiva ? disposicionDe(plantilla, tipo) : tipo === 'agenda' ? 'filas' : 'cuadricula'}
             puedePedir={Boolean(p.secciones.catalogo)}
             puedeReservar={Boolean(p.secciones.reservar)}
           />

@@ -5,7 +5,7 @@
 import { BookOpen } from 'lucide-react';
 import { colorValido, tintaSobre } from '@/modules/fideliza/dominio/estilo';
 import type { PaginaPublica } from '@/modules/tu-pagina/servidor/pagina';
-import { tipoPagina, type TipoPagina } from '@/modules/tu-pagina/dominio/plantillas';
+import { plantillaPorDefecto, plantillaValida, tipoPagina, type TipoPagina } from '@/modules/tu-pagina/dominio/plantillas';
 import { colorO } from '@/modules/tu-pagina/dominio/apariencia';
 import '@/modules/tu-pagina/estilos/publica.css';
 
@@ -35,8 +35,12 @@ export function estiloDe(p: Pick<PaginaPublica, 'color' | 'secciones'>): React.C
  *        igual en tienda.* y en /tu-pagina/; desde una subpágina se sube un nivel.
  */
 export default function Marco({ pagina, children, vista, portada }: { pagina: PaginaPublica; children: React.ReactNode; vista?: TipoPagina; portada?: boolean }) {
+  const tipo = vista ?? tipoPagina(pagina.secciones);
+  const plantilla = pagina.secciones.apariencia?.plantillaActiva
+    ? (plantillaValida(pagina.plantilla) ? pagina.plantilla : plantillaPorDefecto(tipo))
+    : undefined;
   return (
-    <div className="tp" data-diseno={vista ?? tipoPagina(pagina.secciones)} style={estiloDe(pagina)}>
+    <div className="tp" data-diseno={tipo} data-plantilla={plantilla} style={estiloDe(pagina)}>
       {children}
       {/* El Libro de Reclamaciones va en el pie de TODA la página, también la de inicio (sql/0006). */}
       {pagina.secciones.reclamos && pagina.secciones.proveedor?.ruc && (

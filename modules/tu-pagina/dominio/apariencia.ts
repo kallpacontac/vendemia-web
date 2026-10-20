@@ -1,5 +1,7 @@
 /** Ajustes opcionales dentro de tu_pagina.secciones, sin migración SQL. */
 export interface AparienciaPagina {
+  /** Las páginas anteriores conservan su aspecto hasta que el dueño elija un diseño. */
+  plantillaActiva?: boolean;
   colorTienda?: string;
   fondoAgenda?: string;
   fondoTienda?: string;

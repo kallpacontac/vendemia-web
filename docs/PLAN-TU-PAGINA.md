@@ -95,6 +95,8 @@ QR en SVG, `window.print()`): se reutiliza el patrón, no el código de placas.
 
 ## 4 · Lo que hace el dueño: 3 pasos
 
+La revisión de [Dizi y el catálogo Kallpa](REFERENCIA-DIZI.md) concreta cómo presentar estos pasos y documenta la brecha con el editor actual.
+
 ```
 1. Tu página es:  ( Agenda )  ( Tienda )  ( Las dos )  (por defecto, según tu negocio)
    En «Las dos»: ¿Qué se reserva?  [✓] Corte  [ ] Champú …     [ ] También agendar envíos
