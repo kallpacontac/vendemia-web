@@ -69,6 +69,7 @@ export default async function Portada({ params, searchParams }: Props) {
   const conEscaparate = Boolean(p.secciones.catalogo || p.secciones.reservar);
   const esc = conEscaparate ? await escaparateDe(p.slug, p.secciones) : null;
   const hayItems = Boolean(esc && esc.items.length > 0);
+  const fotoDestacada = esc?.items.find((item) => item.tipo === 'producto' && item.fotos[0])?.fotos[0];
   // La página propia de Vendemia enseña un catálogo completo mientras su catálogo real
   // esté vacío. Está rotulado como demo y no ofrece pedidos ni cobros reales.
   if (p.slug === 'vendemia' && !hayItems) {
@@ -104,7 +105,7 @@ export default async function Portada({ params, searchParams }: Props) {
 
   return (
     <Marco pagina={p} portada>
-      <Cabecera pagina={p} />
+      <Cabecera pagina={p} fotoDestacada={fotoDestacada} catalogoDisponible={hayItems} />
       <div className="tp-hoja">
         {/* Enlaces relativos a propósito: valen igual en tienda o agenda (host/<negocio>) y en /tu-pagina/<negocio>. */}
         {envioPrimero && <div className="tp-acciones">{envio}</div>}

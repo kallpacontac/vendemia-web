@@ -176,7 +176,7 @@ export default function Escaparate({ esc: todo, slug, whatsapp, puedePedir, pued
 
   return (
     <>
-      <section className="tp-catalogo" aria-label={tipos.length > 1 ? 'Lo que ofrecemos' : cap(v.items)}>
+      <section className="tp-catalogo" id="catalogo" aria-label={tipos.length > 1 ? 'Lo que ofrecemos' : cap(v.items)}>
         <label className="tp-catalogo__busqueda"><Search size={19} aria-hidden="true" /><input type="search" value={busqueda} onChange={(e) => setBusqueda(e.target.value)} placeholder={`Buscar ${v.items}`} aria-label={`Buscar ${v.items}`} /></label>
         <div className="tp-catalogo__layout">
         {familias.length > 1 && (

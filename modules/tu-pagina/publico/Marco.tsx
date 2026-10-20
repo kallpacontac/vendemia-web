@@ -2,7 +2,7 @@
  * El envoltorio común de toda «Tu página»: el color del negocio y
  * el pie. Componente de servidor, sin JavaScript.
  */
-import { BookOpen } from 'lucide-react';
+import { ArrowRight, BookOpen } from 'lucide-react';
 import { colorValido, tintaSobre } from '@/modules/fideliza/dominio/estilo';
 import type { PaginaPublica } from '@/modules/tu-pagina/servidor/pagina';
 import { plantillaPorDefecto, plantillaValida, tipoPagina, type TipoPagina } from '@/modules/tu-pagina/dominio/plantillas';
@@ -57,10 +57,12 @@ export default function Marco({ pagina, children, vista, portada }: { pagina: Pa
   );
 }
 
-export function Cabecera({ pagina }: { pagina: PaginaPublica }) {
+export function Cabecera({ pagina, fotoDestacada, catalogoDisponible = false }: { pagina: PaginaPublica; fotoDestacada?: string; catalogoDisponible?: boolean }) {
   const inicial = pagina.titulo.trim().charAt(0).toUpperCase() || '·';
   const a = pagina.secciones.apariencia ?? {};
-  const banner = a.mostrarBanner !== false && (!a.plantillaActiva || Boolean(pagina.portada_url || a.tituloBanner));
+  const heroCatalogo = catalogoDisponible && tipoPagina(pagina.secciones) === 'tienda' && a.plantillaActiva && a.mostrarBanner !== false;
+  const banner = !heroCatalogo && a.mostrarBanner !== false && (!a.plantillaActiva || Boolean(pagina.portada_url || a.tituloBanner));
+  const fotoHero = pagina.portada_url || fotoDestacada;
   return (
     <>
       {banner && <div className="tp-portada" style={pagina.portada_url ? { backgroundImage: `url("${pagina.portada_url}")` } : undefined}>
@@ -79,6 +81,15 @@ export function Cabecera({ pagina }: { pagina: PaginaPublica }) {
           {pagina.frase && <p className="tp-frase">{pagina.frase}</p>}
         </header>
       </div>
+      {heroCatalogo && <section className="tp-hero tp-hoja" aria-label={`Bienvenidos a ${pagina.titulo}`}>
+        <div className="tp-hero__contenido">
+          <span className="tp-hero__etiqueta">{pagina.titulo}</span>
+          <h2>{a.tituloBanner || pagina.frase || `Descubre ${pagina.titulo}`}</h2>
+          <p>{a.tituloBanner && pagina.frase ? pagina.frase : 'Explora nuestro catálogo y encuentra algo para ti.'}</p>
+          <a href="#catalogo">Explorar catálogo <ArrowRight size={17} aria-hidden="true" /></a>
+        </div>
+        <div className="tp-hero__arte" style={fotoHero ? { backgroundImage: `url("${fotoHero}")` } : undefined} aria-hidden="true" />
+      </section>}
     </>
   );
 }
