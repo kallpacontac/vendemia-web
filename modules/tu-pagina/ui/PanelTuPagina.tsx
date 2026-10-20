@@ -51,6 +51,8 @@ const urlVista = (slug: string, valores: {
   return `/tu-pagina/${slug}?${q.toString()}`;
 };
 import { Pedidos, Reservas } from '@/modules/tu-pagina/ui/PedidosYReservas';
+import Reclamos from '@/modules/tu-pagina/ui/Reclamos';
+import { proveedorCompleto, rucValido, type Proveedor } from '@/modules/tu-pagina/dominio/reclamos';
 import {
   ESTADOS,
   fechaCorta,
@@ -70,7 +72,10 @@ interface Pagina {
   titulo: string;
   frase: string;
   whatsapp: string;
-  secciones: { catalogo?: boolean; reservar?: boolean; envios?: boolean; tipos?: TiposDePagina; apariencia?: AparienciaPagina };
+  secciones: {
+    catalogo?: boolean; reservar?: boolean; envios?: boolean; tipos?: TiposDePagina; apariencia?: AparienciaPagina;
+    reclamos?: boolean; proveedor?: Partial<Proveedor>;
+  };
   logo_url: string | null;
   portada_url: string | null;
   color: string;
@@ -81,7 +86,7 @@ interface Pagina {
 
 const POR_PAGINA = 50;
 
-type Pestana = 'pedidos' | 'reservas' | 'envios' | 'pagina';
+type Pestana = 'pedidos' | 'reservas' | 'envios' | 'reclamos' | 'pagina';
 
 type Es = TipoPagina;
 const ES = EXPERIENCIAS;
@@ -122,6 +127,7 @@ export default function PanelTuPagina() {
     ...(s.catalogo && !agendaNube ? [{ id: 'pedidos' as const, nombre: 'Pedidos' }] : []),
     ...(s.reservar && !agendaNube ? [{ id: 'reservas' as const, nombre: esRecurrente(compania?.business_mode) ? 'Cupos' : 'Reservas' }] : []),
     ...(s.envios ? [{ id: 'envios' as const, nombre: 'Envíos' }] : []),
+    ...(s.reclamos ? [{ id: 'reclamos' as const, nombre: 'Reclamos' }] : []),
     { id: 'pagina' as const, nombre: 'La página' },
   ];
   const [pestana, setPestana] = useState<Pestana | null>(null);
@@ -154,6 +160,8 @@ export default function PanelTuPagina() {
               <Pedidos companyId={companyId} nombre={pagina?.titulo || compania?.nombre || ''} />
             ) : activa === 'reservas' ? (
               <Reservas companyId={companyId} nombre={pagina?.titulo || compania?.nombre || ''} />
+            ) : activa === 'reclamos' ? (
+              <Reclamos companyId={companyId} />
             ) : (
               <Envios companyId={companyId} pagina={pagina ?? null} nombre={pagina?.titulo || compania?.nombre || ''} codigo={codigoBuscado} alConfigurar={() => setPestana('pagina')} />
             )}
@@ -180,6 +188,12 @@ function MiPagina({ companyId, nombre, pagina, agendaNube, alGuardar }: {
   const modo = compania?.business_mode;
   const tienda = esEcommerce(modo);
   const [envios, setEnvios] = useState(pagina?.secciones?.envios ?? false);
+  const [reclamos, setReclamos] = useState(pagina?.secciones?.reclamos ?? false);
+  const [proveedor, setProveedor] = useState<Proveedor>({
+    razon_social: pagina?.secciones?.proveedor?.razon_social ?? '',
+    ruc: pagina?.secciones?.proveedor?.ruc ?? '',
+    direccion: pagina?.secciones?.proveedor?.direccion ?? '',
+  });
   // Por defecto, lo que hace cada negocio: la tienda vende, el de citas o clases reserva.
   // Una página antigua solo de envíos no es ninguna de las tres, y así se queda si no se elige.
   const [es, setEs] = useState<Es>(pagina ? esDe(pagina.secciones) ?? tipoPaginaPorDefecto(modo) : tienda ? 'tienda' : 'agenda');
@@ -233,6 +247,7 @@ function MiPagina({ companyId, nombre, pagina, agendaNube, alGuardar }: {
 
   async function guardar() {
     if (!esUrlPublica(logo) || !esUrlPublica(portada)) { avisar('El logo y la portada deben tener un enlace público https.', 'error'); return; }
+    if (reclamos && !proveedorCompleto(proveedor)) { avisar('Para el Libro de Reclamaciones faltan tu razón social, un RUC válido (11 cifras) y la dirección.', 'error'); return; }
     setGuardando(true);
     try {
       const { error } = await supabase().rpc('tu_pagina_guardar', {
@@ -247,7 +262,11 @@ function MiPagina({ companyId, nombre, pagina, agendaNube, alGuardar }: {
           plantilla: plantillaGuardada(es),
           logo_url: logo.trim(),
           portada_url: portada.trim(),
-          secciones: { envios, catalogo, reservar, tipos: es === 'ambos' ? tipos : {}, apariencia },
+          secciones: {
+            envios, catalogo, reservar, tipos: es === 'ambos' ? tipos : {}, apariencia,
+            reclamos,
+            proveedor: { razon_social: proveedor.razon_social.trim(), ruc: proveedor.ruc.replace(/\D/g, ''), direccion: proveedor.direccion.trim() },
+          },
           distritos: distritos.split(/[,\n]/).map((d) => d.trim()).filter(Boolean),
         },
       });
@@ -345,8 +364,6 @@ function MiPagina({ companyId, nombre, pagina, agendaNube, alGuardar }: {
             {apariencia.mostrarBanner !== false && <label className="tp-panel-campo"><span>Título de la portada <small className="muted">(opcional)</small></span><input className="input" maxLength={80} value={apariencia.tituloBanner ?? ''} placeholder="Algo nuevo te espera" onChange={(e) => setApariencia({ ...apariencia, tituloBanner: e.target.value })} /></label>}
             <label className="tp-panel-check"><input type="checkbox" checked={apariencia.mostrarWhatsapp !== false} onChange={(e) => setApariencia({ ...apariencia, mostrarWhatsapp: e.target.checked })} /><span><b>Mostrar botón de WhatsApp</b><small className="muted">Los pedidos y reservas siguen enviando su aviso.</small></span></label>
 
-            <label className="tp-panel-check"><input type="checkbox" checked={envios} onChange={(e) => setEnvios(e.target.checked)} /><span><b>También agendar envíos</b><small className="muted">Dirección, distrito y fecha de recojo.</small></span></label>
-            {envios && <label className="tp-panel-campo"><span>Distritos que atiendes <small className="muted">(vacío = cualquiera)</small></span><textarea className="input" rows={2} value={distritos} placeholder="Miraflores, Surco, San Isidro" onChange={(e) => setDistritos(e.target.value)} /></label>}
 
             <div className="tp-panel-colores-avanzados">
               {(es !== 'agenda' ? [{ key: 'colorTienda', label: 'Botones de tienda', fallback: '#111111' }, { key: 'fondoTienda', label: 'Fondo de tienda', fallback: '#FFFFFF' }] : []).concat(es !== 'tienda' ? [{ key: 'fondoAgenda', label: 'Fondo de agenda', fallback: '#F8F9FB' }] : [], [{ key: 'colorBanner', label: 'Color de portada', fallback: color }]).map((item) => (
@@ -355,6 +372,25 @@ function MiPagina({ companyId, nombre, pagina, agendaNube, alGuardar }: {
             </div>
           </div>
         </details>
+
+        {/* Lo que no todos necesitan: se enciende si se quiere y solo entonces pide sus datos. */}
+        <div className="tp-panel-campo">
+          <span>Apartados opcionales</span>
+          <div className="tp-panel-apartados">
+            <Apartado activo={envios} alCambiar={setEnvios} titulo="Agendar envíos" describe="Tus clientes te piden un recojo: dirección, distrito y fecha.">
+              <label className="tp-panel-campo"><span>Distritos que atiendes <small className="muted">(vacío = cualquiera)</small></span><textarea className="input" rows={2} value={distritos} placeholder="Miraflores, Surco, San Isidro" onChange={(e) => setDistritos(e.target.value)} /></label>
+            </Apartado>
+            <Apartado activo={reclamos} alCambiar={setReclamos} titulo="Libro de Reclamaciones" describe="El libro virtual que pide INDECOPI, al pie de tu página. Los reclamos te llegan aquí.">
+              <label className="tp-panel-campo"><span>Razón social o nombre del titular</span><input className="input" maxLength={120} value={proveedor.razon_social} placeholder="Inversiones Lima S.A.C." onChange={(e) => setProveedor({ ...proveedor, razon_social: e.target.value })} /></label>
+              <label className="tp-panel-campo">
+                <span>RUC</span>
+                <input className="input" inputMode="numeric" maxLength={11} value={proveedor.ruc} placeholder="20123456789" onChange={(e) => setProveedor({ ...proveedor, ruc: e.target.value.replace(/\D/g, '') })} />
+                {proveedor.ruc.length === 11 && !rucValido(proveedor.ruc) && <small className="tp-panel-mal">Ese RUC no parece válido.</small>}
+              </label>
+              <label className="tp-panel-campo"><span>Dirección del local</span><input className="input" maxLength={200} value={proveedor.direccion} placeholder="Av. Larco 123, Miraflores, Lima" onChange={(e) => setProveedor({ ...proveedor, direccion: e.target.value })} /></label>
+            </Apartado>
+          </div>
+        </div>
 
         <button className="btn btn-primary" disabled={guardando || subiendo !== null || libre !== true || !whatsapp.trim() || !titulo.trim() || !esUrlPublica(logo) || !esUrlPublica(portada)} onClick={() => void guardar()}>
           {guardando ? 'Publicando…' : publicada ? 'Guardar cambios' : 'Publicar mi página'}
@@ -413,6 +449,21 @@ function Compartir({ slug, envios, reservar, conCatalogo }: { slug: string; envi
       ))}
       {conCatalogo && <CatalogoPdf url={`${urlPagina(slug, modo)}/catalogo.pdf`} />}
     </section>
+  );
+}
+
+/** Un apartado opcional de la página: una casilla y, encendido, sus campos. */
+function Apartado({ activo, alCambiar, titulo, describe, children }: {
+  activo: boolean; alCambiar: (v: boolean) => void; titulo: string; describe: string; children: React.ReactNode;
+}) {
+  return (
+    <div className={`tp-panel-apartado${activo ? ' activo' : ''}`}>
+      <label className="tp-panel-check">
+        <input type="checkbox" checked={activo} onChange={(e) => alCambiar(e.target.checked)} />
+        <span><b>{titulo}</b><small className="muted">{describe}</small></span>
+      </label>
+      {activo && <div className="tp-panel-apartado__campos">{children}</div>}
+    </div>
   );
 }
 

@@ -231,16 +231,21 @@ Los estimados son de planificación, no medidos.
 - Nombre: **«Tu página»**; hosts **tienda** y **agenda**, la misma página en los dos (Alvaro, 15-oct;
   sustituye a «Pide» / `pide.vendemias.com`, decidido esa misma mañana). En el panel: `/panel/tu-pagina`. Por dentro, el mismo nombre (sin «Pide» en el código ni en la base).
   La pestaña «Mi página» de Fideliza (el Linktree) pasó a «Mis enlaces» para no chocar.
-- **Unir «Mis enlaces» con Tu página** en la fase 2 (Alvaro, 15-oct): una sola página por negocio, con
-  los botones de Fideliza como sección; `fideliza.vendemias.com/<slug>` (placas ya impresas) redirige
-  siempre, y un solo slug por negocio. No antes: hoy Tu página solo tiene envíos.
+- **«Mis enlaces» (Fideliza) y Mi página siguen SEPARADAS** (Alvaro, 20-oct-2026; anula la idea del 15-oct de
+  unirlas): un negocio puede tener los dos enlaces. No se redirige fideliza.*/<slug>.
+- **Apartados opcionales** (Alvaro, 20-oct): lo que no todos necesitan (envíos, Libro de Reclamaciones) va
+  en «Apartados opcionales» de Mi página: una casilla y, encendido, sus campos. Nada obligatorio más allá de
+  nombre, WhatsApp, dirección y Agenda/Tienda/Las dos. Prioridad: que configurar sea fácil e intuitivo.
+- **Libro de Reclamaciones Virtual** (20-oct, sql/0006): razón social + RUC + dirección; enlace al pie de
+  toda la página; hojas numeradas, plazo de 15 días hábiles, pestaña «Reclamos» para responder. Vendemia
+  no envía correos: el consumidor imprime o guarda su hoja, y el dueño responde por WhatsApp o mailto.
 - Arquitectura completa, sin atajos (Alvaro, 15-oct).
 - Las preguntas obligatorias de Mia no aplican a Tu página.
 - Lo del voucher → cita (`prompt-bot-voucher-y-caja.md`) sigue en pausa.
 
 ## 9 · Abierto
 
-- **PDF / mayoristas:** por ahora el precio por mayor y el pedido mínimo salen **solo en el PDF** (el
+- **⏰ PENDIENTE CON ALVARO · precios mayoristas** (pidió verlo después, 20-oct): por ahora el precio por mayor y el pedido mínimo salen **solo en el PDF** (el
   carrito de la web cobra el precio normal). ¿Un segundo PDF «solo mayoristas» con un enlace aparte, para
   no mostrarle ese precio al cliente final?
 - **PDF:** ¿en todos los planes que incluyen Pide, o solo desde Starter?

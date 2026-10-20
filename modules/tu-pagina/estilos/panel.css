@@ -167,3 +167,23 @@
 .tp-panel-subir { display: inline-flex; align-items: center; justify-content: center; width: fit-content; min-height: 38px; padding: 7px 14px; border: 1px solid var(--line); border-radius: 9px; cursor: pointer; background: #fff; font-size: 13px; font-weight: 700; }
 .tp-panel-subir { position: relative; } .tp-panel-subir input { position: absolute; width: 1px; height: 1px; opacity: 0; } .tp-panel-subir:focus-within { outline: 3px solid var(--brand); outline-offset: 2px; }
 .tp-panel-enlace-imagen { display: grid; gap: 5px; color: var(--ink-soft); font-size: 12px; }
+
+/* Apartados opcionales: una casilla y, encendido, sus campos debajo. */
+.tp-panel-apartados { display: grid; gap: 8px; }
+.tp-panel-apartado { border: 1px solid var(--line); border-radius: var(--r-sm); }
+.tp-panel-apartado .tp-panel-check { border: 0; }
+.tp-panel-apartado.activo { border-color: var(--brand); }
+.tp-panel-apartado__campos { padding: 0 12px 4px 40px; }
+@media (max-width: 520px) { .tp-panel-apartado__campos { padding-left: 12px; } }
+
+/* Reclamos: la lista y la hoja abierta. */
+.tp-rec-fila { display: grid; grid-template-columns: auto 1fr auto; gap: 10px; align-items: center; width: 100%; padding: 12px 14px; background: none; border: 0; border-top: 1px solid var(--line); text-align: left; cursor: pointer; color: var(--ink); font: inherit; }
+.tp-rec-fila:first-child { border-top: 0; }
+.tp-rec-fila small { display: block; color: var(--ink-soft); }
+.tp-rec-vence { font-size: 12px; font-weight: 700; padding: 3px 8px; border-radius: 999px; background: var(--bg-input); white-space: nowrap; }
+.tp-rec-vence--pronto { background: color-mix(in srgb, var(--hot) 14%, #fff); color: var(--hot); }
+.tp-rec-vence--ok { background: color-mix(in srgb, #1a7f37 12%, #fff); color: #1a7f37; }
+.tp-rec-hoja { padding: 4px 14px 16px; border-top: 1px dashed var(--line); font-size: 13.5px; line-height: 1.5; }
+.tp-rec-hoja h4 { margin: 12px 0 2px; font-size: 12px; text-transform: uppercase; letter-spacing: .03em; color: var(--ink-soft); }
+.tp-rec-hoja p { margin: 2px 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+.tp-rec-acciones { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }

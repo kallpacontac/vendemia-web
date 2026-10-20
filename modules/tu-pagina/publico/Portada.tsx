@@ -92,7 +92,7 @@ export default async function Portada({ params, searchParams }: Props) {
   );
 
   return (
-    <Marco pagina={p}>
+    <Marco pagina={p} portada>
       <Cabecera pagina={p} />
       <div className="tp-hoja">
         {/* Enlaces relativos a propósito: valen igual en tienda o agenda (host/<negocio>) y en /tu-pagina/<negocio>. */}

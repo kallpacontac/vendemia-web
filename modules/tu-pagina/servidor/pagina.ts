@@ -3,6 +3,7 @@ import { unstable_cache } from 'next/cache';
 import { rpc, servidor, log } from '@/modules/tu-pagina/servidor/supabase';
 import { SLUG } from '@/modules/tu-pagina/dominio/config';
 import type { TiposDePagina } from '@/modules/tu-pagina/dominio/tienda';
+import type { Proveedor } from '@/modules/tu-pagina/dominio/reclamos';
 import type { AparienciaPagina } from '@/modules/tu-pagina/dominio/apariencia';
 
 export interface Secciones {
@@ -12,6 +13,9 @@ export interface Secciones {
   /** Qué es cada cosa del catálogo en esta página, si no es lo que diría el modo (dominio/tienda.ts). */
   tipos?: TiposDePagina;
   apariencia?: AparienciaPagina;
+  /** Libro de Reclamaciones Virtual encendido (sql/0006). Con `proveedor` completo. */
+  reclamos?: boolean;
+  proveedor?: Partial<Proveedor>;
 }
 
 export interface PaginaPublica {

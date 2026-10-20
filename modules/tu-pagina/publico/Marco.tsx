@@ -2,6 +2,7 @@
  * El envoltorio común de toda «Tu página»: el color del negocio y
  * el pie. Componente de servidor, sin JavaScript.
  */
+import { BookOpen } from 'lucide-react';
 import { colorValido, tintaSobre } from '@/modules/fideliza/dominio/estilo';
 import type { PaginaPublica } from '@/modules/tu-pagina/servidor/pagina';
 import { tipoPagina, type TipoPagina } from '@/modules/tu-pagina/dominio/plantillas';
@@ -29,11 +30,23 @@ export function estiloDe(p: Pick<PaginaPublica, 'color' | 'secciones'>): React.C
   };
 }
 
-export default function Marco({ pagina, children, vista }: { pagina: PaginaPublica; children: React.ReactNode; vista?: TipoPagina }) {
+/**
+ * @param portada la página de inicio (/<negocio>). Los enlaces son relativos para valer
+ *        igual en tienda.* y en /tu-pagina/; desde una subpágina se sube un nivel.
+ */
+export default function Marco({ pagina, children, vista, portada }: { pagina: PaginaPublica; children: React.ReactNode; vista?: TipoPagina; portada?: boolean }) {
   return (
     <div className="tp" data-diseno={vista ?? tipoPagina(pagina.secciones)} style={estiloDe(pagina)}>
       {children}
-      <p className="tp-pie">
+      {/* El Libro de Reclamaciones va en el pie de TODA la página, también la de inicio (sql/0006). */}
+      {pagina.secciones.reclamos && pagina.secciones.proveedor?.ruc && (
+        <p className="tp-pie tp-no-imprimir">
+          <a className="tp-libro" href={`${portada ? './' : '../'}${pagina.slug}/reclamaciones`}>
+            <BookOpen size={16} aria-hidden="true" /> Libro de Reclamaciones
+          </a>
+        </p>
+      )}
+      <p className="tp-pie tp-no-imprimir">
         Hecho con <a href="https://vendemias.com/?utm_source=tu-pagina" rel="noopener">Vendemia</a>
       </p>
     </div>
