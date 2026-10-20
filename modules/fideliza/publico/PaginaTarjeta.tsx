@@ -18,6 +18,7 @@ import Tarjeta, { type DatosTarjeta } from './Tarjeta';
 import { entorno } from '@/modules/fideliza/servidor/entorno';
 import { rpc, servidor } from '@/modules/fideliza/servidor/supabase';
 import { log } from '@/modules/fideliza/servidor/http';
+import TarjetaNoEncontrada from './TarjetaNoEncontrada';
 
 
 export async function generateMetadata({ params }: { params: { token: string } }): Promise<Metadata> {
@@ -46,7 +47,8 @@ export default async function Pagina({ params }: { params: { token: string } }) 
       </main>
     );
   }
-  if (datos.status !== 'ok') notFound();
+  // Tarjeta borrada o negocio reiniciado: se dice y se ofrece crear otra (no el 404 genérico).
+  if (datos.status !== 'ok') return <TarjetaNoEncontrada />;
 
   const qr = await QRCode.toString(datos.member.qr_token, { type: 'svg', margin: 1, errorCorrectionLevel: 'M' });
   return (
