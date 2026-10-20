@@ -29,6 +29,7 @@ export default function CatalogoEjemplo({ plantilla, incrustado = false, reclamo
   ), [buscar, categoria]);
   const opcion = PLANTILLAS_EJEMPLO.find((p) => p.id === plantilla)!;
   const marca = incrustado ? 'Vendemia · demo' : 'Ámbar Estudio';
+  const principal = incrustado ? (process.env.NEXT_PUBLIC_SITE_URL || 'https://vendemias.com').replace(/\/+$/, '') : '';
 
   return (
     <div className={`ce ce--${plantilla}${incrustado ? ' ce--incrustado' : ''}`}>
@@ -63,9 +64,9 @@ export default function CatalogoEjemplo({ plantilla, incrustado = false, reclamo
             {visibles.length ? <div className="ce-grid">{visibles.map((p) => <button className="ce-producto" key={p.id} type="button" onClick={() => setProducto(p)}><span className={`ce-producto__foto ce-foto ce-foto--${p.foto}`}><em>Ver detalle</em></span><span className="ce-producto__cuerpo"><small>{p.categoria}</small><b>{p.nombre}</b><span className="ce-producto__descripcion">{p.descripcion}</span><strong>S/ {p.precio.toFixed(2)}</strong></span></button>)}</div> : <div className="ce-vacio">No encontramos productos con esa búsqueda. Prueba otra palabra o categoría.</div>}
           </main>
         </div>
-        <footer className="ce-pie"><b>{marca}</b><span>Una tienda de muestra creada con Vendemia.</span>{reclamosHref && <a href={reclamosHref}>Libro de Reclamaciones</a>}<a href="/panel/tu-pagina">Crea tu catálogo</a></footer>
+        <footer className="ce-pie"><b>{marca}</b><span>Una tienda de muestra creada con Vendemia.</span>{reclamosHref && <a href={reclamosHref}>Libro de Reclamaciones</a>}<a href={`${principal}/panel/tu-pagina`}>Crea tu catálogo</a></footer>
       </div>
-      {incrustado && <div className="ce-demo-enlace"><a href={urlEjemplo(plantilla)}>Ver las cuatro plantillas de ejemplo <ArrowRight size={16} aria-hidden="true" /></a></div>}
+      {incrustado && <div className="ce-demo-enlace"><a href={`${principal}${urlEjemplo(plantilla)}`}>Ver las cuatro plantillas de ejemplo <ArrowRight size={16} aria-hidden="true" /></a></div>}
 
       {producto && <div className="ce-modal" role="presentation" onClick={() => setProducto(null)}><div className="ce-modal__dialogo" role="dialog" aria-modal="true" aria-label={producto.nombre} onClick={(e) => e.stopPropagation()}><button className="ce-modal__cerrar" aria-label="Cerrar" onClick={() => setProducto(null)}><X size={22} /></button><div className={`ce-modal__foto ce-foto ce-foto--${producto.foto}`} /><div className="ce-modal__datos"><small>{producto.categoria}</small><h2>{producto.nombre}</h2><strong>S/ {producto.precio.toFixed(2)}</strong><p>{producto.descripcion}</p><button onClick={() => { setAgregados((n) => n + 1); setProducto(null); setAviso(true); }}><ShoppingBag size={19} /> Añadir al carrito de ejemplo</button><span>Esta demo no envía pedidos ni realiza cobros.</span></div></div></div>}
       {aviso && <div className="ce-aviso" role="status"><Check size={19} aria-hidden="true" /><span>Esta es una muestra. Tu catálogo real mostrará tus productos, fotos y precios.</span><button aria-label="Cerrar aviso" onClick={() => setAviso(false)}><X size={17} /></button></div>}
