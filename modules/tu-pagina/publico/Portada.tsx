@@ -14,11 +14,13 @@ import { notFound } from 'next/navigation';
 import { CalendarDays, MessageCircle, Package } from 'lucide-react';
 import Marco, { Cabecera } from '@/modules/tu-pagina/publico/Marco';
 import Escaparate from '@/modules/tu-pagina/publico/Escaparate';
+import CatalogoEjemplo from '@/modules/tu-pagina/publico/CatalogoEjemplo';
 import { paginaDe, type PaginaPublica } from '@/modules/tu-pagina/servidor/pagina';
 import { escaparateDe } from '@/modules/tu-pagina/servidor/escaparate';
 import { urlWhatsApp } from '@/modules/tu-pagina/dominio/envio';
 import { disposicionDe, plantillaPorDefecto, plantillaValida, tipoPagina, type TipoPagina } from '@/modules/tu-pagina/dominio/plantillas';
 import { esHex } from '@/modules/tu-pagina/dominio/apariencia';
+import { esPlantillaEjemplo } from '@/modules/tu-pagina/dominio/ejemplo';
 
 type Props = { params: { slug: string }; searchParams?: Record<string, string | undefined> };
 
@@ -67,6 +69,12 @@ export default async function Portada({ params, searchParams }: Props) {
   const conEscaparate = Boolean(p.secciones.catalogo || p.secciones.reservar);
   const esc = conEscaparate ? await escaparateDe(p.slug, p.secciones) : null;
   const hayItems = Boolean(esc && esc.items.length > 0);
+  // La página propia de Vendemia enseña un catálogo completo mientras su catálogo real
+  // esté vacío. Está rotulado como demo y no ofrece pedidos ni cobros reales.
+  if (p.slug === 'vendemia' && !hayItems) {
+    const ejemplo = esPlantillaEjemplo(searchParams?.plantilla) ? searchParams.plantilla : esPlantillaEjemplo(plantilla) ? plantilla : 'vitrina';
+    return <CatalogoEjemplo plantilla={ejemplo} incrustado reclamosHref={p.secciones.reclamos && p.secciones.proveedor?.ruc ? `./${p.slug}/reclamaciones` : undefined} />;
+  }
   const envioPrimero = !conEscaparate && Boolean(p.secciones.envios);
   // Lo que se reserva tiene su atajo arriba y su enlace propio (/reservar): en un
   // salón es lo primero que se busca, no algo a lo que se llega bajando.

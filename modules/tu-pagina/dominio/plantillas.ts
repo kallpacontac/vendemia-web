@@ -7,10 +7,10 @@ export type Disposicion = 'cuadricula' | 'filas' | 'carta';
 export type PlantillaGuardada = 'agenda' | 'vitrina' | 'lista' | 'carta' | 'clases' | 'envios';
 
 export const PLANTILLAS: { id: PlantillaGuardada; nombre: string; describe: string }[] = [
-  { id: 'vitrina', nombre: 'Vitrina', describe: 'Fotos grandes en cuadrícula.' },
-  { id: 'lista', nombre: 'Lista', describe: 'Productos y servicios fáciles de comparar.' },
-  { id: 'carta', nombre: 'Carta cálida', describe: 'Categorías y precios como en un menú.' },
-  { id: 'agenda', nombre: 'Agenda', describe: 'Reservas y servicios en primer plano.' },
+  { id: 'vitrina', nombre: 'Minimalista', describe: 'Fotos grandes y tarjetas limpias.' },
+  { id: 'lista', nombre: 'Editorial', describe: 'Productos fáciles de comparar.' },
+  { id: 'carta', nombre: 'Clásico cálido', describe: 'Categorías y precios como una carta.' },
+  { id: 'agenda', nombre: 'Nocturna', describe: 'Fondo oscuro y acentos luminosos.' },
 ];
 
 export const plantillaValida = (valor: unknown): valor is PlantillaGuardada =>

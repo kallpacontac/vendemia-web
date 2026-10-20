@@ -46,7 +46,9 @@ Para acercarse al orden de Dizi en el registro general, se podría recoger nombr
 ## Aplicado en el módulo
 
 - La primera publicación de «Mi página» presenta tres pasos: negocio, diseño y publicación. Las páginas ya publicadas mantienen el editor completo.
-- El panel ofrece Vitrina, Lista, Carta cálida y Agenda como diseños visuales independientes de la función de la página. El color y el logo son opcionales.
+- El panel ofrece Minimalista, Editorial, Clásico cálido y Nocturna como diseños visuales independientes de la función de la página. El color y el logo son opcionales.
 - La página pública usa la plantilla guardada para decidir disposición y estilo. Las páginas antiguas conservan su apariencia hasta que el dueño seleccione explícitamente un diseño. La vista previa de páginas publicadas usa la misma ruta pública con los cambios de diseño sin guardar.
-- Antes de publicar, una vista visual reutiliza la cabecera y los estilos públicos con artículos de muestra. El enlace, el QR y el PDF existentes siguen disponibles después. Queda como mejora posterior cargar productos reales en esa primera vista previa.
+- `/ejemplos/catalogo` es una galería pública de las cuatro variantes, con fotografías, seis productos ilustrativos, búsqueda, categorías y fichas. Las acciones son simuladas y no crean pedidos. Cada tarjeta del editor enlaza a la demo completa; la vista previa antes de publicar muestra esa misma demo.
+- Cuando el catálogo de `/vendemia` está vacío, esa página muestra la demo, señalizada como muestra, en vez de una portada sin productos. En cuanto haya productos reales, vuelve automáticamente al escaparate del negocio.
+- El escaparate real también incorpora búsqueda y filtros por categoría, y las plantillas elegidas reciben la cabecera compacta y el tratamiento visual de los ejemplos. El enlace, QR y PDF existentes siguen disponibles después de publicar.
 - El orden de creación de cuenta en `/login` no cambió; simplificarlo requiere un trabajo separado en autenticación.

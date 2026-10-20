@@ -60,7 +60,7 @@ export default function Marco({ pagina, children, vista, portada }: { pagina: Pa
 export function Cabecera({ pagina }: { pagina: PaginaPublica }) {
   const inicial = pagina.titulo.trim().charAt(0).toUpperCase() || '·';
   const a = pagina.secciones.apariencia ?? {};
-  const banner = a.mostrarBanner !== false;
+  const banner = a.mostrarBanner !== false && (!a.plantillaActiva || Boolean(pagina.portada_url || a.tituloBanner));
   return (
     <>
       {banner && <div className="tp-portada" style={pagina.portada_url ? { backgroundImage: `url("${pagina.portada_url}")` } : undefined}>

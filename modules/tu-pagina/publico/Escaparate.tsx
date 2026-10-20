@@ -21,7 +21,7 @@
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Check, ChevronLeft, ChevronRight, Clock, MessageCircle, Minus, Plus, ShoppingBag, Trash2, Users, X } from 'lucide-react';
+import { Check, ChevronLeft, ChevronRight, Clock, MessageCircle, Minus, Plus, Search, ShoppingBag, Trash2, Users, X } from 'lucide-react';
 import { cap, vocabulario } from '@/lib/panel/vocabulario';
 import type { Disposicion } from '@/modules/tu-pagina/dominio/plantillas';
 import { abreEl, horasLibres, sumarDias, sumarMin } from '@/modules/tu-pagina/dominio/agenda';
@@ -123,6 +123,7 @@ export default function Escaparate({ esc: todo, slug, whatsapp, puedePedir, pued
   const familias = useMemo(() => [...new Set(esc.items.map((i) => i.familia).filter(Boolean))], [esc.items]);
   const router = useRouter();
   const [familia, setFamilia] = useState('');
+  const [busqueda, setBusqueda] = useState('');
   const [abierto, setAbierto] = useState<string | null>(null);
   const [verCarrito, setVerCarrito] = useState(false);
   const [hecho, setHecho] = useState<Hecho | null>(null);
@@ -140,7 +141,10 @@ export default function Escaparate({ esc: todo, slug, whatsapp, puedePedir, pued
   const lineas = carrito.filter((l) => porId.has(l.item));
   const total = lineas.reduce((s, l) => s + (porId.get(l.item)?.precio ?? 0) * l.cantidad, 0);
   const unidades = lineas.reduce((s, l) => s + l.cantidad, 0);
-  const visibles = familia ? esc.items.filter((i) => i.familia === familia) : esc.items;
+  const termino = busqueda.trim().toLocaleLowerCase('es');
+  const visibles = esc.items.filter((i) =>
+    (!familia || i.familia === familia) &&
+    (!termino || `${i.nombre} ${i.descripcion} ${i.familia}`.toLocaleLowerCase('es').includes(termino)));
   const item = abierto ? porId.get(abierto) ?? null : null;
 
   const terminar = (h: Hecho) => {
@@ -173,27 +177,29 @@ export default function Escaparate({ esc: todo, slug, whatsapp, puedePedir, pued
   return (
     <>
       <section className="tp-catalogo" aria-label={tipos.length > 1 ? 'Lo que ofrecemos' : cap(v.items)}>
-        {tipos.length <= 1 && <h2 className="tp-seccion">{cap(v.items)}</h2>}
+        <label className="tp-catalogo__busqueda"><Search size={19} aria-hidden="true" /><input type="search" value={busqueda} onChange={(e) => setBusqueda(e.target.value)} placeholder={`Buscar ${v.items}`} aria-label={`Buscar ${v.items}`} /></label>
+        <div className="tp-catalogo__layout">
+        {familias.length > 1 && (
+          <div className="tp-familias" role="group" aria-label="Filtrar por categoría">
+            <button type="button" className="tp-chip" aria-pressed={!familia} onClick={() => setFamilia('')}>Todo <small>{esc.items.length}</small></button>
+            {familias.map((f) => (
+              <button key={f} type="button" className="tp-chip" aria-pressed={familia === f} onClick={() => setFamilia(f)}>{f} <small>{esc.items.filter((i) => i.familia === f).length}</small></button>
+            ))}
+          </div>
+        )}
+        <div className="tp-catalogo__resultados">
+        {tipos.length <= 1 && <div className="tp-catalogo__cabeza"><h2 className="tp-seccion">{cap(v.items)}</h2><small>{visibles.length} {visibles.length === 1 ? 'resultado' : 'resultados'}</small></div>}
         {disposicion === 'carta' ? (
-          // La carta no filtra: enseña todo, por secciones, como un menú.
-          [...new Set(esc.items.map((i) => i.familia))].map((f) => (
+          [...new Set(visibles.map((i) => i.familia))].map((f) => (
             <div key={f || '-'} className="tp-carta">
               {f && <h3 className="tp-carta__seccion">{f}</h3>}
-              {esc.items.filter((i) => i.familia === f).map((i) => (
+              {visibles.filter((i) => i.familia === f).map((i) => (
                 <FilaCarta key={i.id} item={i} alAbrir={() => setAbierto(i.id)} />
               ))}
             </div>
           ))
         ) : (
           <>
-        {familias.length > 1 && (
-          <div className="tp-familias" role="group" aria-label="Filtrar">
-            <button type="button" className="tp-chip" aria-pressed={!familia} onClick={() => setFamilia('')}>Todo</button>
-            {familias.map((f) => (
-              <button key={f} type="button" className="tp-chip" aria-pressed={familia === f} onClick={() => setFamilia(f)}>{f}</button>
-            ))}
-          </div>
-        )}
         {(tipos.length > 1 ? tipos : [null]).map((t) => {
           const deEste = t ? visibles.filter((i) => i.tipo === t) : visibles;
           if (t && deEste.length === 0) return null;
@@ -208,9 +214,11 @@ export default function Escaparate({ esc: todo, slug, whatsapp, puedePedir, pued
             </div>
           );
         })}
-        {visibles.length === 0 && <p className="tp-vacio">Pronto habrá {v.items} aquí.</p>}
           </>
         )}
+        {visibles.length === 0 && <p className="tp-vacio">No encontramos {v.items} con esa búsqueda.</p>}
+        </div>
+        </div>
       </section>
 
       {lineas.length > 0 && !verCarrito && !item && (

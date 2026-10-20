@@ -31,11 +31,10 @@ import { urlPagina, urlEnvio, urlReservar } from '@/modules/tu-pagina/dominio/co
 import { esAppointmentFamily, esEcommerce, esRecurrente } from '@/lib/panel/modo';
 import { tipoPorDefecto, type TiposDePagina } from '@/modules/tu-pagina/dominio/tienda';
 import type { BusinessMode } from '@/lib/supabase/types';
-import { disposicionDe, EXPERIENCIAS, PLANTILLAS, plantillaPorDefecto, plantillaValida, tipoPagina, tipoPorDefecto as tipoPaginaPorDefecto, type PlantillaGuardada, type TipoPagina } from '@/modules/tu-pagina/dominio/plantillas';
+import { EXPERIENCIAS, PLANTILLAS, plantillaPorDefecto, plantillaValida, tipoPagina, tipoPorDefecto as tipoPaginaPorDefecto, type PlantillaGuardada, type TipoPagina } from '@/modules/tu-pagina/dominio/plantillas';
 import { esHex, esUrlPublica, type AparienciaPagina } from '@/modules/tu-pagina/dominio/apariencia';
+import { esPlantillaEjemplo, urlEjemplo } from '@/modules/tu-pagina/dominio/ejemplo';
 import { subirImagenMarca } from '@/modules/fideliza/cliente/imagenMarca';
-import Marco, { Cabecera } from '@/modules/tu-pagina/publico/Marco';
-import type { PaginaPublica } from '@/modules/tu-pagina/servidor/pagina';
 
 /**
  * La página con otra plantilla o color, sin guardar: se sirve en el dominio del
@@ -347,10 +346,13 @@ function MiPagina({ companyId, nombre, pagina, agendaNube, alGuardar }: {
             {publicada && !pagina?.secciones?.apariencia?.plantillaActiva && !plantillaManual && <small className="muted">Tu página conserva su aspecto actual. Elige un diseño para activar el nuevo estilo.</small>}
             <div className="tp-panel-plantillas" role="radiogroup" aria-label="Diseño de la página">
               {plantillas.map((opcion) => (
-                <button key={opcion.id} type="button" role="radio" aria-checked={plantilla === opcion.id} className={`tp-panel-plantilla${plantilla === opcion.id ? ' activa' : ''}`} onClick={() => { setPlantilla(opcion.id); setPlantillaManual(true); }}>
-                  <span className={`tp-panel-plantilla__dibujo tp-panel-plantilla__dibujo--${opcion.id}`} style={{ ['--c' as string]: color }} aria-hidden="true"><i /><i /><i /><i /></span>
-                  <b>{opcion.nombre}</b><small>{opcion.describe}</small>
-                </button>
+                <div key={opcion.id} className={`tp-panel-plantilla${plantilla === opcion.id ? ' activa' : ''}`}>
+                  <button type="button" role="radio" aria-checked={plantilla === opcion.id} onClick={() => { setPlantilla(opcion.id); setPlantillaManual(true); }}>
+                    <span className={`tp-panel-plantilla__dibujo tp-panel-plantilla__dibujo--${opcion.id}`} style={{ ['--c' as string]: color }} aria-hidden="true"><i /><i /><i /><i /></span>
+                    <b>{opcion.nombre}</b><small>{opcion.describe}</small>
+                  </button>
+                  {esPlantillaEjemplo(opcion.id) && <a href={urlEjemplo(opcion.id)} target="_blank" rel="noopener">Ver ejemplo completo <ExternalLink size={13} /></a>}
+                </div>
               ))}
             </div>
           </div>
@@ -462,7 +464,7 @@ function MiPagina({ companyId, nombre, pagina, agendaNube, alGuardar }: {
       </section>
 
       <div className="tp-panel-lado">
-        {!publicada && paso === 2 && <VistaBorrador titulo={titulo} frase={frase} color={color} logo={logo} portada={portada} plantilla={plantilla} tipo={es} apariencia={apariencia} />}
+        {!publicada && paso === 2 && <VistaBorrador plantilla={plantilla} />}
         {publicada && (
           <section className="card">
             <div className="card-mini-head">
@@ -472,6 +474,7 @@ function MiPagina({ companyId, nombre, pagina, agendaNube, alGuardar }: {
             <div className="tp-panel-vista">
               <iframe title="Vista previa de tu página" src={vista} />
             </div>
+            {esPlantillaEjemplo(plantilla) && <a className="tp-panel-demo-link" href={urlEjemplo(plantilla)} target="_blank" rel="noopener">Ver esta plantilla con productos de muestra <ExternalLink size={14} /></a>}
             {(es !== tipoPagina(pagina!.secciones) || plantilla !== pagina!.plantilla || (plantillaManual && !pagina!.secciones.apariencia?.plantillaActiva) || color !== pagina!.color || titulo !== pagina!.titulo || frase !== pagina!.frase || logo !== (pagina!.logo_url ?? '') || portada !== (pagina!.portada_url ?? '') || JSON.stringify(apariencia) !== JSON.stringify(pagina!.secciones.apariencia ?? {})) && (
               <small className="muted">Vista previa del diseño. El nombre y las imágenes se actualizarán al guardar.</small>
             )}
@@ -483,42 +486,16 @@ function MiPagina({ companyId, nombre, pagina, agendaNube, alGuardar }: {
   );
 }
 
-/** Misma cabecera y estilos públicos; los artículos de muestra solo enseñan la disposición. */
-function VistaBorrador({ titulo, frase, color, logo, portada, plantilla, tipo, apariencia }: {
-  titulo: string; frase: string; color: string; logo: string; portada: string;
-  plantilla: PlantillaGuardada; tipo: TipoPagina; apariencia: AparienciaPagina;
-}) {
-  const pagina: PaginaPublica = {
-    slug: 'ejemplo', version: 0, titulo: titulo.trim() || 'Tu negocio', frase, whatsapp: '51987654321',
-    color, logo_url: esUrlPublica(logo) && logo ? logo : null,
-    portada_url: esUrlPublica(portada) && portada ? portada : null,
-    plantilla, distritos: [],
-    secciones: { catalogo: tipo !== 'agenda', reservar: tipo !== 'tienda', apariencia: { ...apariencia, plantillaActiva: true } },
-  };
-  const disposicion = disposicionDe(plantilla, tipo);
+/** Demo real, con fotos, búsqueda y fichas; el catálogo propio aparece al publicar. */
+function VistaBorrador({ plantilla }: { plantilla: PlantillaGuardada }) {
+  const ejemplo = esPlantillaEjemplo(plantilla) ? plantilla : 'vitrina';
   return (
     <section className="card">
-      <div className="card-mini-head"><h3>Así se verá tu diseño</h3></div>
-      <div className="tp-panel-vista tp-panel-vista--borrador" aria-hidden="true" inert>
-        <div className="tp-panel-vista__escala">
-          <Marco pagina={pagina} portada>
-            <Cabecera pagina={pagina} />
-            <div className="tp-hoja">
-              <section className="tp-catalogo">
-                <h2 className="tp-seccion">{tipo === 'agenda' ? 'Servicios' : 'Productos'}</h2>
-                {disposicion === 'carta' ? (
-                  <div className="tp-carta"><h3 className="tp-carta__seccion">Destacados</h3>{[1, 2, 3].map((n) => <div className="tp-carta__fila" key={n}><span className="tp-carta__texto"><span className="tp-carta__linea"><b>{n === 1 ? 'Primera opción' : n === 2 ? 'Otra opción' : 'Especial'}</b><i /><b>S/ 25</b></span></span></div>)}</div>
-                ) : (
-                  <div className={`tp-grid${disposicion === 'cuadricula' ? '' : ' tp-grid--lista'}`}>
-                    {[1, 2, 3, 4].map((n) => <div className="tp-tarjeta" key={n}><span className="tp-tarjeta__foto tp-panel-muestra-foto" /><span className="tp-tarjeta__texto"><b>{tipo === 'agenda' ? `Servicio ${n}` : `Producto ${n}`}</b><span className="tp-tarjeta__pie"><b>S/ {n * 15}</b></span></span></div>)}
-                  </div>
-                )}
-              </section>
-            </div>
-          </Marco>
-        </div>
+      <div className="card-mini-head"><h3>Explora el ejemplo</h3><a className="btn btn-sm btn-ghost" href={urlEjemplo(ejemplo)} target="_blank" rel="noopener"><ExternalLink size={14} /> Abrir</a></div>
+      <div className="tp-panel-vista">
+        <iframe title={`Catálogo de ejemplo ${ejemplo}`} src={urlEjemplo(ejemplo)} />
       </div>
-      <small className="muted">Artículos de muestra. El nombre, color y diseño son los que elegiste.</small>
+      <small className="muted">Ejemplo con productos ilustrativos. Al publicar, aparecerán el nombre, las fotos y los precios de tu negocio.</small>
     </section>
   );
 }

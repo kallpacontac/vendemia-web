@@ -58,19 +58,22 @@
 .tp-panel-colores button { width: 30px; height: 30px; border-radius: 50%; border: 2px solid #fff; box-shadow: 0 0 0 1px var(--line-2); cursor: pointer; }
 .tp-panel-colores button[aria-pressed='true'] { box-shadow: 0 0 0 2px var(--ink); }
 
-/* Plantillas: miniaturas de la página real (iframe a escala), como en Fideliza. */
+/* Plantillas: miniaturas con las mismas fotos usadas por las demos completas. */
 .tp-panel-plantillas { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
 .tp-panel-plantilla {
-  display: grid; align-content: start; gap: 4px; padding: 9px; text-align: left; cursor: pointer; font: inherit; color: var(--ink);
+  display: grid; align-content: start; gap: 4px; padding: 9px; text-align: left; font: inherit; color: var(--ink);
   background: #fff; border: 1px solid var(--line); border-radius: var(--r-sm);
 }
+.tp-panel-plantilla > button { display: grid; width: 100%; gap: 4px; padding: 0; border: 0; background: transparent; color: inherit; text-align: left; cursor: pointer; font: inherit; }
+.tp-panel-plantilla > a, .tp-panel-demo-link { display: inline-flex; align-items: center; gap: 5px; margin-top: 7px; color: var(--brand); font-size: 12px; font-weight: 700; text-decoration: none; }
 .tp-panel-plantilla.activa { border-color: var(--brand); box-shadow: 0 0 0 2px var(--brand); }
 .tp-panel-plantilla b { font-size: 13.5px; margin-top: 4px; }
 .tp-panel-plantilla small { font-size: 11.5px; line-height: 1.3; }
-.tp-panel-plantilla:focus-visible { outline: 3px solid var(--ink); outline-offset: 2px; }
+.tp-panel-plantilla > button:focus-visible, .tp-panel-plantilla > a:focus-visible { outline: 3px solid var(--ink); outline-offset: 2px; }
 .tp-panel-plantilla__dibujo { display: grid; grid-template-columns: repeat(2, 1fr); grid-template-rows: 30% 1fr 1fr; gap: 6px; height: 126px; padding: 8px; overflow: hidden; border-radius: 8px; background: #f7f7f5; }
-.tp-panel-plantilla__dibujo i { display: block; min-width: 0; border-radius: 6px; background: color-mix(in srgb, var(--c) 20%, white); }
-.tp-panel-plantilla__dibujo i:first-child { grid-column: 1 / -1; border-radius: 5px; background: var(--c); }
+.tp-panel-plantilla__dibujo i { display: block; min-width: 0; border-radius: 6px; background: url('/assets/catalogo-ejemplo/productos.webp') 0 0 / 300% 200% no-repeat; }
+.tp-panel-plantilla__dibujo i:first-child { grid-column: 1 / -1; border-radius: 5px; background: linear-gradient(90deg, color-mix(in srgb, var(--c) 30%, white), #f0e1cc); }
+.tp-panel-plantilla__dibujo i:nth-child(2) { background-position: 0 0; }.tp-panel-plantilla__dibujo i:nth-child(3) { background-position: 50% 0; }.tp-panel-plantilla__dibujo i:nth-child(4) { background-position: 100% 0; }
 .tp-panel-plantilla__dibujo--lista { grid-template-columns: 1fr; grid-template-rows: 24% repeat(3, 1fr); background: #fff; }
 .tp-panel-plantilla__dibujo--lista i:first-child { grid-column: 1; }
 .tp-panel-plantilla__dibujo--lista i:not(:first-child) { border-radius: 0; border-bottom: 1px solid #d9dde1; background: linear-gradient(90deg, color-mix(in srgb, var(--c) 28%, white) 0 22%, transparent 22%); }

@@ -462,6 +462,46 @@
 .tp[data-plantilla='clases'] .tp-tarjeta { border-left: 5px solid var(--tp-color); }
 .tp[data-plantilla='envios'] .tp-portada { height: 100px; }
 
+/* El catálogo real comparte la estructura visible de las demos: búsqueda,
+   categorías y tarjetas. Solo se activa al elegir explícitamente una plantilla. */
+.tp-catalogo__busqueda { display: flex; align-items: center; gap: 10px; min-height: 50px; padding: 0 15px; margin-bottom: 22px; border: 1px solid var(--tp-borde); border-radius: 12px; background: var(--tp-papel); color: var(--tp-suave); }
+.tp-catalogo__busqueda:focus-within { outline: 2px solid var(--tp-color); outline-offset: 2px; }
+.tp-catalogo__busqueda input { width: 100%; height: 48px; border: 0; outline: 0; background: transparent; color: var(--tp-texto); font: inherit; }
+.tp-catalogo__cabeza { display: flex; align-items: end; justify-content: space-between; gap: 12px; margin-bottom: 15px; }
+.tp-catalogo__cabeza .tp-seccion { margin: 0; }.tp-catalogo__cabeza > small { color: var(--tp-suave); white-space: nowrap; }
+.tp-familias .tp-chip small { opacity: .65; margin-left: 4px; }
+.tp[data-plantilla='vitrina'], .tp[data-plantilla='lista'], .tp[data-plantilla='carta'], .tp[data-plantilla='agenda'] { font-family: 'Plus Jakarta Sans', system-ui, sans-serif; }
+.tp[data-plantilla='vitrina'] { --tp-fondo: #fffefa; --tp-papel: #fff; --tp-texto: #2e2822; --tp-suave: #746c64; --tp-borde: #e9e2da; }
+.tp[data-plantilla='lista'] { --tp-fondo: #f8fbfc; --tp-papel: #fff; --tp-texto: #183341; --tp-suave: #617985; --tp-borde: #dce7eb; }
+.tp[data-plantilla='carta'] { --tp-fondo: #faf6ed; --tp-papel: #fffdf8; --tp-texto: #36291f; --tp-suave: #786a5b; --tp-borde: #dfd0b9; }
+.tp[data-plantilla='agenda'] { --tp-fondo: #17241e; --tp-papel: #203128; --tp-texto: #f3f4eb; --tp-suave: #b9c6b8; --tp-borde: #3a5041; --tp-campo: #203128; }
+.tp[data-plantilla='vitrina'] .tp-hoja, .tp[data-plantilla='lista'] .tp-hoja, .tp[data-plantilla='carta'] .tp-hoja, .tp[data-plantilla='agenda'] .tp-hoja { max-width: 1180px; padding-inline: 20px; }
+.tp[data-plantilla='vitrina'] .tp-cabeza, .tp[data-plantilla='lista'] .tp-cabeza, .tp[data-plantilla='carta'] .tp-cabeza, .tp[data-plantilla='agenda'] .tp-cabeza {
+  max-width: none; min-height: 82px; margin: 0; padding: 13px 0; display: grid; grid-template-columns: 48px 1fr; column-gap: 12px; align-items: center; text-align: left;
+  border: 0; border-radius: 0; box-shadow: none; background: transparent; color: var(--tp-texto);
+}
+.tp[data-plantilla='vitrina'] .tp-logo, .tp[data-plantilla='lista'] .tp-logo, .tp[data-plantilla='carta'] .tp-logo, .tp[data-plantilla='agenda'] .tp-logo { width: 44px; height: 44px; margin: 0; grid-row: span 2; border: 0; border-radius: 11px; box-shadow: none; background-color: var(--tp-color); color: var(--tp-tinta); font-size: 21px; }
+.tp[data-plantilla='vitrina'] .tp-titulo, .tp[data-plantilla='lista'] .tp-titulo, .tp[data-plantilla='carta'] .tp-titulo, .tp[data-plantilla='agenda'] .tp-titulo { align-self: end; font: 800 18px/1.1 'Plus Jakarta Sans', system-ui, sans-serif; letter-spacing: -.03em; text-transform: none; }
+.tp[data-plantilla='vitrina'] .tp-frase, .tp[data-plantilla='lista'] .tp-frase, .tp[data-plantilla='carta'] .tp-frase, .tp[data-plantilla='agenda'] .tp-frase { margin: 2px 0 0; grid-column: 2; align-self: start; font-size: 12px; }
+.tp[data-plantilla='vitrina'] .tp-acciones, .tp[data-plantilla='lista'] .tp-acciones, .tp[data-plantilla='carta'] .tp-acciones, .tp[data-plantilla='agenda'] .tp-acciones { max-width: 1180px; margin-top: 12px; }
+.tp[data-plantilla='vitrina'] .tp-catalogo, .tp[data-plantilla='lista'] .tp-catalogo, .tp[data-plantilla='carta'] .tp-catalogo, .tp[data-plantilla='agenda'] .tp-catalogo { margin-top: 24px; }
+.tp[data-plantilla='vitrina'] .tp-catalogo__layout, .tp[data-plantilla='lista'] .tp-catalogo__layout, .tp[data-plantilla='carta'] .tp-catalogo__layout, .tp[data-plantilla='agenda'] .tp-catalogo__layout { display: grid; grid-template-columns: 215px minmax(0, 1fr); gap: 28px; }
+.tp[data-plantilla='vitrina'] .tp-familias, .tp[data-plantilla='lista'] .tp-familias, .tp[data-plantilla='carta'] .tp-familias, .tp[data-plantilla='agenda'] .tp-familias { align-self: start; display: grid; gap: 4px; margin: 0; padding: 15px; overflow: visible; border: 1px solid var(--tp-borde); border-radius: 14px; background: var(--tp-papel); }
+.tp[data-plantilla='vitrina'] .tp-familias .tp-chip, .tp[data-plantilla='lista'] .tp-familias .tp-chip, .tp[data-plantilla='carta'] .tp-familias .tp-chip, .tp[data-plantilla='agenda'] .tp-familias .tp-chip { width: 100%; min-height: 36px; display: flex; justify-content: space-between; align-items: center; padding: 6px 10px; border: 0; border-radius: 8px; background: transparent; color: var(--tp-texto); text-align: left; }
+.tp[data-plantilla='vitrina'] .tp-familias .tp-chip[aria-pressed='true'], .tp[data-plantilla='lista'] .tp-familias .tp-chip[aria-pressed='true'], .tp[data-plantilla='carta'] .tp-familias .tp-chip[aria-pressed='true'], .tp[data-plantilla='agenda'] .tp-familias .tp-chip[aria-pressed='true'] { background: var(--tp-color); color: var(--tp-tinta); }
+.tp[data-plantilla='vitrina'] .tp-grid, .tp[data-plantilla='agenda'] .tp-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.tp[data-plantilla='vitrina'] .tp-tarjeta, .tp[data-plantilla='agenda'] .tp-tarjeta { border: 1px solid var(--tp-borde); border-radius: 14px; background: var(--tp-papel); box-shadow: none; }
+.tp[data-plantilla='vitrina'] .tp-tarjeta__foto, .tp[data-plantilla='agenda'] .tp-tarjeta__foto { border-radius: 0; }
+.tp[data-plantilla='vitrina'] .tp-tarjeta__texto, .tp[data-plantilla='agenda'] .tp-tarjeta__texto { padding: 13px; }
+.tp[data-plantilla='carta'] .tp-carta__fila { flex-direction: row-reverse; }
+.tp[data-plantilla='carta'] .tp-carta__foto { width: 82px; height: 82px; border-radius: 50%; }
+@media (max-width: 760px) {
+  .tp[data-plantilla='vitrina'] .tp-catalogo__layout, .tp[data-plantilla='lista'] .tp-catalogo__layout, .tp[data-plantilla='carta'] .tp-catalogo__layout, .tp[data-plantilla='agenda'] .tp-catalogo__layout { display: block; }
+  .tp[data-plantilla='vitrina'] .tp-familias, .tp[data-plantilla='lista'] .tp-familias, .tp[data-plantilla='carta'] .tp-familias, .tp[data-plantilla='agenda'] .tp-familias { display: flex; gap: 7px; overflow-x: auto; margin-bottom: 18px; padding: 0 0 5px; border: 0; background: transparent; }
+  .tp[data-plantilla='vitrina'] .tp-familias .tp-chip, .tp[data-plantilla='lista'] .tp-familias .tp-chip, .tp[data-plantilla='carta'] .tp-familias .tp-chip, .tp[data-plantilla='agenda'] .tp-familias .tp-chip { width: auto; min-height: 38px; gap: 5px; padding: 6px 12px; border: 1px solid var(--tp-borde); border-radius: 999px; background: var(--tp-papel); }
+  .tp[data-plantilla='vitrina'] .tp-grid, .tp[data-plantilla='agenda'] .tp-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+}
+
 /* ══════════════════════════════════════════════════════════════════════════
    LIBRO DE RECLAMACIONES (sql/0006)
    ══════════════════════════════════════════════════════════════════════════ */
