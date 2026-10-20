@@ -72,6 +72,8 @@ import {
 } from 'lucide-react';
 import Topbar from '@/components/panel/Topbar';
 import { useSesion } from '@/components/panel/Sesion';
+import { useLoQueHaceLaPagina, type LoQueHaceLaPagina } from '@/modules/tu-pagina/ui/secciones';
+import Mayorista from '@/modules/tu-pagina/ui/Mayorista';
 import { soloLeeLoDelDueno } from '@/lib/panel/roles';
 import { useAvisar, useGuardar } from '@/components/panel/Avisos';
 import { useCargar } from '@/components/panel/useCargar';
@@ -228,6 +230,8 @@ export default function Catalogo() {
    * productos, que es a lo que se entra normalmente.
    */
   const [tab, setTab] = useState<'catalogo' | 'huecos'>('catalogo');
+  // Mi página puede reservar o vender aunque el negocio sea de otro tipo: la ficha pide lo que falte.
+  const pagina = useLoQueHaceLaPagina(companyId);
 
   const { datos, cargando, releer } = useCargar(async () => {
     if (!companyId) return null;
@@ -485,6 +489,7 @@ export default function Catalogo() {
                 key={it.id}
                 item={it}
                 modo={modo}
+                pagina={pagina}
                 todos={items}
                 medios={vista.medios[it.id] ?? []}
                 companyId={companyId}
@@ -510,6 +515,7 @@ export default function Catalogo() {
 function Ficha({
   item,
   modo,
+  pagina,
   todos,
   medios,
   companyId,
@@ -520,6 +526,8 @@ function Ficha({
 }: {
   item: ItemCatalogo;
   modo: BusinessMode;
+  /** Lo que hace Mi página: una tienda que reserva pide duración; lo que se vende, lo del mayorista. */
+  pagina: LoQueHaceLaPagina;
   todos: ItemCatalogo[];
   medios: CatalogMediaRow[];
   companyId: string | null;
@@ -548,6 +556,8 @@ function Ficha({
   const salen = useMemo(() => losQueSalen(medios), [medios]);
   const esCita = modo === 'appointment';
   const esRecurrente = modo === 'recurring_appointment';
+  // Una tienda cuya página reserva: lo que se reserva necesita su duración.
+  const duracionDePagina = modo === 'ecommerce' && pagina.reserva;
   const vigencia = Number(f.vigencia_meses);
   const vigenciaValida = Number.isInteger(vigencia) && vigencia >= 1 && vigencia <= VIGENCIA_MAX;
 
@@ -644,7 +654,7 @@ function Ficha({
           is_active: b01(item.activo),
           stock: esCita ? null : num(f.stock),
           max_discount: esCita ? null : num(f.max_discount),
-          duration_minutes: esCita ? num(f.duration_minutes) : null,
+          duration_minutes: esCita || duracionDePagina ? num(f.duration_minutes) : null,
           capacity: esCita ? num(f.capacity) : null,
           // ⚠️ text, no jsonb. Y son ids, no nombres.
           package_services: JSON.stringify(f.package_services),
@@ -910,7 +920,27 @@ function Ficha({
                     Hasta aquí puede bajar Mia si el cliente regatea. Nunca más.
                   </small>
                 </div>
+                {duracionDePagina && (
+                  <div>
+                    <label className="field-label">Duración si se reserva (minutos)</label>
+                    <input
+                      className="input"
+                      type="number"
+                      min={0}
+                      placeholder="vacío = un turno"
+                      value={f.duration_minutes}
+                      onChange={(e) => set('duration_minutes', e.target.value)}
+                    />
+                    <small className="muted" style={{ fontSize: 11.5 }}>
+                      Solo para lo que tus clientes reservan desde Mi página.
+                    </small>
+                  </div>
+                )}
               </>
+            )}
+
+            {companyId && (modo === 'ecommerce' || pagina.vende) && !esPendiente(item.id) && (
+              <Mayorista companyId={companyId} catalogId={item.id} moneda={f.currency || 'PEN'} />
             )}
 
             {/*

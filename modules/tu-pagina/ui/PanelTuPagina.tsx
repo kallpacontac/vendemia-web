@@ -18,7 +18,7 @@
  */
 import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { Copy, ExternalLink, Printer, QrCode } from 'lucide-react';
+import { Copy, Download, ExternalLink, FileText, Printer, QrCode } from 'lucide-react';
 import QRCode from 'qrcode';
 import Topbar from '@/components/panel/Topbar';
 import { useSesion } from '@/components/panel/Sesion';
@@ -376,13 +376,13 @@ function MiPagina({ companyId, nombre, pagina, agendaNube, alGuardar }: {
             )}
           </section>
         )}
-        {publicada && <Compartir slug={pagina!.slug} envios={Boolean(pagina!.secciones?.envios)} reservar={Boolean(pagina!.secciones?.reservar)} />}
+        {publicada && <Compartir slug={pagina!.slug} envios={Boolean(pagina!.secciones?.envios)} reservar={Boolean(pagina!.secciones?.reservar)} conCatalogo={Boolean(pagina!.secciones?.catalogo || pagina!.secciones?.reservar)} />}
       </div>
     </div>
   );
 }
 
-function Compartir({ slug, envios, reservar }: { slug: string; envios: boolean; reservar: boolean }) {
+function Compartir({ slug, envios, reservar, conCatalogo }: { slug: string; envios: boolean; reservar: boolean; conCatalogo: boolean }) {
   const avisar = useAvisar();
   const modo = useSesion().compania?.business_mode;
   const enlaces = [
@@ -411,14 +411,37 @@ function Compartir({ slug, envios, reservar }: { slug: string; envios: boolean; 
           </div>
         </div>
       ))}
+      {conCatalogo && <CatalogoPdf url={`${urlPagina(slug, modo)}/catalogo.pdf`} />}
     </section>
   );
 }
 
 /**
+ * El catálogo en PDF (servidor/pdf.tsx): el archivo para mandar como documento
+ * por WhatsApp, y el enlace fijo que siempre trae los precios de hoy.
+ */
+function CatalogoPdf({ url }: { url: string }) {
+  const avisar = useAvisar();
+  return (
+    <div className="tp-panel-enlace">
+      <div>
+        <small className="muted"><FileText size={12} style={{ verticalAlign: '-2px' }} /> Catálogo en PDF · se actualiza solo</small>
+        <b>{url.replace(/^https?:\/\//, '')}</b>
+      </div>
+      <div className="tp-panel-enlace__acciones">
+        <button className="btn btn-sm btn-ghost" title="Copiar enlace" onClick={() => void navigator.clipboard.writeText(url).then(() => avisar('Copiado'))}><Copy size={15} /></button>
+        <a className="btn btn-sm btn-ghost" title="Descargar PDF" href={`${url}?descargar=1`}><Download size={15} /></a>
+        <a className="btn btn-sm btn-ghost" title="Abrir" href={url} target="_blank" rel="noopener"><ExternalLink size={15} /></a>
+      </div>
+    </div>
+  );
+}
+
+/**
  * Dónde ve el dueño lo que llega. Con la agenda en la nube, en la Agenda y en
- * Pedidos del panel aunque su negocio sea de otro tipo (el menú no las enseña:
- * de ahí el enlace); sin ella, en las pestañas de aquí arriba.
+ * Pedidos del panel aunque su negocio sea de otro tipo (el menú las enseña si
+ * la página reserva o vende: modules/tu-pagina/ui/secciones.ts); sin ella, en
+ * las pestañas de aquí arriba.
  */
 function dondeLlega(es: Es, modo: BusinessMode | null | undefined, agendaNube: boolean) {
   const citas = es !== 'tienda';

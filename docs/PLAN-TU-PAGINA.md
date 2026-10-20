@@ -96,14 +96,21 @@ QR en SVG, `window.print()`): se reutiliza el patrón, no el código de placas.
 ## 4 · Lo que hace el dueño: 3 pasos
 
 ```
-1. ¿Qué quieres que tus clientes puedan hacer?        (se marca solo según tu negocio)
-   [✓] Ver mi catálogo y pedir   [✓] Reservar cita   [ ] Inscribirse a grupos   [ ] Pedir un envío
+1. Tu página es:  ( Agenda )  ( Tienda )  ( Las dos )  (por defecto, según tu negocio)
+   En «Las dos»: ¿Qué se reserva?  [✓] Corte  [ ] Champú …     [ ] También agendar envíos
 2. Elige cómo se ve                                    [plantillas en miniatura, vista previa real]
    Color · Logo · Foto de portada (opcional)
 3. Tu WhatsApp para recibir los pedidos                987 654 321         → [Publicar]
 ```
 
 Después: el enlace con «Copiar», «Compartir» y un **QR para imprimir**, más «Ver mi página».
+
+**Agenda, Tienda o Las dos lo decide la PÁGINA, no `business_mode`** (Alvaro, 19-oct-2026): el modo lo
+pone el bot en `ecommerce` por defecto y nadie lo elige a conciencia. Se guarda en `secciones`
+(`catalogo`, `reservar`, y `tipos` en «Las dos»); la regla es `tipoDe` en dominio/tienda.ts. El resto del
+panel lo sigue (modules/tu-pagina/ui/secciones.ts): la Agenda o Pedidos salen en el menú si la página
+reserva o vende, y el catálogo pide la duración en una tienda cuya página reserva. Pedir un producto que
+en esa página es un servicio lo rechaza el servidor (rutas/pedido.ts).
 
 **Plantillas propias de Tu página**, pensadas para vender y no para enlaces:
 
@@ -207,8 +214,8 @@ móviles (§6).
 
 | Paso | Qué | Estimado |
 |---|---|---|
-| **2b-1** | PDF con lo que ya tiene el catálogo + botón + enlace fijo | 1–2 días |
-| **2b-2** | Campos de mayorista (precio por mayor, pedido mínimo, código) en la base, el panel y el PDF | 1–2 días más |
+| **2b-1** | PDF con lo que ya tiene el catálogo + botón + enlace fijo | **Hecho 20-oct** (servidor/pdf.tsx, rutas/pdf.ts) |
+| **2b-2** | Campos de mayorista (precio por mayor, pedido mínimo, código) en la base, el panel y el PDF | **Hecho 20-oct**: sql/0005 (tabla aparte de `catalog`, el bot no la ve), ficha del catálogo, PDF |
 
 Los estimados son de planificación, no medidos.
 
@@ -233,8 +240,9 @@ Los estimados son de planificación, no medidos.
 
 ## 9 · Abierto
 
-- **PDF / mayoristas:** ¿el precio por mayor se ve también en la página web o solo en el PDF? ¿Un
-  segundo PDF «solo mayoristas» (con un enlace aparte) para no mostrarle ese precio al cliente final?
+- **PDF / mayoristas:** por ahora el precio por mayor y el pedido mínimo salen **solo en el PDF** (el
+  carrito de la web cobra el precio normal). ¿Un segundo PDF «solo mayoristas» con un enlace aparte, para
+  no mostrarle ese precio al cliente final?
 - **PDF:** ¿en todos los planes que incluyen Pide, o solo desde Starter?
 - **«El primero libre»** en reservas: ¿por orden o repartido?
 - **Slugs reservados:** `panel`, `api`, `login`, `admin`, `ayuda`… no se pueden dar a un negocio.

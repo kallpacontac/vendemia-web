@@ -41,6 +41,7 @@ import { estadoConsumo } from '@/lib/panel/consumo';
 import { PLANES, miles } from '@/lib/planes';
 import { getConsumo } from '@/lib/supabase/queries';
 import type { BusinessMode } from '@/lib/supabase/types';
+import { useLoQueHaceLaPagina } from '@/modules/tu-pagina/ui/secciones';
 
 const NAV = [
   { href: '/panel', icon: LayoutDashboard, label: 'Dashboard' },
@@ -125,7 +126,10 @@ export default function Sidebar({
   modo?: BusinessMode | null;
 }) {
   const ruta = usePathname();
-  const { salir, compania, esAdminPlataforma } = useSesion();
+  const { salir, compania, esAdminPlataforma, companyId } = useSesion();
+  // Mi página puede reservar o vender aunque el negocio sea de otro tipo: entonces
+  // también le toca la Agenda o Pedidos, que es donde entra lo de la página.
+  const pagina = useLoQueHaceLaPagina(soloGlobal ? null : companyId);
   const [masAbierto, setMasAbierto] = useState(false);
 
   // Al cambiar de pantalla la hoja se cierra: ya cumplió.
@@ -140,6 +144,8 @@ export default function Sidebar({
     // modo == null cubre undefined (primer render) Y null (compañía sin modo
     // asignado): en los dos casos se enseña de más, nunca de menos.
     if (!n.sirveA || modo == null) return true;
+    if (n.href === '/panel/agenda' && pagina.reserva) return true;
+    if (n.href === '/panel/pedidos' && pagina.vende) return true;
     return n.sirveA(modo);
   });
 

@@ -4,13 +4,19 @@
  * El navegador manda qué y cuántos; el precio, el nombre y el stock los pone
  * Postgres desde el catálogo (pedido_srv_crear), con un candado por negocio
  * para que dos personas no se lleven la última unidad.
+ *
+ * Antes, aquí se comprueba que todo lo del carrito sea un PRODUCTO en esta
+ * página (Agenda, Tienda o Las dos: dominio/tienda.ts). Desde la página no
+ * llega otra cosa, pero la petición se puede escribir a mano: un servicio no
+ * se «pide», se reserva con su hora.
  */
 import { revalidateTag } from 'next/cache';
 import { z } from 'zod';
 import { SLUG } from '@/modules/tu-pagina/dominio/config';
-import { validarCliente } from '@/modules/tu-pagina/dominio/tienda';
+import { armarEscaparate, validarCliente } from '@/modules/tu-pagina/dominio/tienda';
 import { huellaIp, limitar, log, rpc, servidor } from '@/modules/tu-pagina/servidor/supabase';
 import { paginaDe } from '@/modules/tu-pagina/servidor/pagina';
+import { datosFrescos } from '@/modules/tu-pagina/servidor/escaparate';
 
 const Cuerpo = z.object({
   slug: z.string().regex(SLUG),
@@ -47,6 +53,11 @@ export async function POST(req: Request) {
     if (!(await limitar(`ip:${ip}:tu-pagina-pedido`, 10, 3600))) return responder({ status: 'demasiados' }, 429);
     const pagina = await paginaDe(c.slug);
     if (!pagina?.secciones.catalogo) return responder({ status: 'not_found' }, 404);
+    // Sin caché, como la reserva: un producto recién creado tiene que poder pedirse ya.
+    const crudos = await datosFrescos(c.slug);
+    if (!crudos) return responder({ status: 'not_found' }, 404);
+    const tipoDe = new Map(armarEscaparate(crudos, pagina.secciones).items.map((i) => [i.id, i.tipo]));
+    if (c.lineas.some((l) => tipoDe.get(l.item) !== 'producto')) return responder({ status: 'no_existe' }, 404);
 
     type Respuesta = { status: string; codigo?: string; total?: number; lineas?: unknown; producto?: string; quedan?: number };
     const args = {
