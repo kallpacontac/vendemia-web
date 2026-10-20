@@ -9,7 +9,7 @@
 import { z } from 'zod';
 import { cuerpo, desdeError, fallo, huellaIp, limitar, ok } from '@/modules/fideliza/servidor/http';
 import { rpc, servidor } from '@/modules/fideliza/servidor/supabase';
-import { enlaceParaTarjeta } from '@/modules/fideliza/servidor/wallet/sincronizar';
+import { enlaceParaTarjeta, tarjetaGuardadaEnWallet } from '@/modules/fideliza/servidor/wallet/sincronizar';
 import { FIDELIZA_URL } from '@/modules/fideliza/dominio/config';
 
 
@@ -17,6 +17,7 @@ const token = z.string().regex(/^[A-Za-z0-9_-]{30,64}$/);
 const esquema = z.discriminatedUnion('accion', [
   z.object({ accion: z.literal('ver'), token }),
   z.object({ accion: z.literal('wallet'), token }),
+  z.object({ accion: z.literal('wallet_estado'), token }),
   z.object({ accion: z.literal('alias'), token, alias: z.string().trim().max(40) }),
   z.object({
     accion: z.literal('contacto'),
@@ -44,7 +45,7 @@ export async function POST(req: Request) {
     if (!e.success) return fallo('invalid_input');
     const d = e.data;
     const ip = huellaIp(req);
-    const [cubo, max] = d.accion === 'wallet' ? ['w', 10] : d.accion === 'ver' ? ['v', 60] : ['a', 30];
+    const [cubo, max] = d.accion === 'wallet' ? ['w', 10] : d.accion === 'wallet_estado' ? ['we', 20] : d.accion === 'ver' ? ['v', 60] : ['a', 30];
     if (!(await limitar(`ip:${ip}:card:${cubo}`, max, 60))) return fallo('rate_limited', 429);
 
     const sb = servidor();
@@ -54,6 +55,9 @@ export async function POST(req: Request) {
     if (d.accion === 'wallet') {
       const url = await enlaceParaTarjeta(d.token, new URL(FIDELIZA_URL).origin);
       return ok({ url });
+    }
+    if (d.accion === 'wallet_estado') {
+      return ok({ guardada: await tarjetaGuardadaEnWallet(d.token) });
     }
     const [accion, args] = (() => {
       switch (d.accion) {

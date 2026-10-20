@@ -15,6 +15,7 @@
  */
 import { createHash } from 'crypto';
 import { UNIDAD, type TipoRegla } from './formato';
+import { colorValido, resolverEstilo, type Estilo } from './estilo';
 
 export interface Marca {
   slug: string;
@@ -23,6 +24,7 @@ export interface Marca {
   logo_url: string | null;
   bg_color: string;
   support_url: string | null;
+  style?: Partial<Estilo> | null;
 }
 
 export interface DatosClase {
@@ -49,11 +51,27 @@ export function cuerpoClase(
   const logo = !demo && d.logo_valido && d.brand.logo_url ? d.brand.logo_url : opciones.logoVendemia;
   const nombreEmisor = demo ? 'Vendemia' : d.brand.display_name;
   const programa = demo ? 'Vendemia Fideliza' : d.program_name;
+  const estilo = resolverEstilo(d.brand.style);
+  const campo = (fieldPath: string) => ({ firstValue: { fields: [{ fieldPath }] } });
+  const saldo = (campoBase: string) => ({
+    firstValue: { fields: [{ fieldPath: `object.${campoBase}.label` }] },
+    secondValue: { fields: [{ fieldPath: `object.${campoBase}.balance` }] },
+  });
   return {
     issuerName: nombreEmisor.slice(0, 40),
     programName: programa.slice(0, 40),
     programLogo: { sourceUri: { uri: logo }, contentDescription: texto(`Logo de ${nombreEmisor}`) },
-    hexBackgroundColor: demo ? '#FF4900' : d.brand.bg_color,
+    hexBackgroundColor: demo ? '#FF4900' : colorValido(d.brand.bg_color),
+    // null elimina una portada anterior al hacer PATCH cuando el comercio la quita.
+    heroImage: estilo.fondo && !demo ? { sourceUri: { uri: estilo.fondo }, contentDescription: texto(`Imagen de ${nombreEmisor}`) } : null,
+    classTemplateInfo: {
+      cardTemplateOverride: {
+        cardRowTemplateInfos: [
+          { twoItems: { startItem: saldo('loyaltyPoints'), endItem: saldo('secondaryLoyaltyPoints') } },
+          { oneItem: { item: campo('object.textModulesData[\'premio\']') } },
+        ],
+      },
+    },
     countryCode: 'PE',
     accountIdLabel: 'Código',
     accountNameLabel: 'Cliente',
@@ -82,11 +100,12 @@ export function cuerpoObjeto(d: DatosObjeto, classId: string, opciones: { urlNeg
   const activo = d.member.status === 'active';
   const tipo = d.program?.rule_type ?? 'stamps';
   const premios = d.member.rewards_available;
+  const faltan = Math.max(0, (d.program?.threshold ?? 0) - d.member.balance);
   const frase =
     premios > 0
       ? `Tienes ${premios} premio${premios > 1 ? 's' : ''} para canjear: ${d.program?.reward ?? ''}`
       : d.program?.threshold
-        ? `Con ${d.program.threshold} ${UNIDAD[tipo].varias}: ${d.program.reward ?? ''}`
+        ? `Te faltan ${faltan} ${faltan === 1 ? UNIDAD[tipo].una : UNIDAD[tipo].varias} para ${d.program.reward ?? 'tu premio'}`
         : '';
   return {
     classId,
@@ -98,7 +117,7 @@ export function cuerpoObjeto(d: DatosObjeto, classId: string, opciones: { urlNeg
     barcode: activo
       ? { type: 'QR_CODE', value: d.member.qr_token, alternateText: d.member.public_code }
       : undefined,
-    textModulesData: frase ? [{ id: 'premio', header: 'Tu premio', body: frase.slice(0, 200) }] : [],
+    textModulesData: frase ? [{ id: 'premio', header: premios > 0 ? 'Premio disponible' : 'Próximo premio', body: frase.slice(0, 200) }] : [],
     linksModuleData: {
       uris: [
         { id: 'negocio', uri: opciones.urlNegocio, description: d.brand.display_name.slice(0, 40) },

@@ -85,6 +85,12 @@ async function llamar(metodo: string, ruta: string, cuerpo?: unknown): Promise<{
 
 type Recurso = 'loyaltyClass' | 'loyaltyObject';
 
+/** Google establece hasUsers cuando el pase está realmente en una Wallet. */
+export async function guardadaEnWallet(objectId: string): Promise<boolean> {
+  const r = await llamar('GET', `loyaltyObject/${encodeURIComponent(objectId)}`);
+  return r.status === 200 && (r.datos as { hasUsers?: boolean } | null)?.hasUsers === true;
+}
+
 /**
  * Crear o actualizar SIN duplicar: PATCH primero; si no existe, INSERT; si el
  * INSERT choca (otro proceso lo creó entre medias), PATCH otra vez. El id lo

@@ -3,7 +3,7 @@ import { entorno } from '../entorno';
 import { rpc, servidor } from '../supabase';
 import { urlNegocio } from '../../dominio/config';
 import { cuerpoClase, cuerpoObjeto, huella, idClase, type DatosClase, type DatosObjeto } from '../../dominio/wallet-payload';
-import { enlaceGuardar, ErrorWallet, upsert } from './google';
+import { enlaceGuardar, ErrorWallet, guardadaEnWallet, upsert } from './google';
 import { CredencialesInvalidas } from './credenciales';
 
 /**
@@ -138,8 +138,7 @@ function programaDe(d: DatosObjetoRpc): string {
 
 /**
  * El botón de la tarjeta web: asegura la fila del pase, crea/actualiza el
- * objeto en Google y firma el enlace. Emitir el enlace NO es «guardado»: eso
- * solo lo sabe Google, y por ahora no nos lo cuenta (ver README).
+ * objeto en Google y firma el enlace. Emitir el enlace NO es «guardado».
  */
 export async function enlaceParaTarjeta(cardToken: string, origen: string): Promise<string> {
   const sb = servidor();
@@ -161,6 +160,24 @@ export async function enlaceParaTarjeta(cardToken: string, origen: string): Prom
     p_error: null,
   });
   return url;
+}
+
+/** Consulta a Google solo si se emitió al menos un enlace para este miembro. */
+export async function tarjetaGuardadaEnWallet(cardToken: string): Promise<boolean> {
+  const sb = servidor();
+  const tarjeta = await rpc<{ status: string; wallet: { links_issued: number } | null }>(sb, 'loyalty_srv_card', {
+    p_card_token: cardToken,
+    p_log: false,
+  });
+  if (tarjeta.status !== 'ok') throw new Error('loyalty:not_found');
+  if (!tarjeta.wallet?.links_issued) return false;
+  const d = await rpc<DatosObjetoRpc | null>(sb, 'loyalty_srv_wallet_object_data', {
+    p_member: null,
+    p_card_token: cardToken,
+    p_issuer: entorno.walletIssuer(),
+  });
+  if (!d) throw new Error('loyalty:not_found');
+  return guardadaEnWallet(d.pass.object_id);
 }
 
 /** Lo que se guarda como último error: corto, sin tokens ni correos. */

@@ -44,6 +44,7 @@ test('1 · el objeto de Wallet lleva el token opaco en el QR y nunca el id inter
   assert.equal(o.accountId, 'VDM-A7K9P2');
   assert.equal(o.state, 'ACTIVE');
   assert.deepEqual(o.loyaltyPoints.balance, { int: 7 });
+  assert.match(o.textModulesData[0].body, /Tienes 1 premio para canjear/);
   assert.ok(!JSON.stringify(o).includes(MIEMBRO_ID));
   assert.ok(!('rewardsTier' in o), 'no se usa rewards tier para simular saldos');
 });
@@ -78,6 +79,40 @@ test('4 · clase: marca del comercio solo con logo válido; la demo siempre con 
   assert.equal(demo.issuerName, 'Vendemia');
   assert.equal(demo.hexBackgroundColor, '#FF4900');
   assert.ok(!('reviewStatus' in demo), 'reviewStatus solo al crear');
+});
+
+test('4b · cada comercio lleva su paleta, portada y saldos visibles en Google Wallet', () => {
+  const clase = payload.cuerpoClase(
+    {
+      program_id: 'p', program_name: 'Club del Café', reward: 'Café gratis', threshold: 8, rule_type: 'stamps',
+      brand: { ...marca, bg_color: '#305A70', style: { plantilla: 'foto', fondo: 'https://ejemplo.com/cafe.jpg' } },
+      logo_valido: true,
+    },
+    { urlNegocio: 'https://fideliza.vendemias.com/n/barberia-centro', logoVendemia: 'https://vendemias.com/logo.png', demo: false },
+  );
+  assert.equal(clase.hexBackgroundColor, '#305A70');
+  assert.equal(clase.heroImage.sourceUri.uri, 'https://ejemplo.com/cafe.jpg');
+  const filas = clase.classTemplateInfo.cardTemplateOverride.cardRowTemplateInfos;
+  assert.equal(filas[0].twoItems.startItem.secondValue.fields[0].fieldPath, 'object.loyaltyPoints.balance');
+  assert.equal(filas[0].twoItems.endItem.secondValue.fields[0].fieldPath, 'object.secondaryLoyaltyPoints.balance');
+  assert.equal(payload.cuerpoClase(
+    { program_id: 'p', program_name: 'Club del Café', reward: null, threshold: 8, rule_type: 'stamps', brand: marca, logo_valido: true },
+    { urlNegocio: 'https://fideliza.vendemias.com/n/barberia-centro', logoVendemia: 'https://vendemias.com/logo.png', demo: false },
+  ).heroImage, null, 'quitar la portada también se envía a Google');
+});
+
+test('4c · el pase explica cuánto falta según la regla y el saldo real', () => {
+  const o = payload.cuerpoObjeto(
+    {
+      member: { public_code: 'VDM-A7K9P2', alias: null, status: 'active', balance: 18, rewards_available: 0, qr_token: 'vq' + 'x'.repeat(24) },
+      program: { name: 'Club', status: 'active', rule_type: 'points', threshold: 20, reward: 'Un café' },
+      brand: marca,
+    },
+    '3388000000023213846.vf_x',
+    { urlNegocio: 'https://fideliza.vendemias.com/n/barberia-centro' },
+  );
+  assert.equal(o.loyaltyPoints.label, 'Puntos');
+  assert.match(o.textModulesData[0].body, /Te faltan 2 puntos para Un café/);
 });
 
 test('5 · importes en céntimos, sin decimales flotantes', () => {

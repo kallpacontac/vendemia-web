@@ -118,9 +118,10 @@ después de cada operación y con «Sincronizar ahora». En Pro, cambiar a
 - Las clases se crean con `reviewStatus: UNDER_REVIEW` (en `DRAFT` Google no
   deja crear objetos). Con el emisor en modo demo, solo funcionan las cuentas
   añadidas como *test accounts* en la Google Pay & Wallet Console.
-- Emitir el enlace de guardado **no** es «guardado». No hay callback de Google
+- Emitir el enlace de guardado **no** es «guardado». La tarjeta pública consulta
+  `hasUsers` del objeto en Google antes de ocultar el botón. No hay callback
   todavía; `loyalty_webhook_receipts` queda preparada para cuando se verifiquen
-  sus firmas.
+  sus firmas. La métrica de enlaces emitidos no equivale a guardados.
 
 **Checklist para pedir producción del emisor (salir de demo):**
 1. Logo del comercio aprobado (sin marcas de terceros) y nombre ≤ 20 caracteres.

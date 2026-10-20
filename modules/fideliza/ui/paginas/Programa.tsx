@@ -19,6 +19,7 @@ import { accion, lecturas, mensaje, sincronizarEnSegundoPlano, type Programa, ty
 import { urlAyuda } from '@/modules/fideliza/dominio/botones';
 import { urlNegocio } from '@/modules/fideliza/dominio/config';
 import { aCentimos, fecha, fraseRegla, soles, unidades, type TipoRegla } from '@/modules/fideliza/dominio/formato';
+import type { Estilo } from '@/modules/fideliza/dominio/estilo';
 
 const PASOS = ['Negocio y sucursal', 'Objetivo', 'Tipo de regla', 'Beneficio', 'Marca', 'Probar y publicar'];
 const OBJETIVOS = [
@@ -575,6 +576,9 @@ function ProgramaPagina() {
                 />,
               )}
               <small className="fz-def">Al pulsar «Guardar y seguir» comprobamos si el logo sirve para Google Wallet.</small>
+              <p className="fz-def" style={{ marginTop: 12 }}>
+                La plantilla e imagen que elijas en <a href="/panel/fideliza/mi-pagina">Mi página</a> también visten la tarjeta web. La tarjeta de Google Wallet usa tu color, logo y, si existe, la imagen de portada.
+              </p>
             </div>
             <div>
               <label className="field-label">Vista previa</label>
@@ -588,11 +592,13 @@ function ProgramaPagina() {
                   )}
                   <b style={{ background: '#fff', padding: '2px 8px', borderRadius: 8 }}>{negocio.display_name || 'Tu negocio'}</b>
                 </div>
-                <p style={{ marginTop: 14, background: 'rgba(255,255,255,.9)', padding: 8, borderRadius: 10, fontSize: 13 }}>
-                  {prog.name || 'Tu programa'} · {b.reward_threshold && b.reward_description && b.rule_type ? fraseRegla({ ...b, rule_type: b.rule_type, threshold: b.reward_threshold, reward: b.reward_description }) : 'Configura la regla'}
-                </p>
+                <div style={{ marginTop: 14, background: 'rgba(255,255,255,.92)', padding: 10, borderRadius: 10, fontSize: 13, color: '#171716' }}>
+                  <b>{prog.name || 'Tu programa'}</b>
+                  <p style={{ marginTop: 7 }}>{unidades(3, b.rule_type)} · 0 premios</p>
+                  <small>{b.reward_description ? `Próximo premio: ${b.reward_description}` : 'Configura tu próximo premio'}</small>
+                </div>
               </div>
-              <p className="fz-def">Aproximada: Google Wallet compone la tarjeta con su propio diseño.</p>
+              <p className="fz-def">Vista orientativa de la tarjeta guardada. Google Wallet decide la apariencia de la pantalla «Agregar».</p>
             </div>
           </div>
         )}
@@ -672,6 +678,7 @@ function ProgramaPagina() {
             negocio: negocio.display_name,
             frase: negocio.tagline,
             color: marca.bg_color,
+            estilo: (ajustes?.page_style ?? null) as Partial<Estilo> | null,
             logo: marca.logo_url,
             programa: prog.name,
             descripcion: prog.description,

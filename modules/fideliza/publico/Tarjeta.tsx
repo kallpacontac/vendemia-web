@@ -1,13 +1,14 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { Wallet } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { Check, Gift, Sparkles } from 'lucide-react';
 import { UNIDAD, fechaHora, type TipoRegla } from '@/modules/fideliza/dominio/formato';
+import { colorValido, mezcla, resolverEstilo, tintaSobre, type Estilo } from '@/modules/fideliza/dominio/estilo';
 
 export interface DatosTarjeta {
   status: 'ok' | 'not_found';
   member: { public_code: string; alias: string | null; status: string; balance: number; rewards_available: number; qr_token: string };
-  brand: { slug: string; display_name: string; tagline: string; logo_url: string | null; bg_color: string; support_url: string | null };
+  brand: { slug: string; display_name: string; tagline: string; logo_url: string | null; bg_color: string; support_url: string | null; style?: Partial<Estilo> | null };
   program: { name: string; description: string; status: string; rule_type: TipoRegla | null; threshold: number | null; reward: string | null } | null;
   rewards: { description: string; expires_at: string | null }[];
   movements: { kind: string; units: number; at: string }[];
@@ -55,6 +56,10 @@ export default function Tarjeta(props: {
   const [enLinea, setEnLinea] = useState(true);
   const [aviso, setAviso] = useState<string | null>(null);
   const [nueva, setNueva] = useState(false);
+  const [walletGuardada, setWalletGuardada] = useState(false);
+  const [walletVerificada, setWalletVerificada] = useState(false);
+  const comprobandoWallet = useRef(false);
+  const volviendoDeWallet = useRef(false);
   const [ocupado, setOcupado] = useState<string | null>(null);
   const [plataforma, setPlataforma] = useState<'ios' | 'android' | 'otra'>('otra');
   const [pushPosible, setPushPosible] = useState(false);
@@ -69,6 +74,43 @@ export default function Tarjeta(props: {
   const tipo = d.program?.rule_type ?? 'stamps';
   const umbral = d.program?.threshold ?? 0;
   const progreso = umbral ? Math.max(0, Math.min(d.member.balance, umbral)) : 0;
+  const sellos = tipo === 'stamps' && umbral > 0 && umbral <= 12;
+
+  useEffect(() => {
+    if (!props.walletDisponible) return;
+    const comprobar = async () => {
+      if (comprobandoWallet.current) return;
+      comprobandoWallet.current = true;
+      try {
+        const r = await pedir<{ guardada: boolean }>({ accion: 'wallet_estado', token });
+        setWalletGuardada(r.guardada);
+        if (r.guardada) volviendoDeWallet.current = false;
+      } catch {
+        // Si Google no responde, conservamos el botón y no afirmamos que se guardó.
+      } finally {
+        setWalletVerificada(true);
+        setOcupado((actual) => actual === 'wallet' ? null : actual);
+        comprobandoWallet.current = false;
+      }
+    };
+    let segundoIntento: number | undefined;
+    const alVolver = () => {
+      void comprobar();
+      if (volviendoDeWallet.current) {
+        window.clearTimeout(segundoIntento);
+        segundoIntento = window.setTimeout(() => { if (volviendoDeWallet.current) void comprobar(); }, 2800);
+      }
+    };
+    const alVisibilizar = () => { if (document.visibilityState === 'visible') alVolver(); };
+    void comprobar();
+    window.addEventListener('pageshow', alVolver);
+    document.addEventListener('visibilitychange', alVisibilizar);
+    return () => {
+      window.removeEventListener('pageshow', alVolver);
+      document.removeEventListener('visibilitychange', alVisibilizar);
+      window.clearTimeout(segundoIntento);
+    };
+  }, [token, props.walletDisponible]);
 
   useEffect(() => {
     const ua = navigator.userAgent;
@@ -136,6 +178,7 @@ export default function Tarjeta(props: {
     setAviso(null);
     try {
       const r = await pedir<{ url: string }>({ accion: 'wallet', token });
+      volviendoDeWallet.current = true;
       location.href = r.url;
     } catch (e) {
       setAviso(e instanceof Error ? e.message : 'No se pudo preparar la tarjeta de Google Wallet.');
@@ -211,7 +254,19 @@ export default function Tarjeta(props: {
     }
   }
 
-  const estilo = { '--marca': /^#[0-9A-Fa-f]{6}$/.test(d.brand.bg_color) ? d.brand.bg_color : '#FF4900' } as React.CSSProperties;
+  const marca = colorValido(d.brand.bg_color);
+  const plantilla = resolverEstilo(d.brand.style);
+  const fondoOscuro = plantilla.plantilla === 'oscura' || plantilla.plantilla === 'vidrio' || plantilla.plantilla === 'foto';
+  const fondo = fondoOscuro ? mezcla(marca, '#101014', .87) : plantilla.plantilla === 'color' ? mezcla(marca, '#FFFFFF', .86) : '#F9F9F6';
+  const estilo = {
+    '--marca': marca,
+    '--sobre-marca': tintaSobre(marca),
+    '--fondo': fondo,
+    '--superficie': fondoOscuro ? '#252428' : '#FFFFFF',
+    '--tinta': fondoOscuro ? '#FFFFFF' : '#171716',
+    '--suave': fondoOscuro ? '#C7C5C6' : '#666661',
+    '--borde': fondoOscuro ? '#48464B' : '#E9E8E4',
+  } as React.CSSProperties;
 
   if (borrado) {
     return (
@@ -225,19 +280,23 @@ export default function Tarjeta(props: {
   }
 
   return (
-    <main className="fz" style={estilo}>
+    <main className="fz" style={estilo} data-plantilla={plantilla.plantilla}>
       <header className="fz-cab">
-        {d.brand.logo_url && (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img className="fz-logo" src={d.brand.logo_url} alt="" width={72} height={72} />
-        )}
-        <h1>{d.brand.display_name}</h1>
-        {d.program && <p>{d.program.name}</p>}
+        <div className="fz-cab__marca">
+          {d.brand.logo_url ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img className="fz-logo" src={d.brand.logo_url} alt="" width={48} height={48} />
+          ) : <span className="fz-logo fz-logo--letra" aria-hidden="true">{d.brand.display_name.slice(0, 1).toUpperCase()}</span>}
+          <div><h1>{d.brand.display_name}</h1><p>{d.brand.tagline || 'Tu programa de fidelidad'}</p></div>
+        </div>
+        <span className="fz-cab__etiqueta">Mi tarjeta</span>
       </header>
 
       {nueva && (
         <div className="fz-caja fz-ok" role="status">
-          <b>¡Listo! Tu tarjeta está creada.</b> Guárdala en tu teléfono para no perderla.
+          <span className="fz-ok__icono"><Check aria-hidden="true" /></span>
+          <div><b>¡Ya eres parte de {d.brand.display_name}!</b><p>Tu tarjeta está lista. Muéstrala en caja para empezar a sumar {UNIDAD[tipo].varias}.</p></div>
+          <Sparkles className="fz-ok__brillo" aria-hidden="true" />
         </div>
       )}
       {!enLinea && (
@@ -256,9 +315,9 @@ export default function Tarjeta(props: {
         </div>
       )}
 
-      {d.member.status === 'active' && (
+      {d.member.status === 'active' && !walletGuardada && (
         <section className="fz-caja fz-caja--flujo fz-wallet-caja" aria-label="Guardar la tarjeta">
-          {plataforma !== 'ios' && props.walletDisponible && (
+          {plataforma !== 'ios' && props.walletDisponible && (walletVerificada || !d.wallet?.links_issued) && (
             <>
               <div>
                 <p className="fz-grande">Lleva tu tarjeta siempre contigo</p>
@@ -271,18 +330,12 @@ export default function Tarjeta(props: {
                 disabled={ocupado === 'wallet'}
                 aria-label="Agregar a Google Wallet"
               >
-                <Wallet aria-hidden="true" />
-                <span>{ocupado === 'wallet' ? 'Preparando…' : 'Agregar a Google Wallet'}</span>
+                {ocupado === 'wallet' ? 'Preparando…' : (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src="/wallet/es419_add_to_google_wallet_wallet-button.svg" alt="" width={378} height={50} />
+                )}
               </button>
-              {d.wallet && (
-                <p className="fz-nota">
-                  {d.wallet.state === 'error'
-                    ? 'Estamos actualizando tu tarjeta de Google Wallet. Tu saldo de aquí es el bueno.'
-                    : d.wallet.pending
-                      ? 'Tu tarjeta de Google Wallet se está poniendo al día.'
-                      : 'Tu tarjeta de Google Wallet está al día.'}
-                </p>
-              )}
+              {d.wallet?.state === 'error' && <p className="fz-nota">Estamos actualizando tu tarjeta de Google Wallet. Tu saldo de aquí es el bueno.</p>}
               {props.walletDemo && (
                 <p className="fz-mini">Google Wallet está en pruebas: por ahora solo funciona con cuentas de prueba autorizadas.</p>
               )}
@@ -308,24 +361,31 @@ export default function Tarjeta(props: {
           )}
         </section>
       )}
+      {walletGuardada && <div className="fz-caja fz-wallet-lista" role="status"><Check aria-hidden="true" /><span>Tu tarjeta ya está en Google Wallet.</span></div>}
 
       <section className="fz-caja fz-centro" aria-label="Tu tarjeta">
-        {d.member.alias && <p className="fz-nota">Hola, {d.member.alias}</p>}
-        <p className="fz-saldo">
-          {d.member.balance.toLocaleString('es-PE')} <span>{UNIDAD[tipo].varias}</span>
-        </p>
-        {umbral > 0 && (
-          <>
-            <div className="fz-barra" role="progressbar" aria-valuemin={0} aria-valuemax={umbral} aria-valuenow={progreso}>
-              <i style={{ width: `${(progreso / umbral) * 100}%` }} />
-            </div>
-            <p className="fz-nota">
-              {d.member.balance >= umbral
-                ? 'Premio a punto de salir'
-                : `Te faltan ${(umbral - d.member.balance).toLocaleString('es-PE')} para: ${d.program?.reward}`}
-            </p>
-          </>
-        )}
+        <div className="fz-carnet">
+          {plantilla.fondo && <>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img className="fz-carnet__foto" src={plantilla.fondo} alt="" />
+          </>}
+          <div className="fz-carnet__contenido">
+            <div className="fz-carnet__arriba"><span>FIDELIDAD</span><span>{d.program?.name || 'Tu programa'}</span></div>
+            <div className="fz-carnet__saludo">{d.member.alias ? `Hola, ${d.member.alias}` : 'Tu tarjeta'}</div>
+            <div className="fz-carnet__saldo"><b>{d.member.balance.toLocaleString('es-PE')}</b><span>{UNIDAD[tipo].varias}</span></div>
+            {sellos ? (
+              <div className="fz-sellos" role="img" aria-label={`${progreso} de ${umbral} sellos`}>
+                {Array.from({ length: umbral }, (_, i) => <span key={i} className={i < progreso ? 'fz-sello fz-sello--lleno' : 'fz-sello'}><Check aria-hidden="true" /></span>)}
+              </div>
+            ) : umbral > 0 ? (
+              <div className="fz-barra" role="progressbar" aria-label={`Progreso de ${UNIDAD[tipo].varias}`} aria-valuemin={0} aria-valuemax={umbral} aria-valuenow={progreso}>
+                <i style={{ width: `${(progreso / umbral) * 100}%` }} />
+              </div>
+            ) : null}
+            {umbral > 0 && <p className="fz-carnet__meta">{progreso} de {umbral} {UNIDAD[tipo].varias} para tu próximo premio</p>}
+          </div>
+        </div>
+        {d.program?.reward && <div className="fz-meta-premio"><Gift aria-hidden="true" /><span>{d.member.balance >= umbral && umbral > 0 ? 'Premio alcanzado' : 'Tu próximo premio'}<b>{d.program.reward}</b></span></div>}
         {d.rewards.length > 0 && (
           <div className="fz-premio">
             <b>

@@ -9,11 +9,13 @@
  * y lo dice.
  */
 import { UNIDAD, fraseRegla, soles, type TipoRegla } from '@/modules/fideliza/dominio/formato';
+import { colorValido, resolverEstilo, tintaSobre, type Estilo } from '@/modules/fideliza/dominio/estilo';
 
 export interface DatosVista {
   negocio: string;
   frase: string;
   color: string;
+  estilo?: Partial<Estilo> | null;
   logo: string;
   programa: string;
   descripcion: string;
@@ -28,27 +30,20 @@ export interface DatosVista {
   ayuda: string;
 }
 
-function tintaSobre(hex: string): string {
-  if (!/^#[0-9A-Fa-f]{6}$/.test(hex)) return '#1A0A00';
-  const [r, g, b] = [1, 3, 5].map((i) => {
-    const v = parseInt(hex.slice(i, i + 2), 16) / 255;
-    return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4;
-  });
-  const l = 0.2126 * r + 0.7152 * g + 0.0722 * b;
-  return 1.05 / (l + 0.05) >= (l + 0.05) / 0.055 ? '#FFFFFF' : '#1A0A00';
-}
-
 export default function VistaTarjeta({ d, foco }: { d: DatosVista; foco: string | null }) {
   const z = (zona: string) => (foco === zona ? 'fz-zona fz-zona--foco' : 'fz-zona');
   const tipo = d.tipo ?? 'stamps';
   const umbral = d.umbral && d.umbral > 0 ? d.umbral : 10;
   const ejemplo = Math.min(3, Math.max(umbral - 1, 0));
   const u = UNIDAD[tipo];
+  const color = colorValido(d.color);
+  const estilo = resolverEstilo(d.estilo);
+  const conFoto = Boolean(estilo.fondo);
 
   return (
     <div>
       <div className="fz-movil">
-        <div className={`fz-movil__cab ${z('color')}`} style={{ background: d.color, color: tintaSobre(d.color) }}>
+        <div className={`fz-movil__cab ${z('color')}`} style={{ background: '#F9F9F6', color: '#171716' }}>
           <span className={z('logo')}>
             {d.logo ? (
               // eslint-disable-next-line @next/next/no-img-element
@@ -59,17 +54,25 @@ export default function VistaTarjeta({ d, foco }: { d: DatosVista; foco: string 
           </span>
           <b className={z('negocio')}>{d.negocio || 'Tu negocio'}</b>
           {d.frase && <small className={z('frase')}>{d.frase}</small>}
-          <small className={z('programa')} style={{ fontWeight: 700 }}>{d.programa || 'Nombre de tu programa'}</small>
         </div>
 
         <div className="fz-movil__cuerpo">
           {d.descripcion && <p className={`fz-movil__desc ${z('descripcion')}`}>{d.descripcion}</p>}
-          <div className={z('umbral')}>
-            <div className="fz-movil__saldo">
-              {ejemplo} <span>de {umbral} {u.varias}</span>
-            </div>
-            <div className="fz-movil__barra">
-              <i style={{ width: `${(ejemplo / umbral) * 100}%`, background: d.color }} />
+          <div className={`fz-movil__carnet ${z('umbral')} fz-movil__carnet--${estilo.plantilla}`} style={{ background: color, color: conFoto && (estilo.plantilla === 'foto' || estilo.plantilla === 'vidrio') ? '#fff' : tintaSobre(color) }}>
+            {conFoto && <>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={estilo.fondo} alt="" />
+            </>}
+            <div className="fz-movil__carnet-contenido">
+              <small className={z('programa')}>FIDELIDAD · {d.programa || 'Tu programa'}</small>
+              <span className="fz-movil__carnet-saludo">Hola, Ana</span>
+              <div className="fz-movil__saldo">{ejemplo} <span>{u.varias}</span></div>
+              {tipo === 'stamps' && umbral <= 12 ? (
+                <div className="fz-movil__sellos" aria-label={`${ejemplo} de ${umbral} sellos`}>
+                  {Array.from({ length: umbral }, (_, i) => <span key={i} className={i < ejemplo ? 'lleno' : ''}>{i < ejemplo ? '✓' : ''}</span>)}
+                </div>
+              ) : <div className="fz-movil__barra"><i style={{ width: `${(ejemplo / umbral) * 100}%`, background: tintaSobre(color) }} /></div>}
+              <small>{ejemplo} de {umbral} {u.varias} para tu premio</small>
             </div>
           </div>
           <p className={`fz-movil__premio ${z('premio')}`}>
@@ -96,6 +99,7 @@ export default function VistaTarjeta({ d, foco }: { d: DatosVista; foco: string 
           </div>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img className="fz-movil__wallet" src="/wallet/es419_add_to_google_wallet_wallet-button.svg" alt="" />
+          <small className="fz-movil__nota">El botón desaparece cuando se guarda en Wallet.</small>
           {d.ayuda && <p className={`fz-movil__nota ${z('ayuda')}`}>Ayuda: {d.ayuda.replace(/^https?:\/\//, '').slice(0, 32)}</p>}
         </div>
       </div>

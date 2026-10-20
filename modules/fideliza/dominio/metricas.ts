@@ -58,7 +58,7 @@ export const DEFINICIONES = {
   cobertura:
     'Ventas registradas frente a ventas totales: NO se calcula. Fideliza no conoce las ventas totales del negocio y no hay denominador real.',
   wallet:
-    'Enlaces emitidos = veces que alguien pulsó «Agregar a Google Wallet» y le dimos el enlace. NO es «guardado»: Google no nos lo confirma.',
+    'Enlaces emitidos = veces que alguien pulsó «Agregar a Google Wallet» y le dimos el enlace. No mide guardados; la tarjeta consulta a Google si ese pase ya tiene usuarios.',
   aperturas: 'Aperturas de placas. «QR» viene con ?o=qr y «NFC» con ?o=nfc; las placas antiguas sin parámetro también cuentan como NFC. No prueba presencia en el local.',
   campanas:
     '«Aceptados» = el servicio de push del navegador aceptó el mensaje. No significa entregado ni leído. «Compra después» = compra registrada en los 14 días siguientes; no prueba que la causara el mensaje.',

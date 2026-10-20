@@ -183,6 +183,21 @@
 @media(max-width:1100px){.fz-editor--asistente{grid-template-columns:1fr}}
 .fz-boton--foco{border-color:#FFB800;box-shadow:0 0 0 3px rgba(255,184,0,.25)}
 .fz-movil__url{margin:-4px 12px 0;padding:6px 8px;border-radius:8px;background:#FFF4D6;font:700 11px ui-monospace,Consolas,monospace;text-align:center;word-break:break-all}
+.fz-movil__carnet{position:relative;overflow:hidden;min-height:206px;border-radius:17px;text-align:left;box-shadow:0 9px 20px rgba(0,0,0,.13)}
+.fz-movil__carnet>img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:.27}
+.fz-movil__carnet--foto>img,.fz-movil__carnet--vidrio>img{opacity:.58}
+.fz-movil__carnet--foto:before,.fz-movil__carnet--vidrio:before{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.4),rgba(0,0,0,.7));z-index:1}
+.fz-movil__carnet--marco{border:5px solid rgba(255,255,255,.75)}
+.fz-movil__carnet-contenido{position:relative;z-index:2;display:flex;flex-direction:column;min-height:206px;padding:15px}
+.fz-movil__carnet-contenido>small:first-child{font-size:9px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;opacity:.85}
+.fz-movil__carnet-saludo{margin-top:21px;font-size:11px;font-weight:700}
+.fz-movil__carnet .fz-movil__saldo{font-size:39px;line-height:1.05;padding:0}
+.fz-movil__carnet .fz-movil__saldo span{font-size:12px;color:inherit}
+.fz-movil__carnet .fz-movil__barra{background:rgba(255,255,255,.4);margin:10px 0}
+.fz-movil__carnet-contenido>small:last-child{margin-top:auto;font-size:9px;font-weight:700;opacity:.88}
+.fz-movil__sellos{display:flex;flex-wrap:wrap;gap:4px;margin:9px 0}
+.fz-movil__sellos span{display:grid;place-items:center;width:21px;height:21px;border:1.5px solid currentColor;border-radius:50%;font-size:12px;font-weight:800;opacity:.65}
+.fz-movil__sellos .lleno{background:#fff;color:#171716;opacity:1}
 .fz-ayudas{list-style:none;padding:10px 12px;margin:12px 0 0;border-radius:12px;background:var(--bg-soft);font-size:12.5px;color:var(--ink-soft);display:flex;flex-direction:column;gap:5px}
 .fz-ayudas b{color:var(--ink)}
 .fz-activar-placa{max-width:640px;margin-bottom:18px;padding:clamp(20px,4vw,28px)}
