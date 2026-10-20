@@ -7,15 +7,16 @@
  * Publicar crea una versión nueva con vigencia desde ese momento; las
  * operaciones anteriores siguen con la regla con la que se hicieron.
  */
-import { Suspense, useEffect, useMemo, useState } from 'react';
+import { cloneElement, Suspense, useEffect, useMemo, useState, type ReactElement } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Check, Plus } from 'lucide-react';
 import { useFideliza } from '@/modules/fideliza/ui/Contexto';
 import VistaTarjeta from '@/modules/fideliza/ui/VistaTarjeta';
+import { esHttps, irACampo, motivoSlug, useValidacion, type Errores } from '@/modules/fideliza/ui/Validacion';
 import { Cargando, Fallo, SinPermiso } from '@/modules/fideliza/ui/Estados';
 import { useAvisar } from '@/components/panel/Avisos';
 import { useCargar } from '@/components/panel/useCargar';
-import { accion, lecturas, mensaje, sincronizarEnSegundoPlano, type Programa, type Version } from '@/modules/fideliza/cliente/api';
+import { accion, ErrorFideliza, lecturas, mensaje, sincronizarEnSegundoPlano, type Programa, type Version } from '@/modules/fideliza/cliente/api';
 import { urlAyuda } from '@/modules/fideliza/dominio/botones';
 import { urlNegocio } from '@/modules/fideliza/dominio/config';
 import { aCentimos, fecha, fraseRegla, soles, unidades, type TipoRegla } from '@/modules/fideliza/dominio/formato';
@@ -114,6 +115,7 @@ function ProgramaPagina() {
   const [textos, setTextos] = useState({ min: '', unidad: '1,00', ejemplo: '50' });
   const [logo, setLogo] = useState<{ ok: boolean; errores: string[]; avisos: string[] } | null>(null);
   const [nuevaSucursal, setNuevaSucursal] = useState('');
+  const [slugOcupado, setSlugOcupado] = useState<string | null>(null);
 
   useEffect(() => {
     if (ajustes) {
@@ -188,14 +190,54 @@ function ProgramaPagina() {
     return `Una compra de ${soles(ejemploCent)} suma ${unidades(n, 'points')} (${x.toFixed(2)} redondeado ${b.rounding === 'floor' ? 'hacia abajo' : b.rounding === 'ceil' ? 'hacia arriba' : 'al más cercano'}).`;
   }, [b, ejemploCent]);
 
+  const errores: Errores = {};
+  const pasoDe: Record<string, number> = {};
+  const pon = (k: string, n: number, m: string) => {
+    errores[k] = m;
+    pasoDe[k] = n;
+  };
+  if (!negocio.display_name.trim()) pon('negocio', 0, 'Escribe el nombre de tu negocio.');
+  const malSlug = motivoSlug(negocio.slug);
+  if (malSlug) pon('slug', 0, malSlug.replace('Tu link', 'La dirección'));
+  else if (slugOcupado === negocio.slug) pon('slug', 0, 'Esa dirección ya la usa otro negocio. Prueba con otra.');
+  if (!prog.name.trim()) pon('programa', 1, 'Ponle nombre al programa (ej. «Club El Centro»).');
+  if (!b.rule_type) pon('tipo', 2, 'Elige cómo se gana: sellos, puntos o visitas.');
+  const enteroEntre = (x: unknown, min: number, max: number) => Number.isInteger(x) && Number(x) >= min && Number(x) <= max;
+  if (b.rule_type === 'stamps' && !enteroEntre(b.stamps_per_purchase, 1, 100)) pon('sellos', 3, 'Sellos por compra: un número entero de 1 a 100.');
+  if (b.rule_type === 'points') {
+    if (!enteroEntre(b.points_per_unit, 1, 100000)) pon('puntos', 3, 'Puntos: un número entero mayor que 0.');
+    const unidad = aCentimos(textos.unidad);
+    if (!unidad || unidad <= 0) pon('unidad', 3, '«…por cada (S/)»: escribe un importe mayor que 0 (ej. 1 o 10).');
+  }
+  if (b.rule_type !== 'visits' && textos.min.trim() && (aCentimos(textos.min) ?? -1) < 0) pon('minimo', 3, 'Compra mínima: escribe un importe (ej. 20) o déjalo vacío.');
+  if (!b.reward_threshold) pon('umbral', 3, '«Premio al llegar a»: ¿cuántos hacen falta para el premio? (ej. 10)');
+  else if (!enteroEntre(b.reward_threshold, 1, 1_000_000)) pon('umbral', 3, '«Premio al llegar a»: un número entero mayor que 0.');
+  if (b.reward_valid_days != null && !enteroEntre(b.reward_valid_days, 1, 3650)) pon('dias', 3, 'Días para canjear: de 1 a 3650, o vacío para que no venza.');
+  if (!(b.reward_description ?? '').trim()) pon('premio', 3, 'Escribe el premio (ej. «Un corte gratis»).');
+  if (b.valid_to && b.valid_to.slice(0, 10) < new Date().toLocaleDateString('en-CA', { timeZone: 'America/Lima' })) {
+    pon('fin', 3, 'La fecha de fin ya pasó: con ella nadie acumularía. Cámbiala o déjala vacía.');
+  }
+  if (b.location_ids && b.location_ids.length === 0) pon('sucursales', 3, 'Marca al menos una sucursal donde suma el programa.');
+  if (marca.logo_url && !esHttps(marca.logo_url)) pon('logo', 4, 'El logo tiene que ser un enlace que empiece por https://');
+  if (marca.support_url.trim() && !urlAyuda(marca.support_url)) pon('ayuda', 4, 'Web o ayuda: escribe un WhatsApp (987 654 321) o una web (tunegocio.com).');
+  const v = useValidacion(errores, {
+    // El campo puede estar en otro paso: primero se va al paso y luego al campo.
+    ir: (k) => {
+      if (pasoDe[k] !== undefined) setPaso(pasoDe[k]);
+      setTimeout(() => irACampo(k), 120);
+    },
+    etiqueta: (k) => (pasoDe[k] !== undefined ? `Paso ${pasoDe[k] + 1} · ${PASOS[pasoDe[k]]}` : null),
+  });
+  const delPaso = (n: number) => Object.keys(pasoDe).filter((k) => pasoDe[k] === n);
+
   if (!puede('program.read')) return <SinPermiso que="el programa" />;
   if (cargando && !datos) return <Cargando texto="Cargando el programa…" />;
   if (error) return <Fallo texto={error} reintentar={releer} />;
   const editable = puede('program.edit');
 
   async function guardarNegocio(): Promise<boolean> {
-    if (!negocio.display_name.trim() || negocio.slug.length < 3) {
-      avisar('Escribe el nombre y una dirección de al menos 3 letras.', 'error');
+    if (!v.comprobar(delPaso(0))) {
+      avisar('Revisa lo marcado en rojo.', 'error');
       return false;
     }
     try {
@@ -205,6 +247,10 @@ function ProgramaPagina() {
       setTomarBase(true);
       return true;
     } catch (e) {
+      if (e instanceof ErrorFideliza && e.codigo === 'slug_taken') {
+        setSlugOcupado(negocio.slug);
+        v.comprobar(['slug']);
+      }
       avisar(mensaje(e), 'error');
       return false;
     }
@@ -213,8 +259,8 @@ function ProgramaPagina() {
   /** 'logo' = guardado, pero el logo no sirve para Wallet (se enseña por qué). */
   async function guardarMarca(): Promise<'ok' | 'logo' | false> {
     const supportUrl = urlAyuda(marca.support_url);
-    if (marca.support_url.trim() && !supportUrl) {
-      avisar('Escribe un número de WhatsApp válido o una dirección web.', 'error');
+    if (!v.comprobar(delPaso(4))) {
+      avisar('Revisa lo marcado en rojo.', 'error');
       return false;
     }
     try {
@@ -242,8 +288,12 @@ function ProgramaPagina() {
   }
 
   async function guardarPrograma(): Promise<boolean> {
-    if (!prog.name.trim()) {
-      avisar('Ponle nombre al programa (paso 2).', 'error');
+    // El borrador se guarda aunque la regla esté a medias: lo que falta queda
+    // marcado en rojo y se exige al publicar. El nombre sí hace falta ya.
+    v.comprobar(delPaso(paso));
+    if (errores.programa) {
+      if (paso !== 1) v.comprobar(['programa']);
+      avisar(paso !== 1 ? 'Primero ponle nombre al programa (paso 2).' : 'Ponle nombre al programa.', 'error');
       return false;
     }
     try {
@@ -310,6 +360,10 @@ function ProgramaPagina() {
   }
 
   async function publicar() {
+    if (!v.comprobar()) {
+      avisar('Faltan datos para publicar: mira la lista.', 'error');
+      return;
+    }
     if (!datos?.programa) return;
     if (publicada && !window.confirm('Se creará una versión nueva de la regla, vigente desde ahora. Las operaciones anteriores no cambian. ¿Publicar?')) return;
     setOcupado(true);
@@ -349,7 +403,19 @@ function ProgramaPagina() {
     }
   }
 
-  const campo = (label: string, hijo: React.ReactNode, ayuda?: string) => {
+  /** Marca el input con su error sin pisar su propio onBlur. */
+  const conValidacion = (hijo: ReactElement<{ onBlur?: () => void }>, clave: string) => {
+    const extra = v.campo(clave);
+    const propio = hijo.props.onBlur;
+    return cloneElement(hijo, {
+      ...extra,
+      onBlur: () => {
+        propio?.();
+        extra.onBlur();
+      },
+    });
+  };
+  const campo = (label: string, hijo: React.ReactNode, ayuda?: string, clave?: string) => {
     const [, zona, texto] = guia(label) ?? [label, null, null];
     return (
       <div
@@ -357,8 +423,9 @@ function ProgramaPagina() {
         onFocusCapture={() => setFoco(zona)}
         onMouseEnter={() => zona && setFoco(zona)}
       >
-        <label className="field-label">{label}</label>
-        {hijo}
+        <label className="field-label" htmlFor={clave ? v.campo(clave).id : undefined}>{label}</label>
+        {clave ? conValidacion(hijo as ReactElement<{ onBlur?: () => void }>, clave) : hijo}
+        {clave && v.error(clave)}
         {(texto ?? ayuda) && <small>{texto ?? ayuda}</small>}
       </div>
     );
@@ -440,11 +507,12 @@ function ProgramaPagina() {
 
         {paso === 0 && (
           <>
-            {campo('Nombre visible del negocio', <input className="input" maxLength={60} value={negocio.display_name} disabled={!editable} onChange={(e) => setNegocio({ ...negocio, display_name: e.target.value })} />)}
+            {campo('Nombre visible del negocio', <input className="input" maxLength={60} value={negocio.display_name} disabled={!editable} onChange={(e) => setNegocio({ ...negocio, display_name: e.target.value })} />, undefined, 'negocio')}
             {campo(
               'Dirección pública',
               <input className="input" maxLength={40} value={negocio.slug} disabled={!editable} onChange={(e) => setNegocio({ ...negocio, slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '') })} />,
               negocio.slug ? `Enlace corto: ${urlNegocio(negocio.slug)}. Abre la misma página que tu placa; la URL grabada en el NFC no cambia.` : 'Minúsculas, números y guiones. Ej.: barberia-el-centro',
+              'slug',
             )}
             {campo('Frase corta', <input className="input" maxLength={120} value={negocio.tagline} disabled={!editable} onChange={(e) => setNegocio({ ...negocio, tagline: e.target.value })} />)}
             <h3 style={{ fontSize: 15, margin: '18px 0 4px' }}>Sucursales</h3>
@@ -473,7 +541,7 @@ function ProgramaPagina() {
 
         {paso === 1 && (
           <>
-            {campo('Nombre del programa', <input className="input" maxLength={40} value={prog.name} disabled={!editable} onChange={(e) => setProg({ ...prog, name: e.target.value })} placeholder="Club El Centro" />, 'Lo verá el cliente en su tarjeta y en Google Wallet (mejor 20 letras o menos).')}
+            {campo('Nombre del programa', <input className="input" maxLength={40} value={prog.name} disabled={!editable} onChange={(e) => setProg({ ...prog, name: e.target.value })} placeholder="Club El Centro" />, 'Lo verá el cliente en su tarjeta y en Google Wallet (mejor 20 letras o menos).', 'programa')}
             {campo('Descripción corta', <input className="input" maxLength={120} value={prog.description} disabled={!editable} onChange={(e) => setProg({ ...prog, description: e.target.value })} />)}
             <label className="field-label">¿Qué quieres conseguir?</label>
             <small className="fz-def" style={{ display: 'block', marginBottom: 8 }}>Solo te orienta para los siguientes pasos: no cambia cómo funciona el programa.</small>
@@ -503,16 +571,17 @@ function ProgramaPagina() {
                 </button>
               ))}
             </div>
+            {v.error('tipo')}
           </>
         )}
 
         {paso === 3 && (
           <>
-            {b.rule_type === 'stamps' && campo('Sellos por compra', <input className="input" type="number" min={1} max={100} value={b.stamps_per_purchase ?? 1} disabled={!editable} onChange={(e) => setB({ ...b, stamps_per_purchase: Number(e.target.value) })} />)}
+            {b.rule_type === 'stamps' && campo('Sellos por compra', <input className="input" type="number" min={1} max={100} value={b.stamps_per_purchase ?? 1} disabled={!editable} onChange={(e) => setB({ ...b, stamps_per_purchase: Number(e.target.value) })} />, undefined, 'sellos')}
             {b.rule_type === 'points' && (
               <div className="fz-col2">
-                {campo('Puntos', <input className="input" type="number" min={1} value={b.points_per_unit ?? 1} disabled={!editable} onChange={(e) => setB({ ...b, points_per_unit: Number(e.target.value) })} />)}
-                {campo('…por cada (S/)', <input className="input" inputMode="decimal" value={textos.unidad} disabled={!editable} onChange={(e) => setTextos({ ...textos, unidad: e.target.value })} />)}
+                {campo('Puntos', <input className="input" type="number" min={1} value={b.points_per_unit ?? 1} disabled={!editable} onChange={(e) => setB({ ...b, points_per_unit: Number(e.target.value) })} />, undefined, 'puntos')}
+                {campo('…por cada (S/)', <input className="input" inputMode="decimal" value={textos.unidad} disabled={!editable} onChange={(e) => setTextos({ ...textos, unidad: e.target.value })} />, undefined, 'unidad')}
                 {campo(
                   'Redondeo',
                   <select className="select" value={b.rounding} disabled={!editable} onChange={(e) => setB({ ...b, rounding: e.target.value as 'floor' })}>
@@ -523,13 +592,13 @@ function ProgramaPagina() {
                 )}
               </div>
             )}
-            {b.rule_type !== 'visits' && campo('Compra mínima (S/, opcional)', <input className="input" inputMode="decimal" value={textos.min} disabled={!editable} onChange={(e) => setTextos({ ...textos, min: e.target.value })} placeholder="0" />, 'Por debajo de este importe la compra se registra pero no suma.')}
+            {b.rule_type !== 'visits' && campo('Compra mínima (S/, opcional)', <input className="input" inputMode="decimal" value={textos.min} disabled={!editable} onChange={(e) => setTextos({ ...textos, min: e.target.value })} placeholder="0" />, 'Por debajo de este importe la compra se registra pero no suma.', 'minimo')}
             <div className="fz-col2">
-              {campo(`Premio al llegar a (${b.rule_type === 'points' ? 'puntos' : b.rule_type === 'visits' ? 'visitas' : 'sellos'})`, <input className="input" type="number" min={1} value={b.reward_threshold ?? ''} disabled={!editable} onChange={(e) => setB({ ...b, reward_threshold: Number(e.target.value) || undefined })} />)}
-              {campo('Días para canjear el premio (opcional)', <input className="input" type="number" min={1} max={3650} value={b.reward_valid_days ?? ''} disabled={!editable} onChange={(e) => setB({ ...b, reward_valid_days: e.target.value ? Number(e.target.value) : null })} />, 'Vacío = no vence.')}
+              {campo(`Premio al llegar a (${b.rule_type === 'points' ? 'puntos' : b.rule_type === 'visits' ? 'visitas' : 'sellos'})`, <input className="input" type="number" min={1} value={b.reward_threshold ?? ''} disabled={!editable} onChange={(e) => setB({ ...b, reward_threshold: Number(e.target.value) || undefined })} />, undefined, 'umbral')}
+              {campo('Días para canjear el premio (opcional)', <input className="input" type="number" min={1} max={3650} value={b.reward_valid_days ?? ''} disabled={!editable} onChange={(e) => setB({ ...b, reward_valid_days: e.target.value ? Number(e.target.value) : null })} />, 'Vacío = no vence.', 'dias')}
             </div>
-            {campo('Premio', <input className="input" maxLength={80} value={b.reward_description ?? ''} disabled={!editable} onChange={(e) => setB({ ...b, reward_description: e.target.value })} placeholder="Un corte gratis" />)}
-            {campo('El programa termina el (opcional)', <input className="input" type="date" value={b.valid_to ? b.valid_to.slice(0, 10) : ''} disabled={!editable} onChange={(e) => setB({ ...b, valid_to: e.target.value ? `${e.target.value}T23:59:59-05:00` : null })} />, 'Pasada esa fecha no se acumula hasta que publiques otra regla.')}
+            {campo('Premio', <input className="input" maxLength={80} value={b.reward_description ?? ''} disabled={!editable} onChange={(e) => setB({ ...b, reward_description: e.target.value })} placeholder="Un corte gratis" />, undefined, 'premio')}
+            {campo('El programa termina el (opcional)', <input className="input" type="date" value={b.valid_to ? b.valid_to.slice(0, 10) : ''} disabled={!editable} onChange={(e) => setB({ ...b, valid_to: e.target.value ? `${e.target.value}T23:59:59-05:00` : null })} />, 'Pasada esa fecha no se acumula hasta que publiques otra regla.', 'fin')}
             {datos!.sucursales.length > 0 &&
               campo(
                 'Sucursales que participan',
@@ -555,6 +624,7 @@ function ProgramaPagina() {
                   })}
                 </div>,
               )}
+            {datos!.sucursales.length > 0 && v.error('sucursales')}
             <label className="check-inline" style={{ display: 'block', margin: '6px 0 14px' }}>
               <input type="checkbox" checked={marca.require_external_ref} disabled={!editable} onChange={(e) => setMarca({ ...marca, require_external_ref: e.target.checked })} /> Pedir el número de boleta o ticket en cada compra
             </label>
@@ -568,7 +638,7 @@ function ProgramaPagina() {
           <div className="fz-col2">
             <div>
               {campo('Color de fondo', <input className="input" type="color" value={marca.bg_color} disabled={!editable} onChange={(e) => setMarca({ ...marca, bg_color: e.target.value.toUpperCase() })} style={{ height: 48, padding: 4 }} />)}
-              {campo('Logo cuadrado (URL https pública)', <input className="input" value={marca.logo_url} disabled={!editable} onChange={(e) => setMarca({ ...marca, logo_url: e.target.value.trim() })} placeholder="https://…/logo.png" />, 'PNG cuadrado, mínimo 660×660, con margen alrededor: Google lo recorta en círculo.')}
+              {campo('Logo cuadrado (URL https pública)', <input className="input" value={marca.logo_url} disabled={!editable} onChange={(e) => setMarca({ ...marca, logo_url: e.target.value.trim() })} placeholder="https://…/logo.png" />, 'PNG cuadrado, mínimo 660×660, con margen alrededor: Google lo recorta en círculo.', 'logo')}
               {logo && (
                 <div className={`fz-panel-aviso ${logo.ok ? 'fz-panel-aviso--ok' : 'fz-panel-aviso--error'}`}>
                   <span>{logo.ok ? 'El logo sirve para Google Wallet.' : logo.errores.join(' ')} {logo.avisos.join(' ')}</span>
@@ -610,6 +680,8 @@ function ProgramaPagina() {
                   }
                   placeholder="987 654 321 o tunegocio.com"
                 />,
+                undefined,
+                'ayuda',
               )}
               <small className="fz-def">Al pulsar «Guardar y seguir» comprobamos si el logo sirve para Google Wallet.</small>
               <p className="fz-def" style={{ marginTop: 12 }}>
@@ -661,9 +733,11 @@ function ProgramaPagina() {
               </div>
             )}
             {!ajustes && <div className="fz-panel-aviso">Falta el paso 1 (datos del negocio).</div>}
+            {editable && v.resumen('Para publicar, falta o hay que corregir:')}
+            {editable && !p && !v.total && <div className="fz-panel-aviso">Guarda primero los pasos 2 a 4 para crear el programa.</div>}
             {editable && (
               <div className="fz-publicacion__acciones">
-                <button className="btn btn-primary" disabled={ocupado || !ajustes || !p || !b.reward_threshold || !b.reward_description} onClick={() => void publicar()}>
+                <button className="btn btn-primary" disabled={ocupado} onClick={() => void publicar()}>
                   {publicada ? 'Publicar nueva versión' : 'Publicar programa'}
                 </button>
               </div>

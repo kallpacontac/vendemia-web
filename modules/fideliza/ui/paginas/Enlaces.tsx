@@ -13,6 +13,7 @@ import { ArrowDown, ArrowUp, ExternalLink, Plus, Trash2 } from 'lucide-react';
 import { useFideliza } from '@/modules/fideliza/ui/Contexto';
 import { Cargando, Fallo, Vacio } from '@/modules/fideliza/ui/Estados';
 import LinkPublico from '@/modules/fideliza/ui/LinkPublico';
+import { esHttps, useValidacion, type Errores } from '@/modules/fideliza/ui/Validacion';
 import { useAvisar } from '@/components/panel/Avisos';
 import { useCargar } from '@/components/panel/useCargar';
 import { accion, ErrorFideliza, lecturas, mensaje, type Enlace } from '@/modules/fideliza/cliente/api';
@@ -69,6 +70,22 @@ export default function Enlaces() {
     }
   }, [elegido, datos, ajustes?.default_profile_id]);
 
+  const errores: Errores = {};
+  if (borrador) {
+    if (!borrador.name.trim()) errores.nombre = 'Ponle un nombre interno al perfil (ej. «Caja», «Mesas»).';
+    borrador.links.forEach((l, i) => {
+      const quien = l.label.trim() ? `«${l.label.trim()}»` : `El botón ${i + 1}`;
+      if (!l.label.trim()) errores[`enlace-${i}-texto`] = `El botón ${i + 1}: falta el texto que ve el cliente.`;
+      if (l.kind === 'url') {
+        if (!(l.url ?? '').trim()) errores[`enlace-${i}-url`] = `${quien}: falta la dirección (https://…).`;
+        else if (!esHttps(l.url ?? '')) errores[`enlace-${i}-url`] = `${quien}: la dirección tiene que empezar por https://`;
+      } else if (datos && !datos.programaActivo && l.is_active) {
+        errores[`enlace-${i}-url`] = `${quien} lleva al alta en la tarjeta, pero no tienes un programa de puntos activo. Publica el programa o quita este botón.`;
+      }
+    });
+  }
+  const v = useValidacion(errores);
+
   if (cargando && !datos) return <Cargando texto="Cargando enlaces…" />;
   if (error) return <Fallo texto={error} reintentar={releer} />;
   if (!datos) return null;
@@ -93,11 +110,9 @@ export default function Enlaces() {
 
   async function guardar(): Promise<string | null> {
     if (!borrador) return null;
-    for (const l of borrador.links) {
-      if (l.kind === 'url' && !/^https:\/\/\S+$/.test(l.url ?? '')) {
-        avisar(`«${l.label}»: el enlace tiene que empezar por https://`, 'error');
-        return null;
-      }
+    if (!v.comprobar()) {
+      avisar('Faltan datos o hay alguno mal: revisa lo marcado en rojo.', 'error');
+      return null;
     }
     setOcupado(true);
     try {
@@ -107,14 +122,18 @@ export default function Enlaces() {
         name: borrador.name,
         title: borrador.title,
         tagline: borrador.tagline,
-        links: borrador.links.map(({ label, kind, url, is_active, is_primary, starts_at, ends_at }) => ({
-          label,
+        links: borrador.links.map(({ label, kind, url, is_active, is_primary, starts_at, ends_at, icon, subtitle, placement }) => ({
+          label: label.trim(),
           kind,
-          url: kind === 'url' ? url : null,
+          url: kind === 'url' ? (url ?? '').trim() : null,
           is_active,
           is_primary,
           starts_at,
           ends_at,
+          // Los pone «Mi página»: sin ellos, las redes pasarían a ser botones.
+          icon: icon ?? null,
+          subtitle: subtitle ?? null,
+          placement: placement ?? 'button',
         })),
         makeDefault: borrador.makeDefault,
       });
@@ -196,7 +215,8 @@ export default function Enlaces() {
             <div className="fz-col2">
               <div className="fz-campo">
                 <label className="field-label">Nombre interno</label>
-                <input className="input" maxLength={60} value={borrador.name} disabled={!editable} onChange={(e) => setBorrador({ ...borrador, name: e.target.value })} placeholder="Caja, Recepción, Mesa…" />
+                <input {...v.campo('nombre')} className="input" maxLength={60} value={borrador.name} disabled={!editable} onChange={(e) => setBorrador({ ...borrador, name: e.target.value })} placeholder="Caja, Recepción, Mesa…" />
+                {v.error('nombre')}
               </div>
               <div className="fz-campo">
                 <label className="field-label">Título visible</label>
@@ -221,15 +241,17 @@ export default function Enlaces() {
             {borrador.links.map((l, i) => (
               <div key={i} className="card" style={{ boxShadow: 'none', border: '1.5px solid var(--line)', padding: 12, marginBottom: 10 }}>
                 <div className="fz-fila">
-                  <input className="input" style={{ flex: 1 }} maxLength={40} value={l.label} disabled={!editable} onChange={(e) => cambiar(i, { label: e.target.value })} aria-label="Texto del botón" />
+                  <input {...v.campo(`enlace-${i}-texto`)} className="input" style={{ flex: 1 }} maxLength={40} value={l.label} disabled={!editable} onChange={(e) => cambiar(i, { label: e.target.value })} aria-label="Texto del botón" />
                   <select className="select" style={{ width: 'auto' }} value={l.kind} disabled={!editable} onChange={(e) => cambiar(i, { kind: e.target.value as Enlace['kind'] })} aria-label="Tipo">
                     <option value="url">Enlace web</option>
                     <option value="join">Alta en la tarjeta</option>
                   </select>
                 </div>
+                {v.error(`enlace-${i}-texto`)}
                 {l.kind === 'url' && (
-                  <input className="input" style={{ marginTop: 8 }} placeholder="https://…" value={l.url ?? ''} disabled={!editable} onChange={(e) => cambiar(i, { url: e.target.value.trim() })} aria-label="Dirección" />
+                  <input {...v.campo(`enlace-${i}-url`)} className="input" style={{ marginTop: 8 }} placeholder="https://…" value={l.url ?? ''} disabled={!editable} onChange={(e) => cambiar(i, { url: e.target.value.trim() })} aria-label="Dirección" />
                 )}
+                {v.error(`enlace-${i}-url`)}
                 <div className="fz-fila" style={{ marginTop: 8, fontSize: 13 }}>
                   <label className="check-inline">
                     <input type="checkbox" checked={l.is_active} disabled={!editable} onChange={(e) => cambiar(i, { is_active: e.target.checked })} /> Visible
@@ -276,6 +298,7 @@ export default function Enlaces() {
               </div>
             )}
             <p className="fz-def">Borrador: {comportamiento(borrador.links.filter(vigente).length)}</p>
+            {v.resumen('Antes de guardar, revisa:')}
             {editable && (
               <div className="fz-fila" style={{ marginTop: 12 }}>
                 <button className="btn btn-ghost" disabled={ocupado} onClick={() => void guardar().then((id) => id && avisar('Borrador guardado. Aún no lo ve nadie: publícalo.'))}>

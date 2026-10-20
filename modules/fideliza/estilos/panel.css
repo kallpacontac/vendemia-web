@@ -45,6 +45,10 @@
 .fz-prev-wallet__premio{font-size:11px;line-height:1.35;min-height:30px}
 .fz-prev-wallet__qr{width:87px;height:87px;margin:13px auto;border:7px solid #fff;border-radius:7px;background:repeating-conic-gradient(#171716 0 25%,#fff 0 50%) 0 0/12px 12px}
 .fz-prev-wallet__arte{display:block;width:100%;height:auto;aspect-ratio:1032/336;object-fit:cover;border-radius:11px}
+.fz-error{display:flex;align-items:center;gap:4px;margin-top:4px;color:#B4232A!important;font-size:12.5px;line-height:1.35}
+.input[aria-invalid="true"],.select[aria-invalid="true"]{border-color:#D93025!important;box-shadow:0 0 0 3px rgba(217,48,37,.12)}
+.fz-resumen-errores ul{margin:6px 0 0;padding-left:18px}
+.fz-resumen-errores button{background:none;border:0;padding:2px 0;color:inherit;text-align:left;text-decoration:underline;cursor:pointer;font:inherit}
 .fz-sellos{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:6px}
 .fz-sello{display:flex;flex-direction:column;align-items:center;gap:4px;min-width:64px;padding:8px 6px;border:1px solid var(--line,#e5e5e5);border-radius:12px;background:transparent;cursor:pointer;font-size:12px;color:inherit}
 .fz-sello svg{width:26px;height:26px}

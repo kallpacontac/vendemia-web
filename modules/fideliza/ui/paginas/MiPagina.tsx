@@ -22,6 +22,7 @@ import { ArrowDown, ArrowUp, Eye, EyeOff, ImagePlus, Plus, Search, Star, Trash2 
 import { useFideliza } from '@/modules/fideliza/ui/Contexto';
 import { Cargando, Fallo, SinPermiso } from '@/modules/fideliza/ui/Estados';
 import LinkPublico from '@/modules/fideliza/ui/LinkPublico';
+import { esHttps, idCampo, motivoSlug, useValidacion, type Errores } from '@/modules/fideliza/ui/Validacion';
 import AvisoSinPlaca from '@/modules/fideliza/ui/AvisoSinPlaca';
 import { useAvisar } from '@/components/panel/Avisos';
 import { useCargar } from '@/components/panel/useCargar';
@@ -93,6 +94,7 @@ export default function MiPagina() {
   const [ocupado, setOcupado] = useState(false);
   const [subiendoLogo, setSubiendoLogo] = useState(false);
   const [aviso, setAviso] = useState<string | null>(null);
+  const [slugOcupado, setSlugOcupado] = useState<string | null>(null);
   /**
    * Viene de activar placas que todavía no tienen a dónde llevar (Placas.tsx
    * las manda aquí con ?placa=<id>&n=<cuántas>). Al publicar, activarPendientes
@@ -198,6 +200,31 @@ export default function MiPagina() {
     [modo, datos?.programaActivo],
   );
 
+  const errores: Errores = {};
+  if (!negocio.nombre.trim()) errores.nombre = 'Escribe el nombre de tu negocio.';
+  else if (negocio.nombre.trim().length < 2) errores.nombre = 'El nombre es muy corto.';
+  const malSlug = motivoSlug(negocio.slug);
+  if (malSlug) errores.slug = malSlug;
+  else if (slugOcupado === negocio.slug) errores.slug = 'Ese link ya lo usa otro negocio. Prueba con otro (por ejemplo, añade tu distrito).';
+  if (estilo.historia && !redes[estilo.historia]?.activa) {
+    errores.historia = `Para abrir ${estilo.historia === 'instagram' ? 'Instagram' : 'TikTok'} al tocar tu foto, actívalo en «Tus redes».`;
+  }
+  for (const d of REDES) {
+    const r = redes[d.tipo];
+    if (!r?.activa) continue;
+    if (!r.valor.trim()) errores[`red-${d.tipo}`] = `${d.nombre}: escribe ${d.pide.toLowerCase()}, o desmárcalo.`;
+    else if (!aUrl(d.tipo, r.valor)) errores[`red-${d.tipo}`] = `${d.nombre}: «${r.valor.trim()}» no parece válido (ej. ${d.placeholder}).`;
+  }
+  for (const b of botones) {
+    const nombreBoton = b.label.trim() || defDe(b.tipo).nombre;
+    if (!b.label.trim()) errores[`boton-${b.clave}-texto`] = `Botón de ${defDe(b.tipo).nombre}: falta el texto del botón.`;
+    if (b.tipo === 'tarjeta') continue;
+    if (!b.valor.trim()) errores[`boton-${b.clave}-dato`] = `«${nombreBoton}»: falta ${defDe(b.tipo).pide.toLowerCase()}.`;
+    else if (!aUrl(b.tipo, b.valor)) errores[`boton-${b.clave}-dato`] = `«${nombreBoton}»: «${b.valor.trim()}» no parece válido (ej. ${defDe(b.tipo).placeholder}).`;
+  }
+  if (estilo.fondo && !esHttps(estilo.fondo)) errores.fondo = 'La foto de fondo tiene que ser un enlace que empiece por https://';
+  const v = useValidacion(errores);
+
   if (!puede('program.read')) return <SinPermiso que="tu página" />;
   if (cargando && !datos) return <Cargando texto="Cargando tu página…" />;
   if (error) return <Fallo texto={error} reintentar={releer} />;
@@ -287,8 +314,7 @@ export default function MiPagina() {
 
   async function publicar() {
     setAviso(null);
-    if (!negocio.nombre.trim()) return setAviso('Escribe el nombre de tu negocio.');
-    if (negocio.slug.length < 3) return setAviso('Tu link necesita al menos 3 letras (minúsculas, números y guiones).');
+    if (!v.comprobar()) return setAviso(`Falta${v.total === 1 ? '' : 'n'} ${v.total} dato${v.total === 1 ? '' : 's'}: mira la lista de arriba.`);
     const links = [];
     for (const d of REDES) {
       const r = redes[d.tipo];
@@ -355,6 +381,11 @@ export default function MiPagina() {
       releer();
       setTomarBase(true);
     } catch (e) {
+      // El link repetido solo lo sabe el servidor: se marca en su campo.
+      if (e instanceof ErrorFideliza && e.codigo === 'slug_taken') {
+        setSlugOcupado(negocio.slug);
+        v.comprobar();
+      }
       avisar(mensaje(e), 'error');
       setAviso(mensaje(e));
     } finally {
@@ -434,9 +465,9 @@ export default function MiPagina() {
             <h3 className="fz-sec">2 · Tu perfil</h3>
             <div className="fz-col2">
               <div className="fz-campo">
-                <label className="field-label" htmlFor="nombre">Nombre del negocio</label>
+                <label className="field-label" htmlFor={idCampo('nombre')}>Nombre del negocio</label>
                 <input
-                  id="nombre"
+                  {...v.campo('nombre')}
                   className="input"
                   maxLength={60}
                   value={negocio.nombre}
@@ -444,6 +475,7 @@ export default function MiPagina() {
                   placeholder="Barbería El Centro"
                   onChange={(ev) => setNegocio((n) => ({ ...n, nombre: ev.target.value, slug: slugTocado ? n.slug : slugDe(ev.target.value) }))}
                 />
+                {v.error('nombre')}
               </div>
               <div className="fz-campo">
                 <label className="field-label" htmlFor="categoria">Qué haces (opcional)</label>
@@ -491,9 +523,9 @@ export default function MiPagina() {
               <small>Elige una foto desde tu celular o computadora. La dejamos cuadrada sin recortarla; ya no necesitas conseguir un enlace.</small>
             </div>
             <div className="fz-campo">
-              <label className="field-label" htmlFor="historia">Al tocar tu foto</label>
+              <label className="field-label" htmlFor={idCampo('historia')}>Al tocar tu foto</label>
               <select
-                id="historia"
+                {...v.campo('historia')}
                 className="select"
                 value={estilo.historia ?? ''}
                 disabled={!editable}
@@ -503,16 +535,17 @@ export default function MiPagina() {
                 <option value="instagram">Ver historias de Instagram</option>
                 <option value="tiktok">Abrir TikTok</option>
               </select>
+              {v.error('historia')}
               <small>
                 Activa esa red y escribe tu usuario en «Tus redes». Instagram abre sus historias; TikTok abre el perfil porque no ofrece un enlace web estable a la historia activa.
               </small>
             </div>
             <div className="fz-campo">
-              <label className="field-label" htmlFor="slug">Tu link</label>
+              <label className="field-label" htmlFor={idCampo('slug')}>Tu link</label>
               <div className="fz-slug">
                 <span>{FIDELIZA_URL.replace(/^https?:\/\//, '')}/n/</span>
                 <input
-                  id="slug"
+                  {...v.campo('slug')}
                   className="input"
                   maxLength={40}
                   value={negocio.slug}
@@ -524,6 +557,7 @@ export default function MiPagina() {
                   }}
                 />
               </div>
+              {v.error('slug')}
               {ajustes && negocio.slug !== ajustes.slug && <small>Ojo: si ya compartiste tu link, el anterior dejará de funcionar. Tus placas NO cambian.</small>}
             </div>
           </section>
@@ -600,6 +634,7 @@ export default function MiPagina() {
                   <Icono tipo={d.tipo} tam={14} /> {d.nombre}: {d.pide.toLowerCase()}
                 </label>
                 <input
+                  {...v.campo(`red-${d.tipo}`)}
                   className="input"
                   value={redes[d.tipo].valor}
                   disabled={!editable}
@@ -607,6 +642,7 @@ export default function MiPagina() {
                   inputMode={d.tipo === 'whatsapp' ? 'tel' : 'text'}
                   onChange={(ev) => setRedes((x) => ({ ...x, [d.tipo]: { ...x[d.tipo], valor: ev.target.value } }))}
                 />
+                {v.error(`red-${d.tipo}`)}
               </div>
             ))}
           </section>
@@ -646,12 +682,14 @@ export default function MiPagina() {
                   <div className="fz-col2" style={{ marginTop: 8 }}>
                     <div>
                       <label className="field-label">Texto del botón</label>
-                      <input className="input" maxLength={40} value={b.label} disabled={!editable} onChange={(ev) => cambiar(b.clave, { label: ev.target.value })} />
+                      <input {...v.campo(`boton-${b.clave}-texto`)} className="input" maxLength={40} value={b.label} disabled={!editable} onChange={(ev) => cambiar(b.clave, { label: ev.target.value })} />
+                      {v.error(`boton-${b.clave}-texto`)}
                     </div>
                     {b.tipo !== 'tarjeta' && (
                       <div>
                         <label className="field-label">{d.pide}</label>
-                        <input className="input" value={b.valor} disabled={!editable} placeholder={d.placeholder} inputMode={b.tipo === 'whatsapp' || b.tipo === 'yape' ? 'tel' : 'url'} onChange={(ev) => cambiar(b.clave, { valor: ev.target.value })} />
+                        <input {...v.campo(`boton-${b.clave}-dato`)} className="input" value={b.valor} disabled={!editable} placeholder={d.placeholder} inputMode={b.tipo === 'whatsapp' || b.tipo === 'yape' ? 'tel' : 'url'} onChange={(ev) => cambiar(b.clave, { valor: ev.target.value })} />
+                        {v.error(`boton-${b.clave}-dato`)}
                       </div>
                     )}
                   </div>
@@ -700,8 +738,9 @@ export default function MiPagina() {
             <summary>Opciones avanzadas</summary>
             <p className="fz-def">Cada plantilla ya trae lo suyo. Cambia esto solo si quieres algo distinto.</p>
             <div className="fz-campo">
-              <label className="field-label" htmlFor="fondo">Foto de portada o de fondo</label>
-              <input id="fondo" className="input" value={estilo.fondo ?? ''} disabled={!editable} placeholder="https://…/foto.jpg" onChange={(ev) => setEstilo({ ...estilo, fondo: ev.target.value.trim() })} />
+              <label className="field-label" htmlFor={idCampo('fondo')}>Foto de portada o de fondo</label>
+              <input {...v.campo('fondo')} className="input" value={estilo.fondo ?? ''} disabled={!editable} placeholder="https://…/foto.jpg" onChange={(ev) => setEstilo({ ...estilo, fondo: ev.target.value.trim() })} />
+              {v.error('fondo')}
               <small>En «Clásica» y «Oscura» es la franja de arriba; en «Vidrio», «Foto de fondo» y «Marco», el fondo entero. Mejor horizontal y de buena calidad.</small>
             </div>
             <div className="fz-col2">
@@ -745,6 +784,7 @@ export default function MiPagina() {
         </aside>
       </div>
 
+      {editable && v.resumen('Antes de publicar, revisa:')}
       {editable && (
         <div className="fz-barra-publicar">
           <span className={sucio ? 'fz-guardado fz-guardado--pendiente' : 'fz-guardado fz-guardado--ok'} role="status">
