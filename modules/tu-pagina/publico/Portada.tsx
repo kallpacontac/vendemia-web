@@ -21,16 +21,18 @@ import { urlWhatsApp } from '@/modules/tu-pagina/dominio/envio';
 import { disposicionDe, plantillaPorDefecto, plantillaValida, tipoPagina, type TipoPagina } from '@/modules/tu-pagina/dominio/plantillas';
 import { esHex } from '@/modules/tu-pagina/dominio/apariencia';
 import { esPlantillaEjemplo } from '@/modules/tu-pagina/dominio/ejemplo';
+import { esFotoPlantilla, fotoDePlantilla } from '@/modules/tu-pagina/dominio/fotos';
 
 type Props = { params: { slug: string }; searchParams?: Record<string, string | undefined> };
 
 export async function generateMetadata({ params, searchParams }: Props): Promise<Metadata> {
   const p = await paginaDe(params.slug).catch(() => null);
   if (!p) return { title: 'Vendemia', robots: { index: false } };
+  const foto = p.portada_url || fotoDePlantilla(p.secciones.apariencia ?? {}, tipoPagina(p.secciones));
   return {
     title: p.titulo,
     description: p.frase || `Pide, reserva o escribe a ${p.titulo}`,
-    openGraph: { title: p.titulo, description: p.frase || undefined, images: p.portada_url ? [p.portada_url] : undefined },
+    openGraph: { title: p.titulo, description: p.frase || undefined, images: foto ? [foto] : undefined },
     ...(searchParams?.vista ? { robots: { index: false, follow: false } } : {}),
   };
 }
@@ -42,6 +44,8 @@ function conVista(p: PaginaPublica, q: Props['searchParams']): PaginaPublica {
   const anterior = p.secciones.apariencia ?? {};
   return {
     ...p,
+    // `sp=1`: el dueño quitó su portada y aún no guarda. Nunca se acepta otra URL por aquí.
+    portada_url: q.sp === '1' ? null : p.portada_url,
     color: esHex(q.color) ? q.color : p.color,
     plantilla: plantillaValida(q.plantilla) ? q.plantilla : p.plantilla,
     secciones: {
@@ -55,6 +59,7 @@ function conVista(p: PaginaPublica, q: Props['searchParams']): PaginaPublica {
         colorBanner: esHex(q.cb) ? q.cb : anterior.colorBanner,
         mostrarBanner: q.mb === '0' ? false : q.mb === '1' ? true : anterior.mostrarBanner,
         mostrarWhatsapp: q.mw === '0' ? false : q.mw === '1' ? true : anterior.mostrarWhatsapp,
+        fotoPlantilla: q.fp === undefined ? anterior.fotoPlantilla : esFotoPlantilla(q.fp) ? q.fp : undefined,
       },
     },
   };

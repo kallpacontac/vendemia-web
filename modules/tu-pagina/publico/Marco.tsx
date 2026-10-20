@@ -7,6 +7,7 @@ import { colorValido, tintaSobre } from '@/modules/fideliza/dominio/estilo';
 import type { PaginaPublica } from '@/modules/tu-pagina/servidor/pagina';
 import { plantillaPorDefecto, plantillaValida, tipoPagina, type TipoPagina } from '@/modules/tu-pagina/dominio/plantillas';
 import { colorO } from '@/modules/tu-pagina/dominio/apariencia';
+import { fotoDePlantilla } from '@/modules/tu-pagina/dominio/fotos';
 import '@/modules/tu-pagina/estilos/publica.css';
 
 export function estiloDe(p: Pick<PaginaPublica, 'color' | 'secciones'>): React.CSSProperties {
@@ -60,12 +61,17 @@ export default function Marco({ pagina, children, vista, portada }: { pagina: Pa
 export function Cabecera({ pagina, fotoDestacada, catalogoDisponible = false }: { pagina: PaginaPublica; fotoDestacada?: string; catalogoDisponible?: boolean }) {
   const inicial = pagina.titulo.trim().charAt(0).toUpperCase() || '·';
   const a = pagina.secciones.apariencia ?? {};
-  const heroCatalogo = catalogoDisponible && tipoPagina(pagina.secciones) === 'tienda' && a.plantillaActiva && a.mostrarBanner !== false;
-  const banner = !heroCatalogo && a.mostrarBanner !== false && (!a.plantillaActiva || Boolean(pagina.portada_url || a.tituloBanner));
-  const fotoHero = pagina.portada_url || fotoDestacada;
+  const tipo = tipoPagina(pagina.secciones);
+  // Sin foto propia, la del ejemplo de la plantilla (dominio/fotos.ts).
+  const deLaPlantilla = fotoDePlantilla(a, tipo);
+  const fotoPortada = pagina.portada_url || deLaPlantilla;
+  const heroCatalogo = catalogoDisponible && tipo === 'tienda' && a.plantillaActiva && a.mostrarBanner !== false;
+  const banner = !heroCatalogo && a.mostrarBanner !== false && (!a.plantillaActiva || Boolean(fotoPortada || a.tituloBanner));
+  // Una foto de plantilla elegida a propósito manda sobre la del primer producto; la sugerida, no.
+  const fotoHero = pagina.portada_url || (a.fotoPlantilla ? deLaPlantilla : fotoDestacada || deLaPlantilla);
   return (
     <>
-      {banner && <div className="tp-portada" style={pagina.portada_url ? { backgroundImage: `url("${pagina.portada_url}")` } : undefined}>
+      {banner && <div className="tp-portada" style={fotoPortada ? { backgroundImage: `url("${fotoPortada}")`, ...(pagina.portada_url ? {} : { backgroundPosition: 'center 25%' }) } : undefined}>
         {a.tituloBanner && <span className="tp-portada__titulo">{a.tituloBanner}</span>}
       </div>}
       <div className="tp-hoja">

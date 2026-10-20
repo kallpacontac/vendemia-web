@@ -9,6 +9,8 @@ export interface AparienciaPagina {
   tituloBanner?: string;
   mostrarBanner?: boolean;
   mostrarWhatsapp?: boolean;
+  /** Foto de ejemplo que hace de portada sin foto propia (dominio/fotos.ts). */
+  fotoPlantilla?: string;
 }
 
 export const esHex = (v: unknown): v is string => typeof v === 'string' && /^#[0-9a-fA-F]{6}$/.test(v);

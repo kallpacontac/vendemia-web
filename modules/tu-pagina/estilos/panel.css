@@ -201,6 +201,14 @@
 .tp-panel-subir { display: inline-flex; align-items: center; justify-content: center; width: fit-content; min-height: 38px; padding: 7px 14px; border: 1px solid var(--line); border-radius: 9px; cursor: pointer; background: #fff; font-size: 13px; font-weight: 700; }
 .tp-panel-subir { position: relative; } .tp-panel-subir input { position: absolute; width: 1px; height: 1px; opacity: 0; } .tp-panel-subir:focus-within { outline: 3px solid var(--brand); outline-offset: 2px; }
 .tp-panel-enlace-imagen { display: grid; gap: 5px; color: var(--ink-soft); font-size: 12px; }
+.tp-panel-imagen-acciones { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.tp-panel-fotos { display: grid; gap: 8px; }
+.tp-panel-fotos__lista { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.tp-panel-fotos__lista button { display: grid; gap: 5px; padding: 5px; border: 1px solid var(--line); border-radius: 11px; background: #fff; text-align: center; cursor: pointer; }
+.tp-panel-fotos__lista button.activa { border-color: var(--brand); box-shadow: 0 0 0 2px var(--brand); }
+.tp-panel-fotos__lista span { display: block; aspect-ratio: 16 / 9; border-radius: 7px; background: #eee center / cover no-repeat; }
+.tp-panel-fotos__lista .tp-panel-fotos__color { background: linear-gradient(135deg, var(--brand), color-mix(in srgb, var(--brand) 60%, #000)); }
+.tp-panel-fotos__lista small { font-size: 11px; font-weight: 700; }
 
 /* Apartados opcionales: una casilla y, encendido, sus campos debajo. */
 .tp-panel-apartados { display: grid; gap: 8px; }

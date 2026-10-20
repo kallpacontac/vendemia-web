@@ -94,6 +94,7 @@ export default function MiPagina() {
   const [menu, setMenu] = useState(false);
   const [ocupado, setOcupado] = useState(false);
   const [subiendoLogo, setSubiendoLogo] = useState(false);
+  const [subiendoFondo, setSubiendoFondo] = useState(false);
   const [aviso, setAviso] = useState<string | null>(null);
   const [slugOcupado, setSlugOcupado] = useState<string | null>(null);
   /**
@@ -110,6 +111,7 @@ export default function MiPagina() {
     history.replaceState(null, '', window.location.pathname);
   }, []);
   const archivoLogo = useRef<HTMLInputElement>(null);
+  const archivoFondo = useRef<HTMLInputElement>(null);
   const [google, setGoogle] = useState<{ q: string; buscando: boolean; res: { id: string; nombre: string; direccion: string }[] | null; error: string | null }>({
     q: '',
     buscando: false,
@@ -285,6 +287,25 @@ export default function MiPagina() {
     } finally {
       setSubiendoLogo(false);
       if (archivoLogo.current) archivoLogo.current.value = '';
+    }
+  }
+
+  /** La de fondo va a `catalog/`: sin el lienzo cuadrado del logo, que la estropearía en horizontal. */
+  async function subirFondo(file: File) {
+    if (!companyId) return;
+    setAviso(null);
+    setSubiendoFondo(true);
+    try {
+      const url = await subirImagenMarca(file, companyId, 'catalog');
+      setEstilo((e) => ({ ...e, fondo: url }));
+      avisar('Foto subida. Revisa la vista previa y publica cuando esté lista.');
+    } catch (e) {
+      const texto = mensaje(e);
+      setAviso(texto);
+      avisar(texto, 'error');
+    } finally {
+      setSubiendoFondo(false);
+      if (archivoFondo.current) archivoFondo.current.value = '';
     }
   }
 
@@ -741,7 +762,29 @@ export default function MiPagina() {
             <p className="fz-def">Cada plantilla ya trae lo suyo. Cambia esto solo si quieres algo distinto.</p>
             <div className="fz-campo">
               <label className="field-label" htmlFor={idCampo('fondo')}>Foto de portada o de fondo</label>
-              <input {...v.campo('fondo')} className="input" value={estilo.fondo ?? ''} disabled={!editable} placeholder="tunegocio.com/foto.jpg" onChange={(ev) => setEstilo({ ...estilo, fondo: ev.target.value.trim() })} />
+              <div className="fz-logo-editor__acciones">
+                <button type="button" className="btn btn-ghost btn-sm" disabled={!editable || subiendoFondo} onClick={() => archivoFondo.current?.click()}>
+                  {subiendoFondo ? <span className="spin" /> : <ImagePlus size={16} />}
+                  {subiendoFondo ? 'Subiendo…' : estilo.fondo ? 'Cambiar foto' : 'Subir foto'}
+                </button>
+                {estilo.fondo && editable && (
+                  <button type="button" className="btn btn-ghost btn-sm" disabled={subiendoFondo} onClick={() => setEstilo((e) => ({ ...e, fondo: '' }))}>
+                    <Trash2 size={15} /> Quitar
+                  </button>
+                )}
+              </div>
+              <input
+                ref={archivoFondo}
+                type="file"
+                accept="image/*"
+                hidden
+                disabled={!editable || subiendoFondo}
+                onChange={(ev) => {
+                  const file = ev.target.files?.[0];
+                  if (file) void subirFondo(file);
+                }}
+              />
+              <input {...v.campo('fondo')} className="input" value={estilo.fondo ?? ''} disabled={!editable} placeholder="O pega un enlace: tunegocio.com/foto.jpg" onChange={(ev) => setEstilo({ ...estilo, fondo: ev.target.value.trim() })} />
               {v.error('fondo')}
               <small>En «Clásica» y «Oscura» es la franja de arriba; en «Vidrio», «Foto de fondo» y «Marco», el fondo entero. Mejor horizontal y de buena calidad.</small>
             </div>
