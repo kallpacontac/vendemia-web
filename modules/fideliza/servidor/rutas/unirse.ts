@@ -7,6 +7,10 @@
  * obligatorio, sin casillas: el nombre es opcional y el consentimiento
  * comercial se pide DESPUÉS, en la tarjeta, por separado y sin premarcar.
  *
+ * «Ya tienes una tarjeta aquí» sale solo si la que recuerda este teléfono
+ * (localStorage `fz:card:<slug>`) SIGUE EXISTIENDO: tras reiniciar el negocio o
+ * borrar la tarjeta, el teléfono la olvida y se ve el alta como la primera vez.
+ *
  * Es un <form> normal: funciona sin JavaScript. El POST crea la tarjeta y
  * redirige (303) a /m/<token>. El token solo aparece en esa redirección.
  */
@@ -42,7 +46,7 @@ function formulario(n: Negocio, slug: string, placa: string | null, aviso?: stri
   <p class="nota">Sin contraseña. Tu tarjeta queda en este teléfono y puedes guardarla en Google Wallet o en tu pantalla de inicio.</p>
 </form>
 <script>
-try{var t=localStorage.getItem('fz:card:${esc(slug)}');if(t&&/^[A-Za-z0-9_-]{30,64}$/.test(t)){document.getElementById('ya').hidden=false;document.getElementById('ya-a').href='/m/'+t;}}catch(e){}
+try{var kc='fz:card:${esc(slug)}',t=localStorage.getItem(kc);if(t&&/^[A-Za-z0-9_-]{30,64}$/.test(t)){fetch('/api/fideliza/publico/tarjeta',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({accion:'ver',token:t})}).then(function(r){return r.ok?r.json():null}).then(function(d){if(!d)return;if(d.status==='ok'){document.getElementById('ya').hidden=false;document.getElementById('ya-a').href='/m/'+t;}else{localStorage.removeItem(kc);}}).catch(function(){});}}catch(e){}
 document.getElementById('f').addEventListener('submit',function(){var b=document.getElementById('b');b.disabled=true;b.textContent='Creando…';});
 </script>`,
   });
