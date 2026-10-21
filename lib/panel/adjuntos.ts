@@ -56,7 +56,15 @@ export function problemaDeArchivo(file: File): string | null {
   return null;
 }
 
-export async function subirAdjunto(file: File, companyId: string): Promise<Adjunto> {
+/**
+ * `destino` elige la carpeta: `chat/` para el buzón, `notas/` para los adjuntos
+ * del saludo y el cierre de Ajustes (ver AdjuntosNota.tsx).
+ */
+export async function subirAdjunto(
+  file: File,
+  companyId: string,
+  destino: 'chat' | 'notas' = 'chat',
+): Promise<Adjunto> {
   const problema = problemaDeArchivo(file);
   if (problema) throw new Error(problema);
   const tipo = tipoDeArchivo(file);
@@ -67,7 +75,7 @@ export async function subirAdjunto(file: File, companyId: string): Promise<Adjun
   const firma = await fetch('/api/cloudinary/firma', {
     method: 'POST',
     headers: { 'content-type': 'application/json', authorization: `Bearer ${sesion.access_token}` },
-    body: JSON.stringify({ companyId, destino: 'chat' }),
+    body: JSON.stringify({ companyId, destino }),
   }).then(async (r) => {
     const j = await r.json();
     if (!r.ok) throw new Error(j.error ?? 'No se pudo firmar la subida');

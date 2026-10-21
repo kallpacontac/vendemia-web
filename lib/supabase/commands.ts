@@ -726,4 +726,7 @@ export const CAMPOS_EDITABLES = [
   'verify_vouchers',
   'request_location',
   'proactive_venue',
+  // Adjuntos del saludo y el cierre (bot 21-oct-2026; nube: modules/datos/sql/0006).
+  'welcome_media',
+  'closing_media',
 ] as const;

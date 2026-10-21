@@ -31,7 +31,7 @@
  *     El emparejamiento se hace en persona. Si `status = needs_qr`, lo único
  *     que puede hacer el panel es avisar.
  */
-import { Suspense, useEffect, useMemo, useRef, useState } from 'react';
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import AvisosCelular from '@/components/panel/AvisosCelular';
@@ -57,6 +57,11 @@ import {
 } from 'lucide-react';
 import Topbar from '@/components/panel/Topbar';
 import Equipo from '@/components/panel/Equipo';
+import AdjuntosNota, {
+  adjuntosNotaATexto,
+  leerAdjuntosNota,
+  type AdjuntoNota,
+} from '@/components/panel/AdjuntosNota';
 import { useSesion } from '@/components/panel/Sesion';
 import { necesitaEmparejar, useSalud } from '@/components/panel/Salud';
 import { useAvisar, useComando } from '@/components/panel/Avisos';
@@ -117,6 +122,9 @@ interface Formulario {
   hook_question: string;
   welcome_note: string;
   closing_note: string;
+  /** Hasta 3 fotos/vídeos/audios. Viajan como texto JSON (ver construirPatch). */
+  welcome_media: AdjuntoNota[];
+  closing_media: AdjuntoNota[];
   custom_rules: string;
   return_policy: string;
 }
@@ -208,6 +216,8 @@ function construirPatch(
     schedule: JSON.stringify(horario),
     payment_methods: JSON.stringify(pagos),
     qualifying_questions: JSON.stringify(preguntas.map(limpiar)),
+    welcome_media: adjuntosNotaATexto(form.welcome_media),
+    closing_media: adjuntosNotaATexto(form.closing_media),
   };
 }
 
@@ -264,6 +274,11 @@ function Configuracion() {
   const [preguntas, setPreguntas] = useState<PreguntaObligatoria[]>([]);
   const [pideEmpleado, setPideEmpleado] = useState(false);
   const [guardando, setGuardando] = useState(false);
+  /** Qué nota tiene un adjunto subiéndose. Con alguno a medias no se guarda. */
+  const [subiendo, setSubiendo] = useState({ welcome_media: false, closing_media: false });
+  const subiendoNotas = subiendo.welcome_media || subiendo.closing_media;
+  const alSubirSaludo = useCallback((v: boolean) => setSubiendo((s) => ({ ...s, welcome_media: v })), []);
+  const alSubirCierre = useCallback((v: boolean) => setSubiendo((s) => ({ ...s, closing_media: v })), []);
 
   const cargado = form !== null;
   useEffect(() => {
@@ -329,6 +344,8 @@ function Configuracion() {
       hook_question: e.hook_question ?? '',
       welcome_note: e.welcome_note ?? '',
       closing_note: e.closing_note ?? '',
+      welcome_media: leerAdjuntosNota(e.welcome_media),
+      closing_media: leerAdjuntosNota(e.closing_media),
       custom_rules: e.custom_rules ?? '',
       return_policy: e.return_policy ?? '',
     };
@@ -342,6 +359,9 @@ function Configuracion() {
 
   const set = <K extends keyof Formulario>(k: K, v: Formulario[K]) =>
     setForm((f) => (f ? { ...f, [k]: v } : f));
+  const cambiarAdjuntos =
+    (k: 'welcome_media' | 'closing_media') => (cambio: (l: AdjuntoNota[]) => AdjuntoNota[]) =>
+      setForm((f) => (f ? { ...f, [k]: cambio(f[k]) } : f));
 
   /**
    * Lo que cambió desde que se abrió la pantalla.
@@ -396,6 +416,11 @@ function Configuracion() {
 
   async function guardar() {
     if (!form) return;
+
+    if (subiendoNotas) {
+      avisar('Espera a que terminen de subirse los adjuntos del saludo o el cierre.', 'error');
+      return;
+    }
 
     // Yape y Plin sin número se imprimen vacíos en el prompt ("• Yape:  a
     // nombre de"). Mejor no dejar salir el formulario así.
@@ -969,12 +994,19 @@ function Configuracion() {
                   onChange={(e) => set('hook_question', e.target.value)}
                 />
               </div>
-              <div>
+              <div className="full">
                 <label className="field-label">Saludo de bienvenida</label>
                 <input
                   className="input"
                   value={form.welcome_note}
                   onChange={(e) => set('welcome_note', e.target.value)}
+                />
+                <AdjuntosNota
+                  companyId={companyId}
+                  lista={form.welcome_media}
+                  alCambiar={cambiarAdjuntos('welcome_media')}
+                  alSubir={alSubirSaludo}
+                  cuando={`Se envía junto con el primer mensaje que ${form.bot_name || 'Mia'} le escribe a cada cliente.`}
                 />
               </div>
               <div className="full">
@@ -983,6 +1015,18 @@ function Configuracion() {
                   className="input"
                   value={form.closing_note}
                   onChange={(e) => set('closing_note', e.target.value)}
+                />
+                <AdjuntosNota
+                  companyId={companyId}
+                  lista={form.closing_media}
+                  alCambiar={cambiarAdjuntos('closing_media')}
+                  alSubir={alSubirCierre}
+                  cuando={(() => {
+                    // Salta con una venta NUEVA: en academia también al inscribirse.
+                    const v = vocabulario(form.business_mode);
+                    const que = form.business_mode === 'recurring_appointment' ? 'una reserva o una inscripción' : `${v.una} ${v.reserva}`;
+                    return `Se envía cuando el ${v.persona} cierra ${que}.`;
+                  })()}
                 />
               </div>
               </div>
@@ -1164,8 +1208,8 @@ function Configuracion() {
             <button className="btn btn-ghost btn-sm" onClick={descartar} disabled={guardando}>
               Descartar
             </button>
-            <button className="btn btn-primary" onClick={() => void guardar()} disabled={guardando}>
-              <Check size={16} /> {guardando ? 'Guardando…' : 'Guardar cambios'}
+            <button className="btn btn-primary" onClick={() => void guardar()} disabled={guardando || subiendoNotas}>
+              <Check size={16} /> {guardando ? 'Guardando…' : subiendoNotas ? 'Subiendo adjuntos…' : 'Guardar cambios'}
             </button>
           </div>
         </div>

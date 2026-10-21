@@ -117,10 +117,12 @@ export async function POST(req: Request) {
    * `chat/` para lo que se manda por WhatsApp desde el buzón, aparte del
    * catálogo: son ficheros de conversaciones, no fotos de producto, y
    * mezclados en la misma carpeta no hay forma de limpiar unos sin tocar los
-   * otros. `brand/` guarda logos y fotos de perfil ya normalizados. Solo estos
-   * tres valores son posibles: el destino no llega nunca a la ruta tal cual.
+   * otros. `brand/` guarda logos y fotos de perfil ya normalizados. `notas/`,
+   * lo que Mia manda con el saludo y el cierre (Ajustes). Solo estos cuatro
+   * valores son posibles: el destino no llega nunca a la ruta tal cual.
    */
-  const clase = destino === 'chat' ? 'chat' : destino === 'brand' ? 'brand' : 'catalog';
+  const clase =
+    destino === 'chat' ? 'chat' : destino === 'brand' ? 'brand' : destino === 'notas' ? 'notas' : 'catalog';
   const folder = `${clase}/${companyId}`;
 
   /**

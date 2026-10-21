@@ -92,6 +92,13 @@ export interface CompanyRow {
   business_description: string | null;
   welcome_note: string | null;
   closing_note: string | null;
+  /**
+   * JSON en text: `[{ url, type: 'image' | 'video' | 'audio', name }]`, hasta 3.
+   * Lo manda el bot detrás de la primera respuesta (welcome) o al cerrar una
+   * venta (closing). Las crea la 0046 del bot: pueden faltar en el espejo.
+   */
+  welcome_media?: string | null;
+  closing_media?: string | null;
   hook_question: string | null;
   delivery_type: 'delivery' | 'pickup' | 'both' | null;
   location: string | null;
