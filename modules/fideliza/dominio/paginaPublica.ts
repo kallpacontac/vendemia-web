@@ -234,9 +234,32 @@ export function htmlPagina(d: DatosPagina, o: { vista?: boolean; indexable?: boo
       if (numero) {
         return `<button type="button" class="${cls} ${tarjeta ? 'bt--tarjeta' : 'bt--pildora'} pago-abrir" data-numero="${numero}" aria-haspopup="dialog">${contenido}</button>`;
       }
-      return `<a class="${cls} ${tarjeta ? 'bt--tarjeta' : 'bt--pildora'}" href="${esc(b.url)}" rel="noopener">${contenido}</a>`;
+      // El alta de la tarjeta lleva el slug: si el teléfono ya tiene una, el script la abre directa.
+      const alta = b.tipo === 'tarjeta' ? /\/n\/([a-z0-9][a-z0-9-]{1,38}[a-z0-9])\/unirse(?:[?#]|$)/.exec(b.url)?.[1] : undefined;
+      return `<a class="${cls} ${tarjeta ? 'bt--tarjeta' : 'bt--pildora'}" href="${esc(b.url)}" rel="noopener"${alta ? ` data-fz-alta="${alta}"` : ''}>${contenido}</a>`;
     })
     .join('');
+
+  /**
+   * Quien ya tiene tarjeta en este teléfono (localStorage `fz:card:<slug>`, lo
+   * guarda la propia tarjeta) no tiene que volver a darse de alta: el botón pasa
+   * a «Ver mi tarjeta de puntos» y la abre. Sin JavaScript, sigue siendo el alta.
+   */
+  const scriptMiTarjeta = !o.vista && botones.includes('data-fz-alta=')
+    ? `<script>
+(function(){
+  document.querySelectorAll('a[data-fz-alta]').forEach(function(a){
+    try{
+      var t=localStorage.getItem('fz:card:'+a.getAttribute('data-fz-alta'));
+      if(!t||!/^[A-Za-z0-9_-]{30,64}$/.test(t))return;
+      a.href=new URL(a.href).origin+'/m/'+t;
+      var b=a.querySelector('.tx b');if(b)b.textContent='Ver mi tarjeta de puntos';
+      var s=a.querySelector('.tx small');if(s)s.textContent='Tus sellos y premios';
+    }catch(e){}
+  });
+})();
+</script>`
+    : '';
 
   const tienePagoMovil = d.botones.some((b) => b.tipo === 'yape' && Boolean(numeroPagoMovil(b.url)));
   const modalRadio = e.forma === 'recto' ? '12px' : '24px';
@@ -363,5 +386,5 @@ ${o.vista ? 'a{pointer-events:none}.pago-abrir{pointer-events:none}' : ''}
 <section class="lista">${botones || (o.vista ? '<p class="vacio">Aquí aparecerán tus botones</p>' : '')}</section>
 ${e.redes === 'abajo' ? redes : ''}
 <a class="pie" href="https://vendemias.com" rel="noopener" aria-label="Visitar Vendemia">Creado con Vendemia</a>
-</main>${modalPago}${scriptPago}</body></html>`;
+</main>${modalPago}${scriptPago}${scriptMiTarjeta}</body></html>`;
 }
