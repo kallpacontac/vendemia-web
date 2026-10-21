@@ -66,6 +66,7 @@ export default function AdjuntosNota({
   alCambiar,
   alSubir,
   cuando,
+  asistente = 'Mia',
 }: {
   companyId: string | null;
   lista: AdjuntoNota[];
@@ -74,6 +75,8 @@ export default function AdjuntosNota({
   alSubir: (subiendo: boolean) => void;
   /** La línea de ayuda: cuándo sale. */
   cuando: string;
+  /** El nombre del asistente de ESTE negocio («Mia», «Luchito»…). */
+  asistente?: string;
 }) {
   const avisar = useAvisar();
   const entrada = useRef<HTMLInputElement>(null);
@@ -197,7 +200,7 @@ export default function AdjuntosNota({
       <small className="nota-adj__ayuda">{cuando}</small>
       {lista.length > 0 && (
         <small className="nota-adj__ayuda nota-adj__ayuda--aviso">
-          Mia no ve lo que hay dentro del adjunto. Si la nota lo menciona («te dejo un vídeo de cómo llegar»),
+          {asistente} no ve lo que hay dentro del adjunto. Si la nota lo menciona («te dejo un vídeo de cómo llegar»),
           que el texto se entienda solo.
         </small>
       )}

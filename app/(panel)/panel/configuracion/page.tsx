@@ -1006,6 +1006,7 @@ function Configuracion() {
                   lista={form.welcome_media}
                   alCambiar={cambiarAdjuntos('welcome_media')}
                   alSubir={alSubirSaludo}
+                  asistente={form.bot_name || 'Mia'}
                   cuando={`Se envía junto con el primer mensaje que ${form.bot_name || 'Mia'} le escribe a cada cliente.`}
                 />
               </div>
@@ -1021,6 +1022,7 @@ function Configuracion() {
                   lista={form.closing_media}
                   alCambiar={cambiarAdjuntos('closing_media')}
                   alSubir={alSubirCierre}
+                  asistente={form.bot_name || 'Mia'}
                   cuando={(() => {
                     // Salta con una venta NUEVA: en academia también al inscribirse.
                     const v = vocabulario(form.business_mode);
