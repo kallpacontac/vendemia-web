@@ -9,6 +9,8 @@ export interface AparienciaPagina {
   tituloBanner?: string;
   mostrarBanner?: boolean;
   mostrarWhatsapp?: boolean;
+  /** Restaurantes y cafeterías: solicitud de atención con número de mesa por WhatsApp. */
+  mostrarMesero?: boolean;
   /** Foto de ejemplo que hace de portada sin foto propia (dominio/fotos.ts). */
   fotoPlantilla?: string;
 }

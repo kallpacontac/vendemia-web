@@ -15,6 +15,7 @@ import { CalendarDays, MessageCircle, Package } from 'lucide-react';
 import Marco, { Cabecera } from '@/modules/tu-pagina/publico/Marco';
 import Escaparate from '@/modules/tu-pagina/publico/Escaparate';
 import CatalogoEjemplo from '@/modules/tu-pagina/publico/CatalogoEjemplo';
+import LlamarMesero from '@/modules/tu-pagina/publico/LlamarMesero';
 import { paginaDe, type PaginaPublica } from '@/modules/tu-pagina/servidor/pagina';
 import { escaparateDe } from '@/modules/tu-pagina/servidor/escaparate';
 import { urlWhatsApp } from '@/modules/tu-pagina/dominio/envio';
@@ -59,6 +60,7 @@ function conVista(p: PaginaPublica, q: Props['searchParams']): PaginaPublica {
         colorBanner: esHex(q.cb) ? q.cb : anterior.colorBanner,
         mostrarBanner: q.mb === '0' ? false : q.mb === '1' ? true : anterior.mostrarBanner,
         mostrarWhatsapp: q.mw === '0' ? false : q.mw === '1' ? true : anterior.mostrarWhatsapp,
+        mostrarMesero: q.lm === '0' ? false : q.lm === '1' ? true : anterior.mostrarMesero,
         fotoPlantilla: q.fp === undefined ? anterior.fotoPlantilla : esFotoPlantilla(q.fp) ? q.fp : undefined,
       },
     },
@@ -118,6 +120,7 @@ export default async function Portada({ params, searchParams }: Props) {
         <nav className={`tp-acciones${hayItems || envioPrimero ? ' tp-acciones--fila' : ''}`} aria-label="Qué quieres hacer">
           {!reservaGrande && reservar}
           {!envioPrimero && envio}
+          {p.secciones.catalogo && p.secciones.apariencia?.mostrarMesero === true && <LlamarMesero negocio={p.titulo} whatsapp={p.whatsapp} />}
           {p.secciones.apariencia?.mostrarWhatsapp !== false && <a className="tp-accion" href={urlWhatsApp(p.whatsapp, `Hola ${p.titulo}`)} rel="noopener">
             <span className="tp-accion__icono"><MessageCircle size={22} aria-hidden="true" /></span>
             <span className="tp-accion__texto">
