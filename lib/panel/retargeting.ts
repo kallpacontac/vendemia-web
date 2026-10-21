@@ -12,7 +12,7 @@
  * ⚠️ Ojo con `'solo-conversó'`: lleva tilde en el bot. Copiada tal cual.
  */
 
-/* ── Los 10 motivos, EN ORDEN DE URGENCIA ────────────────────────────────── */
+/* ── Los 11 motivos, EN ORDEN DE URGENCIA ────────────────────────────────── */
 
 /**
  * Mismo orden que `MOTIVOS` en recuperar.service.ts, que es de donde sale
@@ -23,6 +23,14 @@ export const MOTIVOS = [
   'voucher-sin-verificar',
   'pedido-sin-pagar',
   'cupo-sin-pagar',
+  /**
+   * Dejó seña y su cita o su cupo YA están confirmados (la seña reserva), pero
+   * debe el resto. `monto` es lo que FALTA, no el total — igual que en
+   * `pedido-sin-pagar` desde el 21-oct-2026. Va aquí y no más abajo porque es
+   * dinero de una venta ya hecha. Empieza a llenarse con las primeras señas
+   * que no cubran el total: vacío no es que esté roto.
+   */
+  'saldo-pendiente',
   /**
    * Pidió un grupo que estaba LLENO (evento `SLOT_FULL`) y esa plaza ha vuelto
    * a quedar libre: alguien canceló, o entró el mes nuevo y no todos renovaron.
@@ -63,6 +71,7 @@ export const MOTIVO: Record<string, Rotulo> = {
   'voucher-sin-verificar': { label: 'Pagó y nadie lo revisó', color: '#0FA968' },
   'pedido-sin-pagar': { label: 'Pedido apartado sin pagar', color: '#E5484D' },
   'cupo-sin-pagar': { label: 'Cupo apartado sin pagar', color: '#E5484D' },
+  'saldo-pendiente': { label: 'Dejó seña, debe el resto', color: '#8A5A00' },
   'cupo-liberado': { label: 'Se liberó el cupo que quería', color: '#B23A00' },
   'stock-repuesto': { label: 'Volvió lo que quería', color: '#B23A00' },
   'carrito': { label: 'Carrito sin cerrar', color: '#CC3A00' },

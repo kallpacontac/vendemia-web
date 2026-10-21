@@ -382,6 +382,16 @@ function Configuracion() {
   const hayCambios = Object.keys(patch).length > 0;
 
   /**
+   * Entrega y la ubicación del pedido: en una tienda, y en un negocio de citas
+   * con al menos un PRODUCTO activo (la cera de la barbería). El bot usa
+   * `delivery_type` para ese producto igual que en una tienda.
+   */
+  const vendeProductos =
+    !!form &&
+    (esEcommerce(form.business_mode) ||
+      (datos?.catalogo ?? []).some((c) => c.activo && c.tipo === 'producto'));
+
+  /**
    * Aviso del navegador al cerrar la pestaña con cambios sin guardar.
    *
    * No cubre la navegación interna del panel —Next no dispara beforeunload al
@@ -573,7 +583,7 @@ function Configuracion() {
                 </select>
                 <small className="muted" style={{ fontSize: 11.5 }}>Define si gestionas citas, clases o productos.</small>
               </div>
-              {esEcommerce(form.business_mode) && (
+              {vendeProductos && (
                 <div>
                   <label className="field-label">Entrega</label>
                   <select
@@ -912,8 +922,8 @@ function Configuracion() {
               </p>
             )}
 
-            {/* Solo pide Maps quien entrega a domicilio: una cita no tiene «pedido». */}
-            {esEcommerce(form.business_mode) && (
+            {/* Solo pide Maps quien entrega a domicilio: una cita no tiene «pedido»; el producto de un negocio de citas, sí. */}
+            {vendeProductos && (
               <div className="toggle-row" style={{ marginTop: 14 }}>
                 <div className="t">
                   <b>Pedir la ubicación para la entrega</b>

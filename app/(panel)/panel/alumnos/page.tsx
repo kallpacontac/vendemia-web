@@ -24,6 +24,7 @@ import { useCargar } from '@/components/panel/useCargar';
 import { familias, DIAS_AVISO_RENOVAR, type EstadoFamilia, type Familia } from '@/lib/panel/alumnos';
 import { soles, telefono } from '@/lib/panel/format';
 import { hoyLima } from '@/lib/panel/inscripciones';
+import { comprobantes } from '@/lib/panel/saldo';
 import { getCatalogo, getCitas, getLeads, getVentas } from '@/lib/supabase/queries';
 
 type Filtro = 'todos' | EstadoFamilia | 'renovar';
@@ -191,6 +192,8 @@ function TarjetaFamilia({ f, alGuardar }: { f: Familia; alGuardar: () => void })
   const [pagando, setPagando] = useState(false);
   const e = ESTADO[f.estado];
   const soloUno = f.alumnos.length === 1 && f.alumnos[0].nombre === f.responsable;
+  // Comprobantes, no filas: un Yape repartido entre dos inscripciones es un pago.
+  const n = f.venta ? comprobantes(f.venta.pagos).length : 0;
 
   return (
     <div className="card familia">
@@ -211,8 +214,7 @@ function TarjetaFamilia({ f, alGuardar }: { f: Familia; alGuardar: () => void })
       {f.venta && (
         <p className="familia__cuenta muted">
           Total {soles(f.venta.saldo.total)} · pagó {soles(f.venta.saldo.pagado)}
-          {f.venta.pagos.length > 0 &&
-            ` en ${f.venta.pagos.length} ${f.venta.pagos.length === 1 ? 'pago' : 'pagos'}`}
+          {n > 0 && ` en ${n} ${n === 1 ? 'pago' : 'pagos'}`}
         </p>
       )}
 

@@ -28,7 +28,7 @@ import { useComando } from './Avisos';
 import { useCargar } from './useCargar';
 import { soles } from '@/lib/panel/format';
 import { METODO_LABEL, METODOS_CITA, type MetodoPago } from '@/lib/panel/metodosPago';
-import { conSaldo, type VentaLead } from '@/lib/panel/saldo';
+import { comprobantes, conSaldo, type VentaLead } from '@/lib/panel/saldo';
 import { getCitas, getLeads, getVentas } from '@/lib/supabase/queries';
 
 /** «hace 2 días», a partir de un epoch en segundos. */
@@ -222,7 +222,7 @@ export function SaldoDeFicha({ v }: { v: VentaLead | undefined }) {
         <>
           <small className="saldo-ficha__sub">Comprobantes</small>
           <ul className="saldo-ficha__lista">
-            {v.pagos.map((p) => (
+            {comprobantes(v.pagos).map((p) => (
               <li key={p.id}>
                 <span className="muted">
                   {p.created_at ? new Date(p.created_at * 1000).toLocaleDateString('es-PE', { day: 'numeric', month: 'short' }) : '—'}

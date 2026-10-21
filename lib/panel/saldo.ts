@@ -29,6 +29,30 @@ import type { AppointmentRow, AppointmentServiceRow, PendingPaymentRow } from '@
 
 const redondea = (n: number): number => Math.round(n * 100) / 100;
 
+/**
+ * Los COMPROBANTES, no las filas. Desde el 21-oct-2026 el bot reparte un mismo
+ * Yape entre varias cosas (la cita y el pedido, dos inscripciones): cada parte
+ * es su propia fila, con la misma `operation_id`. Para sumar no importa; para
+ * contar «en 2 pagos» o listar los comprobantes, sí. Agrupa por `operation_id`
+ * (las filas sin ella, una a una), suma el importe y conserva el orden de llegada.
+ */
+export function comprobantes(pagos: PendingPaymentRow[]): PendingPaymentRow[] {
+  const porOperacion = new Map<string, PendingPaymentRow>();
+  const lista: PendingPaymentRow[] = [];
+  for (const p of pagos) {
+    const op = p.operation_id?.trim();
+    const visto = op ? porOperacion.get(op) : undefined;
+    if (visto) {
+      visto.amount = redondea(Number(visto.amount ?? 0) + Number(p.amount ?? 0));
+      continue;
+    }
+    const copia = { ...p, amount: Number(p.amount ?? 0) };
+    if (op) porOperacion.set(op, copia);
+    lista.push(copia);
+  }
+  return lista;
+}
+
 export interface Saldo {
   total: number;
   pagado: number;

@@ -178,6 +178,12 @@ interface Borrador {
   /** Solo negocios de citas. Vacío = usa la del trabajador. Ver lib/panel/comisiones.ts. */
   comision_pct: string;
   comision_monto: string;
+  /**
+   * Solo en negocios de citas. `''` = servicio (lo de siempre); se guarda `''`
+   * y no `'servicio'` para que lo nunca tocado y lo dejado como estaba digan
+   * lo mismo. Ver CatalogRow.tipo.
+   */
+  tipo: '' | 'producto';
 }
 
 /** Lo que admite el bot para `vigencia_meses`: meses enteros, de 1 a 24. */
@@ -198,6 +204,7 @@ function borradorDe(it: ItemCatalogo): Borrador {
     promo: borradorVigencia(it.promo_vigencia),
     comision_pct: it.comision_pct == null ? '' : String(it.comision_pct),
     comision_monto: it.comision_monto == null ? '' : String(it.comision_monto),
+    tipo: it.tipo === 'producto' ? 'producto' : '',
   };
 }
 
@@ -554,8 +561,18 @@ function Ficha({
   }, [abierta, item.id]);
 
   const salen = useMemo(() => losQueSalen(medios), [medios]);
-  const esCita = modo === 'appointment';
-  const esRecurrente = modo === 'recurring_appointment';
+  /**
+   * Un producto en un negocio de citas (la cera de la barbería, el uniforme de
+   * la academia) no ocupa hora: va al carrito y a un pedido. Se le pide lo de
+   * una tienda —stock, descuento— y sobran duración, cupo y comisión.
+   * `eraProducto` es lo guardado (la cabecera); `esProducto`, lo que se edita.
+   */
+  const esTienda = modo === 'ecommerce';
+  const eraProducto = !esTienda && item.tipo === 'producto';
+  const esProducto = !esTienda && f.tipo === 'producto';
+  const esCita = modo === 'appointment' && !esProducto;
+  const esRecurrente = modo === 'recurring_appointment' && !esProducto;
+  const citaGuardada = modo === 'appointment' && !eraProducto;
   // Una tienda cuya página reserva: lo que se reserva necesita su duración.
   const duracionDePagina = modo === 'ecommerce' && pagina.reserva;
   const vigencia = Number(f.vigencia_meses);
@@ -663,6 +680,8 @@ function Ficha({
           promo_vigencia: promoTexto,
           // Solo donde el formulario la enseña: en otros modos no significa nada.
           ...(esRecurrente ? { vigencia_meses: vigencia } : {}),
+          // En una tienda todo es producto: no se manda y se queda en ''.
+          ...(esTienda ? {} : { tipo: f.tipo }),
           // La comisión solo tiene sentido donde hay personal que atiende. Va
           // `null` explícito cuando se vacía: es lo que devuelve el servicio a
           // «usa la del trabajador» (el upsert es un PATCH).
@@ -708,10 +727,11 @@ function Ficha({
           <b>{item.name}</b>
           <small>
             {precio}
-            {esCita && item.duration_minutes ? ` · ${item.duration_minutes} min` : ''}
-            {!esCita && item.stock != null ? ` · ${item.stock} en stock` : ''}
+            {eraProducto ? ' · producto' : ''}
+            {citaGuardada && item.duration_minutes ? ` · ${item.duration_minutes} min` : ''}
+            {!citaGuardada && item.stock != null ? ` · ${item.stock} en stock` : ''}
             {item.paquete.length ? ` · pack de ${item.paquete.length}` : ''}
-            {esRecurrente && (item.vigencia_meses ?? 1) > 1 ? ` · ${item.vigencia_meses} meses` : ''}
+            {modo === 'recurring_appointment' && !eraProducto && (item.vigencia_meses ?? 1) > 1 ? ` · ${item.vigencia_meses} meses` : ''}
           </small>
         </div>
 
@@ -744,7 +764,7 @@ function Ficha({
           </span>
         )}
 
-        {!esCita && item.stock != null && item.stock <= STOCK_URGENTE && (
+        {!citaGuardada && item.stock != null && item.stock <= STOCK_URGENTE && (
           <span className="badge-pill" style={{ color: 'var(--warm)', background: '#FEF6E7' }}>
             Queda poco
           </span>
@@ -794,6 +814,45 @@ function Ficha({
                 onChange={(e) => set('description', e.target.value)}
               />
             </div>
+
+            {/*
+              Solo en negocios de citas: en una tienda todo es producto. Cambia
+              cómo se CIERRA, no cómo se ofrece —precio, fotos y descuento van
+              igual—: el servicio se reserva, el producto va al carrito.
+            */}
+            {!esTienda && (
+              <div className="full">
+                <label className="field-label">¿Qué es?</label>
+                <div className="opciones" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', marginTop: 0, gap: 8 }}>
+                  {(
+                    [
+                      ['', `Es ${v.aItem === 'a' ? 'una' : 'un'} ${v.item}`, modo === 'recurring_appointment' ? 'Se reserva: ocupa un cupo en un grupo.' : 'Se reserva: ocupa una hora en la agenda.'],
+                      ['producto', 'Es un producto', 'Se vende: va al carrito, con stock y envío o recojo. No ocupa hora.'],
+                    ] as ['' | 'producto', string, string][]
+                  ).map(([tipo, rotulo, pista]) => (
+                    <label key={tipo || 'servicio'} className={`opcion ${f.tipo === tipo ? 'on' : ''}`} style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+                      <input
+                        type="radio"
+                        name={`tipo-${item.id}`}
+                        checked={f.tipo === tipo}
+                        onChange={() => set('tipo', tipo)}
+                        style={{ accentColor: 'var(--brand)', cursor: 'pointer', marginTop: 3 }}
+                      />
+                      <span>
+                        <b style={{ fontWeight: 700, fontSize: 13, display: 'block' }}>{rotulo}</b>
+                        <small className="muted" style={{ fontSize: 11.5 }}>{pista}</small>
+                      </span>
+                    </label>
+                  ))}
+                </div>
+                {esProducto && (
+                  <small className="muted" style={{ fontSize: 11.5, display: 'block', marginTop: 6 }}>
+                    Cómo lo entrega Mia (recojo o envío) se elige en{' '}
+                    <Link href="/panel/configuracion">Ajustes → Entrega</Link>.
+                  </small>
+                )}
+              </div>
+            )}
 
             <div>
               <label className="field-label">Precio</label>
@@ -1088,7 +1147,7 @@ function Ficha({
             alCambiar={(v) => set('package_services', v)}
           />
 
-          {modo === 'recurring_appointment' && (
+          {esRecurrente && (
             <div className="desfase" style={{ background: 'var(--bg-soft)', borderColor: 'var(--line-2)', color: 'var(--ink-soft)', marginTop: 14 }}>
               Las <b>franjas semanales</b> de {v.laItem === 'la' ? 'esta' : 'este'} {v.item} (días, horas y aforo) no se editan desde
               aquí todavía. De ellas dependen las reservas, y un editor a medias rompería agendas sin

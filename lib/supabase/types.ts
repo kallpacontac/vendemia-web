@@ -303,6 +303,13 @@ export interface CatalogRow {
    */
   promo_vigencia: string | null;
   /**
+   * Servicio o producto (0047 del bot). `''` = lo que diga el negocio: servicio
+   * en uno de citas, producto en una tienda — es el valor de todo el catálogo
+   * de antes. `'producto'` en un negocio de citas no ocupa hora: va al carrito
+   * y a un pedido. Opcional: sin la 0047 la columna no llega.
+   */
+  tipo?: '' | 'servicio' | 'producto' | null;
+  /**
    * ⚠️ CAMPO MUERTO. El bot NO lo envía nunca. Las fotos viven en
    * `catalog_media`. No lo ofrezcas en ningún formulario: quien lo rellene
    * creerá que sirve y la foto no saldrá jamás.
