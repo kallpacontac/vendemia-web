@@ -13,17 +13,36 @@
 .ne-ejemplos a { flex: none; padding: 7px 10px; border: 1px solid #dce3ea; border-radius: 999px; background: #fff; text-decoration: none; font-weight: 700; }
 .ne-ejemplos a[aria-current='page'] { background: #0b3558; border-color: #0b3558; color: #fff; }
 .ne-vacio { padding: 35px; border: 1px dashed currentColor; text-align: center; opacity: .65; }
-.ne-modal { position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; padding: 18px; background: #09111bc9; }
-.ne-modal-dialogo { position: relative; width: min(780px, 100%); max-height: 90vh; overflow-y: auto; display: grid; grid-template-columns: 1fr 1fr; background: #fff; color: #1d292f; border-radius: 20px; }
-.ne-modal-dialogo > .ne-cafe-foto, .ne-modal-dialogo > .ne-dental-servicio-foto { width: 100%; min-height: 410px; }
-.ne-modal-dialogo > div { align-self: center; padding: 38px 32px; display: grid; gap: 13px; }
-.ne-modal-dialogo > div > small { color: #5d727a; font-weight: 800; text-transform: uppercase; letter-spacing: .1em; }
-.ne-modal-dialogo h2 { margin: 0; font-size: 34px; line-height: 1.1; }
-.ne-modal-dialogo p { margin: 0; color: #62717d; }
-.ne-modal-dialogo strong { font-size: 24px; }
-.ne-modal-dialogo > div > button, .ne-modal-dialogo > div > a { min-height: 48px; display: inline-flex; justify-content: center; align-items: center; gap: 8px; border: 0; border-radius: 9px; background: #e85e0b; color: #fff; font-weight: 700; text-decoration: none; }
-.ne-modal-dialogo > div > span { color: #7b8790; font-size: 12px; }
-.ne-modal-cerrar { position: absolute; z-index: 2; top: 12px; right: 12px; width: 40px; height: 40px; display: grid; place-items: center; border: 0; border-radius: 50%; background: #fff; color: #142338; }
+.ne-modal { position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; padding: 18px; background: #09111bd9; animation: ne-aparecer .2s ease-out; }
+.ne-modal-dialogo { position: relative; width: min(920px, 100%); max-height: min(88dvh, 720px); display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); overflow: hidden; border-radius: 20px; background: #fff; color: #1d292f; box-shadow: 0 24px 80px #0005; animation: ne-entrar .28s cubic-bezier(.2,.8,.2,1); }
+.ne-modal-foto { position: relative; min-width: 0; min-height: 440px; width: 100%; padding: 0; overflow: hidden; border: 0; background: #e3eef7; color: #fff; text-align: left; }
+.ne-modal-foto > .ne-cafe-foto, .ne-modal-foto > .ne-dental-servicio-foto { width: 100%; height: 100%; min-height: inherit; aspect-ratio: auto; transition: transform .5s ease; }
+.ne-modal-foto:hover > span:first-child, .ne-modal-foto:focus-visible > span:first-child { transform: scale(1.08); }
+.ne-modal-ampliar { position: absolute; right: 15px; bottom: 15px; min-height: 34px; padding: 7px 11px; display: inline-flex; align-items: center; gap: 6px; border-radius: 999px; background: #0b1428dc; color: #fff; font-size: 11px; font-weight: 750; }
+.ne-modal-info { min-width: 0; padding: clamp(28px, 4vw, 46px); display: flex; flex-direction: column; align-items: flex-start; justify-content: center; gap: 14px; overflow-y: auto; overflow-wrap: anywhere; }
+.ne-modal-info > small { color: #5d727a; font-weight: 800; text-transform: uppercase; letter-spacing: .1em; }
+.ne-modal-info h2 { margin: 0; font-size: clamp(26px, 3vw, 36px); line-height: 1.12; letter-spacing: -.03em; }
+.ne-modal-info p { margin: 0; color: #62717d; line-height: 1.6; }
+.ne-modal-info strong { font-size: 24px; }
+.ne-modal-info > span { color: #7b8790; font-size: 12px; }
+.ne-modal-acciones { width: 100%; display: flex; flex-wrap: wrap; align-items: stretch; gap: 10px; margin-top: 6px; }
+.ne-modal-acciones > button, .ne-modal-acciones > a { min-width: 0; min-height: 48px; padding: 11px 16px; display: inline-flex; justify-content: center; align-items: center; gap: 8px; border: 1px solid transparent; border-radius: 10px; background: #e85e0b; color: #fff; font-size: 13px; font-weight: 750; line-height: 1.2; text-align: center; text-decoration: none; transition: transform .2s ease, background .2s ease, box-shadow .2s ease; }
+.ne-modal-acciones > :first-child { flex: 1 1 185px; }
+.ne-modal-acciones > :last-child { flex: 1 1 125px; border-color: #dce3ea; background: #fff; color: #314558; }
+.ne-modal-acciones > :hover { transform: translateY(-2px); box-shadow: 0 6px 16px #0002; }
+.ne-modal-cerrar { position: absolute; z-index: 2; top: 14px; right: 14px; width: 42px; height: 42px; display: grid; place-items: center; border: 1px solid #dde4e9; border-radius: 50%; background: #fff; color: #142338; box-shadow: 0 3px 12px #0002; }
+.ne-zoom { position: fixed; inset: 0; z-index: 120; padding: 14px; background: #050608f5; color: #fff; animation: ne-aparecer .2s ease-out; }
+.ne-zoom-dialogo { width: 100%; height: 100%; display: grid; grid-template-rows: auto minmax(0, 1fr) auto; }
+.ne-zoom-barra { min-height: 45px; display: flex; justify-content: space-between; align-items: center; gap: 20px; font-weight: 750; }
+.ne-zoom-barra button { width: 38px; height: 38px; display: grid; place-items: center; border: 1px solid #ffffff55; border-radius: 50%; background: #ffffff20; color: #fff; }
+.ne-zoom-lienzo { min-height: 0; display: grid; place-items: center; overflow: hidden; }
+.ne-zoom-lienzo img { max-width: 100%; max-height: 100%; object-fit: contain; cursor: zoom-in; transition: transform .25s ease; }
+.ne-zoom-controles { display: flex; align-items: center; justify-content: center; gap: 12px; padding: 10px 0 2px; }
+.ne-zoom-controles button { width: 38px; height: 38px; display: grid; place-items: center; border: 1px solid #ffffff55; border-radius: 50%; background: #ffffff1c; color: #fff; }
+.ne-zoom-controles button:disabled { opacity: .35; cursor: default; }
+.ne-zoom-controles span { min-width: 48px; text-align: center; font-size: 12px; font-weight: 750; }
+@keyframes ne-aparecer { from { opacity: 0; } to { opacity: 1; } }
+@keyframes ne-entrar { from { opacity: 0; transform: translateY(14px) scale(.97); } to { opacity: 1; transform: translateY(0) scale(1); } }
 .ne-toast { position: fixed; bottom: 16px; left: 50%; z-index: 110; transform: translateX(-50%); width: min(520px, calc(100% - 28px)); padding: 12px 14px; display: flex; align-items: center; gap: 10px; border-radius: 11px; background: #18342a; color: white; box-shadow: 0 10px 30px #0003; font-size: 12px; }
 .ne-toast button { margin-left: auto; background: none; color: inherit; border: 0; }
 
@@ -72,8 +91,36 @@
 .ne-dental-resumen { margin-top: 15px; padding: 14px 16px; display: flex; align-items: center; gap: 12px; border: 1px solid #b9d9c7; border-radius: 12px; background: #eff9f2; color: #24573a; }.ne-dental-resumen > div { display: grid; }.ne-dental-resumen span { font-size: 12px; }.ne-dental-resumen button { margin-left: auto; border: 0; background: none; color: inherit; }
 .ne-dental--editorial { background: #f3f7fa; }.ne-dental--editorial .ne-dental-servicios-grid { grid-template-columns: 1fr; gap: 10px; }.ne-dental--editorial .ne-dental-servicio { display: grid; grid-template-columns: 180px 1fr; box-shadow: none; }.ne-dental--editorial .ne-dental-servicio-foto { width: 100%; height: 100%; aspect-ratio: auto; }.ne-dental--editorial .ne-dental-servicio > div:last-child { display: grid; grid-template-columns: 1fr auto; gap: 4px 20px; }.ne-dental--editorial .ne-dental-servicio small, .ne-dental--editorial .ne-dental-servicio h3, .ne-dental--editorial .ne-dental-servicio p { grid-column: 1; }.ne-dental--editorial .ne-dental-servicio-pie, .ne-dental--editorial .ne-dental-servicio button { grid-column: 2; }.ne-dental--editorial .ne-dental-servicio-pie { grid-row: 2 / 4; display: grid; align-content: center; justify-content: start; margin: 0; padding: 0; border: 0; }.ne-dental--editorial .ne-dental-servicio p { min-height: 0; }.ne-dental--editorial .ne-dental-servicio button { grid-row: 4; justify-self: start; }.ne-dental--editorial .ne-dental-widget { border-radius: 12px; }
 .ne-dental-buscar { max-width: 560px; min-height: 50px; margin-bottom: 22px; padding: 0 15px; display: flex; align-items: center; gap: 8px; border: 1px solid var(--nd-line); border-radius: 8px; background: #fff; color: var(--nd-muted); }.ne-dental-buscar input { width: 100%; height: 48px; border: 0; outline: 0; color: var(--nd-ink); }.ne-dental--tienda .ne-dental-servicios-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }.ne-dental--tienda .ne-dental-servicio button { background: var(--nd-blue); color: #fff; }
-.ne-dental-modal > div > a { background: var(--nd-blue); }
+.ne-dental-modal .ne-modal-acciones > :first-child { background: var(--nd-blue); }
 .ne-dental-footer { max-width: 1200px; margin: 0 auto; padding: 35px 24px; display: flex; align-items: center; gap: 20px; border-top: 1px solid var(--nd-line); color: var(--nd-muted); font-size: 12px; }.ne-dental-footer b { color: var(--nd-ink); font-size: 18px; }.ne-dental-footer p { margin: 4px 0; }.ne-dental-footer a { margin-left: auto; color: var(--nd-blue); font-weight: 750; }
 
 @media (max-width: 900px) { .ne-cafe-layout { grid-template-columns: 1fr; }.ne-cafe-sidebar { position: static; display: none; }.ne-dental-hero { gap: 5px; }.ne-dental-widget { grid-template-columns: 240px 1fr; }.ne-dental-widget-horas { grid-column: 1 / -1; border-top: 1px solid var(--nd-line); border-left: 0 !important; }.ne-dental-widget-horas > div { grid-template-columns: repeat(5, 1fr); } }
 @media (max-width: 650px) { .ne-aviso-demo { font-size: 10px; }.ne-aviso-demo a { display: none; }.ne-ejemplos { flex-wrap: nowrap; overflow-x: auto; }.ne-ejemplos b { flex: none; }.ne-cafe-header { height: 66px; padding: 0 16px; }.ne-cafe-header > div > a { display: none; }.ne-cafe-layout { padding: 12px; }.ne-cafe-hero { min-height: 360px; }.ne-cafe-hero::after { background: linear-gradient(0deg, #0b0908f2, #0b090860 70%); }.ne-cafe-hero > div { position: absolute; bottom: 0; padding: 24px; }.ne-cafe-hero h1 { font-size: 34px; }.ne-cafe-ofertas-grid { display: flex; overflow-x: auto; }.ne-cafe-ofertas-grid button { min-width: 220px; }.ne-cafe-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }.ne-cafe-card-texto { padding: 10px; }.ne-cafe-card-texto b { font-size: 13px; }.ne-cafe-card-texto > span { display: none; }.ne-cafe-card-texto strong { font-size: 13px; }.ne-cafe-footer { padding: 25px 14px; }.ne-dental-header { height: 68px; padding: 0 15px; }.ne-dental-header nav > a:not(.ne-dental-header-cta) { display: none; }.ne-dental-header-cta { font-size: 11px !important; }.ne-dental-hero { grid-template-columns: 1fr; margin: 0 12px; }.ne-dental-hero-texto { padding: 22px 10px; }.ne-dental-hero h1 { font-size: 38px; }.ne-dental-hero-foto { min-height: 250px; }.ne-dental-hero--editorial { min-height: 390px; }.ne-dental-hero--editorial .ne-dental-hero-texto { padding: 24px; }.ne-dental-hero--editorial h1 { font-size: 35px; }.ne-dental-confianza { margin: 22px 12px; padding: 12px; flex-wrap: wrap; justify-content: start; }.ne-dental-servicios, .ne-dental-reservar { padding: 36px 14px; }.ne-dental-servicios-grid, .ne-dental--tienda .ne-dental-servicios-grid { grid-template-columns: 1fr; }.ne-dental-servicio p { min-height: 0; }.ne-dental--editorial .ne-dental-servicio { grid-template-columns: 110px 1fr; }.ne-dental--editorial .ne-dental-servicio > div:last-child { display: block; padding: 12px; }.ne-dental--editorial .ne-dental-servicio p, .ne-dental--editorial .ne-dental-servicio-pie { display: none; }.ne-dental--editorial .ne-dental-servicio h3 { font-size: 16px; }.ne-dental--editorial .ne-dental-servicio button { min-height: 35px; font-size: 10px; }.ne-dental-widget { grid-template-columns: 1fr; }.ne-dental-widget > * + * { border-left: 0; border-top: 1px solid var(--nd-line); }.ne-dental-widget-horas { grid-column: 1; }.ne-dental-widget-horas > div { grid-template-columns: repeat(3, 1fr); }.ne-dental-footer { padding: 26px 14px; flex-wrap: wrap; }.ne-modal-dialogo { grid-template-columns: 1fr; }.ne-modal-dialogo > .ne-cafe-foto, .ne-modal-dialogo > .ne-dental-servicio-foto { min-height: 280px; }.ne-modal-dialogo > div { padding: 24px; } }
+
+/* Las fotos llenan la tarjeta; al pasar el puntero se acercan sin dejar bordes vacíos. */
+.ne-cafe-card, .ne-cafe-ofertas-grid button, .ne-dental-servicio { transition: transform .25s ease, box-shadow .25s ease, border-color .25s ease; }
+.ne-cafe-card > .ne-cafe-foto, .ne-cafe-ofertas-grid .ne-cafe-foto, .ne-dental-servicio-foto { transition: transform .45s cubic-bezier(.2,.8,.2,1); }
+.ne-cafe-card:hover, .ne-cafe-card:focus-visible, .ne-cafe-ofertas-grid button:hover, .ne-cafe-ofertas-grid button:focus-visible, .ne-dental-servicio:hover { transform: translateY(-4px); box-shadow: 0 14px 34px #0003; }
+.ne-cafe-card:hover > .ne-cafe-foto, .ne-cafe-card:focus-visible > .ne-cafe-foto, .ne-cafe-ofertas-grid button:hover .ne-cafe-foto, .ne-cafe-ofertas-grid button:focus-visible .ne-cafe-foto, .ne-dental-servicio:hover .ne-dental-servicio-foto { transform: scale(1.045); }
+.ne-cafe-sidebar button, .ne-cafe-chips button, .ne-dental-servicio button, .ne-dental-hero-texto > a, .ne-cafe-hero a { transition: background .2s ease, border-color .2s ease, transform .2s ease; }
+.ne-dental-servicio button:hover, .ne-dental-hero-texto > a:hover, .ne-cafe-hero a:hover { transform: translateY(-2px); }
+.ne-dental-servicio button { padding: 10px 15px; line-height: 1.25; }
+.ne-cafe-card-texto { min-width: 0; }
+.ne-cafe-card-texto b, .ne-dental-servicio h3 { overflow-wrap: anywhere; }
+
+@media (max-width: 650px) {
+  .ne-modal { padding: 12px; align-items: center; }
+  .ne-modal-dialogo { width: 100%; max-height: calc(100dvh - 24px); grid-template-columns: minmax(0, 1fr); grid-template-rows: 230px auto; overflow-y: auto; border-radius: 16px; }
+  .ne-modal-foto { min-height: 230px; height: 230px; }
+  .ne-modal-foto > .ne-cafe-foto, .ne-modal-foto > .ne-dental-servicio-foto { min-height: 230px; }
+  .ne-modal-info { padding: 24px 20px 22px; overflow: visible; }
+  .ne-modal-info h2 { font-size: 27px; }
+  .ne-modal-acciones { flex-direction: column; }
+  .ne-modal-acciones > :first-child, .ne-modal-acciones > :last-child { flex: none; width: 100%; }
+  .ne-dental-servicio > div:last-child { padding: 18px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ne-modal, .ne-modal-dialogo { animation: none; }
+  .ne-cafe-card, .ne-cafe-card > .ne-cafe-foto, .ne-cafe-ofertas-grid button, .ne-cafe-ofertas-grid .ne-cafe-foto, .ne-dental-servicio, .ne-dental-servicio-foto, .ne-modal-foto > span:first-child, .ne-zoom-lienzo img { transition: none; }
+}

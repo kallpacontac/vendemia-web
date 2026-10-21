@@ -1,7 +1,8 @@
 'use client';
 
-import { useMemo, useState } from 'react';
-import { ArrowRight, Check, Coffee, Info, MapPin, Plus, Search, ShoppingBag, X } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import { ArrowRight, Check, Coffee, Info, MapPin, Plus, Search, ShoppingBag, X, ZoomIn } from 'lucide-react';
+import ImagenAmpliada from './ImagenAmpliada';
 import './negocios-ejemplo.css';
 
 const PRODUCTOS = [
@@ -20,6 +21,7 @@ export default function CafeteriaEjemplo() {
   const [categoria, setCategoria] = useState<string>('Todos');
   const [busqueda, setBusqueda] = useState('');
   const [producto, setProducto] = useState<Producto | null>(null);
+  const [zoom, setZoom] = useState(false);
   const [carrito, setCarrito] = useState(0);
   const [aviso, setAviso] = useState(false);
   const visibles = useMemo(() => PRODUCTOS.filter((p) =>
@@ -27,6 +29,13 @@ export default function CafeteriaEjemplo() {
     `${p.nombre} ${p.descripcion}`.toLocaleLowerCase('es').includes(busqueda.trim().toLocaleLowerCase('es')),
   ), [categoria, busqueda]);
   const anadir = () => { setCarrito((n) => n + 1); setProducto(null); setAviso(true); };
+
+  useEffect(() => {
+    if (!producto || zoom) return;
+    const alPulsar = (evento: KeyboardEvent) => { if (evento.key === 'Escape') setProducto(null); };
+    document.addEventListener('keydown', alPulsar);
+    return () => document.removeEventListener('keydown', alPulsar);
+  }, [producto, zoom]);
 
   return <div className="ne ne-cafe">
     <div className="ne-aviso-demo"><span><Info size={15} /> Ejemplo de cafetería · fotos, productos y precios ilustrativos</span><a href="/panel/tu-pagina">Crear mi página <ArrowRight size={15} /></a></div>
@@ -41,7 +50,14 @@ export default function CafeteriaEjemplo() {
       </main>
     </div>
     <footer className="ne-cafe-footer"><b>Grano de Barrio</b><span>Ejemplo creado con Vendemia. No se realizan pedidos ni cobros.</span><a href="/panel/tu-pagina">Crea tu catálogo</a></footer>
-    {producto && <div className="ne-modal" role="presentation" onClick={() => setProducto(null)}><div className="ne-modal-dialogo" role="dialog" aria-modal="true" aria-label={producto.nombre} onClick={(e) => e.stopPropagation()}><button className="ne-modal-cerrar" type="button" aria-label="Cerrar detalle" onClick={() => setProducto(null)}><X size={21} /></button><span className={`ne-cafe-foto ne-cafe-foto--${producto.id}`} /><div><small>{producto.categoria}</small><h2>{producto.nombre}</h2><p>{producto.descripcion}</p><strong>S/ {producto.precio.toFixed(2)}</strong><button type="button" onClick={anadir}><Plus size={19} /> Añadir al carrito de ejemplo</button><span>Esta muestra no envía pedidos ni realiza cobros.</span></div></div></div>}
+    {producto && <div className="ne-modal" role="presentation" onClick={() => setProducto(null)}>
+      <div className="ne-modal-dialogo ne-cafe-modal" role="dialog" aria-modal="true" aria-label={producto.nombre} onClick={(e) => e.stopPropagation()}>
+        <button className="ne-modal-cerrar" type="button" aria-label="Cerrar detalle" onClick={() => setProducto(null)}><X size={21} /></button>
+        <button className="ne-modal-foto" type="button" aria-label={`Ampliar foto de ${producto.nombre}`} onClick={() => setZoom(true)}><span className={`ne-cafe-foto ne-cafe-foto--${producto.id}`} /><span className="ne-modal-ampliar"><ZoomIn size={17} /> Toca para ampliar</span></button>
+        <div className="ne-modal-info"><small>{producto.categoria}</small><h2>{producto.nombre}</h2><p>{producto.descripcion}</p><strong>S/ {producto.precio.toFixed(2)}</strong><div className="ne-modal-acciones"><button type="button" onClick={anadir}><Plus size={19} /> Añadir al carrito</button><button type="button" onClick={() => setProducto(null)}>Seguir viendo</button></div><span>Esta muestra no envía pedidos ni realiza cobros.</span></div>
+      </div>
+    </div>}
+    {producto && zoom && <ImagenAmpliada src={`/assets/negocios-ejemplo/cafe-${producto.id}.webp`} alt={producto.nombre} onClose={() => setZoom(false)} />}
     {aviso && <div className="ne-toast" role="status"><Check size={18} /><span>Esta es una muestra. Tu catálogo real mostrará tus propios productos.</span><button type="button" aria-label="Cerrar aviso" onClick={() => setAviso(false)}><X size={17} /></button></div>}
   </div>;
 }
