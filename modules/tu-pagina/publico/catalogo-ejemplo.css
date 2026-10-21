@@ -73,7 +73,7 @@
 .ce-vacio { padding: 40px 18px; text-align: center; border: 1px dashed var(--ce-linea); color: var(--ce-suave); }
 .ce-pie { min-height: 130px; padding: 30px max(18px, calc((100vw - 1180px)/2)); display: flex; align-items: center; gap: 16px; border-top: 1px solid var(--ce-linea); color: var(--ce-suave); font-size: 12px; }
 .ce-pie b { color: var(--ce-tinta); font-size: 15px; }.ce-pie a { margin-left: auto; font-weight: 750; color: var(--ce-acento); }
-.ce-demo-enlace { max-width: 1180px; margin: auto; padding: 20px; text-align: center; }.ce-demo-enlace a { color: var(--ce-acento); font-weight: 750; text-decoration: none; }
+.ce-demo-enlace { max-width: 1180px; margin: auto; padding: 20px; display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 12px 24px; text-align: center; }.ce-demo-enlace a { color: var(--ce-acento); font-weight: 750; text-decoration: none; }
 .ce-modal { position: fixed; inset: 0; z-index: 100; padding: 18px; display: grid; place-items: center; background: #18120db8; }
 .ce-modal__dialogo { position: relative; width: min(100%, 780px); max-height: min(90vh, 680px); overflow-y: auto; display: grid; grid-template-columns: 1fr 1fr; background: var(--ce-papel); color: var(--ce-tinta); border-radius: 18px; }
 .ce-modal__cerrar { position: absolute; top: 12px; right: 12px; z-index: 1; width: 38px; height: 38px; border: 0; border-radius: 50%; background: #ffffffef; display: grid; place-items: center; }
