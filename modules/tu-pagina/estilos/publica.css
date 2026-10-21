@@ -619,6 +619,69 @@
   .tp[data-diseno='agenda'][data-plantilla='lista'] .tp-cabeza { padding: 16px; }
 }
 
+/* Luxury: una portada editorial y el catálogo como primera sección. */
+html:has(.tp[data-plantilla='luxury']), body:has(.tp[data-plantilla='luxury']) { margin: 0; }
+.tp[data-plantilla='luxury'] {
+  --tp-fondo: #f6f4f1; --tp-papel: #fff; --tp-texto: #171717;
+  --tp-suave: #67635f; --tp-borde: #dedbd7; --tp-campo: #fff;
+  --tp-radio: 3px;
+}
+.tp[data-plantilla='luxury'] > .tp-hoja { max-width: 1460px; padding: 0 clamp(18px, 4.5vw, 72px) 56px; }
+.tp-luxury-hero {
+  position: relative; display: flex; flex-direction: column; justify-content: space-between;
+  min-height: min(84svh, 820px); padding: clamp(22px, 3.4vw, 52px) clamp(20px, 5vw, 80px) clamp(50px, 7vw, 100px);
+  background: #181715 center / cover no-repeat; color: #fff; isolation: isolate;
+}
+.tp-luxury-hero::before { content: ''; position: absolute; inset: 0; z-index: -1; background: linear-gradient(90deg, rgba(0,0,0,.78), rgba(0,0,0,.25) 65%), linear-gradient(0deg, rgba(0,0,0,.56), transparent 45%); }
+.tp-luxury-nav { display: flex; align-items: center; justify-content: space-between; gap: 24px; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: .15em; }
+.tp-luxury-nav a { color: #fff; text-decoration: none; }
+.tp-luxury-nav > a:last-child { border-bottom: 1px solid rgba(255,255,255,.8); padding-bottom: 5px; }
+.tp-luxury-brand { display: inline-flex; align-items: center; gap: 11px; max-width: 75%; }
+.tp-luxury-brand__logo { width: 42px; height: 42px; flex: none; background: #fff center / cover no-repeat; border-radius: 50%; }
+.tp-luxury-hero__contenido { max-width: 790px; }
+.tp-luxury-hero__etiqueta { display: block; margin-bottom: 14px; color: #eee5d8; font-size: 12px; font-weight: 750; letter-spacing: .18em; text-transform: uppercase; }
+.tp-luxury-hero h1 { margin: 0; font-family: Georgia, 'Times New Roman', serif; font-size: clamp(64px, 10vw, 150px); line-height: .92; letter-spacing: -.06em; text-wrap: balance; overflow-wrap: anywhere; }
+.tp-luxury-hero p { max-width: 550px; margin: 25px 0 31px; color: rgba(255,255,255,.92); font-size: clamp(17px, 1.8vw, 23px); line-height: 1.5; }
+.tp-luxury-hero__cta { display: inline-flex; align-items: center; justify-content: center; gap: 14px; min-height: 54px; padding: 13px 24px; background: var(--tp-color); color: var(--tp-tinta) !important; text-decoration: none; font-weight: 750; border: 1px solid rgba(255,255,255,.35); transition: transform .2s ease, filter .2s ease; }
+.tp-luxury-hero__cta:hover { transform: translateY(-3px); filter: brightness(1.08); }
+.tp-luxury-hero a:focus-visible, .tp[data-plantilla='luxury'] button:focus-visible, .tp[data-plantilla='luxury'] a:focus-visible { outline: 3px solid var(--tp-color); outline-offset: 4px; }
+.tp[data-plantilla='luxury'] .tp-catalogo { margin: 0; padding: 52px 0 36px; }
+.tp[data-plantilla='luxury'] .tp-catalogo__busqueda { max-width: 500px; margin-bottom: 24px; border-radius: 2px; }
+.tp[data-plantilla='luxury'] .tp-catalogo__cabeza .tp-seccion, .tp[data-plantilla='luxury'] .tp-modulo > .tp-seccion { font-family: Georgia, 'Times New Roman', serif; font-size: clamp(34px, 4vw, 58px); font-weight: 500; letter-spacing: -.045em; }
+.tp[data-plantilla='luxury'] .tp-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: clamp(16px, 2vw, 30px); }
+.tp[data-plantilla='luxury'] .tp-tarjeta { overflow: hidden; border: 0; border-radius: 2px; background: #fff; color: #171717; box-shadow: none; }
+.tp[data-diseno='ambos'][data-plantilla='luxury'] .tp-modulo { margin: 0 0 42px; padding: 0; background: transparent; border: 0; border-radius: 0; font-family: inherit; color: #171717; }
+.tp[data-diseno='ambos'][data-plantilla='luxury'] .tp-modulo--tienda { --tp-color: var(--tp-acento-negocio); --tp-tinta: var(--tp-tinta-acento-negocio); }
+.tp[data-diseno='ambos'][data-plantilla='luxury'] .tp-modulo--tienda .tp-tarjeta { background: #fff; border-radius: 2px; }
+.tp[data-diseno='ambos'][data-plantilla='luxury'] .tp-modulo--tienda .tp-tarjeta__texto { padding: 18px 18px 21px; }
+.tp[data-plantilla='luxury'] .tp-tarjeta__foto { aspect-ratio: 4 / 3; background-color: #e6e0d9; background-size: cover; transition: transform .45s ease; }
+.tp[data-plantilla='luxury'] .tp-tarjeta:hover .tp-tarjeta__foto { transform: scale(1.035); }
+.tp[data-plantilla='luxury'] .tp-tarjeta__texto { padding: 18px 18px 21px; gap: 7px; }
+.tp[data-plantilla='luxury'] .tp-tarjeta__texto > b { font-size: 19px; }
+.tp[data-plantilla='luxury'] .tp-tarjeta__pie b { color: #171717; }
+.tp[data-plantilla='luxury'] .tp-chip[aria-pressed='true'], .tp[data-plantilla='luxury'] .tp-boton, .tp[data-plantilla='luxury'] .tp-barra { background: var(--tp-color); color: var(--tp-tinta); }
+.tp[data-plantilla='luxury'] .tp-acciones { margin-top: 0; border-top: 1px solid var(--tp-borde); padding-top: 24px; }
+.tp[data-plantilla='luxury'][data-portada='no'] > .tp-hoja { max-width: 800px; padding: 30px 20px 60px; }
+.tp[data-plantilla='luxury'][data-portada='no'] .tp-catalogo { padding: 20px 0 60px; }
+.tp[data-plantilla='luxury'][data-portada='no'] .tp-grid { grid-template-columns: 1fr; }
+.tp[data-plantilla='luxury'][data-portada='no'] .tp-grid .tp-tarjeta { flex-direction: row; }
+.tp[data-plantilla='luxury'][data-portada='no'] .tp-grid .tp-tarjeta__foto { width: 150px; min-height: 150px; height: 150px; flex: none; aspect-ratio: auto; }
+.tp[data-plantilla='luxury'][data-portada='no'] .tp-grid .tp-tarjeta__texto { align-content: center; }
+@media (max-width: 850px) { .tp[data-plantilla='luxury'] .tp-grid { grid-template-columns: repeat(2, minmax(0,1fr)); } }
+@media (max-width: 560px) {
+  .tp-luxury-hero { min-height: min(740px, 82svh); padding: 20px 22px 50px; background-position: 62% center; }
+  .tp-luxury-hero::before { background: linear-gradient(0deg, rgba(0,0,0,.84), rgba(0,0,0,.08) 80%), linear-gradient(90deg, rgba(0,0,0,.33), transparent); }
+  .tp-luxury-nav { font-size: 11px; letter-spacing: .1em; }
+  .tp-luxury-hero h1 { font-size: clamp(55px, 14vw, 86px); }
+  .tp-luxury-hero p { margin: 16px 0 25px; font-size: 17px; }
+  .tp-luxury-hero__cta { width: 100%; }
+  .tp[data-plantilla='luxury'] .tp-catalogo { padding-top: 34px; }
+  .tp[data-plantilla='luxury'] .tp-grid { grid-template-columns: 1fr; gap: 22px; }
+  .tp[data-plantilla='luxury'] .tp-tarjeta__foto { aspect-ratio: 1 / .83; }
+  .tp[data-plantilla='luxury'][data-portada='no'] .tp-grid .tp-tarjeta__foto { width: 96px; min-height: 110px; height: auto; }
+}
+@media (prefers-reduced-motion: reduce) { .tp-luxury-hero__cta, .tp[data-plantilla='luxury'] .tp-tarjeta__foto { transition: none; } }
+
 /* ══════════════════════════════════════════════════════════════════════════
    LIBRO DE RECLAMACIONES (sql/0006)
    ══════════════════════════════════════════════════════════════════════════ */

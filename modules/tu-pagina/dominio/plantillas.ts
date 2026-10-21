@@ -4,7 +4,10 @@ import type { BusinessMode } from '@/lib/supabase/types';
 
 export type TipoPagina = 'agenda' | 'tienda' | 'ambos';
 export type Disposicion = 'cuadricula' | 'filas' | 'carta';
-export type PlantillaGuardada = 'agenda' | 'vitrina' | 'lista' | 'carta' | 'clases' | 'envios' | 'impulso';
+export type PlantillaGuardada = 'agenda' | 'vitrina' | 'lista' | 'carta' | 'clases' | 'envios' | 'impulso' | 'luxury';
+
+const LUXURY: { id: PlantillaGuardada; nombre: string; describe: string } =
+  { id: 'luxury', nombre: 'Luxury', describe: 'Fotografía editorial y servicios para salones y barberías.' };
 
 export const PLANTILLAS: { id: PlantillaGuardada; nombre: string; describe: string }[] = [
   { id: 'vitrina', nombre: 'Minimalista', describe: 'Fotos grandes y tarjetas limpias.' },
@@ -14,16 +17,18 @@ export const PLANTILLAS: { id: PlantillaGuardada; nombre: string; describe: stri
   { id: 'impulso', nombre: 'Impulso', describe: 'Tienda deportiva con portada editorial y productos protagonistas.' },
 ];
 
-/** Dos lecturas claras para negocios que atienden con cita. Reutilizan IDs ya
- * admitidos por la base de datos y no alteran las plantillas de tienda. */
+/** Diseños para negocios que atienden con cita. */
 export const PLANTILLAS_AGENDA: { id: PlantillaGuardada; nombre: string; describe: string }[] = [
   { id: 'agenda', nombre: 'Agenda clara', describe: 'Tarjetas blancas, espacio y reservas fáciles de encontrar.' },
   { id: 'lista', nombre: 'Agenda editorial', describe: 'Servicios en lista y una presentación más fotográfica.' },
+  LUXURY,
 ];
+
+export const PLANTILLAS_AMBOS: { id: PlantillaGuardada; nombre: string; describe: string }[] = [...PLANTILLAS, LUXURY];
 
 export const plantillaValida = (valor: unknown): valor is PlantillaGuardada =>
   valor === 'vitrina' || valor === 'lista' || valor === 'carta' ||
-  valor === 'agenda' || valor === 'clases' || valor === 'envios' || valor === 'impulso';
+  valor === 'agenda' || valor === 'clases' || valor === 'envios' || valor === 'impulso' || valor === 'luxury';
 
 export const EXPERIENCIAS: { id: TipoPagina; nombre: string; describe: string }[] = [
   { id: 'agenda', nombre: 'Agenda', describe: 'Reservas claras, con servicios, día y hora.' },
@@ -43,4 +48,4 @@ export const plantillaPorDefecto = (tipo: TipoPagina): PlantillaGuardada =>
 
 export const disposicionDe = (plantilla: PlantillaGuardada, tipo: TipoPagina): Disposicion =>
   plantilla === 'carta' ? 'carta' : plantilla === 'lista' || plantilla === 'agenda' || plantilla === 'clases'
-    ? 'filas' : plantilla === 'vitrina' || plantilla === 'impulso' ? 'cuadricula' : tipo === 'agenda' ? 'filas' : 'cuadricula';
+    ? 'filas' : plantilla === 'vitrina' || plantilla === 'impulso' || plantilla === 'luxury' ? 'cuadricula' : tipo === 'agenda' ? 'filas' : 'cuadricula';

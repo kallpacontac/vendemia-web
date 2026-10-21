@@ -46,6 +46,7 @@ export default async function PaginaReservar({ params }: Props) {
             puedePedir={false}
             puedeReservar
             solo="reservas"
+            plantillaLuxury={p.secciones.apariencia?.plantillaActiva && p.plantilla === 'luxury'}
           />
         ) : (
           <p className="tp-vacio">Por ahora no hay nada para reservar aquí. Escríbenos por WhatsApp.</p>

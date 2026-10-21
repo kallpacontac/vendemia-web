@@ -86,6 +86,15 @@
 .tp-panel-plantilla__dibujo--impulso { background: #fff; }
 .tp-panel-plantilla__dibujo--impulso i { border-radius: 0; background-image: url('/assets/impulso-ejemplo/productos.png'); }
 .tp-panel-plantilla__dibujo--impulso i:first-child { background: linear-gradient(90deg, #1118, transparent), url('/assets/impulso-ejemplo/hero.png') center / cover no-repeat; }
+.tp-panel-plantilla__dibujo--luxury { grid-template-columns: repeat(3, 1fr); grid-template-rows: 62% 1fr; gap: 4px; background: #f4f1ec; }
+.tp-panel-plantilla__dibujo--luxury i { border-radius: 0; background-position: center; background-size: cover; }
+.tp-panel-plantilla__dibujo--luxury i:first-child { grid-column: 1 / -1; background: linear-gradient(90deg, #0009, transparent), url('/assets/luxury-ejemplo/portada.webp') center / cover; }
+.tp-panel-plantilla__dibujo--luxury i:nth-child(2) { background-image: url('/assets/luxury-ejemplo/corte.webp'); }
+.tp-panel-plantilla__dibujo--luxury i:nth-child(3) { background-image: url('/assets/luxury-ejemplo/barba.webp'); }
+.tp-panel-plantilla__dibujo--luxury i:nth-child(4) { background-image: url('/assets/luxury-ejemplo/peinado.webp'); }
+.tp-panel-esquema--luxury { grid-template-rows: 58% 1fr; grid-template-columns: repeat(3, 1fr); background: #f4f1ec; }
+.tp-panel-esquema--luxury i:first-child { grid-column: 1 / -1; background: url('/assets/luxury-ejemplo/portada.webp') center / cover; }
+.tp-panel-esquema--luxury i:nth-child(n + 2) { display: block; background: #d8d0c6; }
 @media (max-width: 430px) { .tp-panel-plantillas { gap: 8px; } .tp-panel-plantilla__dibujo { height: 104px; } }
 .tp-panel-plantilla__mini { position: relative; display: block; height: 170px; overflow: hidden; border-radius: 8px; background: var(--bg-soft); }
 .tp-panel-plantilla__mini iframe {

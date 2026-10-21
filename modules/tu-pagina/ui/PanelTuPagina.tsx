@@ -31,7 +31,7 @@ import { urlPagina, urlEnvio, urlReservar } from '@/modules/tu-pagina/dominio/co
 import { esAppointmentFamily, esEcommerce, esRecurrente } from '@/lib/panel/modo';
 import { tipoPorDefecto, type TiposDePagina } from '@/modules/tu-pagina/dominio/tienda';
 import type { BusinessMode } from '@/lib/supabase/types';
-import { EXPERIENCIAS, PLANTILLAS, PLANTILLAS_AGENDA, plantillaPorDefecto, plantillaValida, tipoPagina, tipoPorDefecto as tipoPaginaPorDefecto, type PlantillaGuardada, type TipoPagina } from '@/modules/tu-pagina/dominio/plantillas';
+import { EXPERIENCIAS, PLANTILLAS, PLANTILLAS_AGENDA, PLANTILLAS_AMBOS, plantillaPorDefecto, plantillaValida, tipoPagina, tipoPorDefecto as tipoPaginaPorDefecto, type PlantillaGuardada, type TipoPagina } from '@/modules/tu-pagina/dominio/plantillas';
 import { esHex, esUrlPublica, type AparienciaPagina } from '@/modules/tu-pagina/dominio/apariencia';
 import { urlEjemploPara } from '@/modules/tu-pagina/dominio/ejemplo';
 import { FOTOS_PLANTILLA, esFotoPlantilla, fotoPlantillaPorDefecto } from '@/modules/tu-pagina/dominio/fotos';
@@ -311,7 +311,7 @@ function MiPagina({ companyId, nombre, pagina, agendaNube, alGuardar }: {
   const verPaso = (numero: 1 | 2 | 3) => Boolean(publicada || paso === numero);
   // Al guardar queda activa la plantilla (ver `guardar`): solo entonces sale su foto de respaldo.
   const usaPlantilla = !pagina?.publicada || plantillaManual || apariencia.plantillaActiva === true;
-  const opcionesBase = es === 'agenda' ? PLANTILLAS_AGENDA : PLANTILLAS;
+  const opcionesBase = es === 'agenda' ? PLANTILLAS_AGENDA : es === 'ambos' ? PLANTILLAS_AMBOS : PLANTILLAS;
   const plantillas = plantillaValida(pagina?.plantilla) && es === tipoPagina(pagina.secciones) && !opcionesBase.some((p) => p.id === pagina.plantilla)
     ? [...opcionesBase, { id: pagina.plantilla, nombre: pagina.plantilla === 'clases' ? 'Clases' : pagina.plantilla === 'envios' ? 'Envíos' : 'Diseño anterior', describe: 'Diseño que ya tiene tu página.' }]
     : opcionesBase;
@@ -428,7 +428,7 @@ function MiPagina({ companyId, nombre, pagina, agendaNube, alGuardar }: {
                 {portada && <button type="button" className="btn btn-sm btn-ghost" disabled={subiendo !== null} onClick={() => setPortada('')}>{usaPlantilla ? 'Quitar y usar la de la plantilla' : 'Quitar'}</button>}
               </div>
               {portada && esUrlPublica(portada) && <img className="tp-panel-imagen tp-panel-imagen--portada" src={portada} alt="Vista previa de la portada" />}
-              {!portada && usaPlantilla && <FotosPlantilla tipo={es} elegida={apariencia.fotoPlantilla} alElegir={(fotoPlantilla) => setApariencia({ ...apariencia, fotoPlantilla })} />}
+              {!portada && usaPlantilla && <FotosPlantilla tipo={es} plantilla={plantilla} elegida={apariencia.fotoPlantilla} alElegir={(fotoPlantilla) => setApariencia({ ...apariencia, fotoPlantilla })} />}
               <label className="tp-panel-enlace-imagen">O pega un enlace HTTPS<input className="input" type="url" value={portada} placeholder="https://…/portada.jpg" onChange={(e) => setPortada(e.target.value)} /></label>
             </div>
             <label className="tp-panel-check"><input type="checkbox" checked={apariencia.mostrarBanner !== false} onChange={(e) => setApariencia({ ...apariencia, mostrarBanner: e.target.checked })} /><span><b>Mostrar portada</b><small className="muted">Puede llevar imagen o un color de fondo.</small></span></label>
@@ -501,8 +501,8 @@ function MiPagina({ companyId, nombre, pagina, agendaNube, alGuardar }: {
 }
 
 /** Sin foto propia, la portada lleva la de un ejemplo; al subir la suya, esta deja de salir. */
-function FotosPlantilla({ tipo, elegida, alElegir }: { tipo: TipoPagina; elegida?: string; alElegir: (id: string) => void }) {
-  const actual = esFotoPlantilla(elegida) ? elegida : fotoPlantillaPorDefecto(tipo);
+function FotosPlantilla({ tipo, plantilla, elegida, alElegir }: { tipo: TipoPagina; plantilla: PlantillaGuardada; elegida?: string; alElegir: (id: string) => void }) {
+  const actual = esFotoPlantilla(elegida) ? elegida : fotoPlantillaPorDefecto(tipo, plantilla);
   return (
     <div className="tp-panel-fotos">
       <small className="muted">Mientras no subas la tuya, tu portada usa una foto de la plantilla:</small>

@@ -20,6 +20,8 @@ export function estiloDe(p: Pick<PaginaPublica, 'color' | 'secciones'>): React.C
   return {
     ['--tp-color' as string]: principal,
     ['--tp-tinta' as string]: tintaSobre(principal),
+    ['--tp-acento-negocio' as string]: principal,
+    ['--tp-tinta-acento-negocio' as string]: tintaSobre(principal),
     ['--tp-tienda' as string]: tienda,
     ['--tp-tinta-tienda' as string]: tintaSobre(tienda),
     ['--tp-fondo-agenda' as string]: fondoAgenda,
@@ -41,7 +43,7 @@ export default function Marco({ pagina, children, vista, portada }: { pagina: Pa
     ? (plantillaValida(pagina.plantilla) ? pagina.plantilla : plantillaPorDefecto(tipo))
     : undefined;
   return (
-    <div className="tp" data-diseno={tipo} data-plantilla={plantilla} style={estiloDe(pagina)}>
+    <div className="tp" data-diseno={tipo} data-plantilla={plantilla} data-portada={portada ? 'si' : 'no'} style={estiloDe(pagina)}>
       {children}
       {/* El Libro de Reclamaciones va en el pie de TODA la página, también la de inicio (sql/0006). */}
       {pagina.secciones.reclamos && pagina.secciones.proveedor?.ruc && (
@@ -62,9 +64,27 @@ export function Cabecera({ pagina, fotoDestacada, catalogoDisponible = false }: 
   const inicial = pagina.titulo.trim().charAt(0).toUpperCase() || '·';
   const a = pagina.secciones.apariencia ?? {};
   const tipo = tipoPagina(pagina.secciones);
+  const plantilla = a.plantillaActiva && plantillaValida(pagina.plantilla) ? pagina.plantilla : plantillaPorDefecto(tipo);
   // Sin foto propia, la del ejemplo de la plantilla (dominio/fotos.ts).
-  const deLaPlantilla = fotoDePlantilla(a, tipo);
+  const deLaPlantilla = fotoDePlantilla(a, tipo, plantilla);
   const fotoPortada = pagina.portada_url || deLaPlantilla;
+  if (plantilla === 'luxury' && a.plantillaActiva && pagina.secciones.reservar) {
+    return <section className="tp-luxury-hero" aria-label={`Bienvenidos a ${pagina.titulo}`} style={a.mostrarBanner !== false && fotoPortada ? { backgroundImage: `url("${fotoPortada}")` } : undefined}>
+      <nav className="tp-luxury-nav" aria-label="Navegación de la página">
+        <a className="tp-luxury-brand" href={`./${pagina.slug}`} aria-label={`${pagina.titulo}, inicio`}>
+          {pagina.logo_url && <span className="tp-luxury-brand__logo" style={{ backgroundImage: `url("${pagina.logo_url}")` }} aria-hidden="true" />}
+          <span>{pagina.titulo}</span>
+        </a>
+        {catalogoDisponible && <a href="#catalogo">Servicios</a>}
+      </nav>
+      <div className="tp-luxury-hero__contenido">
+        {a.tituloBanner && <span className="tp-luxury-hero__etiqueta">{a.tituloBanner}</span>}
+        <h1>{pagina.titulo}</h1>
+        {pagina.frase && <p>{pagina.frase}</p>}
+        <a className="tp-luxury-hero__cta" href={`./${pagina.slug}/reservar`}>Agendar una cita <ArrowRight size={19} aria-hidden="true" /></a>
+      </div>
+    </section>;
+  }
   const heroCatalogo = catalogoDisponible && tipo === 'tienda' && a.plantillaActiva && a.mostrarBanner !== false;
   const banner = !heroCatalogo && a.mostrarBanner !== false && (!a.plantillaActiva || Boolean(fotoPortada || a.tituloBanner));
   // Una foto de plantilla elegida a propósito manda sobre la del primer producto; la sugerida, no.

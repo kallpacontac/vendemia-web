@@ -24,6 +24,7 @@ import { useRouter } from 'next/navigation';
 import { Check, ChevronLeft, ChevronRight, Clock, MessageCircle, Minus, Plus, Search, ShoppingBag, Trash2, Users, X } from 'lucide-react';
 import { cap, vocabulario } from '@/lib/panel/vocabulario';
 import type { Disposicion } from '@/modules/tu-pagina/dominio/plantillas';
+import { fotoServicioLuxury } from '@/modules/tu-pagina/dominio/fotos';
 import { abreEl, horasLibres, sumarDias, sumarMin } from '@/modules/tu-pagina/dominio/agenda';
 import { fechaCorta, urlWhatsApp } from '@/modules/tu-pagina/dominio/envio';
 import {
@@ -51,6 +52,7 @@ interface Props {
   disposicion: Disposicion;
   /** «reservas»: solo lo que se reserva (la página /reservar). */
   solo?: 'reservas';
+  plantillaLuxury?: boolean;
 }
 
 const ORDEN_TIPOS: TipoItem[] = ['cita', 'grupo', 'producto'];
@@ -112,10 +114,14 @@ const MENSAJE_FALLO: Record<string, string> = {
   not_found: 'Esta página ya no recibe reservas en línea. Escríbenos por WhatsApp.',
 };
 
-export default function Escaparate({ esc: todo, slug, whatsapp, puedePedir, puedeReservar, disposicion, solo }: Props) {
+export default function Escaparate({ esc: todo, slug, whatsapp, puedePedir, puedeReservar, disposicion, solo, plantillaLuxury = false }: Props) {
   const esc = useMemo(
-    () => (solo === 'reservas' ? { ...todo, items: todo.items.filter((i) => i.tipo !== 'producto') } : todo),
-    [todo, solo],
+    () => {
+      const items = solo === 'reservas' ? todo.items.filter((i) => i.tipo !== 'producto') : todo.items;
+      return solo || plantillaLuxury ? { ...todo, items: plantillaLuxury ? items.map((i, indice) =>
+        i.tipo !== 'producto' && !i.fotos.length ? { ...i, fotos: [fotoServicioLuxury(i.nombre, indice)] } : i) : items } : todo;
+    },
+    [todo, solo, plantillaLuxury],
   );
   // Los tipos que hay, en orden; con uno solo, el título es el suyo y no hay secciones.
   const tipos = ORDEN_TIPOS.filter((t) => esc.items.some((i) => i.tipo === t));
@@ -177,7 +183,7 @@ export default function Escaparate({ esc: todo, slug, whatsapp, puedePedir, pued
   return (
     <>
       <section className="tp-catalogo" id="catalogo" aria-label={tipos.length > 1 ? 'Lo que ofrecemos' : cap(v.items)}>
-        <label className="tp-catalogo__busqueda"><Search size={19} aria-hidden="true" /><input type="search" value={busqueda} onChange={(e) => setBusqueda(e.target.value)} placeholder={`Buscar ${v.items}`} aria-label={`Buscar ${v.items}`} /></label>
+        {(!plantillaLuxury || esc.items.length > 6) && <label className="tp-catalogo__busqueda"><Search size={19} aria-hidden="true" /><input type="search" value={busqueda} onChange={(e) => setBusqueda(e.target.value)} placeholder={`Buscar ${v.items}`} aria-label={`Buscar ${v.items}`} /></label>}
         <div className="tp-catalogo__layout">
         {familias.length > 1 && (
           <div className="tp-familias" role="group" aria-label="Filtrar por categoría">

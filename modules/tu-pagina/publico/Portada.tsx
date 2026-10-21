@@ -29,7 +29,7 @@ type Props = { params: { slug: string }; searchParams?: Record<string, string | 
 export async function generateMetadata({ params, searchParams }: Props): Promise<Metadata> {
   const p = await paginaDe(params.slug).catch(() => null);
   if (!p) return { title: 'Vendemia', robots: { index: false } };
-  const foto = p.portada_url || fotoDePlantilla(p.secciones.apariencia ?? {}, tipoPagina(p.secciones));
+  const foto = p.portada_url || fotoDePlantilla(p.secciones.apariencia ?? {}, tipoPagina(p.secciones), plantillaValida(p.plantilla) ? p.plantilla : undefined);
   return {
     title: p.titulo,
     description: p.frase || `Pide, reserva o escribe a ${p.titulo}`,
@@ -73,6 +73,7 @@ export default async function Portada({ params, searchParams }: Props) {
   const p = conVista(guardada, searchParams);
   const tipo = tipoPagina(p.secciones);
   const plantilla = plantillaValida(p.plantilla) ? p.plantilla : plantillaPorDefecto(tipo);
+  const esLuxury = plantilla === 'luxury' && p.secciones.apariencia?.plantillaActiva && p.secciones.reservar;
   const conEscaparate = Boolean(p.secciones.catalogo || p.secciones.reservar);
   const esc = conEscaparate ? await escaparateDe(p.slug, p.secciones) : null;
   const hayItems = Boolean(esc && esc.items.length > 0);
@@ -88,7 +89,7 @@ export default async function Portada({ params, searchParams }: Props) {
   // salón es lo primero que se busca, no algo a lo que se llega bajando.
   const reservables = p.secciones.reservar ? (esc?.items ?? []).filter((i) => i.tipo !== 'producto') : [];
   const soloGrupos = reservables.length > 0 && reservables.every((i) => i.tipo === 'grupo');
-  const reservaGrande = !envioPrimero && tipo !== 'tienda';
+  const reservaGrande = !envioPrimero && tipo !== 'tienda' && !esLuxury;
 
   const reservar = reservables.length > 0 && (
     <a className={`tp-accion${reservaGrande ? ' tp-accion--grande' : ''}`} href={`./${p.slug}/reservar`}>
@@ -110,15 +111,28 @@ export default async function Portada({ params, searchParams }: Props) {
     </a>
   );
 
+  const catalogo = esc && hayItems && (
+    <Escaparate
+      esc={esc}
+      slug={p.slug}
+      whatsapp={p.whatsapp}
+      disposicion={p.secciones.apariencia?.plantillaActiva ? disposicionDe(plantilla, tipo) : tipo === 'agenda' ? 'filas' : 'cuadricula'}
+      puedePedir={Boolean(p.secciones.catalogo)}
+      puedeReservar={Boolean(p.secciones.reservar)}
+      plantillaLuxury={Boolean(esLuxury)}
+    />
+  );
+
   return (
     <Marco pagina={p} portada>
       <Cabecera pagina={p} fotoDestacada={fotoDestacada} catalogoDisponible={hayItems} />
       <div className="tp-hoja">
         {/* Enlaces relativos a propósito: valen igual en tienda o agenda (host/<negocio>) y en /tu-pagina/<negocio>. */}
         {envioPrimero && <div className="tp-acciones">{envio}</div>}
+        {esLuxury && catalogo}
         {reservaGrande && reservar && <div className="tp-acciones">{reservar}</div>}
         <nav className={`tp-acciones${hayItems || envioPrimero ? ' tp-acciones--fila' : ''}`} aria-label="Qué quieres hacer">
-          {!reservaGrande && reservar}
+          {!reservaGrande && !esLuxury && reservar}
           {!envioPrimero && envio}
           {p.secciones.catalogo && p.secciones.apariencia?.mostrarMesero === true && <LlamarMesero negocio={p.titulo} whatsapp={p.whatsapp} />}
           {p.secciones.apariencia?.mostrarWhatsapp !== false && <a className="tp-accion" href={urlWhatsApp(p.whatsapp, `Hola ${p.titulo}`)} rel="noopener">
@@ -129,16 +143,7 @@ export default async function Portada({ params, searchParams }: Props) {
             </span>
           </a>}
         </nav>
-        {esc && hayItems && (
-          <Escaparate
-            esc={esc}
-            slug={p.slug}
-            whatsapp={p.whatsapp}
-            disposicion={p.secciones.apariencia?.plantillaActiva ? disposicionDe(plantilla, tipo) : tipo === 'agenda' ? 'filas' : 'cuadricula'}
-            puedePedir={Boolean(p.secciones.catalogo)}
-            puedeReservar={Boolean(p.secciones.reservar)}
-          />
-        )}
+        {!esLuxury && catalogo}
       </div>
     </Marco>
   );
