@@ -56,7 +56,7 @@
 .ne-cafe-brand > span:first-child { width: 42px; height: 42px; display: grid; place-items: center; border: 1px solid #ed6a24; border-radius: 12px; color: #f0722f; }
 .ne-cafe-brand > span:last-child { display: grid; }.ne-cafe-brand b { font-size: 18px; line-height: 1.15; }.ne-cafe-brand small { color: #aca9a3; font-size: 11px; }
 .ne-cafe-header > div { display: flex; align-items: center; gap: 15px; }.ne-cafe-header > div > a { text-decoration: none; font-size: 12px; font-weight: 700; }
-.ne-cafe-header button { position: relative; width: 42px; height: 42px; display: grid; place-items: center; border: 1px solid #3c3c39; border-radius: 50%; background: #242520; color: white; }.ne-cafe-header button b { position: absolute; top: -5px; right: -5px; min-width: 18px; height: 18px; border-radius: 50%; display: grid; place-items: center; background: #e95c0c; font-size: 10px; }
+.ne-cafe-header > div > button { position: relative; width: 42px; height: 42px; display: grid; place-items: center; border: 1px solid #3c3c39; border-radius: 50%; background: #242520; color: white; }.ne-cafe-header > div > button b { position: absolute; top: -5px; right: -5px; min-width: 18px; height: 18px; border-radius: 50%; display: grid; place-items: center; background: #e95c0c; font-size: 10px; }
 .ne-cafe-layout { max-width: 1320px; margin: auto; padding: 24px; display: grid; grid-template-columns: 225px minmax(0, 1fr); gap: 30px; }
 .ne-cafe-sidebar { position: sticky; top: 15px; align-self: start; padding: 20px; border: 1px solid #3d3d3a; border-radius: 20px; background: #242522; }
 .ne-cafe-sidebar h2 { margin: 0 0 14px; color: #a9aaa5; font-size: 12px; letter-spacing: .13em; text-transform: uppercase; }

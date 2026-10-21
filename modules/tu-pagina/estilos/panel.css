@@ -83,6 +83,9 @@
 .tp-panel-plantilla__dibujo--agenda { grid-template-columns: 1fr; grid-template-rows: 34% repeat(3, 1fr); background: #15191e; }
 .tp-panel-plantilla__dibujo--agenda i:first-child { grid-column: 1; background: linear-gradient(130deg, var(--c), #20252b); }
 .tp-panel-plantilla__dibujo--agenda i:not(:first-child) { background: #333b44; }
+.tp-panel-plantilla__dibujo--impulso { background: #fff; }
+.tp-panel-plantilla__dibujo--impulso i { border-radius: 0; background-image: url('/assets/impulso-ejemplo/productos.png'); }
+.tp-panel-plantilla__dibujo--impulso i:first-child { background: linear-gradient(90deg, #1118, transparent), url('/assets/impulso-ejemplo/hero.png') center / cover no-repeat; }
 @media (max-width: 430px) { .tp-panel-plantillas { gap: 8px; } .tp-panel-plantilla__dibujo { height: 104px; } }
 .tp-panel-plantilla__mini { position: relative; display: block; height: 170px; overflow: hidden; border-radius: 8px; background: var(--bg-soft); }
 .tp-panel-plantilla__mini iframe {

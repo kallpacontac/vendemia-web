@@ -532,6 +532,45 @@
   .tp[data-plantilla='vitrina'] .tp-grid, .tp[data-plantilla='agenda'] .tp-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
 }
 
+/* Impulso: escaparate ecommerce con fotografía, tipografía fuerte y superficies planas. */
+.tp[data-plantilla='impulso'] { --tp-fondo: #fff; --tp-papel: #fff; --tp-texto: #111; --tp-suave: #707072; --tp-borde: #e5e5e5; --tp-campo: #f5f5f5; --tp-radio: 0; }
+.tp[data-plantilla='impulso'] .tp-hoja { max-width: 1240px; padding-inline: 24px; }
+.tp[data-plantilla='impulso'] .tp-portada { height: 200px; background-color: #111; }
+.tp[data-plantilla='impulso'] .tp-cabeza { min-height: 86px; margin: 0; padding: 14px 0; display: grid; grid-template-columns: 52px 1fr; column-gap: 13px; align-items: center; text-align: left; }
+.tp[data-plantilla='impulso'] .tp-logo { width: 48px; height: 48px; margin: 0; grid-row: span 2; border: 0; border-radius: 50%; background-color: #111; color: #fff; box-shadow: none; font-size: 22px; }
+.tp[data-plantilla='impulso'] .tp-titulo { align-self: end; font-size: 20px; font-weight: 900; letter-spacing: -.05em; text-transform: uppercase; }
+.tp[data-plantilla='impulso'] .tp-frase { grid-column: 2; align-self: start; margin-top: 0; font-size: 12px; }
+.tp[data-plantilla='impulso'] .tp-hero { max-width: 1240px; min-height: 420px; margin-bottom: 30px; padding: 54px 5%; grid-template-columns: 1fr 1fr; background: #111; color: #fff; }
+.tp[data-plantilla='impulso'] .tp-hero__contenido { max-width: 570px; }
+.tp[data-plantilla='impulso'] .tp-hero__etiqueta { color: #c8c8c8; }
+.tp[data-plantilla='impulso'] .tp-hero h2 { font: 900 clamp(42px, 5.5vw, 78px)/.94 'Arial Narrow', 'Plus Jakarta Sans', system-ui, sans-serif; letter-spacing: -.06em; text-transform: uppercase; }
+.tp[data-plantilla='impulso'] .tp-hero p { color: #dedede; }
+.tp[data-plantilla='impulso'] .tp-hero a { padding: 12px 22px; background: #fff; color: #111; }
+.tp[data-plantilla='impulso'] .tp-hero__arte { width: 100%; height: 100%; min-height: 310px; aspect-ratio: auto; transform: none; border-radius: 0; background-color: #292929; background-position: center; box-shadow: none; }
+.tp[data-plantilla='impulso'] .tp-acciones { max-width: 1240px; margin-top: 10px; }
+.tp[data-plantilla='impulso'] .tp-accion { border-radius: 0; box-shadow: none; }
+.tp[data-plantilla='impulso'] .tp-accion__icono { border-radius: 50%; background: #f5f5f5; color: #111; }
+.tp[data-plantilla='impulso'] .tp-catalogo { margin-top: 24px; }
+.tp[data-plantilla='impulso'] .tp-catalogo__busqueda { border-radius: 999px; background: #f5f5f5; }
+.tp[data-plantilla='impulso'] .tp-catalogo__busqueda:focus-within { outline-color: #111; }
+.tp[data-plantilla='impulso'] .tp-catalogo__layout { display: block; }
+.tp[data-plantilla='impulso'] .tp-familias { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 22px; overflow: visible; }
+.tp[data-plantilla='impulso'] .tp-familias .tp-chip { min-height: 40px; padding: 7px 17px; border: 1px solid #d5d5d5; border-radius: 999px; background: #fff; color: #111; }
+.tp[data-plantilla='impulso'] .tp-familias .tp-chip[aria-pressed='true'] { background: #111; border-color: #111; color: #fff; }
+.tp[data-plantilla='impulso'] .tp-catalogo__cabeza .tp-seccion { font-size: clamp(26px, 3vw, 40px); font-weight: 900; letter-spacing: -.05em; }
+.tp[data-plantilla='impulso'] .tp-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; }
+.tp[data-plantilla='impulso'] .tp-tarjeta { border: 0; border-radius: 0; box-shadow: none; }
+.tp[data-plantilla='impulso'] .tp-tarjeta__foto { overflow: hidden; background-color: #f5f5f5; background-size: cover; transition: filter .2s ease; }
+.tp[data-plantilla='impulso'] .tp-tarjeta:hover .tp-tarjeta__foto { filter: brightness(.94); }
+.tp[data-plantilla='impulso'] .tp-tarjeta__texto { padding: 13px 0; }
+.tp[data-plantilla='impulso'] .tp-tarjeta__texto > b { font-size: 17px; font-weight: 800; }
+.tp[data-plantilla='impulso'] .tp-tarjeta__pie b, .tp[data-plantilla='impulso'] .tp-ficha__precio { color: #111; }
+.tp[data-plantilla='impulso'] .tp-boton, .tp[data-plantilla='impulso'] .tp-barra { border-radius: 999px; background: #111; color: #fff; }
+.tp[data-plantilla='impulso'] .tp-barra__icono b { background: #fff; color: #111; }
+.tp[data-plantilla='impulso'] .tp-hojita { background: #fff; }
+@media (max-width: 760px) { .tp[data-plantilla='impulso'] .tp-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; } .tp[data-plantilla='impulso'] .tp-hoja { padding-inline: 16px; } }
+@media (max-width: 540px) { .tp[data-plantilla='impulso'] .tp-hero { min-height: 350px; margin: 0 0 20px; padding: 30px 20px; grid-template-columns: 1fr; } .tp[data-plantilla='impulso'] .tp-hero__contenido { z-index: 1; } .tp[data-plantilla='impulso'] .tp-hero h2 { max-width: 270px; font-size: 48px; } .tp[data-plantilla='impulso'] .tp-hero p { max-width: 210px; } .tp[data-plantilla='impulso'] .tp-hero__arte { position: absolute; right: 0; bottom: 0; width: 70%; min-height: 100%; opacity: .4; mask-image: linear-gradient(90deg, transparent, #000 35%); } .tp[data-plantilla='impulso'] .tp-familias { flex-wrap: nowrap; overflow-x: auto; padding-bottom: 6px; } }
+
 /* Dos diseños de agenda con superficies claras, tinta azul y reservas visibles. */
 .tp[data-diseno='agenda'][data-plantilla='agenda'],
 .tp[data-diseno='agenda'][data-plantilla='lista'] {
