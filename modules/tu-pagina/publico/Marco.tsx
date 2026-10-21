@@ -8,6 +8,7 @@ import type { PaginaPublica } from '@/modules/tu-pagina/servidor/pagina';
 import { plantillaPorDefecto, plantillaValida, tipoPagina, type TipoPagina } from '@/modules/tu-pagina/dominio/plantillas';
 import { colorO } from '@/modules/tu-pagina/dominio/apariencia';
 import { fotoDePlantilla } from '@/modules/tu-pagina/dominio/fotos';
+import LuxuryPortada from '@/modules/tu-pagina/publico/LuxuryPortada';
 import '@/modules/tu-pagina/estilos/publica.css';
 
 export function estiloDe(p: Pick<PaginaPublica, 'color' | 'secciones'>): React.CSSProperties {
@@ -60,7 +61,7 @@ export default function Marco({ pagina, children, vista, portada }: { pagina: Pa
   );
 }
 
-export function Cabecera({ pagina, fotoDestacada, catalogoDisponible = false }: { pagina: PaginaPublica; fotoDestacada?: string; catalogoDisponible?: boolean }) {
+export function Cabecera({ pagina, fotoDestacada, servicioDestacado, catalogoDisponible = false }: { pagina: PaginaPublica; fotoDestacada?: string; servicioDestacado?: { nombre: string; descripcion?: string; precio?: string; foto?: string }; catalogoDisponible?: boolean }) {
   const inicial = pagina.titulo.trim().charAt(0).toUpperCase() || '·';
   const a = pagina.secciones.apariencia ?? {};
   const tipo = tipoPagina(pagina.secciones);
@@ -69,21 +70,17 @@ export function Cabecera({ pagina, fotoDestacada, catalogoDisponible = false }: 
   const deLaPlantilla = fotoDePlantilla(a, tipo, plantilla);
   const fotoPortada = pagina.portada_url || deLaPlantilla;
   if (plantilla === 'luxury' && a.plantillaActiva && pagina.secciones.reservar) {
-    return <section className="tp-luxury-hero" aria-label={`Bienvenidos a ${pagina.titulo}`} style={a.mostrarBanner !== false && fotoPortada ? { backgroundImage: `url("${fotoPortada}")` } : undefined}>
-      <nav className="tp-luxury-nav" aria-label="Navegación de la página">
-        <a className="tp-luxury-brand" href={`./${pagina.slug}`} aria-label={`${pagina.titulo}, inicio`}>
-          {pagina.logo_url && <span className="tp-luxury-brand__logo" style={{ backgroundImage: `url("${pagina.logo_url}")` }} aria-hidden="true" />}
-          <span>{pagina.titulo}</span>
-        </a>
-        {catalogoDisponible && <a href="#catalogo">Servicios</a>}
-      </nav>
-      <div className="tp-luxury-hero__contenido">
-        {a.tituloBanner && <span className="tp-luxury-hero__etiqueta">{a.tituloBanner}</span>}
-        <h1>{pagina.titulo}</h1>
-        {pagina.frase && <p>{pagina.frase}</p>}
-        <a className="tp-luxury-hero__cta" href={`./${pagina.slug}/reservar`}>Agendar una cita <ArrowRight size={19} aria-hidden="true" /></a>
-      </div>
-    </section>;
+    return <LuxuryPortada
+      titulo={pagina.titulo}
+      frase={pagina.frase}
+      etiqueta={a.tituloBanner}
+      logo={pagina.logo_url || undefined}
+      portada={a.mostrarBanner !== false ? fotoPortada || undefined : undefined}
+      servicio={servicioDestacado}
+      inicioHref={`./${pagina.slug}`}
+      reservarHref={`./${pagina.slug}/reservar`}
+      catalogoDisponible={catalogoDisponible}
+    />;
   }
   const heroCatalogo = catalogoDisponible && tipo === 'tienda' && a.plantillaActiva && a.mostrarBanner !== false;
   const banner = !heroCatalogo && a.mostrarBanner !== false && (!a.plantillaActiva || Boolean(fotoPortada || a.tituloBanner));

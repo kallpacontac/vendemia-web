@@ -645,6 +645,30 @@ html:has(.tp[data-plantilla='luxury']), body:has(.tp[data-plantilla='luxury']) {
 .tp-luxury-hero__cta { display: inline-flex; align-items: center; justify-content: center; gap: 14px; min-height: 54px; padding: 13px 24px; background: var(--tp-color); color: var(--tp-tinta) !important; text-decoration: none; font-weight: 750; border: 1px solid rgba(255,255,255,.35); transition: transform .2s ease, filter .2s ease; }
 .tp-luxury-hero__cta:hover { transform: translateY(-3px); filter: brightness(1.08); }
 .tp-luxury-hero a:focus-visible, .tp[data-plantilla='luxury'] button:focus-visible, .tp[data-plantilla='luxury'] a:focus-visible { outline: 3px solid var(--tp-color); outline-offset: 4px; }
+.tp-luxury-motion { position: relative; height: 200svh; }
+.tp-luxury-motion__fijo { position: sticky; top: 0; height: 100svh; overflow: hidden; background: #171717; }
+.tp-luxury-motion__pista { display: flex; width: 200vw; height: 100%; will-change: transform; }
+.tp-luxury-motion .tp-luxury-hero { width: 100vw; min-width: 100vw; min-height: 100svh; height: 100svh; flex: none; }
+.tp-luxury-motion__progreso { position: absolute; z-index: 5; top: 0; left: 0; width: 100%; height: 4px; background: var(--tp-color); transform: scaleX(0); transform-origin: left; pointer-events: none; }
+.tp-luxury-nav { position: relative; z-index: 2; }
+.tp-luxury-nav__paso { margin-left: auto; color: rgba(255,255,255,.8); font-size: 12px; letter-spacing: .1em; }
+.tp-luxury-motion__siguiente { position: absolute; right: clamp(20px, 5vw, 80px); bottom: clamp(20px, 4vw, 54px); display: inline-flex; align-items: center; gap: 10px; min-height: 44px; padding: 8px 0; border: 0; border-bottom: 1px solid rgba(255,255,255,.8); background: transparent; color: #fff !important; cursor: pointer; font: inherit; font-size: 13px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; text-decoration: none; }
+.tp-luxury-hero--servicio { background-position: center; }
+.tp-luxury-hero--servicio::before { background: linear-gradient(270deg, rgba(0,0,0,.84), rgba(0,0,0,.18) 75%), linear-gradient(0deg, rgba(0,0,0,.4), transparent 40%); }
+.tp-luxury-hero__panel { width: min(490px, 44vw); margin: auto 0 auto auto; padding: 28px 0; opacity: .4; transform: translateY(22px); transition: opacity .55s ease, transform .55s ease; }
+.tp-luxury-motion[data-escena='1'] .tp-luxury-hero__panel { opacity: 1; transform: translateY(0); }
+.tp-luxury-hero__panel h2 { margin: 0; font: 500 clamp(58px, 7vw, 116px)/.94 Georgia, 'Times New Roman', serif; letter-spacing: -.06em; }
+.tp-luxury-hero__panel p { max-width: 450px; margin: 25px 0 30px; color: rgba(255,255,255,.86); font-size: clamp(16px, 1.5vw, 20px); }
+.tp-luxury-hero__panel-pie { display: flex; flex-wrap: wrap; align-items: center; gap: 18px; }
+.tp-luxury-hero__panel-pie strong { font-size: 22px; font-weight: 700; }
+.tp-luxury-hero__panel-pie a { display: inline-flex; align-items: center; gap: 10px; min-height: 52px; padding: 12px 20px; background: var(--tp-color); color: var(--tp-tinta); text-decoration: none; font-weight: 750; }
+@media (prefers-reduced-motion: reduce) {
+  .tp-luxury-motion { height: auto; }
+  .tp-luxury-motion__fijo { position: relative; height: auto; }
+  .tp-luxury-motion__pista { width: 100%; transform: none !important; }
+  .tp-luxury-motion .tp-luxury-hero { width: 100%; min-width: 100%; min-height: min(760px, 90svh); height: auto; }
+  .tp-luxury-motion .tp-luxury-hero--servicio, .tp-luxury-motion__progreso, .tp-luxury-motion__siguiente { display: none; }
+}
 .tp[data-plantilla='luxury'] .tp-catalogo { margin: 0; padding: 52px 0 36px; }
 .tp[data-plantilla='luxury'] .tp-catalogo__busqueda { max-width: 500px; margin-bottom: 24px; border-radius: 2px; }
 .tp[data-plantilla='luxury'] .tp-catalogo__cabeza .tp-seccion, .tp[data-plantilla='luxury'] .tp-modulo > .tp-seccion { font-family: Georgia, 'Times New Roman', serif; font-size: clamp(34px, 4vw, 58px); font-weight: 500; letter-spacing: -.045em; }
@@ -670,6 +694,13 @@ html:has(.tp[data-plantilla='luxury']), body:has(.tp[data-plantilla='luxury']) {
 @media (max-width: 850px) { .tp[data-plantilla='luxury'] .tp-grid { grid-template-columns: repeat(2, minmax(0,1fr)); } }
 @media (max-width: 560px) {
   .tp-luxury-hero { min-height: min(740px, 82svh); padding: 20px 22px 50px; background-position: 62% center; }
+  .tp-luxury-motion .tp-luxury-hero { padding: 22px 22px 74px; }
+  .tp-luxury-nav__paso { display: none; }
+  .tp-luxury-motion__siguiente { right: 22px; bottom: 18px; font-size: 11px; }
+  .tp-luxury-hero__panel { width: 100%; margin: auto 0 35px; opacity: 1; transform: none; }
+  .tp-luxury-hero__panel h2 { font-size: clamp(52px, 13vw, 78px); }
+  .tp-luxury-hero__panel p { margin: 18px 0 22px; }
+  .tp-luxury-hero__panel-pie a { min-height: 48px; }
   .tp-luxury-hero::before { background: linear-gradient(0deg, rgba(0,0,0,.84), rgba(0,0,0,.08) 80%), linear-gradient(90deg, rgba(0,0,0,.33), transparent); }
   .tp-luxury-nav { font-size: 11px; letter-spacing: .1em; }
   .tp-luxury-hero h1 { font-size: clamp(55px, 14vw, 86px); }
@@ -681,6 +712,56 @@ html:has(.tp[data-plantilla='luxury']), body:has(.tp[data-plantilla='luxury']) {
   .tp[data-plantilla='luxury'][data-portada='no'] .tp-grid .tp-tarjeta__foto { width: 96px; min-height: 110px; height: auto; }
 }
 @media (prefers-reduced-motion: reduce) { .tp-luxury-hero__cta, .tp[data-plantilla='luxury'] .tp-tarjeta__foto { transition: none; } }
+
+/* Agenda interactiva del ejemplo Atelier Norte, con la misma estética Luxury. */
+.lx-reserva { min-height: 100svh; background: #f3f0eb; }
+.lx-reserva__nav { min-height: 76px; padding: 18px clamp(20px, 5vw, 76px); display: flex; align-items: center; justify-content: space-between; gap: 16px; background: #181715; color: #fff; }
+.lx-reserva__nav a { display: inline-flex; align-items: center; gap: 8px; text-decoration: none; font-size: 13px; }
+.lx-reserva__nav > span { font-size: 14px; font-weight: 800; letter-spacing: .17em; }
+.lx-reserva__nav small { font-size: 10px; letter-spacing: .12em; }
+.lx-reserva__intro { max-width: 1500px; margin: auto; padding: clamp(46px, 6vw, 95px) clamp(20px, 5vw, 76px) 36px; }
+.lx-reserva__intro > span, .lx-reserva__servicio-info > span:first-child, .lx-reserva__parte > span, .lx-reserva__horas > span { color: #8a6b43; font-size: 11px; font-weight: 850; letter-spacing: .19em; }
+.lx-reserva__intro h1 { margin: 12px 0 20px; font: 500 clamp(58px, 8vw, 118px)/.94 Georgia, 'Times New Roman', serif; letter-spacing: -.06em; }
+.lx-reserva__intro p { max-width: 570px; margin: 0; color: #625d57; font-size: 17px; line-height: 1.6; }
+.lx-reserva__panel { max-width: 1350px; margin: 0 auto; display: grid; grid-template-columns: minmax(270px, .85fr) minmax(0, 1.45fr); background: #fff; border: 1px solid #e1dbd2; box-shadow: 0 24px 60px rgba(36,30,24,.07); }
+.lx-reserva__servicio { border-right: 1px solid #e1dbd2; }
+.lx-reserva__foto { height: 280px; background: #d7cbbd center / cover no-repeat; }
+.lx-reserva__servicio-info { padding: 28px 30px 34px; }
+.lx-reserva__servicio-info label { display: block; margin: 20px 0 6px; font-size: 12px; font-weight: 800; }
+.lx-reserva__servicio-info select { display: block; width: 100%; min-height: 48px; padding: 10px 14px; border: 1px solid #ccc3b7; border-radius: 2px; background: #fff; color: #171717; font: inherit; font-weight: 750; }
+.lx-reserva__servicio-info p { margin: 18px 0; color: #66605a; line-height: 1.55; }
+.lx-reserva__detalle { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-top: 15px; border-top: 1px solid #eae5df; }
+.lx-reserva__detalle span, .lx-reserva__direccion { display: inline-flex; align-items: center; gap: 7px; color: #67615b; font-size: 13px; }
+.lx-reserva__detalle strong { font-size: 18px; }
+.lx-reserva__direccion { margin-top: 17px; }
+.lx-reserva__calendario { padding: clamp(26px, 3vw, 50px); }
+.lx-reserva__parte { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 3px 16px; }
+.lx-reserva__parte > span { grid-column: 1; }
+.lx-reserva__parte h2, .lx-reserva__horas h2 { grid-column: 1; margin: 0; font: 500 clamp(28px, 3vw, 44px)/1.1 Georgia, 'Times New Roman', serif; letter-spacing: -.04em; }
+.lx-reserva__flechas { grid-column: 2; grid-row: 1 / 3; display: flex; gap: 6px; }
+.lx-reserva__flechas button { width: 40px; height: 40px; display: grid; place-items: center; border: 1px solid #d8d0c6; background: #fff; cursor: pointer; }
+.lx-reserva__flechas button:disabled { opacity: .35; cursor: default; }
+.lx-reserva__dias { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 8px; margin-top: 25px; }
+.lx-reserva__dias button { display: grid; place-items: center; min-height: 84px; padding: 9px; border: 1px solid #d9d1c7; background: #fff; cursor: pointer; color: #27231f; }
+.lx-reserva__dias button small { color: #69615a; font-size: 12px; text-transform: capitalize; }
+.lx-reserva__dias button b { font: 500 29px Georgia, 'Times New Roman', serif; }
+.lx-reserva__dias button[aria-pressed='true'], .lx-reserva__horas button[aria-pressed='true'] { background: #171717; border-color: #171717; color: #fff; }
+.lx-reserva__dias button[aria-pressed='true'] small { color: #e3d8c9; }
+.lx-reserva__fecha { min-height: 24px; margin: 15px 0 28px; color: #68615a; font-size: 13px; text-transform: capitalize; }
+.lx-reserva__horas { padding-top: 25px; border-top: 1px solid #e7e0d8; }
+.lx-reserva__horas h2 { margin: 6px 0 20px; }
+.lx-reserva__horas > div { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; }
+.lx-reserva__horas button { min-height: 48px; border: 1px solid #d9d1c7; background: #fff; cursor: pointer; color: #27231f; font: inherit; font-size: 13px; font-weight: 750; }
+.lx-reserva__horas > p { color: #756e66; }
+.lx-reserva__confirmar { display: inline-flex; align-items: center; justify-content: center; gap: 11px; min-height: 50px; margin-top: 26px; padding: 12px 20px; border: 0; background: var(--tp-color); color: var(--tp-tinta); cursor: pointer; font: inherit; font-weight: 800; }
+.lx-reserva__resumen { max-width: 1350px; margin: 18px auto 0; padding: 20px 26px; display: flex; align-items: center; gap: 17px; border: 1px solid #c9ae84; background: #f8edda; }
+.lx-reserva__resumen > div { display: grid; gap: 2px; flex: 1; }
+.lx-reserva__resumen small { color: #62574b; }
+.lx-reserva__resumen button { padding: 10px; border: 1px solid #8a6b43; background: transparent; cursor: pointer; font: inherit; font-size: 12px; }
+.lx-reserva__pie { margin: 0; padding: 42px 20px 28px; text-align: center; color: #71685f; font-size: 12px; }
+@media (max-width: 1000px) { .lx-reserva__panel, .lx-reserva__resumen { margin-inline: 20px; } .lx-reserva__dias { grid-template-columns: repeat(3, minmax(0, 1fr)); } .lx-reserva__horas > div { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (max-width: 720px) { .lx-reserva__nav { min-height: 62px; }.lx-reserva__nav > span { display: none; } .lx-reserva__intro { padding-top: 45px; }.lx-reserva__panel { grid-template-columns: 1fr; }.lx-reserva__servicio { border-right: 0; border-bottom: 1px solid #e1dbd2; }.lx-reserva__foto { height: 220px; }.lx-reserva__servicio-info { padding: 22px; }.lx-reserva__calendario { padding: 26px 22px; } }
+@media (max-width: 430px) { .lx-reserva__panel, .lx-reserva__resumen { margin-inline: 12px; }.lx-reserva__intro { padding-inline: 19px; }.lx-reserva__intro h1 { font-size: 54px; }.lx-reserva__dias { gap: 6px; }.lx-reserva__dias button { min-height: 72px; }.lx-reserva__horas > div { grid-template-columns: repeat(2, minmax(0, 1fr)); }.lx-reserva__resumen { display: grid; grid-template-columns: 24px minmax(0, 1fr); align-items: start; }.lx-reserva__resumen button { grid-column: 2; justify-self: start; margin-top: 8px; } }
 
 /* ══════════════════════════════════════════════════════════════════════════
    LIBRO DE RECLAMACIONES (sql/0006)

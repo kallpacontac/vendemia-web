@@ -23,6 +23,8 @@ import { disposicionDe, plantillaPorDefecto, plantillaValida, tipoPagina, type T
 import { esHex } from '@/modules/tu-pagina/dominio/apariencia';
 import { esPlantillaEjemplo } from '@/modules/tu-pagina/dominio/ejemplo';
 import { esFotoPlantilla, fotoDePlantilla } from '@/modules/tu-pagina/dominio/fotos';
+import { FOTOS_SERVICIOS_LUXURY } from '@/modules/tu-pagina/dominio/fotos';
+import { soles } from '@/modules/tu-pagina/dominio/tienda';
 
 type Props = { params: { slug: string }; searchParams?: Record<string, string | undefined> };
 
@@ -78,6 +80,13 @@ export default async function Portada({ params, searchParams }: Props) {
   const esc = conEscaparate ? await escaparateDe(p.slug, p.secciones) : null;
   const hayItems = Boolean(esc && esc.items.length > 0);
   const fotoDestacada = esc?.items.find((item) => item.tipo === 'producto' && item.fotos[0])?.fotos[0];
+  const primerServicio = esc?.items.find((item) => item.tipo !== 'producto');
+  const servicioDestacado = primerServicio ? {
+    nombre: primerServicio.nombre,
+    descripcion: primerServicio.descripcion,
+    precio: primerServicio.precio == null ? undefined : soles(primerServicio.precio),
+    foto: primerServicio.fotos[0] || FOTOS_SERVICIOS_LUXURY.corte,
+  } : { nombre: p.titulo, descripcion: p.frase, foto: FOTOS_SERVICIOS_LUXURY.corte };
   // La página propia de Vendemia enseña un catálogo completo mientras su catálogo real
   // esté vacío. Está rotulado como demo y no ofrece pedidos ni cobros reales.
   if (p.slug === 'vendemia' && !hayItems) {
@@ -125,7 +134,7 @@ export default async function Portada({ params, searchParams }: Props) {
 
   return (
     <Marco pagina={p} portada>
-      <Cabecera pagina={p} fotoDestacada={fotoDestacada} catalogoDisponible={hayItems} />
+      <Cabecera pagina={p} fotoDestacada={fotoDestacada} servicioDestacado={servicioDestacado} catalogoDisponible={hayItems} />
       <div className="tp-hoja">
         {/* Enlaces relativos a propósito: valen igual en tienda o agenda (host/<negocio>) y en /tu-pagina/<negocio>. */}
         {envioPrimero && <div className="tp-acciones">{envio}</div>}
