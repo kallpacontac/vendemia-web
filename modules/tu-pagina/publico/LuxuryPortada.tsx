@@ -15,10 +15,11 @@ type Props = {
   inicioHref: string;
   reservarHref: string;
   catalogoDisponible: boolean;
+  catalogoProductosDisponible?: boolean;
 };
 
 /** El desplazamiento vertical mueve la portada lateralmente y después continúa al catálogo. */
-export default function LuxuryPortada({ titulo, frase, etiqueta, logo, portada, servicio, inicioHref, reservarHref, catalogoDisponible }: Props) {
+export default function LuxuryPortada({ titulo, frase, etiqueta, logo, portada, servicio, inicioHref, reservarHref, catalogoDisponible, catalogoProductosDisponible = false }: Props) {
   const marco = useRef<HTMLDivElement>(null);
   const pista = useRef<HTMLDivElement>(null);
   const progreso = useRef<HTMLSpanElement>(null);
@@ -85,12 +86,16 @@ export default function LuxuryPortada({ titulo, frase, etiqueta, logo, portada, 
             </a>
             <span className="tp-luxury-nav__paso">01 / 02</span>
             {catalogoDisponible && <a href="#catalogo">Servicios</a>}
+            {catalogoProductosDisponible && <a href="#catalogo-productos">Catálogo</a>}
           </nav>
           <div className="tp-luxury-hero__contenido">
             {etiqueta && <span className="tp-luxury-hero__etiqueta">{etiqueta}</span>}
             <h1>{titulo}</h1>
             {frase && <p>{frase}</p>}
-            <a className="tp-luxury-hero__cta" href={reservarHref}>Agendar una cita <ArrowRight size={19} aria-hidden="true" /></a>
+            <div className="tp-luxury-hero__acciones">
+              <a className="tp-luxury-hero__cta" href={reservarHref}>Agendar una cita <ArrowRight size={19} aria-hidden="true" /></a>
+              {catalogoProductosDisponible && <a className="tp-luxury-hero__cta tp-luxury-hero__cta--secundario" href="#catalogo-productos">Ver catálogo <ArrowDown size={19} aria-hidden="true" /></a>}
+            </div>
           </div>
           <button type="button" className="tp-luxury-motion__siguiente" onClick={() => irAEscena(1)}>Explorar <ArrowRight size={18} aria-hidden="true" /></button>
         </section>

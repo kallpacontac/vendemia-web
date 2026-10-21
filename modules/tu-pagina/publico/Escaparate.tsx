@@ -53,6 +53,7 @@ interface Props {
   /** «reservas»: solo lo que se reserva (la página /reservar). */
   solo?: 'reservas';
   plantillaLuxury?: boolean;
+  catalogoLuxuryDestacado?: boolean;
 }
 
 const ORDEN_TIPOS: TipoItem[] = ['cita', 'grupo', 'producto'];
@@ -114,7 +115,7 @@ const MENSAJE_FALLO: Record<string, string> = {
   not_found: 'Esta página ya no recibe reservas en línea. Escríbenos por WhatsApp.',
 };
 
-export default function Escaparate({ esc: todo, slug, whatsapp, puedePedir, puedeReservar, disposicion, solo, plantillaLuxury = false }: Props) {
+export default function Escaparate({ esc: todo, slug, whatsapp, puedePedir, puedeReservar, disposicion, solo, plantillaLuxury = false, catalogoLuxuryDestacado = false }: Props) {
   const esc = useMemo(
     () => {
       const items = solo === 'reservas' ? todo.items.filter((i) => i.tipo !== 'producto') : todo.items;
@@ -128,6 +129,7 @@ export default function Escaparate({ esc: todo, slug, whatsapp, puedePedir, pued
   const v = vocabularioDe(tipos[0] ?? modoTipo(esc.modo));
   const familias = useMemo(() => [...new Set(esc.items.map((i) => i.familia).filter(Boolean))], [esc.items]);
   const router = useRouter();
+  const carruselProductos = useRef<HTMLDivElement>(null);
   const [familia, setFamilia] = useState('');
   const [busqueda, setBusqueda] = useState('');
   const [abierto, setAbierto] = useState<string | null>(null);
@@ -182,7 +184,7 @@ export default function Escaparate({ esc: todo, slug, whatsapp, puedePedir, pued
 
   return (
     <>
-      <section className="tp-catalogo" id="catalogo" aria-label={tipos.length > 1 ? 'Lo que ofrecemos' : cap(v.items)}>
+      <section className={`tp-catalogo${catalogoLuxuryDestacado ? ' tp-catalogo--luxury-productos' : ''}`} id="catalogo" aria-label={tipos.length > 1 ? 'Lo que ofrecemos' : cap(v.items)}>
         {(!plantillaLuxury || esc.items.length > 6) && <label className="tp-catalogo__busqueda"><Search size={19} aria-hidden="true" /><input type="search" value={busqueda} onChange={(e) => setBusqueda(e.target.value)} placeholder={`Buscar ${v.items}`} aria-label={`Buscar ${v.items}`} /></label>}
         <div className="tp-catalogo__layout">
         {familias.length > 1 && (
@@ -194,7 +196,7 @@ export default function Escaparate({ esc: todo, slug, whatsapp, puedePedir, pued
           </div>
         )}
         <div className="tp-catalogo__resultados">
-        {tipos.length <= 1 && <div className="tp-catalogo__cabeza"><h2 className="tp-seccion">{cap(v.items)}</h2><small>{visibles.length} {visibles.length === 1 ? 'resultado' : 'resultados'}</small></div>}
+        {tipos.length <= 1 && !catalogoLuxuryDestacado && <div className="tp-catalogo__cabeza"><h2 className="tp-seccion">{cap(v.items)}</h2><small>{visibles.length} {visibles.length === 1 ? 'resultado' : 'resultados'}</small></div>}
         {disposicion === 'carta' ? (
           [...new Set(visibles.map((i) => i.familia))].map((f) => (
             <div key={f || '-'} className="tp-carta">
@@ -210,9 +212,15 @@ export default function Escaparate({ esc: todo, slug, whatsapp, puedePedir, pued
           const deEste = t ? visibles.filter((i) => i.tipo === t) : visibles;
           if (t && deEste.length === 0) return null;
           return (
-            <div key={t ?? 'todo'} className={`tp-modulo tp-modulo--${(t ?? tipos[0]) === 'producto' ? 'tienda' : 'agenda'}`}>
-              {t && <h2 className="tp-seccion">{cap(vocabularioDe(t).items)}</h2>}
-              <div className={`tp-grid${disposicion === 'cuadricula' ? '' : ' tp-grid--lista'}`}>
+            <div key={t ?? 'todo'} id={catalogoLuxuryDestacado && (t ?? tipos[0]) === 'producto' ? 'catalogo-productos' : undefined} className={`tp-modulo tp-modulo--${(t ?? tipos[0]) === 'producto' ? 'tienda' : 'agenda'}${catalogoLuxuryDestacado && (t ?? tipos[0]) === 'producto' ? ' tp-modulo--luxury-productos' : ''}`}>
+              {catalogoLuxuryDestacado && (t ?? tipos[0]) === 'producto' ? <div className="tp-luxury-productos__cabecera">
+                <div><span>LA SELECCIÓN</span><h2 className="tp-seccion">Catálogo de productos</h2></div>
+                <div className="tp-luxury-productos__controles" aria-label="Mover catálogo de productos">
+                  <button type="button" aria-label="Productos anteriores" onClick={() => carruselProductos.current?.scrollBy({ left: -carruselProductos.current.clientWidth * .8, behavior: 'smooth' })}><ChevronLeft size={24} aria-hidden="true" /></button>
+                  <button type="button" aria-label="Productos siguientes" onClick={() => carruselProductos.current?.scrollBy({ left: carruselProductos.current.clientWidth * .8, behavior: 'smooth' })}><ChevronRight size={24} aria-hidden="true" /></button>
+                </div>
+              </div> : t && <h2 className="tp-seccion">{cap(vocabularioDe(t).items)}</h2>}
+              <div ref={catalogoLuxuryDestacado && (t ?? tipos[0]) === 'producto' ? carruselProductos : undefined} className={`tp-grid${disposicion === 'cuadricula' ? '' : ' tp-grid--lista'}`}>
                 {deEste.map((i) => (
                   <Tarjeta key={i.id} item={i} alAbrir={() => setAbierto(i.id)} />
                 ))}

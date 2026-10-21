@@ -62,6 +62,7 @@ function conVista(p: PaginaPublica, q: Props['searchParams']): PaginaPublica {
         colorBanner: esHex(q.cb) ? q.cb : anterior.colorBanner,
         mostrarBanner: q.mb === '0' ? false : q.mb === '1' ? true : anterior.mostrarBanner,
         mostrarWhatsapp: q.mw === '0' ? false : q.mw === '1' ? true : anterior.mostrarWhatsapp,
+        catalogoLuxuryDestacado: q.lcd === '0' ? false : q.lcd === '1' ? true : anterior.catalogoLuxuryDestacado,
         mostrarMesero: q.lm === '0' ? false : q.lm === '1' ? true : anterior.mostrarMesero,
         fotoPlantilla: q.fp === undefined ? anterior.fotoPlantilla : esFotoPlantilla(q.fp) ? q.fp : undefined,
       },
@@ -79,6 +80,8 @@ export default async function Portada({ params, searchParams }: Props) {
   const conEscaparate = Boolean(p.secciones.catalogo || p.secciones.reservar);
   const esc = conEscaparate ? await escaparateDe(p.slug, p.secciones) : null;
   const hayItems = Boolean(esc && esc.items.length > 0);
+  const hayProductos = Boolean(esc?.items.some((item) => item.tipo === 'producto'));
+  const catalogoLuxuryDestacado = Boolean(esLuxury && p.secciones.catalogo && p.secciones.apariencia?.catalogoLuxuryDestacado && hayProductos);
   const fotoDestacada = esc?.items.find((item) => item.tipo === 'producto' && item.fotos[0])?.fotos[0];
   const primerServicio = esc?.items.find((item) => item.tipo !== 'producto');
   const servicioDestacado = primerServicio ? {
@@ -129,12 +132,13 @@ export default async function Portada({ params, searchParams }: Props) {
       puedePedir={Boolean(p.secciones.catalogo)}
       puedeReservar={Boolean(p.secciones.reservar)}
       plantillaLuxury={Boolean(esLuxury)}
+      catalogoLuxuryDestacado={catalogoLuxuryDestacado}
     />
   );
 
   return (
     <Marco pagina={p} portada>
-      <Cabecera pagina={p} fotoDestacada={fotoDestacada} servicioDestacado={servicioDestacado} catalogoDisponible={hayItems} />
+      <Cabecera pagina={p} fotoDestacada={fotoDestacada} servicioDestacado={servicioDestacado} catalogoDisponible={hayItems} catalogoProductosDisponible={catalogoLuxuryDestacado} />
       <div className="tp-hoja">
         {/* Enlaces relativos a propósito: valen igual en tienda o agenda (host/<negocio>) y en /tu-pagina/<negocio>. */}
         {envioPrimero && <div className="tp-acciones">{envio}</div>}

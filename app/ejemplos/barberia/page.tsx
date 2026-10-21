@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import LuxuryPortada from '@/modules/tu-pagina/publico/LuxuryPortada';
+import LuxuryCatalogoEjemplo from '@/modules/tu-pagina/publico/LuxuryCatalogoEjemplo';
 import { SERVICIOS_BARBERIA } from '@/modules/tu-pagina/dominio/barberia-ejemplo';
 import '@/modules/tu-pagina/estilos/publica.css';
 
@@ -19,6 +20,7 @@ export default function BarberiaLuxuryEjemplo() {
       inicioHref="/ejemplos/barberia"
       reservarHref="/ejemplos/barberia/reservar?servicio=0"
       catalogoDisponible
+      catalogoProductosDisponible
     />
     <main className="tp-hoja">
       <section className="tp-catalogo" id="catalogo" aria-label="Servicios de Atelier Norte">
@@ -34,6 +36,7 @@ export default function BarberiaLuxuryEjemplo() {
           </a>)}
         </div>
       </section>
+      <LuxuryCatalogoEjemplo />
     </main>
     <p className="tp-pie">Ejemplo de plantilla · Hecho con <a href="https://vendemias.com/?utm_source=tu-pagina">Vendemia</a></p>
   </div>;

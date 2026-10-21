@@ -61,7 +61,7 @@ export default function Marco({ pagina, children, vista, portada }: { pagina: Pa
   );
 }
 
-export function Cabecera({ pagina, fotoDestacada, servicioDestacado, catalogoDisponible = false }: { pagina: PaginaPublica; fotoDestacada?: string; servicioDestacado?: { nombre: string; descripcion?: string; precio?: string; foto?: string }; catalogoDisponible?: boolean }) {
+export function Cabecera({ pagina, fotoDestacada, servicioDestacado, catalogoDisponible = false, catalogoProductosDisponible = false }: { pagina: PaginaPublica; fotoDestacada?: string; servicioDestacado?: { nombre: string; descripcion?: string; precio?: string; foto?: string }; catalogoDisponible?: boolean; catalogoProductosDisponible?: boolean }) {
   const inicial = pagina.titulo.trim().charAt(0).toUpperCase() || '·';
   const a = pagina.secciones.apariencia ?? {};
   const tipo = tipoPagina(pagina.secciones);
@@ -80,6 +80,7 @@ export function Cabecera({ pagina, fotoDestacada, servicioDestacado, catalogoDis
       inicioHref={`./${pagina.slug}`}
       reservarHref={`./${pagina.slug}/reservar`}
       catalogoDisponible={catalogoDisponible}
+      catalogoProductosDisponible={catalogoProductosDisponible}
     />;
   }
   const heroCatalogo = catalogoDisponible && tipo === 'tienda' && a.plantillaActiva && a.mostrarBanner !== false;

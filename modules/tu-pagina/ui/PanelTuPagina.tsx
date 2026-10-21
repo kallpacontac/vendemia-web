@@ -49,6 +49,7 @@ const urlVista = (slug: string, valores: {
     ft: valores.apariencia.fondoTienda ?? '', cb: valores.apariencia.colorBanner ?? '',
     mb: valores.apariencia.mostrarBanner === false ? '0' : '1',
     mw: valores.apariencia.mostrarWhatsapp === false ? '0' : '1',
+    lcd: valores.apariencia.catalogoLuxuryDestacado === true ? '1' : '0',
     lm: valores.apariencia.mostrarMesero === true ? '1' : '0',
     fp: valores.apariencia.fotoPlantilla ?? '', sp: valores.sinPortada ? '1' : '0',
   });
@@ -434,6 +435,7 @@ function MiPagina({ companyId, nombre, pagina, agendaNube, alGuardar }: {
             <label className="tp-panel-check"><input type="checkbox" checked={apariencia.mostrarBanner !== false} onChange={(e) => setApariencia({ ...apariencia, mostrarBanner: e.target.checked })} /><span><b>Mostrar portada</b><small className="muted">Puede llevar imagen o un color de fondo.</small></span></label>
             {apariencia.mostrarBanner !== false && <label className="tp-panel-campo"><span>Título de la portada <small className="muted">(opcional)</small></span><input className="input" maxLength={80} value={apariencia.tituloBanner ?? ''} placeholder="Algo nuevo te espera" onChange={(e) => setApariencia({ ...apariencia, tituloBanner: e.target.value })} /></label>}
             <label className="tp-panel-check"><input type="checkbox" checked={apariencia.mostrarWhatsapp !== false} onChange={(e) => setApariencia({ ...apariencia, mostrarWhatsapp: e.target.checked })} /><span><b>Mostrar botón de WhatsApp</b><small className="muted">Los pedidos y reservas siguen enviando su aviso.</small></span></label>
+            {plantilla === 'luxury' && es === 'ambos' && <label className="tp-panel-check"><input type="checkbox" checked={apariencia.catalogoLuxuryDestacado === true} onChange={(e) => setApariencia({ ...apariencia, catalogoLuxuryDestacado: e.target.checked })} /><span><b>Mostrar botón «Ver catálogo» y carrusel de productos</b><small className="muted">Los servicios siguen primero. Si lo desactivas, tus productos conservan la vista actual.</small></span></label>}
             {es !== 'agenda' && <label className="tp-panel-check"><input type="checkbox" checked={apariencia.mostrarMesero === true} onChange={(e) => setApariencia({ ...apariencia, mostrarMesero: e.target.checked })} /><span><b>Mostrar «Llamar al mesero»</b><small className="muted">Para restaurantes y cafeterías. El cliente indica su mesa y abre WhatsApp con el aviso listo para enviar.</small></span></label>}
 
 
