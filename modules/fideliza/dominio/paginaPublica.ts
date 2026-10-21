@@ -246,17 +246,45 @@ export function htmlPagina(d: DatosPagina, o: { vista?: boolean; indexable?: boo
    * a «Ver mi tarjeta de puntos» y la abre. Sin JavaScript, sigue siendo el alta.
    */
   const scriptMiTarjeta = !o.vista && botones.includes('data-fz-alta=')
-    ? `<script>
+    ? `<style>
+.mt{position:fixed;left:12px;right:12px;bottom:14px;z-index:30;max-width:460px;margin:0 auto;display:flex;align-items:center;gap:12px;padding:14px 14px 14px 16px;border-radius:18px;background:#14110F;color:#fff;box-shadow:0 14px 40px rgba(0,0,0,.35);font:500 14px/1.35 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;transform:translateY(140%);transition:transform .35s cubic-bezier(.2,.8,.2,1)}
+.mt.vis{transform:none}
+.mt__tx{flex:1;min-width:0}.mt__tx b{display:block;font-size:15px}.mt__tx small{opacity:.8}
+.mt__ir{flex:none;padding:10px 14px;border-radius:12px;background:#fff;color:#14110F;font-weight:700;text-decoration:none}
+.mt__x{flex:none;width:30px;height:30px;border:0;border-radius:50%;background:rgba(255,255,255,.14);color:#fff;font-size:18px;line-height:1;cursor:pointer}
+@media (prefers-reduced-motion:reduce){.mt{transition:none}}
+</style><script>
 (function(){
-  document.querySelectorAll('a[data-fz-alta]').forEach(function(a){
-    try{
-      var t=localStorage.getItem('fz:card:'+a.getAttribute('data-fz-alta'));
-      if(!t||!/^[A-Za-z0-9_-]{30,64}$/.test(t))return;
-      a.href=new URL(a.href).origin+'/m/'+t;
-      var b=a.querySelector('.tx b');if(b)b.textContent='Ver mi tarjeta de puntos';
-      var s=a.querySelector('.tx small');if(s)s.textContent='Tus sellos y premios';
-    }catch(e){}
-  });
+  var a=document.querySelector('a[data-fz-alta]');if(!a)return;
+  var slug=a.getAttribute('data-fz-alta'),clave='fz:card:'+slug,t=null;
+  try{t=localStorage.getItem(clave);}catch(e){}
+  if(!t||!/^[A-Za-z0-9_-]{30,64}$/.test(t))return;
+  var url=new URL(a.href).origin+'/m/'+t;
+  function boton(){document.querySelectorAll('a[data-fz-alta]').forEach(function(x){x.href=url;var b=x.querySelector('.tx b');if(b)b.textContent='Ver mi tarjeta de puntos';var s=x.querySelector('.tx small');if(s)s.textContent='Tus sellos y premios';});}
+  function aviso(titulo,detalle){
+    var d=document.createElement('div');d.className='mt';d.setAttribute('role','status');
+    var tx=document.createElement('div');tx.className='mt__tx';
+    var b=document.createElement('b');b.textContent=titulo;var s=document.createElement('small');s.textContent=detalle;
+    tx.appendChild(b);tx.appendChild(s);
+    var ir=document.createElement('a');ir.className='mt__ir';ir.href=url;ir.textContent='Ver mi tarjeta';
+    var x=document.createElement('button');x.type='button';x.className='mt__x';x.setAttribute('aria-label','Cerrar');x.textContent='\u00d7';
+    x.addEventListener('click',function(){d.classList.remove('vis');setTimeout(function(){d.remove();},400);});
+    d.appendChild(tx);d.appendChild(ir);d.appendChild(x);document.body.appendChild(d);
+    requestAnimationFrame(function(){requestAnimationFrame(function(){d.classList.add('vis');});});
+  }
+  // Se comprueba que la tarjeta sigue existiendo (tras un reinicio, el teléfono la recuerda igual).
+  fetch('/api/fideliza/publico/tarjeta',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({accion:'ver',token:t})})
+    .then(function(r){return r.ok?r.json():null;})
+    .then(function(c){
+      if(!c){boton();return;}
+      if(c.status!=='ok'){try{localStorage.removeItem(clave);}catch(e){}return;}
+      boton();
+      var m=c.member||{},p=c.program||{},u=p.rule_type==='points'?'puntos':p.rule_type==='visits'?'visitas':'sellos';
+      var premios=m.rewards_available||0;
+      aviso(premios>0?'¡Tienes '+(premios>1?premios+' premios':'un premio')+' para canjear!':'Tu tarjeta de puntos',
+            premios>0?(p.reward||'Enséñala en caja'):(p.threshold?(m.balance||0)+' de '+p.threshold+' '+u+(p.reward?' · '+p.reward:''):'Tus '+u+' y premios'));
+    })
+    .catch(function(){boton();});
 })();
 </script>`
     : '';
