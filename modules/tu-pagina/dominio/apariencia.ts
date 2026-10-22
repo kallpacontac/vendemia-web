@@ -15,6 +15,8 @@ export interface AparienciaPagina {
   mostrarMesero?: boolean;
   /** Foto de ejemplo que hace de portada sin foto propia (dominio/fotos.ts). */
   fotoPlantilla?: string;
+  /** Foto opcional del segundo banner de Luxury; sin ella se usa la de la plantilla. */
+  portadaLuxurySecundaria?: string;
 }
 
 export const esHex = (v: unknown): v is string => typeof v === 'string' && /^#[0-9a-fA-F]{6}$/.test(v);

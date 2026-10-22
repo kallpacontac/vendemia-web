@@ -34,7 +34,7 @@ import type { BusinessMode } from '@/lib/supabase/types';
 import { EXPERIENCIAS, PLANTILLAS, PLANTILLAS_AGENDA, PLANTILLAS_AMBOS, plantillaPorDefecto, plantillaValida, tipoPagina, tipoPorDefecto as tipoPaginaPorDefecto, type PlantillaGuardada, type TipoPagina } from '@/modules/tu-pagina/dominio/plantillas';
 import { esHex, esUrlPublica, type AparienciaPagina } from '@/modules/tu-pagina/dominio/apariencia';
 import { urlEjemploPara } from '@/modules/tu-pagina/dominio/ejemplo';
-import { FOTOS_PLANTILLA, esFotoPlantilla, fotoPlantillaPorDefecto } from '@/modules/tu-pagina/dominio/fotos';
+import { FOTOS_PLANTILLA, FOTOS_SERVICIOS_LUXURY, esFotoPlantilla, fotoPlantillaPorDefecto } from '@/modules/tu-pagina/dominio/fotos';
 import { subirImagenMarca } from '@/modules/fideliza/cliente/imagenMarca';
 
 /**
@@ -221,7 +221,7 @@ function MiPagina({ companyId, nombre, pagina, agendaNube, alGuardar }: {
   const [logo, setLogo] = useState(pagina?.logo_url ?? '');
   const [portada, setPortada] = useState(pagina?.portada_url ?? '');
   const [apariencia, setApariencia] = useState<AparienciaPagina>(pagina?.secciones?.apariencia ?? {});
-  const [subiendo, setSubiendo] = useState<'logo' | 'portada' | null>(null);
+  const [subiendo, setSubiendo] = useState<'logo' | 'portada' | 'portadaLuxurySecundaria' | null>(null);
   const [libre, setLibre] = useState<boolean | null>(null);
   const [errorSlug, setErrorSlug] = useState(false);
   const [guardando, setGuardando] = useState(false);
@@ -247,12 +247,13 @@ function MiPagina({ companyId, nombre, pagina, agendaNube, alGuardar }: {
     };
   }, [slug, companyId, pagina?.slug]);
 
-  async function subirImagen(file: File, destino: 'logo' | 'portada') {
+  async function subirImagen(file: File, destino: 'logo' | 'portada' | 'portadaLuxurySecundaria') {
     setSubiendo(destino);
     try {
       const url = await subirImagenMarca(file, companyId, destino === 'logo' ? 'brand' : 'catalog');
       if (destino === 'logo') setLogo(url);
-      else setPortada(url);
+      else if (destino === 'portada') setPortada(url);
+      else setApariencia((actual) => ({ ...actual, portadaLuxurySecundaria: url }));
       avisar('Imagen lista. Guarda los cambios para publicarla.');
     } catch (e) {
       avisar(mensajeDe(e), 'error');
@@ -262,7 +263,7 @@ function MiPagina({ companyId, nombre, pagina, agendaNube, alGuardar }: {
   }
 
   async function guardar() {
-    if (!esUrlPublica(logo) || !esUrlPublica(portada)) { avisar('El logo y la portada deben tener un enlace público https.', 'error'); return; }
+    if (!esUrlPublica(logo) || !esUrlPublica(portada) || !esUrlPublica(apariencia.portadaLuxurySecundaria ?? '')) { avisar('Las fotos deben tener un enlace público https.', 'error'); return; }
     if (!/^\d{8,15}$/.test(telefonoNormal(whatsapp))) { avisar('Revisa el número de WhatsApp antes de publicar.', 'error'); return; }
     if (reclamos && !proveedorCompleto(proveedor)) { avisar('Para el Libro de Reclamaciones faltan tu razón social, un RUC válido (11 cifras) y la dirección.', 'error'); return; }
     const aparienciaPublicada = { ...apariencia, plantillaActiva: !pagina?.publicada || plantillaManual || apariencia.plantillaActiva === true };
@@ -421,7 +422,7 @@ function MiPagina({ companyId, nombre, pagina, agendaNube, alGuardar }: {
         <details className="tp-panel-avanzado">
           <summary>Personalizar más <small>Portada, secciones y colores específicos</small></summary>
           <div className="tp-panel-avanzado__contenido">
-            <div className="tp-panel-campo"><span>Imagen de portada <small className="muted">(opcional)</small></span>
+            <div className="tp-panel-campo"><span>{plantilla === 'luxury' ? 'Foto del primer banner' : 'Imagen de portada'} <small className="muted">(opcional)</small></span>
               <div className="tp-panel-imagen-acciones">
                 <label className="tp-panel-subir">{subiendo === 'portada' ? 'Subiendo…' : portada ? 'Cambiar portada' : 'Subir mi foto'}
                   <input type="file" accept="image/*" disabled={subiendo !== null} onChange={(e) => { const file = e.target.files?.[0]; if (file) void subirImagen(file, 'portada'); e.target.value = ''; }} />
@@ -432,8 +433,20 @@ function MiPagina({ companyId, nombre, pagina, agendaNube, alGuardar }: {
               {!portada && usaPlantilla && <FotosPlantilla tipo={es} plantilla={plantilla} elegida={apariencia.fotoPlantilla} alElegir={(fotoPlantilla) => setApariencia({ ...apariencia, fotoPlantilla })} />}
               <label className="tp-panel-enlace-imagen">O pega un enlace HTTPS<input className="input" type="url" value={portada} placeholder="https://…/portada.jpg" onChange={(e) => setPortada(e.target.value)} /></label>
             </div>
-            <label className="tp-panel-check"><input type="checkbox" checked={apariencia.mostrarBanner !== false} onChange={(e) => setApariencia({ ...apariencia, mostrarBanner: e.target.checked })} /><span><b>Mostrar portada</b><small className="muted">Puede llevar imagen o un color de fondo.</small></span></label>
-            {apariencia.mostrarBanner !== false && <label className="tp-panel-campo"><span>Título de la portada <small className="muted">(opcional)</small></span><input className="input" maxLength={80} value={apariencia.tituloBanner ?? ''} placeholder="Algo nuevo te espera" onChange={(e) => setApariencia({ ...apariencia, tituloBanner: e.target.value })} /></label>}
+            {plantilla === 'luxury' && es !== 'tienda' && <div className="tp-panel-campo">
+              <span>Foto del segundo banner <small className="muted">(opcional)</small></span>
+              <small className="muted">Si no subes una foto, se muestra la del diseño Luxury.</small>
+              <div className="tp-panel-imagen-acciones">
+                <label className="tp-panel-subir">{subiendo === 'portadaLuxurySecundaria' ? 'Subiendo…' : apariencia.portadaLuxurySecundaria ? 'Cambiar foto' : 'Subir mi foto'}
+                  <input type="file" accept="image/*" disabled={subiendo !== null} onChange={(e) => { const file = e.target.files?.[0]; if (file) void subirImagen(file, 'portadaLuxurySecundaria'); e.target.value = ''; }} />
+                </label>
+                {apariencia.portadaLuxurySecundaria && <button type="button" className="btn btn-sm btn-ghost" disabled={subiendo !== null} onClick={() => setApariencia({ ...apariencia, portadaLuxurySecundaria: '' })}>Usar foto de la plantilla</button>}
+              </div>
+              <img className="tp-panel-imagen tp-panel-imagen--portada" src={esUrlPublica(apariencia.portadaLuxurySecundaria ?? '') && apariencia.portadaLuxurySecundaria || FOTOS_SERVICIOS_LUXURY.corte} alt="Vista previa del segundo banner" />
+              <label className="tp-panel-enlace-imagen">O pega un enlace HTTPS<input className="input" type="url" value={apariencia.portadaLuxurySecundaria ?? ''} placeholder="https://…/segundo-banner.jpg" onChange={(e) => setApariencia({ ...apariencia, portadaLuxurySecundaria: e.target.value })} /></label>
+            </div>}
+            {plantilla !== 'luxury' && <label className="tp-panel-check"><input type="checkbox" checked={apariencia.mostrarBanner !== false} onChange={(e) => setApariencia({ ...apariencia, mostrarBanner: e.target.checked })} /><span><b>Mostrar portada</b><small className="muted">Puede llevar imagen o un color de fondo.</small></span></label>}
+            {(plantilla === 'luxury' || apariencia.mostrarBanner !== false) && <label className="tp-panel-campo"><span>{plantilla === 'luxury' ? 'Texto pequeño del primer banner' : 'Título de la portada'} <small className="muted">(opcional)</small></span><input className="input" maxLength={80} value={apariencia.tituloBanner ?? ''} placeholder={plantilla === 'luxury' ? 'BARBERÍA · LIMA' : 'Algo nuevo te espera'} onChange={(e) => setApariencia({ ...apariencia, tituloBanner: e.target.value })} /></label>}
             <label className="tp-panel-check"><input type="checkbox" checked={apariencia.mostrarWhatsapp !== false} onChange={(e) => setApariencia({ ...apariencia, mostrarWhatsapp: e.target.checked })} /><span><b>Mostrar botón de WhatsApp</b><small className="muted">Los pedidos y reservas siguen enviando su aviso.</small></span></label>
             {plantilla === 'luxury' && es === 'ambos' && <label className="tp-panel-check"><input type="checkbox" checked={apariencia.catalogoLuxuryDestacado === true} onChange={(e) => setApariencia({ ...apariencia, catalogoLuxuryDestacado: e.target.checked })} /><span><b>Mostrar botón «Ver catálogo» y carrusel de productos</b><small className="muted">Los servicios siguen primero. Si lo desactivas, tus productos conservan la vista actual.</small></span></label>}
             {es !== 'agenda' && <label className="tp-panel-check"><input type="checkbox" checked={apariencia.mostrarMesero === true} onChange={(e) => setApariencia({ ...apariencia, mostrarMesero: e.target.checked })} /><span><b>Mostrar «Llamar al mesero»</b><small className="muted">Para restaurantes y cafeterías. El cliente indica su mesa y abre WhatsApp con el aviso listo para enviar.</small></span></label>}
@@ -504,7 +517,7 @@ function MiPagina({ companyId, nombre, pagina, agendaNube, alGuardar }: {
 
 /** Sin foto propia, la portada lleva la de un ejemplo; al subir la suya, esta deja de salir. */
 function FotosPlantilla({ tipo, plantilla, elegida, alElegir }: { tipo: TipoPagina; plantilla: PlantillaGuardada; elegida?: string; alElegir: (id: string) => void }) {
-  const actual = esFotoPlantilla(elegida) ? elegida : fotoPlantillaPorDefecto(tipo, plantilla);
+  const actual = plantilla === 'luxury' && elegida === 'ninguna' ? fotoPlantillaPorDefecto(tipo, plantilla) : esFotoPlantilla(elegida) ? elegida : fotoPlantillaPorDefecto(tipo, plantilla);
   return (
     <div className="tp-panel-fotos">
       <small className="muted">Mientras no subas la tuya, tu portada usa una foto de la plantilla:</small>
@@ -515,10 +528,10 @@ function FotosPlantilla({ tipo, plantilla, elegida, alElegir }: { tipo: TipoPagi
             <small>{f.nombre}</small>
           </button>
         ))}
-        <button type="button" role="radio" aria-checked={actual === 'ninguna'} className={actual === 'ninguna' ? 'activa' : ''} onClick={() => alElegir('ninguna')}>
+        {plantilla !== 'luxury' && <button type="button" role="radio" aria-checked={actual === 'ninguna'} className={actual === 'ninguna' ? 'activa' : ''} onClick={() => alElegir('ninguna')}>
           <span className="tp-panel-fotos__color" aria-hidden="true" />
           <small>Solo color</small>
-        </button>
+        </button>}
       </div>
     </div>
   );

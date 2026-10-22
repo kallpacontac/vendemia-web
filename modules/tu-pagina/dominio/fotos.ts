@@ -41,7 +41,7 @@ export const fotoPlantillaPorDefecto = (tipo: TipoPagina, plantilla?: PlantillaG
 
 /** La elegida, o la del diseño si no se eligió ninguna; null = solo color. */
 export function fotoDePlantilla(a: AparienciaPagina, tipo: TipoPagina, plantilla?: PlantillaGuardada): string | null {
-  if (!a.plantillaActiva || a.fotoPlantilla === 'ninguna') return null;
-  const id = esFotoPlantilla(a.fotoPlantilla) ? a.fotoPlantilla : fotoPlantillaPorDefecto(tipo, plantilla);
+  if (!a.plantillaActiva || (a.fotoPlantilla === 'ninguna' && plantilla !== 'luxury')) return null;
+  const id = a.fotoPlantilla !== 'ninguna' && esFotoPlantilla(a.fotoPlantilla) ? a.fotoPlantilla : fotoPlantillaPorDefecto(tipo, plantilla);
   return FOTOS_PLANTILLA.find((f) => f.id === id)?.url ?? null;
 }

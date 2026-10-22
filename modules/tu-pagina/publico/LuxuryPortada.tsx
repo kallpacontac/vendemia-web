@@ -2,6 +2,9 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { ArrowDown, ArrowRight } from 'lucide-react';
+import { FOTOS_SERVICIOS_LUXURY } from '@/modules/tu-pagina/dominio/fotos';
+
+const PORTADA_LUXURY = '/assets/luxury-ejemplo/portada.webp';
 
 type ServicioDestacado = { nombre: string; descripcion?: string; precio?: string; foto?: string };
 
@@ -11,6 +14,7 @@ type Props = {
   etiqueta?: string;
   logo?: string;
   portada?: string;
+  portadaSecundaria?: string;
   servicio?: ServicioDestacado;
   inicioHref: string;
   reservarHref: string;
@@ -19,7 +23,7 @@ type Props = {
 };
 
 /** El desplazamiento vertical mueve la portada lateralmente y después continúa al catálogo. */
-export default function LuxuryPortada({ titulo, frase, etiqueta, logo, portada, servicio, inicioHref, reservarHref, catalogoDisponible, catalogoProductosDisponible = false }: Props) {
+export default function LuxuryPortada({ titulo, frase, etiqueta, logo, portada, portadaSecundaria, servicio, inicioHref, reservarHref, catalogoDisponible, catalogoProductosDisponible = false }: Props) {
   const marco = useRef<HTMLDivElement>(null);
   const pista = useRef<HTMLDivElement>(null);
   const progreso = useRef<HTMLSpanElement>(null);
@@ -37,12 +41,17 @@ export default function LuxuryPortada({ titulo, frase, etiqueta, logo, portada, 
       if (reducida.matches) {
         carril.style.transform = '';
         linea.style.transform = '';
+        zona.style.removeProperty('--tp-luxury-salida');
+        zona.style.removeProperty('--tp-luxury-entrada');
         return;
       }
       const recorrido = Math.max(1, zona.offsetHeight - window.innerHeight);
       const avance = Math.max(0, Math.min(1, -zona.getBoundingClientRect().top / recorrido));
-      carril.style.transform = `translate3d(${-avance * window.innerWidth}px, 0, 0)`;
+      zona.dataset.fase = avance <= 0 ? 'inicio' : avance >= 1 ? 'fin' : 'durante';
+      carril.style.transform = `translate3d(${-avance * zona.clientWidth}px, 0, 0)`;
       linea.style.transform = `scaleX(${avance})`;
+      zona.style.setProperty('--tp-luxury-salida', String(Math.max(0, 1 - avance * 2.8)));
+      zona.style.setProperty('--tp-luxury-entrada', String(Math.max(0, Math.min(1, (avance - .55) * 2.8))));
       setEscena((actual) => {
         const siguiente = avance > .52 ? 1 : 0;
         return actual === siguiente ? actual : siguiente;
@@ -75,10 +84,14 @@ export default function LuxuryPortada({ titulo, frase, etiqueta, logo, portada, 
     window.scrollTo({ top: zona.getBoundingClientRect().top + window.scrollY + (numero ? zona.offsetHeight - window.innerHeight : 0), behavior: 'smooth' });
   };
 
-  return <div className="tp-luxury-motion" ref={marco} data-escena={escena}>
+  const fondo = (foto: string | undefined, respaldo: string) => ({
+    backgroundImage: foto && foto !== respaldo ? `url("${foto}"), url("${respaldo}")` : `url("${respaldo}")`,
+  });
+
+  return <div className="tp-luxury-motion" ref={marco} data-escena={escena} data-fase="inicio">
     <div className="tp-luxury-motion__fijo">
       <div className="tp-luxury-motion__pista" ref={pista}>
-        <section className="tp-luxury-hero" aria-label={`Bienvenidos a ${titulo}`} style={portada ? { backgroundImage: `url("${portada}")` } : undefined}>
+        <section className="tp-luxury-hero" aria-label={`Bienvenidos a ${titulo}`} style={fondo(portada, PORTADA_LUXURY)}>
           <nav className="tp-luxury-nav" aria-label="Navegación de la página">
             <a className="tp-luxury-brand" href={inicioHref} aria-label={`${titulo}, inicio`}>
               {logo && <span className="tp-luxury-brand__logo" style={{ backgroundImage: `url("${logo}")` }} aria-hidden="true" />}
@@ -99,7 +112,7 @@ export default function LuxuryPortada({ titulo, frase, etiqueta, logo, portada, 
           </div>
           <button type="button" className="tp-luxury-motion__siguiente" onClick={() => irAEscena(1)}>Explorar <ArrowRight size={18} aria-hidden="true" /></button>
         </section>
-        <section className="tp-luxury-hero tp-luxury-hero--servicio" aria-label={servicio?.nombre || `Servicios de ${titulo}`} style={servicio?.foto ? { backgroundImage: `url("${servicio.foto}")` } : undefined}>
+        <section className="tp-luxury-hero tp-luxury-hero--servicio" aria-label={servicio?.nombre || `Servicios de ${titulo}`} style={fondo(portadaSecundaria, FOTOS_SERVICIOS_LUXURY.corte)}>
           <div className="tp-luxury-hero__panel">
             <span className="tp-luxury-hero__etiqueta">02 / 02 · SERVICIO DESTACADO</span>
             <h2>{servicio?.nombre || titulo}</h2>

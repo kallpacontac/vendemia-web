@@ -21,7 +21,7 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { SLUG } from '@/modules/tu-pagina/dominio/config';
 
-const ESTATICOS = /^\/(_next\/|favicon|icon|apple-icon|robots\.txt$)/;
+const ESTATICOS = /^\/(_next\/|assets\/|favicon|icon|apple-icon|robots\.txt$)/;
 const API_PUBLICA = /^\/api\/tu-pagina\/publico\//;
 
 const hostDe = (url: string | undefined) => {

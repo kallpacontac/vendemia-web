@@ -625,6 +625,7 @@ html:has(.tp[data-plantilla='luxury']), body:has(.tp[data-plantilla='luxury']) {
   --tp-fondo: #f6f4f1; --tp-papel: #fff; --tp-texto: #171717;
   --tp-suave: #67635f; --tp-borde: #dedbd7; --tp-campo: #fff;
   --tp-radio: 3px;
+  width: 100%; overflow-x: clip;
 }
 .tp[data-plantilla='luxury'] > .tp-hoja { max-width: 1460px; padding: 0 clamp(18px, 4.5vw, 72px) 56px; }
 .tp-luxury-hero {
@@ -648,18 +649,22 @@ html:has(.tp[data-plantilla='luxury']), body:has(.tp[data-plantilla='luxury']) {
 .tp-luxury-hero__cta--secundario { color: #fff !important; background: rgba(10,10,10,.25); border-color: rgba(255,255,255,.75); }
 .tp-luxury-hero__cta:hover { transform: translateY(-3px); filter: brightness(1.08); }
 .tp-luxury-hero a:focus-visible, .tp[data-plantilla='luxury'] button:focus-visible, .tp[data-plantilla='luxury'] a:focus-visible { outline: 3px solid var(--tp-color); outline-offset: 4px; }
-.tp-luxury-motion { position: relative; height: 200svh; }
-.tp-luxury-motion__fijo { position: sticky; top: 0; height: 100svh; overflow: hidden; background: #171717; }
-.tp-luxury-motion__pista { display: flex; width: 200vw; height: 100%; will-change: transform; }
-.tp-luxury-motion .tp-luxury-hero { width: 100vw; min-width: 100vw; min-height: 100svh; height: 100svh; flex: none; }
+.tp-luxury-motion { position: relative; width: 100%; height: 200dvh; }
+.tp-luxury-motion__fijo { position: sticky; top: 0; width: 100%; height: 100dvh; overflow: hidden; background: #171717; touch-action: pan-y; }
+.tp-luxury-motion[data-fase='durante'] .tp-luxury-motion__fijo { position: fixed; left: 0; right: 0; top: 0; width: 100%; }
+.tp-luxury-motion[data-fase='fin'] .tp-luxury-motion__fijo { position: absolute; top: auto; bottom: 0; }
+.tp-luxury-motion__pista { display: flex; width: 200%; height: 100%; will-change: transform; }
+.tp-luxury-motion .tp-luxury-hero { width: 50%; min-width: 50%; min-height: 100dvh; height: 100dvh; flex: none; }
+.tp-luxury-motion .tp-luxury-nav, .tp-luxury-motion .tp-luxury-hero__contenido, .tp-luxury-motion .tp-luxury-hero:not(.tp-luxury-hero--servicio) .tp-luxury-motion__siguiente { opacity: var(--tp-luxury-salida, 1); }
 .tp-luxury-motion__progreso { position: absolute; z-index: 5; top: 0; left: 0; width: 100%; height: 4px; background: var(--tp-color); transform: scaleX(0); transform-origin: left; pointer-events: none; }
 .tp-luxury-nav { position: relative; z-index: 2; }
 .tp-luxury-nav__paso { margin-left: auto; color: rgba(255,255,255,.8); font-size: 12px; letter-spacing: .1em; }
 .tp-luxury-motion__siguiente { position: absolute; right: clamp(20px, 5vw, 80px); bottom: clamp(20px, 4vw, 54px); display: inline-flex; align-items: center; gap: 10px; min-height: 44px; padding: 8px 0; border: 0; border-bottom: 1px solid rgba(255,255,255,.8); background: transparent; color: #fff !important; cursor: pointer; font: inherit; font-size: 13px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; text-decoration: none; }
 .tp-luxury-hero--servicio { background-position: center; }
 .tp-luxury-hero--servicio::before { background: linear-gradient(270deg, rgba(0,0,0,.84), rgba(0,0,0,.18) 75%), linear-gradient(0deg, rgba(0,0,0,.4), transparent 40%); }
-.tp-luxury-hero__panel { width: min(490px, 44vw); margin: auto 0 auto auto; padding: 28px 0; opacity: .4; transform: translateY(22px); transition: opacity .55s ease, transform .55s ease; }
-.tp-luxury-motion[data-escena='1'] .tp-luxury-hero__panel { opacity: 1; transform: translateY(0); }
+.tp-luxury-hero__panel { width: min(490px, 44vw); margin: auto 0 auto auto; padding: 28px 0; opacity: var(--tp-luxury-entrada, 0); transform: translateY(22px); transition: transform .55s ease; }
+.tp-luxury-motion[data-escena='1'] .tp-luxury-hero__panel { transform: translateY(0); }
+.tp-luxury-hero--servicio .tp-luxury-motion__siguiente { opacity: var(--tp-luxury-entrada, 0); }
 .tp-luxury-hero__panel h2 { margin: 0; font: 500 clamp(58px, 7vw, 116px)/.94 Georgia, 'Times New Roman', serif; letter-spacing: -.06em; }
 .tp-luxury-hero__panel p { max-width: 450px; margin: 25px 0 30px; color: rgba(255,255,255,.86); font-size: clamp(16px, 1.5vw, 20px); }
 .tp-luxury-hero__panel-pie { display: flex; flex-wrap: wrap; align-items: center; gap: 18px; }
@@ -667,10 +672,11 @@ html:has(.tp[data-plantilla='luxury']), body:has(.tp[data-plantilla='luxury']) {
 .tp-luxury-hero__panel-pie a { display: inline-flex; align-items: center; gap: 10px; min-height: 52px; padding: 12px 20px; background: var(--tp-color); color: var(--tp-tinta); text-decoration: none; font-weight: 750; }
 @media (prefers-reduced-motion: reduce) {
   .tp-luxury-motion { height: auto; }
-  .tp-luxury-motion__fijo { position: relative; height: auto; }
+  .tp-luxury-motion__fijo, .tp-luxury-motion[data-fase='durante'] .tp-luxury-motion__fijo, .tp-luxury-motion[data-fase='fin'] .tp-luxury-motion__fijo { position: relative; inset: auto; height: auto; }
   .tp-luxury-motion__pista { width: 100%; transform: none !important; }
   .tp-luxury-motion .tp-luxury-hero { width: 100%; min-width: 100%; min-height: min(760px, 90svh); height: auto; }
   .tp-luxury-motion .tp-luxury-hero--servicio, .tp-luxury-motion__progreso, .tp-luxury-motion__siguiente { display: none; }
+  .tp-luxury-motion .tp-luxury-nav, .tp-luxury-motion .tp-luxury-hero__contenido { opacity: 1; }
 }
 .tp[data-plantilla='luxury'] .tp-catalogo { margin: 0; padding: 52px 0 36px; }
 .tp[data-plantilla='luxury'] .tp-catalogo__busqueda { max-width: 500px; margin-bottom: 24px; border-radius: 2px; }
@@ -727,7 +733,7 @@ html:has(.tp[data-plantilla='luxury']), body:has(.tp[data-plantilla='luxury']) {
   .tp-luxury-motion .tp-luxury-hero { padding: 22px 22px 74px; }
   .tp-luxury-nav__paso { display: none; }
   .tp-luxury-motion__siguiente { right: 22px; bottom: 18px; font-size: 11px; }
-  .tp-luxury-hero__panel { width: 100%; margin: auto 0 35px; opacity: 1; transform: none; }
+  .tp-luxury-hero__panel { width: 100%; margin: auto 0 35px; opacity: var(--tp-luxury-entrada, 0); transform: none; }
   .tp-luxury-hero__panel h2 { font-size: clamp(52px, 13vw, 78px); }
   .tp-luxury-hero__panel p { margin: 18px 0 22px; }
   .tp-luxury-hero__panel-pie a { min-height: 48px; }

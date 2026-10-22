@@ -75,7 +75,8 @@ export function Cabecera({ pagina, fotoDestacada, servicioDestacado, catalogoDis
       frase={pagina.frase}
       etiqueta={a.tituloBanner}
       logo={pagina.logo_url || undefined}
-      portada={a.mostrarBanner !== false ? fotoPortada || undefined : undefined}
+      portada={fotoPortada || undefined}
+      portadaSecundaria={a.portadaLuxurySecundaria}
       servicio={servicioDestacado}
       inicioHref={`./${pagina.slug}`}
       reservarHref={`./${pagina.slug}/reservar`}
