@@ -356,6 +356,12 @@ export interface RespuestaAsistente {
   /** Si se mandó un audio: lo que Mia entendió. */
   transcripcion: string | null;
   audio: AudioAsistente;
+  /**
+   * Mia redactó un mensaje para un cliente y lo dejó POR APROBAR en su chat
+   * (tabla `borradores`, ver lib/panel/borradores.ts). La respuesta solo trae
+   * a quién, para el botón «Ver el chat de …»: la tarjeta vive en Mensajes.
+   */
+  borrador?: { id: string; lead_id: string; nombre: string } | null;
 }
 
 export interface ResultadoAddMember {

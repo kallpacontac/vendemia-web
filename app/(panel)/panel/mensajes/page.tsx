@@ -40,6 +40,8 @@ import { Burbuja } from '@/components/panel/Burbuja';
 import { BotonAdjunto, ChipAdjunto, useAdjunto } from '@/components/panel/SelectorAdjunto';
 import { useEnviarMensaje } from '@/components/panel/useEnviarMensaje';
 import { useSondeo } from '@/components/panel/useSondeo';
+import { TarjetaBorrador } from '@/components/panel/TarjetaBorrador';
+import { getBorradores, porCliente } from '@/lib/panel/borradores';
 import {
   escucharMensajes,
   getCitas,
@@ -64,7 +66,7 @@ import { esAppointmentFamily } from '@/lib/panel/modo';
 import { cap, vocabulario, type Vocabulario } from '@/lib/panel/vocabulario';
 import type { MovimientoRow } from '@/lib/supabase/types';
 
-type Filtro = 'all' | 'hot' | 'new' | 'manual';
+type Filtro = 'all' | 'hot' | 'new' | 'manual' | 'por_aprobar';
 
 /**
  * Cada cuánto se mira si hay algo nuevo, con la pestaña a la vista (ver
@@ -122,7 +124,7 @@ export default function MensajesPage() {
 }
 
 function Mensajes() {
-  const { companyId, compania } = useSesion();
+  const { companyId, compania, session } = useSesion();
   const conCitas = esAppointmentFamily(compania?.business_mode);
   /** «cita» en una barbería, «reserva»/«clase»/«alumno» en una academia. Ver lib/panel/vocabulario. */
   const v = vocabulario(compania?.business_mode);
@@ -130,7 +132,8 @@ function Mensajes() {
   const params = useSearchParams();
   const leadDeLaUrl = params.get('lead');
 
-  const [filtro, setFiltro] = useState<Filtro>('all');
+  // «?filtro=por_aprobar»: el aviso al celular de «Mia preparó 3 mensajes».
+  const [filtro, setFiltro] = useState<Filtro>(params.get('filtro') === 'por_aprobar' ? 'por_aprobar' : 'all');
   const [busqueda, setBusqueda] = useState('');
   const [activoId, setActivoId] = useState<string | null>(null);
   /**
@@ -210,6 +213,22 @@ function Mensajes() {
     releer: releerBandeja,
   } = useCargar(async () => (companyId ? getConversaciones(companyId) : null), [companyId]);
   useSondeo(releerBandeja, SONDEO_BANDEJA_MS, !!companyId);
+
+  /**
+   * Los mensajes que Mia redactó y esperan aprobación (lib/panel/borradores).
+   * Al ritmo de la bandeja: cambian cuando Mia propone uno o cuando el bot
+   * termina de enviar el aprobado. Un empleado recibe la lista vacía (RLS).
+   */
+  const { datos: borradores, releer: releerBorradores } = useCargar(
+    async () => (companyId ? getBorradores(companyId) : null),
+    [companyId],
+  );
+  useSondeo(releerBorradores, SONDEO_BANDEJA_MS, !!companyId);
+  const borradorDe = useMemo(() => porCliente(borradores ?? []), [borradores]);
+  const porAprobar = useMemo(
+    () => (borradores ?? []).filter((b) => b.estado === 'por_aprobar').length,
+    [borradores],
+  );
 
   const leads = useMemo(() => bandeja ?? [], [bandeja]);
 
@@ -310,10 +329,13 @@ function Mensajes() {
   useEffect(() => {
     pegadoAbajo.current = true;
   }, [activoId]);
+  // También cuando aparece o cambia la tarjeta del borrador: va al final.
+  const borradorActivo = activoId ? borradorDe.get(activoId) : undefined;
+  const claveBorrador = borradorActivo ? `${borradorActivo.id}:${borradorActivo.estado}` : '';
   useEffect(() => {
     const c = cajaMsgs.current;
     if (c && pegadoAbajo.current) c.scrollTop = c.scrollHeight;
-  }, [mensajes]);
+  }, [mensajes, claveBorrador]);
 
   /* ── Lo que ha dejado este cliente ──────────────────────────────────────
      Se pide por lead y no de una vez para toda la empresa: esto es una
@@ -343,11 +365,12 @@ function Mensajes() {
       if (filtro === 'hot' && l.intent !== 'purchase_ready') return false;
       if (filtro === 'new' && l.status !== 'new') return false;
       if (filtro === 'manual' && (botPendiente[l.id] ?? l.botActivo)) return false;
+      if (filtro === 'por_aprobar' && borradorDe.get(l.id)?.estado !== 'por_aprobar') return false;
       if (q && !(l.name ?? '').toLowerCase().includes(q) && !l.ultimoMensaje.toLowerCase().includes(q))
         return false;
       return true;
     });
-  }, [leads, filtro, busqueda, botPendiente]);
+  }, [leads, filtro, busqueda, botPendiente, borradorDe]);
 
   const citasDelLead = useMemo(
     () => (datos?.citas ?? []).filter((c) => c.lead_id === activoId),
@@ -480,6 +503,10 @@ function Mensajes() {
                 ['hot', 'Listos'],
                 ['new', 'Nuevos'],
                 ['manual', 'Manual'],
+                // Solo aparece si hay algo que aprobar (o si se llegó con el filtro puesto).
+                ...(porAprobar || filtro === 'por_aprobar'
+                  ? ([['por_aprobar', `Por aprobar${porAprobar ? ` (${porAprobar})` : ''}`]] as [Filtro, string][])
+                  : []),
               ] as [Filtro, string][]
             ).map(([k, txt]) => (
               <button
@@ -496,7 +523,11 @@ function Mensajes() {
           <div className="convos">
             {lista.length === 0 && (
               <p className="vacio">
-                {leads.length === 0 ? 'Todavía no hay conversaciones.' : 'Sin resultados.'}
+                {leads.length === 0
+                  ? 'Todavía no hay conversaciones.'
+                  : filtro === 'por_aprobar'
+                    ? 'No hay mensajes de Mia por aprobar.'
+                    : 'Sin resultados.'}
               </p>
             )}
             {lista.map((l) => {
@@ -524,6 +555,11 @@ function Mensajes() {
                     <span className={`badge-pill ${li.cls}`} style={{ marginTop: 5 }}>
                       {li.short}
                     </span>
+                    {borradorDe.get(l.id)?.estado === 'por_aprobar' && (
+                      <span className="badge-pill badge-aprobar" style={{ marginTop: 5, marginLeft: 4 }}>
+                        Por aprobar
+                      </span>
+                    )}
                   </div>
                 </div>
               );
@@ -589,6 +625,13 @@ function Mensajes() {
             {mensajes.map((m) => (
               <Burbuja key={m.id} m={m} />
             ))}
+            {borradorActivo && !cargandoChat && (
+              <TarjetaBorrador
+                borrador={borradorActivo}
+                yo={session?.user?.id ?? null}
+                alCambiar={releerBorradores}
+              />
+            )}
           </div>
 
           {adjunto && !botActivo && (

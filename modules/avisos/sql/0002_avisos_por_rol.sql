@@ -35,11 +35,13 @@ begin
 end $$;
 
 -- 1 · Quién recibe avisos
+-- `memberships.auth_user_id` es TEXTO (0001 del bot) y las suscripciones guardan un uuid:
+-- sin el ::text, Postgres no crea la función («operator does not exist: text = uuid»).
 create or replace function public.avisos_recibe(p_user uuid, p_company text)
 returns boolean language sql stable security definer set search_path = public as $$
     select exists (
         select 1 from public.memberships m
-         where m.auth_user_id = p_user and m.company_id = p_company
+         where m.auth_user_id = p_user::text and m.company_id = p_company
            and m.role in ('owner', 'admin')
     );
 $$;

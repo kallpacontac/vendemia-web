@@ -119,3 +119,4 @@
   .asis-tarjeta{margin-top:2vh;padding:24px 20px 20px}
 }
 @media(prefers-reduced-motion:reduce){.asis__grabando i{animation:none}}
+.asis-b__borrador{display:inline-flex;align-items:center;gap:6px;margin-top:8px;text-decoration:none}

@@ -31,7 +31,7 @@ import { enModoApp, plataforma, useInstalarAndroid } from './Instalable';
 import { supabase } from '@/lib/supabase/client';
 import { activarAvisos, enviarPrueba, registroPanel, soportaAvisos, suscripcionActual } from '@/lib/panel/suscribirAvisos';
 
-type Tipo = 'pago' | 'reserva' | 'whatsapp' | 'plan' | 'persona';
+type Tipo = 'pago' | 'reserva' | 'whatsapp' | 'plan' | 'persona' | 'stock' | 'por_aprobar';
 
 const TIPOS: { id: Tipo; titulo: string; detalle: string }[] = [
   { id: 'pago', titulo: 'Pagos', detalle: 'Un comprobante por revisar, o un pago que Mia verificó.' },
@@ -39,9 +39,23 @@ const TIPOS: { id: Tipo; titulo: string; detalle: string }[] = [
   { id: 'whatsapp', titulo: 'WhatsApp desconectado', detalle: 'Si Mia deja de responder porque se cayó el número.' },
   { id: 'plan', titulo: 'Tu plan', detalle: 'Al 80 % y al 100 % de las conversaciones del mes.' },
   { id: 'persona', titulo: 'Cliente pide una persona', detalle: 'Cuando Mia deriva una conversación a tu equipo.' },
+  { id: 'por_aprobar', titulo: 'Mensajes por aprobar', detalle: 'Cuando Mia prepara mensajes a clientes para que los revises.' },
+  {
+    id: 'stock',
+    titulo: 'Stock que le pediste vigilar',
+    detalle: 'Solo los productos de los que le pediste a Mia que te avise, y solo a ti.',
+  },
 ];
 
-const PREFS_DEFECTO: Record<Tipo, boolean> = { pago: true, reserva: true, whatsapp: true, plan: true, persona: false };
+const PREFS_DEFECTO: Record<Tipo, boolean> = {
+  pago: true,
+  reserva: true,
+  whatsapp: true,
+  plan: true,
+  persona: false,
+  stock: true,
+  por_aprobar: true,
+};
 
 interface Fila {
   id: string;

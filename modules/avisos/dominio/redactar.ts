@@ -17,7 +17,7 @@
 import { vocabulario } from '@/lib/panel/vocabulario';
 import type { BusinessMode } from '@/lib/supabase/types';
 
-export type TipoAviso = 'pago' | 'reserva' | 'whatsapp' | 'plan' | 'persona';
+export type TipoAviso = 'pago' | 'reserva' | 'whatsapp' | 'plan' | 'persona' | 'stock' | 'por_aprobar';
 
 export interface Destino {
   id: string;
@@ -174,6 +174,44 @@ export function redactar(eventos: EventoPendiente[]): Mensaje {
             url: '/panel/mensajes',
             tag,
           };
+    case 'stock': {
+      // Solo llega a quien pidió el aviso (datos.para, 0003). Al tocarlo, Mia con la
+      // pregunta de cuánto pedir lista para enviar: no se envía sola.
+      const nombre = (x: EventoPendiente) =>
+        [x.datos.producto, x.datos.opcion].filter((t) => typeof t === 'string' && t).join(' · ');
+      if (n === 1) {
+        const quedan = Number(e.datos.quedan);
+        const pregunta = `¿Cuánto pido del producto ${String(e.datos.producto ?? '')}?`;
+        return {
+          title: `${prefijo}${nombre(e)}: ${quedan === 0 ? 'se agotó' : `quedan ${quedan}`}`,
+          body: `Llegó al mínimo que pediste (${Number(e.datos.minimo)}). Toca para ver cuánto pedir.`,
+          url: `/panel/asistente?pregunta=${encodeURIComponent(pregunta)}`,
+          // Por producto: el aviso de la gorra no tapa en la bandeja al del polo.
+          tag: `${tag}:${String(e.datos.catalog_id ?? '')}:${String(e.datos.opcion ?? '')}`,
+        };
+      }
+      const nombres = eventos.map(nombre).filter(Boolean);
+      return {
+        title: `${prefijo}${n} productos llegaron a su mínimo`,
+        body: `${nombres.slice(0, 3).join(', ')}${nombres.length > 3 ? ' y más' : ''}.`,
+        url: `/panel/asistente?pregunta=${encodeURIComponent('¿Qué tengo que comprar esta semana?')}`,
+        tag,
+      };
+    }
+    case 'por_aprobar':
+      return n === 1
+        ? {
+            title: `${prefijo}Mia preparó un mensaje para ${e.cliente || 'un cliente'}`,
+            body: 'Revísalo en su chat y apruébalo para que salga.',
+            url: lead ? `/panel/mensajes?lead=${lead}` : '/panel/mensajes?filtro=por_aprobar',
+            tag,
+          }
+        : {
+            title: `${prefijo}Mia preparó ${n} mensajes para aprobar`,
+            body: 'Cada uno está en el chat de su cliente. Nada sale hasta que lo apruebes.',
+            url: '/panel/mensajes?filtro=por_aprobar',
+            tag,
+          };
   }
 }
 
@@ -186,6 +224,8 @@ const NOMBRE_RESUMEN: Record<TipoAviso, (n: number, r: Resumen) => string> = {
   persona: (n) => `${n} ${n === 1 ? 'cliente pidió' : 'clientes pidieron'} una persona`,
   whatsapp: () => 'WhatsApp se desconectó',
   plan: () => 'aviso del plan',
+  stock: (n) => `${n} ${n === 1 ? 'producto llegó' : 'productos llegaron'} a su mínimo`,
+  por_aprobar: (n) => `${n} ${n === 1 ? 'mensaje' : 'mensajes'} de Mia por aprobar`,
 };
 
 /** El resumen de la mañana: UN aviso con lo que pasó durante el silencio. */

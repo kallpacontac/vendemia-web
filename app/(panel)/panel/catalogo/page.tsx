@@ -72,6 +72,7 @@ import {
 } from 'lucide-react';
 import Topbar from '@/components/panel/Topbar';
 import { useSesion } from '@/components/panel/Sesion';
+import { AvisoStock } from '@/components/panel/AvisoStock';
 import { useLoQueHaceLaPagina, type LoQueHaceLaPagina } from '@/modules/tu-pagina/ui/secciones';
 import Mayorista from '@/modules/tu-pagina/ui/Mayorista';
 import { soloLeeLoDelDueno } from '@/lib/panel/roles';
@@ -963,6 +964,8 @@ function Ficha({
                     Vacío no es lo mismo que 0: vacío es «no lo controlo», 0 es «agotado». Con{' '}
                     {STOCK_URGENTE} o menos, Mia mete prisa.
                   </small>
+                  {/* Solo con el stock ya guardado: un aviso sobre un producto sin control no tiene cuándo saltar. */}
+                  {item.stock != null && <AvisoStock catalogId={item.id} stock={item.stock} />}
                 </div>
                 <div>
                   <label className="field-label">Descuento máximo por unidad</label>

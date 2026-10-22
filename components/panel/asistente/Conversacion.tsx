@@ -34,7 +34,8 @@
  * descartar sin dejar nada detrás.
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ArrowUp, Mic, Trash2, Volume2, X } from 'lucide-react';
+import Link from 'next/link';
+import { ArrowUp, MessageSquare, Mic, Trash2, Volume2, X } from 'lucide-react';
 import {
   ESPERA_EN_CURSO_MS,
   MAX_AUDIO_BYTES,
@@ -74,7 +75,15 @@ type Burbuja =
       /** Lo que Mia entendió del audio. */
       transcripcion: string | null;
     }
-  | { id: number; de: 'mia'; texto: string; voz: Voz; aviso: boolean };
+  | {
+      id: number;
+      de: 'mia';
+      texto: string;
+      voz: Voz;
+      aviso: boolean;
+      /** Mia dejó un mensaje por aprobar en el chat de este cliente. */
+      borrador?: { lead_id: string; nombre: string } | null;
+    };
 
 let siguienteId = 1;
 
@@ -149,10 +158,28 @@ export default function Conversacion({
     [cambiar],
   );
 
-  const diceMia = useCallback((texto: string, aviso = false, voz: Voz = null): number => {
-    const id = siguienteId++;
-    setBurbujas((l) => [...l, { id, de: 'mia', texto, voz, aviso }]);
-    return id;
+  const diceMia = useCallback(
+    (texto: string, aviso = false, voz: Voz = null, borrador: { lead_id: string; nombre: string } | null = null): number => {
+      const id = siguienteId++;
+      setBurbujas((l) => [...l, { id, de: 'mia', texto, voz, aviso, borrador }]);
+      return id;
+    },
+    [],
+  );
+
+  /**
+   * «?pregunta=…»: llega desde un aviso al celular («Polo negro: quedan 5» →
+   * «¿Cuánto pido del producto Polo negro?»). Se deja ESCRITA en la caja, no se
+   * envía: preguntar sigue siendo decisión de quien está delante. Y se quita de
+   * la URL, para que recargar no la vuelva a poner.
+   */
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    const q = url.searchParams.get('pregunta');
+    if (!q) return;
+    setBorrador(q.slice(0, 300));
+    url.searchParams.delete('pregunta');
+    window.history.replaceState(null, '', url.pathname + url.search + url.hash);
   }, []);
 
   /**
@@ -246,7 +273,7 @@ export default function Conversacion({
           const { r } = d;
           if (r.transcripcion) cambiar(mio, (b) => (b.de === 'yo' ? { ...b, transcripcion: r.transcripcion } : b));
           const espera = r.audio !== null && r.audio.estado !== 'sin_audio';
-          const id = diceMia(r.respuesta, false, espera ? { estado: 'generando' } : null);
+          const id = diceMia(r.respuesta, false, espera ? { estado: 'generando' } : null, r.borrador ?? null);
           // Solo si acaba de HABLAR: espera que le hablen. Si escribió, el
           // audio queda listo para pulsar: puede estar delante de clientes.
           void traerVoz(id, r.id, r.audio, 'audio' in p);
@@ -377,6 +404,11 @@ export default function Conversacion({
           ) : (
             <div key={b.id} className={`asis-b asis-b--mia ${b.aviso ? 'asis-b--aviso' : ''}`}>
               <TextoMia texto={b.texto} />
+              {b.borrador && (
+                <Link className="btn btn-ghost btn-sm asis-b__borrador" href={`/panel/mensajes?lead=${encodeURIComponent(b.borrador.lead_id)}`}>
+                  <MessageSquare size={14} /> Ver el chat de {b.borrador.nombre || 'este cliente'}
+                </Link>
+              )}
               {b.voz?.estado === 'generando' && (
                 <span className="asis-b__preparando">
                   <Volume2 size={14} /> preparando el audio…
