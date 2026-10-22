@@ -355,7 +355,14 @@ function MiPagina({ companyId, nombre, pagina, agendaNube, alGuardar }: {
             <div className="tp-panel-plantillas" role="radiogroup" aria-label="Diseño de la página">
               {plantillas.map((opcion) => (
                 <div key={opcion.id} className={`tp-panel-plantilla${plantilla === opcion.id ? ' activa' : ''}`}>
-                  <button type="button" role="radio" aria-checked={plantilla === opcion.id} onClick={() => { setPlantilla(opcion.id); setPlantillaManual(true); }}>
+                  <button type="button" role="radio" aria-checked={plantilla === opcion.id} onClick={() => {
+                    if (opcion.id === 'luxury' && plantilla !== 'luxury') {
+                      setApariencia((actual) => ({ ...actual, fotoPlantilla: 'barberia' }));
+                      if (!pagina?.publicada && color === '#006BFF') setColor('#D0AB75');
+                    }
+                    setPlantilla(opcion.id);
+                    setPlantillaManual(true);
+                  }}>
                     <span className={`tp-panel-plantilla__dibujo tp-panel-plantilla__dibujo--${opcion.id}`} style={{ ['--c' as string]: color }} aria-hidden="true"><i /><i /><i /><i /></span>
                     <b>{opcion.nombre}</b><small>{opcion.describe}</small>
                   </button>

@@ -26,6 +26,7 @@ export default async function PaginaReservar({ params }: Props) {
   const esc = await escaparateDe(p.slug, p.secciones);
   const reservables = (esc?.items ?? []).filter((i) => i.tipo !== 'producto');
   const soloGrupos = reservables.length > 0 && reservables.every((i) => i.tipo === 'grupo');
+  const luxury = p.secciones.apariencia?.plantillaActiva && p.plantilla === 'luxury';
 
   return (
     <Marco pagina={p} vista="agenda">
@@ -33,9 +34,10 @@ export default async function PaginaReservar({ params }: Props) {
         <a className="tp-volver" href={`../${p.slug}`}>
           <ChevronLeft size={18} aria-hidden="true" /> {p.titulo}
         </a>
-        <h1 className="tp-h1">{soloGrupos ? 'Separar mi cupo' : 'Reservar una cita'}</h1>
+        {luxury && <span className="tp-reserva-eyebrow">AGENDA · {p.titulo}</span>}
+        <h1 className="tp-h1">{luxury ? 'Elige tu momento' : soloGrupos ? 'Separar mi cupo' : 'Reservar una cita'}</h1>
         <p className="tp-lead">
-          {soloGrupos ? 'Elige tu horario y separa tu lugar.' : 'Elige el servicio, el día y la hora.'} Al terminar, nos avisas por WhatsApp con todo ya escrito.
+          {luxury ? 'Escoge un servicio y encuentra una hora que te venga bien. ' : soloGrupos ? 'Elige tu horario y separa tu lugar. ' : 'Elige el servicio, el día y la hora. '}Al terminar, nos avisas por WhatsApp con todo ya escrito.
         </p>
         {esc && reservables.length > 0 ? (
           <Escaparate
@@ -46,7 +48,7 @@ export default async function PaginaReservar({ params }: Props) {
             puedePedir={false}
             puedeReservar
             solo="reservas"
-            plantillaLuxury={p.secciones.apariencia?.plantillaActiva && p.plantilla === 'luxury'}
+            plantillaLuxury={luxury}
           />
         ) : (
           <p className="tp-vacio">Por ahora no hay nada para reservar aquí. Escríbenos por WhatsApp.</p>

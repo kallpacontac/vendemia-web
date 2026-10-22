@@ -45,9 +45,9 @@ export default function LuxuryPortada({ titulo, frase, etiqueta, logo, portada, 
         zona.style.removeProperty('--tp-luxury-entrada');
         return;
       }
-      const recorrido = Math.max(1, zona.offsetHeight - window.innerHeight);
-      const avance = Math.max(0, Math.min(1, -zona.getBoundingClientRect().top / recorrido));
-      zona.dataset.fase = avance <= 0 ? 'inicio' : avance >= 1 ? 'fin' : 'durante';
+      const inicio = zona.getBoundingClientRect().top + window.scrollY;
+      const recorrido = Math.max(1, zona.offsetHeight - (zona.firstElementChild as HTMLElement).clientHeight);
+      const avance = Math.max(0, Math.min(1, (window.scrollY - inicio) / recorrido));
       carril.style.transform = `translate3d(${-avance * zona.clientWidth}px, 0, 0)`;
       linea.style.transform = `scaleX(${avance})`;
       zona.style.setProperty('--tp-luxury-salida', String(Math.max(0, 1 - avance * 2.8)));
@@ -81,14 +81,15 @@ export default function LuxuryPortada({ titulo, frase, etiqueta, logo, portada, 
     }
     const zona = marco.current;
     if (!zona) return;
-    window.scrollTo({ top: zona.getBoundingClientRect().top + window.scrollY + (numero ? zona.offsetHeight - window.innerHeight : 0), behavior: 'smooth' });
+    const altoVisible = (zona.firstElementChild as HTMLElement).clientHeight;
+    window.scrollTo({ top: zona.getBoundingClientRect().top + window.scrollY + (numero ? zona.offsetHeight - altoVisible : 0), behavior: 'smooth' });
   };
 
   const fondo = (foto: string | undefined, respaldo: string) => ({
     backgroundImage: foto && foto !== respaldo ? `url("${foto}"), url("${respaldo}")` : `url("${respaldo}")`,
   });
 
-  return <div className="tp-luxury-motion" ref={marco} data-escena={escena} data-fase="inicio">
+  return <div className="tp-luxury-motion" ref={marco} data-escena={escena}>
     <div className="tp-luxury-motion__fijo">
       <div className="tp-luxury-motion__pista" ref={pista}>
         <section className="tp-luxury-hero" aria-label={`Bienvenidos a ${titulo}`} style={fondo(portada, PORTADA_LUXURY)}>

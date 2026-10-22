@@ -132,6 +132,8 @@ export default function Escaparate({ esc: todo, slug, whatsapp, puedePedir, pued
   const carruselProductos = useRef<HTMLDivElement>(null);
   const [familia, setFamilia] = useState('');
   const [busqueda, setBusqueda] = useState('');
+  const [vistaServicios, setVistaServicios] = useState<'vertical' | 'horizontal'>('vertical');
+  const [servicioInlineId, setServicioInlineId] = useState('');
   const [abierto, setAbierto] = useState<string | null>(null);
   const [verCarrito, setVerCarrito] = useState(false);
   const [hecho, setHecho] = useState<Hecho | null>(null);
@@ -154,6 +156,15 @@ export default function Escaparate({ esc: todo, slug, whatsapp, puedePedir, pued
     (!familia || i.familia === familia) &&
     (!termino || `${i.nombre} ${i.descripcion} ${i.familia}`.toLocaleLowerCase('es').includes(termino)));
   const item = abierto ? porId.get(abierto) ?? null : null;
+  const citaInline = plantillaLuxury && solo === 'reservas' && esc.items.length > 0 && esc.items.every((i) => i.tipo === 'cita');
+  const servicioInline = esc.items.find((i) => i.id === servicioInlineId) ?? esc.items[0];
+  const alternarServicios = plantillaLuxury && visibles.filter((i) => i.tipo !== 'producto').length > 1;
+  const controlesServicios = alternarServicios && (
+    <div className="tp-luxury-servicios__controles" role="group" aria-label="Vista de servicios">
+      <button type="button" aria-pressed={vistaServicios === 'vertical'} onClick={() => setVistaServicios('vertical')}>Vertical</button>
+      <button type="button" aria-pressed={vistaServicios === 'horizontal'} onClick={() => setVistaServicios('horizontal')}>Horizontal</button>
+    </div>
+  );
 
   const terminar = (h: Hecho) => {
     setAbierto(null);
@@ -182,6 +193,21 @@ export default function Escaparate({ esc: todo, slug, whatsapp, puedePedir, pued
     );
   }
 
+  if (citaInline) {
+    return <section className="tp-luxury-reserva-real" aria-label="Elegir cita">
+      <div className="tp-luxury-reserva-real__selector">
+        <span>01 / SERVICIO</span>
+        <label htmlFor="tp-servicio-inline">Tu servicio</label>
+        <select id="tp-servicio-inline" value={servicioInline.id} onChange={(e) => setServicioInlineId(e.target.value)}>
+          {esc.items.map((servicio) => <option key={servicio.id} value={servicio.id}>{servicio.nombre}</option>)}
+        </select>
+      </div>
+      <div className="tp-luxury-reserva-real__panel">
+        <Reservar key={servicioInline.id} item={servicioInline} esc={esc} slug={slug} alTerminar={terminar} presentacion="inline" />
+      </div>
+    </section>;
+  }
+
   return (
     <>
       <section className={`tp-catalogo${catalogoLuxuryDestacado ? ' tp-catalogo--luxury-productos' : ''}`} id="catalogo" aria-label={tipos.length > 1 ? 'Lo que ofrecemos' : cap(v.items)}>
@@ -196,7 +222,7 @@ export default function Escaparate({ esc: todo, slug, whatsapp, puedePedir, pued
           </div>
         )}
         <div className="tp-catalogo__resultados">
-        {tipos.length <= 1 && !catalogoLuxuryDestacado && <div className="tp-catalogo__cabeza"><h2 className="tp-seccion">{cap(v.items)}</h2><small>{visibles.length} {visibles.length === 1 ? 'resultado' : 'resultados'}</small></div>}
+        {tipos.length <= 1 && !catalogoLuxuryDestacado && <div className="tp-catalogo__cabeza"><h2 className="tp-seccion">{cap(v.items)}</h2><div className="tp-catalogo__cabeza-acciones"><small>{visibles.length} {visibles.length === 1 ? 'resultado' : 'resultados'}</small>{controlesServicios}</div></div>}
         {disposicion === 'carta' ? (
           [...new Set(visibles.map((i) => i.familia))].map((f) => (
             <div key={f || '-'} className="tp-carta">
@@ -219,10 +245,10 @@ export default function Escaparate({ esc: todo, slug, whatsapp, puedePedir, pued
                   <button type="button" aria-label="Productos anteriores" onClick={() => carruselProductos.current?.scrollBy({ left: -carruselProductos.current.clientWidth * .8, behavior: 'smooth' })}><ChevronLeft size={24} aria-hidden="true" /></button>
                   <button type="button" aria-label="Productos siguientes" onClick={() => carruselProductos.current?.scrollBy({ left: carruselProductos.current.clientWidth * .8, behavior: 'smooth' })}><ChevronRight size={24} aria-hidden="true" /></button>
                 </div>
-              </div> : t && <h2 className="tp-seccion">{cap(vocabularioDe(t).items)}</h2>}
-              <div ref={catalogoLuxuryDestacado && (t ?? tipos[0]) === 'producto' ? carruselProductos : undefined} className={`tp-grid${disposicion === 'cuadricula' ? '' : ' tp-grid--lista'}`}>
-                {deEste.map((i) => (
-                  <Tarjeta key={i.id} item={i} alAbrir={() => setAbierto(i.id)} />
+              </div> : t && <div className="tp-luxury-servicios__cabecera"><h2 className="tp-seccion">{cap(vocabularioDe(t).items)}</h2>{t !== 'producto' && controlesServicios}</div>}
+              <div ref={catalogoLuxuryDestacado && (t ?? tipos[0]) === 'producto' ? carruselProductos : undefined} className={`tp-grid${disposicion === 'cuadricula' ? '' : ' tp-grid--lista'}${plantillaLuxury && (t ?? tipos[0]) !== 'producto' && vistaServicios === 'horizontal' ? ' tp-grid--luxury-horizontal' : ''}`}>
+                {deEste.map((i, indice) => (
+                  <Tarjeta key={i.id} item={i} plantillaLuxury={plantillaLuxury} indice={indice} alAbrir={() => setAbierto(i.id)} />
                 ))}
               </div>
             </div>
@@ -297,7 +323,9 @@ export default function Escaparate({ esc: todo, slug, whatsapp, puedePedir, pued
    Piezas
    ═══════════════════════════════════════════════════════════════════════ */
 
-function Tarjeta({ item, alAbrir }: { item: Item; alAbrir: () => void }) {
+function Tarjeta({ item, alAbrir, plantillaLuxury, indice }: { item: Item; alAbrir: () => void; plantillaLuxury: boolean; indice: number }) {
+  const foto = item.fotos[0];
+  const respaldo = plantillaLuxury && item.tipo !== 'producto' ? fotoServicioLuxury(item.nombre, indice) : undefined;
   const agotado =
     item.tipo === 'producto' &&
     (item.opciones.length ? item.opciones.every((o) => o.quedan === 0) : item.quedan === 0);
@@ -317,8 +345,8 @@ function Tarjeta({ item, alAbrir }: { item: Item; alAbrir: () => void }) {
               : '';
   return (
     <button type="button" className={`tp-tarjeta${agotado ? ' tp-tarjeta--agotado' : ''}`} onClick={alAbrir}>
-      <span className="tp-tarjeta__foto" style={item.fotos[0] ? { backgroundImage: `url("${item.fotos[0]}")` } : undefined} aria-hidden="true">
-        {!item.fotos[0] && (item.tipo === 'grupo' ? <Users size={26} /> : item.tipo === 'cita' ? <Clock size={26} /> : <ShoppingBag size={26} />)}
+      <span className="tp-tarjeta__foto" style={foto || respaldo ? { backgroundImage: foto && respaldo && foto !== respaldo ? `url("${foto}"), url("${respaldo}")` : `url("${foto || respaldo}")` } : undefined} aria-hidden="true">
+        {!foto && !respaldo && (item.tipo === 'grupo' ? <Users size={26} /> : item.tipo === 'cita' ? <Clock size={26} /> : <ShoppingBag size={26} />)}
       </span>
       <span className="tp-tarjeta__texto">
         <b>{item.nombre}</b>
@@ -327,6 +355,7 @@ function Tarjeta({ item, alAbrir }: { item: Item; alAbrir: () => void }) {
           <b>{soles(item.precio)}</b>
           {sub && <small>{sub}</small>}
         </span>
+        {plantillaLuxury && item.tipo !== 'producto' && <span className="tp-tarjeta__reservar">Elegir horario <span aria-hidden="true">→</span></span>}
       </span>
     </button>
   );
@@ -379,7 +408,12 @@ function Galeria({ fotos, nombre }: { fotos: string[]; nombre: string }) {
   return (
     <div className="tp-galeria">
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={fotos[i]} alt={nombre} />
+      <img src={fotos[i]} alt={nombre} onError={(evento) => {
+        const imagen = evento.currentTarget;
+        if (!imagen.closest('.tp[data-plantilla="luxury"]')) return;
+        const respaldo = fotoServicioLuxury(nombre, 0);
+        if (!imagen.src.endsWith(respaldo)) imagen.src = respaldo;
+      }} />
       {fotos.length > 1 && (
         <>
           <button type="button" className="tp-galeria__btn tp-galeria__btn--izq" aria-label="Anterior" onClick={() => setI((i - 1 + fotos.length) % fotos.length)}><ChevronLeft size={20} /></button>
@@ -526,7 +560,7 @@ function useEnviar(ruta: string) {
   return { enviar, enviando };
 }
 
-function Reservar({ item, esc, slug, alTerminar }: { item: Item; esc: Datos; slug: string; alTerminar: (h: Hecho) => void }) {
+function Reservar({ item, esc, slug, alTerminar, presentacion }: { item: Item; esc: Datos; slug: string; alTerminar: (h: Hecho) => void; presentacion?: 'inline' }) {
   const { cliente, setCliente, recordar } = useCliente();
   const [profesional, setProfesional] = useState<string>('');
   const [tomadas, setTomadas] = useState<Set<string>>(new Set());
@@ -603,7 +637,8 @@ function Reservar({ item, esc, slug, alTerminar }: { item: Item; esc: Datos; slu
         </div>
       )}
       <div className="tp-campo">
-        <label id="tp-dia-l">Día</label>
+        {presentacion === 'inline' && <span className="tp-luxury-reserva-real__paso">02 / DÍA</span>}
+        <label id="tp-dia-l">{presentacion === 'inline' ? 'Elige un día' : 'Día'}</label>
         <div className="tp-dias" role="group" aria-labelledby="tp-dia-l">
           {dias.map((f) => {
             const libres = horasDe(f).length;
@@ -617,7 +652,8 @@ function Reservar({ item, esc, slug, alTerminar }: { item: Item; esc: Datos; slu
         </div>
       </div>
       <div className="tp-campo">
-        <label id="tp-hora-l">Hora</label>
+        {presentacion === 'inline' && <span className="tp-luxury-reserva-real__paso">03 / HORA</span>}
+        <label id="tp-hora-l">{presentacion === 'inline' ? 'Escoge tu horario' : 'Hora'}</label>
         {horas.length ? (
           <div className="tp-horas" role="group" aria-labelledby="tp-hora-l">
             {horas.map((h) => (

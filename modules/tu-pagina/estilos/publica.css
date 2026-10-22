@@ -649,12 +649,10 @@ html:has(.tp[data-plantilla='luxury']), body:has(.tp[data-plantilla='luxury']) {
 .tp-luxury-hero__cta--secundario { color: #fff !important; background: rgba(10,10,10,.25); border-color: rgba(255,255,255,.75); }
 .tp-luxury-hero__cta:hover { transform: translateY(-3px); filter: brightness(1.08); }
 .tp-luxury-hero a:focus-visible, .tp[data-plantilla='luxury'] button:focus-visible, .tp[data-plantilla='luxury'] a:focus-visible { outline: 3px solid var(--tp-color); outline-offset: 4px; }
-.tp-luxury-motion { position: relative; width: 100%; height: 200dvh; }
-.tp-luxury-motion__fijo { position: sticky; top: 0; width: 100%; height: 100dvh; overflow: hidden; background: #171717; touch-action: pan-y; }
-.tp-luxury-motion[data-fase='durante'] .tp-luxury-motion__fijo { position: fixed; left: 0; right: 0; top: 0; width: 100%; }
-.tp-luxury-motion[data-fase='fin'] .tp-luxury-motion__fijo { position: absolute; top: auto; bottom: 0; }
+.tp-luxury-motion { position: relative; width: 100%; height: 200svh; }
+.tp-luxury-motion__fijo { position: sticky; top: 0; width: 100%; height: 100svh; overflow: hidden; background: #171717; touch-action: pan-y; }
 .tp-luxury-motion__pista { display: flex; width: 200%; height: 100%; will-change: transform; }
-.tp-luxury-motion .tp-luxury-hero { width: 50%; min-width: 50%; min-height: 100dvh; height: 100dvh; flex: none; }
+.tp-luxury-motion .tp-luxury-hero { width: 50%; min-width: 50%; min-height: 100svh; height: 100svh; flex: none; }
 .tp-luxury-motion .tp-luxury-nav, .tp-luxury-motion .tp-luxury-hero__contenido, .tp-luxury-motion .tp-luxury-hero:not(.tp-luxury-hero--servicio) .tp-luxury-motion__siguiente { opacity: var(--tp-luxury-salida, 1); }
 .tp-luxury-motion__progreso { position: absolute; z-index: 5; top: 0; left: 0; width: 100%; height: 4px; background: var(--tp-color); transform: scaleX(0); transform-origin: left; pointer-events: none; }
 .tp-luxury-nav { position: relative; z-index: 2; }
@@ -672,7 +670,7 @@ html:has(.tp[data-plantilla='luxury']), body:has(.tp[data-plantilla='luxury']) {
 .tp-luxury-hero__panel-pie a { display: inline-flex; align-items: center; gap: 10px; min-height: 52px; padding: 12px 20px; background: var(--tp-color); color: var(--tp-tinta); text-decoration: none; font-weight: 750; }
 @media (prefers-reduced-motion: reduce) {
   .tp-luxury-motion { height: auto; }
-  .tp-luxury-motion__fijo, .tp-luxury-motion[data-fase='durante'] .tp-luxury-motion__fijo, .tp-luxury-motion[data-fase='fin'] .tp-luxury-motion__fijo { position: relative; inset: auto; height: auto; }
+  .tp-luxury-motion__fijo { position: relative; inset: auto; height: auto; }
   .tp-luxury-motion__pista { width: 100%; transform: none !important; }
   .tp-luxury-motion .tp-luxury-hero { width: 100%; min-width: 100%; min-height: min(760px, 90svh); height: auto; }
   .tp-luxury-motion .tp-luxury-hero--servicio, .tp-luxury-motion__progreso, .tp-luxury-motion__siguiente { display: none; }
@@ -692,6 +690,18 @@ html:has(.tp[data-plantilla='luxury']), body:has(.tp[data-plantilla='luxury']) {
 .tp[data-plantilla='luxury'] .tp-tarjeta__texto { padding: 18px 18px 21px; gap: 7px; }
 .tp[data-plantilla='luxury'] .tp-tarjeta__texto > b { font-size: 19px; }
 .tp[data-plantilla='luxury'] .tp-tarjeta__pie b { color: #171717; }
+.tp-catalogo__cabeza-acciones { display: flex; align-items: center; justify-content: flex-end; gap: 18px; flex-wrap: wrap; }
+.tp-catalogo__cabeza-acciones > small { color: var(--tp-suave); white-space: nowrap; }
+.tp-luxury-servicios__cabecera { display: flex; align-items: end; justify-content: space-between; gap: 18px; margin-bottom: 15px; }
+.tp-luxury-servicios__cabecera .tp-seccion { margin: 0; }
+.tp-luxury-servicios__controles { display: inline-flex; flex: none; padding: 4px; border: 1px solid #dedbd7; border-radius: 999px; background: #ebe8e3; }
+.tp-luxury-servicios__controles button { min-height: 38px; padding: 6px 15px; border: 0; border-radius: 999px; background: transparent; color: #625e58; cursor: pointer; font: inherit; font-size: 13px; font-weight: 700; }
+.tp-luxury-servicios__controles button[aria-pressed='true'] { background: #fff; color: #171717; box-shadow: 0 2px 8px rgba(18,18,18,.1); }
+.tp-luxury-servicios__controles button:hover:not([aria-pressed='true']) { color: #171717; }
+.tp[data-plantilla='luxury'] .tp-grid.tp-grid--luxury-horizontal { display: flex; gap: 16px; overflow-x: auto; padding: 2px 2px 12px; scroll-snap-type: x mandatory; overscroll-behavior-inline: contain; scrollbar-width: thin; }
+.tp[data-plantilla='luxury'] .tp-grid--luxury-horizontal .tp-tarjeta { flex: 0 0 clamp(260px, 30vw, 390px); flex-direction: column; scroll-snap-align: start; }
+.tp[data-plantilla='luxury'] .tp-grid--luxury-horizontal .tp-tarjeta__foto { width: 100%; min-height: 0; height: auto; aspect-ratio: 4 / 3; }
+.tp[data-plantilla='luxury'] .tp-tarjeta__reservar { display: inline-flex; align-items: center; gap: 12px; justify-self: start; margin-top: 9px; padding-bottom: 3px; border-bottom: 1px solid currentColor; color: #34302b; font-size: 13px; font-weight: 800; }
 .tp[data-plantilla='luxury'] .tp-chip[aria-pressed='true'], .tp[data-plantilla='luxury'] .tp-boton, .tp[data-plantilla='luxury'] .tp-barra { background: var(--tp-color); color: var(--tp-tinta); }
 .tp[data-plantilla='luxury'] .tp-acciones { margin-top: 0; border-top: 1px solid var(--tp-borde); padding-top: 24px; }
 .tp[data-plantilla='luxury'] .tp-modulo--luxury-productos { margin-top: 42px; }
@@ -721,13 +731,71 @@ html:has(.tp[data-plantilla='luxury']), body:has(.tp[data-plantilla='luxury']) {
 .lx-ejemplo-productos__modal small { margin: 10px 0 24px; color: #716b62; }
 .lx-ejemplo-productos__modal > div > button { min-height: 48px; padding: 10px 20px; border: 0; background: var(--tp-color); color: var(--tp-tinta); font: inherit; font-weight: 750; cursor: pointer; }
 .lx-ejemplo-productos__cerrar { position: absolute; z-index: 1; top: 12px; right: 12px; display: grid; place-items: center; width: 42px; height: 42px; border: 0; border-radius: 50%; background: #fff; color: #171717; cursor: pointer; }
-.tp[data-plantilla='luxury'][data-portada='no'] > .tp-hoja { max-width: 800px; padding: 30px 20px 60px; }
+.tp[data-plantilla='luxury'][data-portada='no'] { background: radial-gradient(circle at 85% 0%, color-mix(in srgb, var(--tp-color) 17%, #eef5fb), transparent 34%), #f7f8fa; }
+.tp[data-plantilla='luxury'][data-portada='no'] > .tp-hoja { max-width: 940px; padding: 40px 24px 60px; }
 .tp[data-plantilla='luxury'][data-portada='no'] .tp-catalogo { padding: 20px 0 60px; }
 .tp[data-plantilla='luxury'][data-portada='no'] .tp-grid { grid-template-columns: 1fr; }
-.tp[data-plantilla='luxury'][data-portada='no'] .tp-grid .tp-tarjeta { flex-direction: row; }
+.tp[data-plantilla='luxury'][data-portada='no'] .tp-grid .tp-tarjeta { flex-direction: row; border: 1px solid #e0e5e9; border-radius: 18px; box-shadow: 0 8px 28px rgba(29,39,49,.04); }
 .tp[data-plantilla='luxury'][data-portada='no'] .tp-grid .tp-tarjeta__foto { width: 150px; min-height: 150px; height: 150px; flex: none; aspect-ratio: auto; }
 .tp[data-plantilla='luxury'][data-portada='no'] .tp-grid .tp-tarjeta__texto { align-content: center; }
+.tp[data-plantilla='luxury'][data-portada='no'] .tp-grid.tp-grid--luxury-horizontal .tp-tarjeta { flex-direction: column; }
+.tp[data-plantilla='luxury'][data-portada='no'] .tp-grid.tp-grid--luxury-horizontal .tp-tarjeta__foto { width: 100%; min-height: 0; height: auto; aspect-ratio: 4 / 3; }
+.tp[data-plantilla='luxury'][data-portada='no'] .tp-h1 { font: 500 clamp(42px, 6vw, 72px)/1.05 Georgia, 'Times New Roman', serif; letter-spacing: -.045em; }
+.tp[data-plantilla='luxury'][data-portada='no'] .tp-lead { max-width: 670px; color: #65727d; font-size: 17px; line-height: 1.6; }
+.tp-reserva-eyebrow { display: block; margin-top: 24px; color: #65727d; font-size: 12px; font-weight: 800; letter-spacing: .15em; text-transform: uppercase; }
+.tp[data-plantilla='luxury'] .tp-hojita--agenda { max-width: min(940px, calc(100vw - 32px)); display: grid; grid-template-columns: minmax(0, .8fr) minmax(0, 1.2fr); border: 1px solid #e0e6ed; border-radius: 24px; background: #fff; box-shadow: 0 30px 90px rgba(18,36,52,.2); }
+.tp[data-plantilla='luxury'] .tp-hojita--agenda .tp-hojita__cerrar { position: absolute; top: 12px; right: 12px; float: none; margin: 0; width: 44px; height: 44px; }
+.tp[data-plantilla='luxury'] .tp-hojita--agenda .tp-galeria { min-height: 100%; background: #e9e3da; }
+.tp[data-plantilla='luxury'] .tp-hojita--agenda .tp-galeria img { width: 100%; height: 100%; min-height: 520px; aspect-ratio: auto; object-fit: cover; }
+.tp[data-plantilla='luxury'] .tp-hojita--agenda .tp-ficha { min-width: 0; padding: clamp(24px, 4vw, 46px); }
+.tp[data-plantilla='luxury'] .tp-hojita--agenda .tp-ficha__nombre { font: 500 clamp(32px, 3.2vw, 48px)/1.1 Georgia, 'Times New Roman', serif; letter-spacing: -.04em; }
+.tp[data-plantilla='luxury'] .tp-hojita--agenda .tp-ficha__precio { color: #253a4b; }
+.tp[data-plantilla='luxury'] .tp-hojita--agenda .tp-ficha__desc { color: #65727d; }
+.tp[data-plantilla='luxury'] .tp-hojita--agenda .tp-opcion { border-color: #dce5ee; border-radius: 14px; background: #f0f5fa; color: #26445f; transition: background .18s ease, transform .18s ease; }
+.tp[data-plantilla='luxury'] .tp-hojita--agenda .tp-opcion:hover:not(:disabled) { background: #e2edf6; transform: translateY(-2px); }
+.tp[data-plantilla='luxury'] .tp-hojita--agenda .tp-opcion[aria-pressed='true'] { border-color: var(--tp-color); outline: 2px solid var(--tp-color); background: color-mix(in srgb, var(--tp-color) 24%, #f0f5fa); color: #171717; }
+.tp[data-plantilla='luxury'] .tp-hojita--agenda .tp-dias { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 7px; overflow: visible; margin: 0; padding: 3px; }
+.tp[data-plantilla='luxury'] .tp-hojita--agenda .tp-dias .tp-opcion { width: auto; min-width: 0; min-height: 66px; padding: 7px 2px; }
+.tp[data-plantilla='luxury'] .tp-hojita--agenda .tp-horas { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.tp[data-plantilla='luxury'] .tp-hojita--agenda .tp-boton { border-radius: 12px; }
+.tp-luxury-reserva-real { margin-top: 30px; border: 1px solid #e0e6ed; border-radius: 22px; overflow: hidden; background: #fff; box-shadow: 0 24px 60px rgba(36,48,60,.08); }
+.tp-luxury-reserva-real__selector { display: flex; align-items: center; gap: 16px; padding: 18px 26px; border-bottom: 1px solid #e0e6ed; }
+.tp-luxury-reserva-real__selector > span, .tp-luxury-reserva-real__paso { color: #718091; font-size: 11px; font-weight: 800; letter-spacing: .16em; white-space: nowrap; }
+.tp-luxury-reserva-real__selector label { font-weight: 750; }
+.tp-luxury-reserva-real__selector select { flex: 1; min-width: 0; min-height: 48px; padding: 10px 14px; border: 1px solid #dce5ee; border-radius: 12px; background: #f0f5fa; color: #26445f; font: inherit; font-weight: 700; }
+.tp-luxury-reserva-real__panel { display: grid; grid-template-columns: minmax(0, .8fr) minmax(0, 1.2fr); }
+.tp-luxury-reserva-real__panel .tp-galeria { background: #e9e3da; }
+.tp-luxury-reserva-real__panel .tp-galeria img { width: 100%; height: 100%; min-height: 550px; aspect-ratio: auto; object-fit: cover; }
+.tp-luxury-reserva-real__panel .tp-ficha { min-width: 0; padding: clamp(24px, 4vw, 46px); }
+.tp-luxury-reserva-real__panel .tp-ficha__nombre { font: 500 clamp(32px, 3.2vw, 48px)/1.1 Georgia, 'Times New Roman', serif; letter-spacing: -.04em; }
+.tp-luxury-reserva-real__panel .tp-ficha__precio { color: #253a4b; }
+.tp-luxury-reserva-real__panel .tp-ficha__desc { color: #65727d; }
+.tp-luxury-reserva-real__panel .tp-campo { margin-top: 24px; }
+.tp-luxury-reserva-real__panel .tp-campo label { font-size: 19px; }
+.tp-luxury-reserva-real__panel .tp-dias { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 7px; overflow: visible; margin: 0; padding: 3px; }
+.tp-luxury-reserva-real__panel .tp-dias .tp-opcion { width: auto; min-width: 0; min-height: 66px; padding: 7px 2px; }
+.tp-luxury-reserva-real__panel .tp-horas { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.tp-luxury-reserva-real__panel .tp-opcion { border-color: #dce5ee; border-radius: 14px; background: #f0f5fa; color: #26445f; }
+.tp-luxury-reserva-real__panel .tp-opcion:hover:not(:disabled) { background: #e2edf6; }
+.tp-luxury-reserva-real__panel .tp-opcion[aria-pressed='true'] { border-color: var(--tp-color); outline: 2px solid var(--tp-color); background: color-mix(in srgb, var(--tp-color) 24%, #f0f5fa); color: #171717; }
+.tp-luxury-reserva-real__panel .tp-boton { border-radius: 12px; }
 @media (max-width: 850px) { .tp[data-plantilla='luxury'] .tp-grid { grid-template-columns: repeat(2, minmax(0,1fr)); } }
+@media (max-width: 700px) {
+  .tp[data-plantilla='luxury'] .tp-hojita--agenda { display: block; max-width: 100%; border-radius: 22px 22px 0 0; }
+  .tp[data-plantilla='luxury'] .tp-hojita--agenda .tp-galeria { min-height: 0; }
+  .tp[data-plantilla='luxury'] .tp-hojita--agenda .tp-galeria img { height: min(30dvh, 240px); min-height: 0; }
+  .tp[data-plantilla='luxury'] .tp-hojita--agenda .tp-ficha { padding: 22px; }
+  .tp[data-plantilla='luxury'] .tp-hojita--agenda .tp-dias { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .tp[data-plantilla='luxury'] .tp-hojita--agenda .tp-horas { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .tp-luxury-reserva-real__selector { display: grid; grid-template-columns: auto 1fr; padding: 18px; }
+  .tp-luxury-reserva-real__selector > span { grid-column: 1 / -1; }
+  .tp-luxury-reserva-real__selector select { width: 100%; }
+  .tp-luxury-reserva-real__panel { display: block; }
+  .tp-luxury-reserva-real__panel .tp-galeria img { height: min(33dvh, 250px); min-height: 0; }
+  .tp-luxury-reserva-real__panel .tp-ficha { padding: 22px; }
+  .tp-luxury-reserva-real__panel .tp-dias { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .tp-luxury-reserva-real__panel .tp-horas { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
 @media (max-width: 560px) {
   .tp-luxury-hero { min-height: min(740px, 82svh); padding: 20px 22px 50px; background-position: 62% center; }
   .tp-luxury-motion .tp-luxury-hero { padding: 22px 22px 74px; }
@@ -754,13 +822,20 @@ html:has(.tp[data-plantilla='luxury']), body:has(.tp[data-plantilla='luxury']) {
   .lx-ejemplo-productos__modal img { height: min(42dvh, 360px); min-height: 0; }
   .tp[data-plantilla='luxury'] .tp-catalogo { padding-top: 34px; }
   .tp[data-plantilla='luxury'] .tp-grid { grid-template-columns: 1fr; gap: 22px; }
+  .tp[data-plantilla='luxury'] .tp-grid.tp-grid--luxury-horizontal { gap: 12px; }
+  .tp[data-plantilla='luxury'] .tp-grid--luxury-horizontal .tp-tarjeta { flex-basis: min(82vw, 340px); }
   .tp[data-plantilla='luxury'] .tp-tarjeta__foto { aspect-ratio: 1 / .83; }
   .tp[data-plantilla='luxury'][data-portada='no'] .tp-grid .tp-tarjeta__foto { width: 96px; min-height: 110px; height: auto; }
+  .tp[data-plantilla='luxury'][data-portada='no'] .tp-grid.tp-grid--luxury-horizontal .tp-tarjeta__foto { width: 100%; min-height: 0; aspect-ratio: 4 / 3; }
+  .tp[data-plantilla='luxury'][data-portada='no'] > .tp-hoja { padding: 25px 16px 45px; }
+  .tp[data-plantilla='luxury'] .tp-catalogo__cabeza, .tp-luxury-servicios__cabecera { align-items: start; flex-direction: column; }
+  .tp[data-plantilla='luxury'] .tp-catalogo__cabeza-acciones { width: 100%; justify-content: space-between; gap: 10px; }
+  .tp-luxury-servicios__controles button { min-height: 36px; padding-inline: 12px; font-size: 12px; }
 }
 @media (prefers-reduced-motion: reduce) { .tp-luxury-hero__cta, .tp[data-plantilla='luxury'] .tp-tarjeta__foto { transition: none; } }
 
 /* Agenda interactiva del ejemplo Atelier Norte, con la misma estética Luxury. */
-.lx-reserva { min-height: 100svh; background: #f3f0eb; }
+.lx-reserva { min-height: 100svh; background: radial-gradient(circle at 86% 4%, color-mix(in srgb, var(--tp-color) 18%, #dceeff), transparent 32%), #f7f8fa; }
 .lx-reserva__nav { min-height: 76px; padding: 18px clamp(20px, 5vw, 76px); display: flex; align-items: center; justify-content: space-between; gap: 16px; background: #181715; color: #fff; }
 .lx-reserva__nav a { display: inline-flex; align-items: center; gap: 8px; text-decoration: none; font-size: 13px; }
 .lx-reserva__nav > span { font-size: 14px; font-weight: 800; letter-spacing: .17em; }
@@ -769,12 +844,12 @@ html:has(.tp[data-plantilla='luxury']), body:has(.tp[data-plantilla='luxury']) {
 .lx-reserva__intro > span, .lx-reserva__servicio-info > span:first-child, .lx-reserva__parte > span, .lx-reserva__horas > span { color: #8a6b43; font-size: 11px; font-weight: 850; letter-spacing: .19em; }
 .lx-reserva__intro h1 { margin: 12px 0 20px; font: 500 clamp(58px, 8vw, 118px)/.94 Georgia, 'Times New Roman', serif; letter-spacing: -.06em; }
 .lx-reserva__intro p { max-width: 570px; margin: 0; color: #625d57; font-size: 17px; line-height: 1.6; }
-.lx-reserva__panel { max-width: 1350px; margin: 0 auto; display: grid; grid-template-columns: minmax(270px, .85fr) minmax(0, 1.45fr); background: #fff; border: 1px solid #e1dbd2; box-shadow: 0 24px 60px rgba(36,30,24,.07); }
+.lx-reserva__panel { max-width: 1350px; margin: 0 auto; display: grid; grid-template-columns: minmax(270px, .85fr) minmax(0, 1.45fr); overflow: hidden; background: #fff; border: 1px solid #e0e6ed; border-radius: 22px; box-shadow: 0 24px 60px rgba(36,48,60,.09); }
 .lx-reserva__servicio { border-right: 1px solid #e1dbd2; }
 .lx-reserva__foto { height: 280px; background: #d7cbbd center / cover no-repeat; }
 .lx-reserva__servicio-info { padding: 28px 30px 34px; }
 .lx-reserva__servicio-info label { display: block; margin: 20px 0 6px; font-size: 12px; font-weight: 800; }
-.lx-reserva__servicio-info select { display: block; width: 100%; min-height: 48px; padding: 10px 14px; border: 1px solid #ccc3b7; border-radius: 2px; background: #fff; color: #171717; font: inherit; font-weight: 750; }
+.lx-reserva__servicio-info select { display: block; width: 100%; min-height: 48px; padding: 10px 14px; border: 1px solid #d9e2eb; border-radius: 12px; background: #f6f9fc; color: #171717; font: inherit; font-weight: 750; }
 .lx-reserva__servicio-info p { margin: 18px 0; color: #66605a; line-height: 1.55; }
 .lx-reserva__detalle { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-top: 15px; border-top: 1px solid #eae5df; }
 .lx-reserva__detalle span, .lx-reserva__direccion { display: inline-flex; align-items: center; gap: 7px; color: #67615b; font-size: 13px; }
@@ -785,21 +860,21 @@ html:has(.tp[data-plantilla='luxury']), body:has(.tp[data-plantilla='luxury']) {
 .lx-reserva__parte > span { grid-column: 1; }
 .lx-reserva__parte h2, .lx-reserva__horas h2 { grid-column: 1; margin: 0; font: 500 clamp(28px, 3vw, 44px)/1.1 Georgia, 'Times New Roman', serif; letter-spacing: -.04em; }
 .lx-reserva__flechas { grid-column: 2; grid-row: 1 / 3; display: flex; gap: 6px; }
-.lx-reserva__flechas button { width: 40px; height: 40px; display: grid; place-items: center; border: 1px solid #d8d0c6; background: #fff; cursor: pointer; }
+.lx-reserva__flechas button { width: 40px; height: 40px; display: grid; place-items: center; border: 1px solid #dce5ee; border-radius: 50%; background: #edf5fb; cursor: pointer; }
 .lx-reserva__flechas button:disabled { opacity: .35; cursor: default; }
 .lx-reserva__dias { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 8px; margin-top: 25px; }
-.lx-reserva__dias button { display: grid; place-items: center; min-height: 84px; padding: 9px; border: 1px solid #d9d1c7; background: #fff; cursor: pointer; color: #27231f; }
+.lx-reserva__dias button { display: grid; place-items: center; min-height: 84px; padding: 9px; border: 1px solid #dce5ee; border-radius: 16px; background: #f0f5fa; cursor: pointer; color: #26445f; }
 .lx-reserva__dias button small { color: #69615a; font-size: 12px; text-transform: capitalize; }
 .lx-reserva__dias button b { font: 500 29px Georgia, 'Times New Roman', serif; }
-.lx-reserva__dias button[aria-pressed='true'], .lx-reserva__horas button[aria-pressed='true'] { background: #171717; border-color: #171717; color: #fff; }
-.lx-reserva__dias button[aria-pressed='true'] small { color: #e3d8c9; }
+.lx-reserva__dias button[aria-pressed='true'], .lx-reserva__horas button[aria-pressed='true'] { background: color-mix(in srgb, var(--tp-color) 35%, #f0f5fa); border-color: var(--tp-color); color: #171717; outline: 2px solid var(--tp-color); }
+.lx-reserva__dias button[aria-pressed='true'] small { color: #313b43; }
 .lx-reserva__fecha { min-height: 24px; margin: 15px 0 28px; color: #68615a; font-size: 13px; text-transform: capitalize; }
 .lx-reserva__horas { padding-top: 25px; border-top: 1px solid #e7e0d8; }
 .lx-reserva__horas h2 { margin: 6px 0 20px; }
 .lx-reserva__horas > div { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; }
-.lx-reserva__horas button { min-height: 48px; border: 1px solid #d9d1c7; background: #fff; cursor: pointer; color: #27231f; font: inherit; font-size: 13px; font-weight: 750; }
+.lx-reserva__horas button { min-height: 48px; border: 1px solid #dce5ee; border-radius: 12px; background: #f0f5fa; cursor: pointer; color: #26445f; font: inherit; font-size: 13px; font-weight: 750; }
 .lx-reserva__horas > p { color: #756e66; }
-.lx-reserva__confirmar { display: inline-flex; align-items: center; justify-content: center; gap: 11px; min-height: 50px; margin-top: 26px; padding: 12px 20px; border: 0; background: var(--tp-color); color: var(--tp-tinta); cursor: pointer; font: inherit; font-weight: 800; }
+.lx-reserva__confirmar { display: inline-flex; align-items: center; justify-content: center; gap: 11px; min-height: 50px; margin-top: 26px; padding: 12px 20px; border: 0; border-radius: 12px; background: var(--tp-color); color: var(--tp-tinta); cursor: pointer; font: inherit; font-weight: 800; }
 .lx-reserva__resumen { max-width: 1350px; margin: 18px auto 0; padding: 20px 26px; display: flex; align-items: center; gap: 17px; border: 1px solid #c9ae84; background: #f8edda; }
 .lx-reserva__resumen > div { display: grid; gap: 2px; flex: 1; }
 .lx-reserva__resumen small { color: #62574b; }
