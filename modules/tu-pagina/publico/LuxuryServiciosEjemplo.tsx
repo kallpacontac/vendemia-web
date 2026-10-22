@@ -1,22 +1,11 @@
-'use client';
-
-import { useState } from 'react';
 import { SERVICIOS_BARBERIA } from '@/modules/tu-pagina/dominio/barberia-ejemplo';
 
-/** El ejemplo usa los mismos controles de vista que una página Luxury publicada. */
-export default function LuxuryServiciosEjemplo() {
-  const [vista, setVista] = useState<'vertical' | 'horizontal'>('vertical');
-
+/** El ejemplo refleja la vista elegida por el negocio en Mi página. */
+export default function LuxuryServiciosEjemplo({ vista }: { vista: 'vertical' | 'horizontal' }) {
   return <section className="tp-catalogo" id="catalogo" aria-label="Servicios de Atelier Norte">
     <div className="tp-catalogo__cabeza">
       <h2 className="tp-seccion">Servicios</h2>
-      <div className="tp-catalogo__cabeza-acciones">
-        <small>{SERVICIOS_BARBERIA.length} servicios</small>
-        <div className="tp-luxury-servicios__controles" role="group" aria-label="Vista de servicios">
-          <button type="button" aria-pressed={vista === 'vertical'} onClick={() => setVista('vertical')}>Vertical</button>
-          <button type="button" aria-pressed={vista === 'horizontal'} onClick={() => setVista('horizontal')}>Horizontal</button>
-        </div>
-      </div>
+      <small>{SERVICIOS_BARBERIA.length} servicios</small>
     </div>
     <div className={`tp-grid${vista === 'horizontal' ? ' tp-grid--luxury-horizontal' : ''}`}>
       {SERVICIOS_BARBERIA.map((servicio, indice) => <a key={servicio.nombre} className="tp-tarjeta" href={`/ejemplos/barberia/reservar?servicio=${indice}`} style={{ textDecoration: 'none' }}>

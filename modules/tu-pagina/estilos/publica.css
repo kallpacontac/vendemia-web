@@ -694,10 +694,6 @@ html:has(.tp[data-plantilla='luxury']), body:has(.tp[data-plantilla='luxury']) {
 .tp-catalogo__cabeza-acciones > small { color: var(--tp-suave); white-space: nowrap; }
 .tp-luxury-servicios__cabecera { display: flex; align-items: end; justify-content: space-between; gap: 18px; margin-bottom: 15px; }
 .tp-luxury-servicios__cabecera .tp-seccion { margin: 0; }
-.tp-luxury-servicios__controles { display: inline-flex; flex: none; padding: 4px; border: 1px solid #dedbd7; border-radius: 999px; background: #ebe8e3; }
-.tp-luxury-servicios__controles button { min-height: 38px; padding: 6px 15px; border: 0; border-radius: 999px; background: transparent; color: #625e58; cursor: pointer; font: inherit; font-size: 13px; font-weight: 700; }
-.tp-luxury-servicios__controles button[aria-pressed='true'] { background: #fff; color: #171717; box-shadow: 0 2px 8px rgba(18,18,18,.1); }
-.tp-luxury-servicios__controles button:hover:not([aria-pressed='true']) { color: #171717; }
 .tp[data-plantilla='luxury'] .tp-grid.tp-grid--luxury-horizontal { display: flex; gap: 16px; overflow-x: auto; padding: 2px 2px 12px; scroll-snap-type: x mandatory; overscroll-behavior-inline: contain; scrollbar-width: thin; }
 .tp[data-plantilla='luxury'] .tp-grid--luxury-horizontal .tp-tarjeta { flex: 0 0 clamp(260px, 30vw, 390px); flex-direction: column; scroll-snap-align: start; }
 .tp[data-plantilla='luxury'] .tp-grid--luxury-horizontal .tp-tarjeta__foto { width: 100%; min-height: 0; height: auto; aspect-ratio: 4 / 3; }
@@ -732,7 +728,7 @@ html:has(.tp[data-plantilla='luxury']), body:has(.tp[data-plantilla='luxury']) {
 .lx-ejemplo-productos__modal > div > button { min-height: 48px; padding: 10px 20px; border: 0; background: var(--tp-color); color: var(--tp-tinta); font: inherit; font-weight: 750; cursor: pointer; }
 .lx-ejemplo-productos__cerrar { position: absolute; z-index: 1; top: 12px; right: 12px; display: grid; place-items: center; width: 42px; height: 42px; border: 0; border-radius: 50%; background: #fff; color: #171717; cursor: pointer; }
 .tp[data-plantilla='luxury'][data-portada='no'] { background: radial-gradient(circle at 85% 0%, color-mix(in srgb, var(--tp-color) 17%, #eef5fb), transparent 34%), #f7f8fa; }
-.tp[data-plantilla='luxury'][data-portada='no'] > .tp-hoja { max-width: 940px; padding: 40px 24px 60px; }
+.tp[data-plantilla='luxury'][data-portada='no'] > .tp-hoja { max-width: 1100px; padding: 16px 24px 60px; }
 .tp[data-plantilla='luxury'][data-portada='no'] .tp-catalogo { padding: 20px 0 60px; }
 .tp[data-plantilla='luxury'][data-portada='no'] .tp-grid { grid-template-columns: 1fr; }
 .tp[data-plantilla='luxury'][data-portada='no'] .tp-grid .tp-tarjeta { flex-direction: row; border: 1px solid #e0e5e9; border-radius: 18px; box-shadow: 0 8px 28px rgba(29,39,49,.04); }
@@ -740,9 +736,9 @@ html:has(.tp[data-plantilla='luxury']), body:has(.tp[data-plantilla='luxury']) {
 .tp[data-plantilla='luxury'][data-portada='no'] .tp-grid .tp-tarjeta__texto { align-content: center; }
 .tp[data-plantilla='luxury'][data-portada='no'] .tp-grid.tp-grid--luxury-horizontal .tp-tarjeta { flex-direction: column; }
 .tp[data-plantilla='luxury'][data-portada='no'] .tp-grid.tp-grid--luxury-horizontal .tp-tarjeta__foto { width: 100%; min-height: 0; height: auto; aspect-ratio: 4 / 3; }
-.tp[data-plantilla='luxury'][data-portada='no'] .tp-h1 { font: 500 clamp(42px, 6vw, 72px)/1.05 Georgia, 'Times New Roman', serif; letter-spacing: -.045em; }
+.tp[data-plantilla='luxury'][data-portada='no'] .tp-h1 { font: 500 clamp(34px, 4vw, 52px)/1.05 Georgia, 'Times New Roman', serif; letter-spacing: -.045em; }
 .tp[data-plantilla='luxury'][data-portada='no'] .tp-lead { max-width: 670px; color: #65727d; font-size: 17px; line-height: 1.6; }
-.tp-reserva-eyebrow { display: block; margin-top: 24px; color: #65727d; font-size: 12px; font-weight: 800; letter-spacing: .15em; text-transform: uppercase; }
+.tp-reserva-eyebrow { display: block; margin-top: 8px; color: #65727d; font-size: 12px; font-weight: 800; letter-spacing: .15em; text-transform: uppercase; }
 .tp[data-plantilla='luxury'] .tp-hojita--agenda { max-width: min(940px, calc(100vw - 32px)); display: grid; grid-template-columns: minmax(0, .8fr) minmax(0, 1.2fr); border: 1px solid #e0e6ed; border-radius: 24px; background: #fff; box-shadow: 0 30px 90px rgba(18,36,52,.2); }
 .tp[data-plantilla='luxury'] .tp-hojita--agenda .tp-hojita__cerrar { position: absolute; top: 12px; right: 12px; float: none; margin: 0; width: 44px; height: 44px; }
 .tp[data-plantilla='luxury'] .tp-hojita--agenda .tp-galeria { min-height: 100%; background: #e9e3da; }
@@ -758,7 +754,7 @@ html:has(.tp[data-plantilla='luxury']), body:has(.tp[data-plantilla='luxury']) {
 .tp[data-plantilla='luxury'] .tp-hojita--agenda .tp-dias .tp-opcion { width: auto; min-width: 0; min-height: 66px; padding: 7px 2px; }
 .tp[data-plantilla='luxury'] .tp-hojita--agenda .tp-horas { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .tp[data-plantilla='luxury'] .tp-hojita--agenda .tp-boton { border-radius: 12px; }
-.tp-luxury-reserva-real { margin-top: 30px; border: 1px solid #e0e6ed; border-radius: 22px; overflow: hidden; background: #fff; box-shadow: 0 24px 60px rgba(36,48,60,.08); }
+.tp-luxury-reserva-real { margin-top: 18px; border: 1px solid #e0e6ed; border-radius: 22px; overflow: hidden; background: #fff; box-shadow: 0 24px 60px rgba(36,48,60,.08); animation: tp-reserva-entrada .45s ease-out both; }
 .tp-luxury-reserva-real__selector { display: flex; align-items: center; gap: 16px; padding: 18px 26px; border-bottom: 1px solid #e0e6ed; }
 .tp-luxury-reserva-real__selector > span, .tp-luxury-reserva-real__paso { color: #718091; font-size: 11px; font-weight: 800; letter-spacing: .16em; white-space: nowrap; }
 .tp-luxury-reserva-real__selector label { font-weight: 750; }
@@ -775,8 +771,8 @@ html:has(.tp[data-plantilla='luxury']), body:has(.tp[data-plantilla='luxury']) {
 .tp-luxury-reserva-real__panel .tp-dias { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 7px; overflow: visible; margin: 0; padding: 3px; }
 .tp-luxury-reserva-real__panel .tp-dias .tp-opcion { width: auto; min-width: 0; min-height: 66px; padding: 7px 2px; }
 .tp-luxury-reserva-real__panel .tp-horas { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-.tp-luxury-reserva-real__panel .tp-opcion { border-color: #dce5ee; border-radius: 14px; background: #f0f5fa; color: #26445f; }
-.tp-luxury-reserva-real__panel .tp-opcion:hover:not(:disabled) { background: #e2edf6; }
+.tp-luxury-reserva-real__panel .tp-opcion { border-color: #dce5ee; border-radius: 14px; background: #f0f5fa; color: #26445f; transition: transform .2s ease, background .2s ease, box-shadow .2s ease; }
+.tp-luxury-reserva-real__panel .tp-opcion:hover:not(:disabled) { background: #e2edf6; transform: translateY(-2px); box-shadow: 0 6px 14px rgba(25,38,50,.09); }
 .tp-luxury-reserva-real__panel .tp-opcion[aria-pressed='true'] { border-color: var(--tp-color); outline: 2px solid var(--tp-color); background: color-mix(in srgb, var(--tp-color) 24%, #f0f5fa); color: #171717; }
 .tp-luxury-reserva-real__panel .tp-boton { border-radius: 12px; }
 @media (max-width: 850px) { .tp[data-plantilla='luxury'] .tp-grid { grid-template-columns: repeat(2, minmax(0,1fr)); } }
@@ -791,12 +787,17 @@ html:has(.tp[data-plantilla='luxury']), body:has(.tp[data-plantilla='luxury']) {
   .tp-luxury-reserva-real__selector > span { grid-column: 1 / -1; }
   .tp-luxury-reserva-real__selector select { width: 100%; }
   .tp-luxury-reserva-real__panel { display: block; }
-  .tp-luxury-reserva-real__panel .tp-galeria img { height: min(33dvh, 250px); min-height: 0; }
+  .tp-luxury-reserva-real__panel .tp-galeria { display: none; }
   .tp-luxury-reserva-real__panel .tp-ficha { padding: 22px; }
   .tp-luxury-reserva-real__panel .tp-dias { grid-template-columns: repeat(4, minmax(0, 1fr)); }
   .tp-luxury-reserva-real__panel .tp-horas { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 @media (max-width: 560px) {
+  .tp-luxury-motion { height: 100vh; height: 100lvh; overflow: hidden; }
+  .tp-luxury-motion__fijo { position: relative; height: 100%; overflow-x: auto; overflow-y: hidden; scroll-snap-type: x mandatory; overscroll-behavior-x: contain; scrollbar-width: none; touch-action: auto; }
+  .tp-luxury-motion__fijo::-webkit-scrollbar { display: none; }
+  .tp-luxury-motion__pista { transform: none !important; will-change: auto; }
+  .tp-luxury-motion .tp-luxury-hero { height: 100%; min-height: 100%; scroll-snap-align: start; }
   .tp-luxury-hero { min-height: min(740px, 82svh); padding: 20px 22px 50px; background-position: 62% center; }
   .tp-luxury-motion .tp-luxury-hero { padding: 22px 22px 74px; }
   .tp-luxury-nav__paso { display: none; }
@@ -820,7 +821,7 @@ html:has(.tp[data-plantilla='luxury']), body:has(.tp[data-plantilla='luxury']) {
   .tp[data-plantilla='luxury'] .tp-modulo--luxury-productos .tp-tarjeta__foto { aspect-ratio: 1 / 1.05; }
   .lx-ejemplo-productos__modal { display: block; }
   .lx-ejemplo-productos__modal img { height: min(42dvh, 360px); min-height: 0; }
-  .tp[data-plantilla='luxury'] .tp-catalogo { padding-top: 34px; }
+  .tp[data-plantilla='luxury'] .tp-catalogo { padding-top: 12px; }
   .tp[data-plantilla='luxury'] .tp-grid { grid-template-columns: 1fr; gap: 22px; }
   .tp[data-plantilla='luxury'] .tp-grid.tp-grid--luxury-horizontal { gap: 12px; }
   .tp[data-plantilla='luxury'] .tp-grid--luxury-horizontal .tp-tarjeta { flex-basis: min(82vw, 340px); }
@@ -829,10 +830,15 @@ html:has(.tp[data-plantilla='luxury']), body:has(.tp[data-plantilla='luxury']) {
   .tp[data-plantilla='luxury'][data-portada='no'] .tp-grid.tp-grid--luxury-horizontal .tp-tarjeta__foto { width: 100%; min-height: 0; aspect-ratio: 4 / 3; }
   .tp[data-plantilla='luxury'][data-portada='no'] > .tp-hoja { padding: 25px 16px 45px; }
   .tp[data-plantilla='luxury'] .tp-catalogo__cabeza, .tp-luxury-servicios__cabecera { align-items: start; flex-direction: column; }
-  .tp[data-plantilla='luxury'] .tp-catalogo__cabeza-acciones { width: 100%; justify-content: space-between; gap: 10px; }
-  .tp-luxury-servicios__controles button { min-height: 36px; padding-inline: 12px; font-size: 12px; }
+  .tp[data-plantilla='luxury'][data-portada='no'] > .tp-hoja { padding-top: 12px; }
+  .tp[data-plantilla='luxury'][data-portada='no'] .tp-lead { font-size: 14px; line-height: 1.4; }
+  .tp[data-plantilla='luxury'][data-portada='no'] .tp-h1 { margin: 5px 0 7px; font-size: 34px; }
+  .tp[data-plantilla='luxury'] .tp-luxury-reserva-real__selector { padding: 12px 16px; }
+  .tp[data-plantilla='luxury'] .tp-luxury-reserva-real__panel .tp-ficha { padding: 16px; }
+  .tp[data-plantilla='luxury'] .tp-luxury-reserva-real__panel .tp-ficha__desc { display: none; }
+  .tp[data-plantilla='luxury'] .tp-luxury-reserva-real__panel .tp-campo { margin-top: 15px; }
 }
-@media (prefers-reduced-motion: reduce) { .tp-luxury-hero__cta, .tp[data-plantilla='luxury'] .tp-tarjeta__foto { transition: none; } }
+@media (prefers-reduced-motion: reduce) { .tp-luxury-hero__cta, .tp[data-plantilla='luxury'] .tp-tarjeta__foto, .tp-luxury-reserva-real__panel .tp-opcion { transition: none; } .tp-luxury-reserva-real { animation: none; } }
 
 /* Agenda interactiva del ejemplo Atelier Norte, con la misma estética Luxury. */
 .lx-reserva { min-height: 100svh; background: radial-gradient(circle at 86% 4%, color-mix(in srgb, var(--tp-color) 18%, #dceeff), transparent 32%), #f7f8fa; }
@@ -840,11 +846,11 @@ html:has(.tp[data-plantilla='luxury']), body:has(.tp[data-plantilla='luxury']) {
 .lx-reserva__nav a { display: inline-flex; align-items: center; gap: 8px; text-decoration: none; font-size: 13px; }
 .lx-reserva__nav > span { font-size: 14px; font-weight: 800; letter-spacing: .17em; }
 .lx-reserva__nav small { font-size: 10px; letter-spacing: .12em; }
-.lx-reserva__intro { max-width: 1500px; margin: auto; padding: clamp(46px, 6vw, 95px) clamp(20px, 5vw, 76px) 36px; }
+.lx-reserva__intro { max-width: 1500px; margin: auto; padding: clamp(18px, 3vw, 38px) clamp(20px, 5vw, 76px) 20px; }
 .lx-reserva__intro > span, .lx-reserva__servicio-info > span:first-child, .lx-reserva__parte > span, .lx-reserva__horas > span { color: #8a6b43; font-size: 11px; font-weight: 850; letter-spacing: .19em; }
-.lx-reserva__intro h1 { margin: 12px 0 20px; font: 500 clamp(58px, 8vw, 118px)/.94 Georgia, 'Times New Roman', serif; letter-spacing: -.06em; }
-.lx-reserva__intro p { max-width: 570px; margin: 0; color: #625d57; font-size: 17px; line-height: 1.6; }
-.lx-reserva__panel { max-width: 1350px; margin: 0 auto; display: grid; grid-template-columns: minmax(270px, .85fr) minmax(0, 1.45fr); overflow: hidden; background: #fff; border: 1px solid #e0e6ed; border-radius: 22px; box-shadow: 0 24px 60px rgba(36,48,60,.09); }
+.lx-reserva__intro h1 { margin: 6px 0 9px; font: 500 clamp(38px, 4.8vw, 64px)/1 Georgia, 'Times New Roman', serif; letter-spacing: -.05em; }
+.lx-reserva__intro p { max-width: 640px; margin: 0; color: #625d57; font-size: 15px; line-height: 1.45; }
+.lx-reserva__panel { max-width: 1350px; margin: 0 auto; display: grid; grid-template-columns: minmax(270px, .85fr) minmax(0, 1.45fr); overflow: hidden; background: #fff; border: 1px solid #e0e6ed; border-radius: 22px; box-shadow: 0 24px 60px rgba(36,48,60,.09); animation: tp-reserva-entrada .45s ease-out both; }
 .lx-reserva__servicio { border-right: 1px solid #e1dbd2; }
 .lx-reserva__foto { height: 280px; background: #d7cbbd center / cover no-repeat; }
 .lx-reserva__servicio-info { padding: 28px 30px 34px; }
@@ -863,16 +869,17 @@ html:has(.tp[data-plantilla='luxury']), body:has(.tp[data-plantilla='luxury']) {
 .lx-reserva__flechas button { width: 40px; height: 40px; display: grid; place-items: center; border: 1px solid #dce5ee; border-radius: 50%; background: #edf5fb; cursor: pointer; }
 .lx-reserva__flechas button:disabled { opacity: .35; cursor: default; }
 .lx-reserva__dias { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 8px; margin-top: 25px; }
-.lx-reserva__dias button { display: grid; place-items: center; min-height: 84px; padding: 9px; border: 1px solid #dce5ee; border-radius: 16px; background: #f0f5fa; cursor: pointer; color: #26445f; }
+.lx-reserva__dias button { display: grid; place-items: center; min-height: 84px; padding: 9px; border: 1px solid #dce5ee; border-radius: 16px; background: #f0f5fa; cursor: pointer; color: #26445f; transition: transform .2s ease, background .2s ease, box-shadow .2s ease; }
+.lx-reserva__dias button:hover:not(:disabled), .lx-reserva__horas button:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 7px 16px rgba(25,38,50,.1); }
 .lx-reserva__dias button small { color: #69615a; font-size: 12px; text-transform: capitalize; }
 .lx-reserva__dias button b { font: 500 29px Georgia, 'Times New Roman', serif; }
 .lx-reserva__dias button[aria-pressed='true'], .lx-reserva__horas button[aria-pressed='true'] { background: color-mix(in srgb, var(--tp-color) 35%, #f0f5fa); border-color: var(--tp-color); color: #171717; outline: 2px solid var(--tp-color); }
 .lx-reserva__dias button[aria-pressed='true'] small { color: #313b43; }
 .lx-reserva__fecha { min-height: 24px; margin: 15px 0 28px; color: #68615a; font-size: 13px; text-transform: capitalize; }
-.lx-reserva__horas { padding-top: 25px; border-top: 1px solid #e7e0d8; }
+.lx-reserva__horas { padding-top: 25px; border-top: 1px solid #e7e0d8; animation: tp-reserva-entrada .3s ease-out both; }
 .lx-reserva__horas h2 { margin: 6px 0 20px; }
 .lx-reserva__horas > div { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; }
-.lx-reserva__horas button { min-height: 48px; border: 1px solid #dce5ee; border-radius: 12px; background: #f0f5fa; cursor: pointer; color: #26445f; font: inherit; font-size: 13px; font-weight: 750; }
+.lx-reserva__horas button { min-height: 48px; border: 1px solid #dce5ee; border-radius: 12px; background: #f0f5fa; cursor: pointer; color: #26445f; font: inherit; font-size: 13px; font-weight: 750; transition: transform .2s ease, box-shadow .2s ease; }
 .lx-reserva__horas > p { color: #756e66; }
 .lx-reserva__confirmar { display: inline-flex; align-items: center; justify-content: center; gap: 11px; min-height: 50px; margin-top: 26px; padding: 12px 20px; border: 0; border-radius: 12px; background: var(--tp-color); color: var(--tp-tinta); cursor: pointer; font: inherit; font-weight: 800; }
 .lx-reserva__resumen { max-width: 1350px; margin: 18px auto 0; padding: 20px 26px; display: flex; align-items: center; gap: 17px; border: 1px solid #c9ae84; background: #f8edda; }
@@ -881,8 +888,10 @@ html:has(.tp[data-plantilla='luxury']), body:has(.tp[data-plantilla='luxury']) {
 .lx-reserva__resumen button { padding: 10px; border: 1px solid #8a6b43; background: transparent; cursor: pointer; font: inherit; font-size: 12px; }
 .lx-reserva__pie { margin: 0; padding: 42px 20px 28px; text-align: center; color: #71685f; font-size: 12px; }
 @media (max-width: 1000px) { .lx-reserva__panel, .lx-reserva__resumen { margin-inline: 20px; } .lx-reserva__dias { grid-template-columns: repeat(3, minmax(0, 1fr)); } .lx-reserva__horas > div { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
-@media (max-width: 720px) { .lx-reserva__nav { min-height: 62px; }.lx-reserva__nav > span { display: none; } .lx-reserva__intro { padding-top: 45px; }.lx-reserva__panel { grid-template-columns: 1fr; }.lx-reserva__servicio { border-right: 0; border-bottom: 1px solid #e1dbd2; }.lx-reserva__foto { height: 220px; }.lx-reserva__servicio-info { padding: 22px; }.lx-reserva__calendario { padding: 26px 22px; } }
-@media (max-width: 430px) { .lx-reserva__panel, .lx-reserva__resumen { margin-inline: 12px; }.lx-reserva__intro { padding-inline: 19px; }.lx-reserva__intro h1 { font-size: 54px; }.lx-reserva__dias { gap: 6px; }.lx-reserva__dias button { min-height: 72px; }.lx-reserva__horas > div { grid-template-columns: repeat(2, minmax(0, 1fr)); }.lx-reserva__resumen { display: grid; grid-template-columns: 24px minmax(0, 1fr); align-items: start; }.lx-reserva__resumen button { grid-column: 2; justify-self: start; margin-top: 8px; } }
+@media (max-width: 720px) { .lx-reserva__nav { min-height: 62px; }.lx-reserva__nav > span { display: none; } .lx-reserva__intro { padding-top: 18px; padding-bottom: 14px; }.lx-reserva__panel { grid-template-columns: 1fr; }.lx-reserva__servicio { border-right: 0; border-bottom: 1px solid #e1dbd2; }.lx-reserva__foto { display: none; }.lx-reserva__servicio-info { padding: 16px 20px; }.lx-reserva__servicio-info label { margin-top: 8px; }.lx-reserva__servicio-info p, .lx-reserva__direccion { display: none; }.lx-reserva__detalle { margin-top: 12px; padding-top: 10px; }.lx-reserva__calendario { padding: 18px 20px; }.lx-reserva__dias { margin-top: 16px; }.lx-reserva__fecha { margin-bottom: 18px; } }
+@media (max-width: 430px) { .lx-reserva__panel, .lx-reserva__resumen { margin-inline: 12px; }.lx-reserva__intro { padding-inline: 19px; }.lx-reserva__intro h1 { font-size: 38px; }.lx-reserva__dias { gap: 6px; }.lx-reserva__dias button { min-height: 72px; }.lx-reserva__horas > div { grid-template-columns: repeat(2, minmax(0, 1fr)); }.lx-reserva__resumen { display: grid; grid-template-columns: 24px minmax(0, 1fr); align-items: start; }.lx-reserva__resumen button { grid-column: 2; justify-self: start; margin-top: 8px; } }
+@keyframes tp-reserva-entrada { from { transform: translateY(10px); } to { transform: translateY(0); } }
+@media (prefers-reduced-motion: reduce) { .lx-reserva__panel, .lx-reserva__horas { animation: none; }.lx-reserva__dias button, .lx-reserva__horas button { transition: none; } }
 
 /* ══════════════════════════════════════════════════════════════════════════
    LIBRO DE RECLAMACIONES (sql/0006)

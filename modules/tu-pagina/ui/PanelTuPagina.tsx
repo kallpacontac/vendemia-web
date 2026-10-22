@@ -50,6 +50,7 @@ const urlVista = (slug: string, valores: {
     mb: valores.apariencia.mostrarBanner === false ? '0' : '1',
     mw: valores.apariencia.mostrarWhatsapp === false ? '0' : '1',
     lcd: valores.apariencia.catalogoLuxuryDestacado === true ? '1' : '0',
+    vs: valores.apariencia.vistaServiciosLuxury === 'horizontal' ? 'horizontal' : 'vertical',
     lm: valores.apariencia.mostrarMesero === true ? '1' : '0',
     fp: valores.apariencia.fotoPlantilla ?? '', sp: valores.sinPortada ? '1' : '0',
   });
@@ -129,11 +130,11 @@ export default function PanelTuPagina() {
   const sinPagina = !cargando && !error && !pagina?.publicada;
   const s = pagina?.publicada ? pagina.secciones ?? {} : {};
   const pestanas = [
+    { id: 'pagina' as const, nombre: 'La página' },
+    ...(s.reclamos ? [{ id: 'reclamos' as const, nombre: 'Reclamos' }] : []),
     ...(s.catalogo && !agendaNube ? [{ id: 'pedidos' as const, nombre: 'Pedidos' }] : []),
     ...(s.reservar && !agendaNube ? [{ id: 'reservas' as const, nombre: esRecurrente(compania?.business_mode) ? 'Cupos' : 'Reservas' }] : []),
     ...(s.envios ? [{ id: 'envios' as const, nombre: 'Envíos' }] : []),
-    ...(s.reclamos ? [{ id: 'reclamos' as const, nombre: 'Reclamos' }] : []),
-    { id: 'pagina' as const, nombre: 'La página' },
   ];
   const [pestana, setPestana] = useState<Pestana | null>(null);
   // ?ver=reclamos: el enlace del correo que avisa de una hoja nueva.
@@ -366,7 +367,7 @@ function MiPagina({ companyId, nombre, pagina, agendaNube, alGuardar }: {
                     <span className={`tp-panel-plantilla__dibujo tp-panel-plantilla__dibujo--${opcion.id}`} style={{ ['--c' as string]: color }} aria-hidden="true"><i /><i /><i /><i /></span>
                     <b>{opcion.nombre}</b><small>{opcion.describe}</small>
                   </button>
-                  <a href={urlEjemploPara(es, opcion.id)} target="_blank" rel="noopener">Ver ejemplo completo <ExternalLink size={13} /></a>
+                  <a href={urlEjemploPara(es, opcion.id, apariencia.vistaServiciosLuxury)} target="_blank" rel="noopener">Ver ejemplo completo <ExternalLink size={13} /></a>
                 </div>
               ))}
             </div>
@@ -423,6 +424,13 @@ function MiPagina({ companyId, nombre, pagina, agendaNube, alGuardar }: {
           </div>
           <small className="muted">Se aplica a botones y selecciones. En “Agenda y tienda”, la tienda mantiene un contraste propio que puedes ajustar abajo.</small>
         </div>
+        {plantilla === 'luxury' && es !== 'tienda' && <div className="tp-panel-campo">
+          <span>Cómo se ven tus servicios</span>
+          <div className="tp-panel-vista-servicios" role="group" aria-label="Presentación del catálogo de servicios">
+            {(['vertical', 'horizontal'] as const).map((vista) => <button key={vista} type="button" aria-pressed={(apariencia.vistaServiciosLuxury ?? 'vertical') === vista} onClick={() => setApariencia({ ...apariencia, vistaServiciosLuxury: vista })}>{vista === 'vertical' ? 'Vertical' : 'Horizontal'}</button>)}
+          </div>
+          <small className="muted">Esta elección es tuya; tus clientes verán el catálogo como lo publiques.</small>
+        </div>}
         </div>
 
         <div className="tp-panel-paso" hidden={!verPaso(3)}>
@@ -510,7 +518,7 @@ function MiPagina({ companyId, nombre, pagina, agendaNube, alGuardar }: {
             <div className="tp-panel-vista">
               <iframe title="Vista previa de tu página" src={vista} />
             </div>
-            <a className="tp-panel-demo-link" href={urlEjemploPara(es, plantilla)} target="_blank" rel="noopener">Ver esta plantilla con un negocio de ejemplo <ExternalLink size={14} /></a>
+            <a className="tp-panel-demo-link" href={urlEjemploPara(es, plantilla, apariencia.vistaServiciosLuxury)} target="_blank" rel="noopener">Ver esta plantilla con un negocio de ejemplo <ExternalLink size={14} /></a>
             {(es !== tipoPagina(pagina!.secciones) || plantilla !== pagina!.plantilla || (plantillaManual && !pagina!.secciones.apariencia?.plantillaActiva) || color !== pagina!.color || titulo !== pagina!.titulo || frase !== pagina!.frase || logo !== (pagina!.logo_url ?? '') || portada !== (pagina!.portada_url ?? '') || JSON.stringify(apariencia) !== JSON.stringify(pagina!.secciones.apariencia ?? {})) && (
               <small className="muted">Vista previa del diseño. El nombre y las imágenes se actualizarán al guardar.</small>
             )}

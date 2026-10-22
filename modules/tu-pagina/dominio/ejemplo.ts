@@ -16,8 +16,8 @@ export const esPlantillaEjemplo = (valor: unknown): valor is PlantillaEjemplo =>
 export const urlEjemplo = (plantilla: PlantillaEjemplo = 'vitrina') =>
   `/ejemplos/catalogo?plantilla=${plantilla}`;
 
-export const urlEjemploPara = (tipo: TipoPagina, plantilla: PlantillaGuardada) => {
-  if (plantilla === 'luxury') return `/ejemplos/barberia?tipo=${tipo}`;
+export const urlEjemploPara = (tipo: TipoPagina, plantilla: PlantillaGuardada, vistaServicios: 'vertical' | 'horizontal' = 'vertical') => {
+  if (plantilla === 'luxury') return `/ejemplos/barberia?tipo=${tipo}&servicios=${vistaServicios}`;
   if (tipo === 'agenda') return `/ejemplos/clinica-dental?diseno=${plantilla === 'lista' ? 'editorial' : 'clara'}`;
   if (tipo === 'tienda' && plantilla === 'agenda') return '/ejemplos/cafeteria';
   return urlEjemplo(esPlantillaEjemplo(plantilla) ? plantilla : 'vitrina');

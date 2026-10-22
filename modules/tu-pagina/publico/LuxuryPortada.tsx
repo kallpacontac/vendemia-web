@@ -22,19 +22,22 @@ type Props = {
   catalogoProductosDisponible?: boolean;
 };
 
-/** El desplazamiento vertical mueve la portada lateralmente y después continúa al catálogo. */
+/** Escritorio: desplazamiento editorial. Móvil: dos escenas laterales y luego catálogo vertical. */
 export default function LuxuryPortada({ titulo, frase, etiqueta, logo, portada, portadaSecundaria, servicio, inicioHref, reservarHref, catalogoDisponible, catalogoProductosDisponible = false }: Props) {
   const marco = useRef<HTMLDivElement>(null);
+  const fijo = useRef<HTMLDivElement>(null);
   const pista = useRef<HTMLDivElement>(null);
   const progreso = useRef<HTMLSpanElement>(null);
   const [escena, setEscena] = useState(0);
 
   useEffect(() => {
     const zona = marco.current;
+    const ventana = fijo.current;
     const carril = pista.current;
     const linea = progreso.current;
-    if (!zona || !carril || !linea) return;
+    if (!zona || !ventana || !carril || !linea) return;
     const reducida = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const movil = window.matchMedia('(max-width: 560px)');
     let pendiente = false;
     const actualizar = () => {
       pendiente = false;
@@ -45,10 +48,10 @@ export default function LuxuryPortada({ titulo, frase, etiqueta, logo, portada, 
         zona.style.removeProperty('--tp-luxury-entrada');
         return;
       }
-      const inicio = zona.getBoundingClientRect().top + window.scrollY;
-      const recorrido = Math.max(1, zona.offsetHeight - (zona.firstElementChild as HTMLElement).clientHeight);
-      const avance = Math.max(0, Math.min(1, (window.scrollY - inicio) / recorrido));
-      carril.style.transform = `translate3d(${-avance * zona.clientWidth}px, 0, 0)`;
+      const avance = movil.matches
+        ? Math.max(0, Math.min(1, ventana.scrollLeft / Math.max(1, ventana.clientWidth)))
+        : Math.max(0, Math.min(1, -zona.getBoundingClientRect().top / Math.max(1, zona.offsetHeight - ventana.clientHeight)));
+      carril.style.transform = movil.matches ? '' : `translate3d(${-avance * zona.clientWidth}px, 0, 0)`;
       linea.style.transform = `scaleX(${avance})`;
       zona.style.setProperty('--tp-luxury-salida', String(Math.max(0, 1 - avance * 2.8)));
       zona.style.setProperty('--tp-luxury-entrada', String(Math.max(0, Math.min(1, (avance - .55) * 2.8))));
@@ -65,11 +68,15 @@ export default function LuxuryPortada({ titulo, frase, etiqueta, logo, portada, 
     };
     actualizar();
     window.addEventListener('scroll', solicitar, { passive: true });
+    ventana.addEventListener('scroll', solicitar, { passive: true });
     window.addEventListener('resize', solicitar);
+    movil.addEventListener('change', solicitar);
     reducida.addEventListener('change', solicitar);
     return () => {
       window.removeEventListener('scroll', solicitar);
+      ventana.removeEventListener('scroll', solicitar);
       window.removeEventListener('resize', solicitar);
+      movil.removeEventListener('change', solicitar);
       reducida.removeEventListener('change', solicitar);
     };
   }, []);
@@ -81,6 +88,10 @@ export default function LuxuryPortada({ titulo, frase, etiqueta, logo, portada, 
     }
     const zona = marco.current;
     if (!zona) return;
+    if (window.matchMedia('(max-width: 560px)').matches) {
+      fijo.current?.scrollTo({ left: numero * (fijo.current?.clientWidth ?? 0), behavior: 'smooth' });
+      return;
+    }
     const altoVisible = (zona.firstElementChild as HTMLElement).clientHeight;
     window.scrollTo({ top: zona.getBoundingClientRect().top + window.scrollY + (numero ? zona.offsetHeight - altoVisible : 0), behavior: 'smooth' });
   };
@@ -90,7 +101,7 @@ export default function LuxuryPortada({ titulo, frase, etiqueta, logo, portada, 
   });
 
   return <div className="tp-luxury-motion" ref={marco} data-escena={escena}>
-    <div className="tp-luxury-motion__fijo">
+    <div className="tp-luxury-motion__fijo" ref={fijo}>
       <div className="tp-luxury-motion__pista" ref={pista}>
         <section className="tp-luxury-hero" aria-label={`Bienvenidos a ${titulo}`} style={fondo(portada, PORTADA_LUXURY)}>
           <nav className="tp-luxury-nav" aria-label="Navegación de la página">

@@ -63,6 +63,7 @@ function conVista(p: PaginaPublica, q: Props['searchParams']): PaginaPublica {
         mostrarBanner: q.mb === '0' ? false : q.mb === '1' ? true : anterior.mostrarBanner,
         mostrarWhatsapp: q.mw === '0' ? false : q.mw === '1' ? true : anterior.mostrarWhatsapp,
         catalogoLuxuryDestacado: q.lcd === '0' ? false : q.lcd === '1' ? true : anterior.catalogoLuxuryDestacado,
+        vistaServiciosLuxury: q.vs === 'horizontal' ? 'horizontal' : q.vs === 'vertical' ? 'vertical' : anterior.vistaServiciosLuxury,
         mostrarMesero: q.lm === '0' ? false : q.lm === '1' ? true : anterior.mostrarMesero,
         fotoPlantilla: q.fp === undefined ? anterior.fotoPlantilla : esFotoPlantilla(q.fp) ? q.fp : undefined,
       },
@@ -133,6 +134,7 @@ export default async function Portada({ params, searchParams }: Props) {
       puedeReservar={Boolean(p.secciones.reservar)}
       plantillaLuxury={Boolean(esLuxury)}
       catalogoLuxuryDestacado={catalogoLuxuryDestacado}
+      vistaServiciosLuxury={p.secciones.apariencia?.vistaServiciosLuxury}
     />
   );
 

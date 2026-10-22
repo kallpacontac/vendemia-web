@@ -54,6 +54,7 @@ interface Props {
   solo?: 'reservas';
   plantillaLuxury?: boolean;
   catalogoLuxuryDestacado?: boolean;
+  vistaServiciosLuxury?: 'vertical' | 'horizontal';
 }
 
 const ORDEN_TIPOS: TipoItem[] = ['cita', 'grupo', 'producto'];
@@ -115,7 +116,7 @@ const MENSAJE_FALLO: Record<string, string> = {
   not_found: 'Esta página ya no recibe reservas en línea. Escríbenos por WhatsApp.',
 };
 
-export default function Escaparate({ esc: todo, slug, whatsapp, puedePedir, puedeReservar, disposicion, solo, plantillaLuxury = false, catalogoLuxuryDestacado = false }: Props) {
+export default function Escaparate({ esc: todo, slug, whatsapp, puedePedir, puedeReservar, disposicion, solo, plantillaLuxury = false, catalogoLuxuryDestacado = false, vistaServiciosLuxury = 'vertical' }: Props) {
   const esc = useMemo(
     () => {
       const items = solo === 'reservas' ? todo.items.filter((i) => i.tipo !== 'producto') : todo.items;
@@ -132,7 +133,6 @@ export default function Escaparate({ esc: todo, slug, whatsapp, puedePedir, pued
   const carruselProductos = useRef<HTMLDivElement>(null);
   const [familia, setFamilia] = useState('');
   const [busqueda, setBusqueda] = useState('');
-  const [vistaServicios, setVistaServicios] = useState<'vertical' | 'horizontal'>('vertical');
   const [servicioInlineId, setServicioInlineId] = useState('');
   const [abierto, setAbierto] = useState<string | null>(null);
   const [verCarrito, setVerCarrito] = useState(false);
@@ -158,14 +158,6 @@ export default function Escaparate({ esc: todo, slug, whatsapp, puedePedir, pued
   const item = abierto ? porId.get(abierto) ?? null : null;
   const citaInline = plantillaLuxury && solo === 'reservas' && esc.items.length > 0 && esc.items.every((i) => i.tipo === 'cita');
   const servicioInline = esc.items.find((i) => i.id === servicioInlineId) ?? esc.items[0];
-  const alternarServicios = plantillaLuxury && visibles.filter((i) => i.tipo !== 'producto').length > 1;
-  const controlesServicios = alternarServicios && (
-    <div className="tp-luxury-servicios__controles" role="group" aria-label="Vista de servicios">
-      <button type="button" aria-pressed={vistaServicios === 'vertical'} onClick={() => setVistaServicios('vertical')}>Vertical</button>
-      <button type="button" aria-pressed={vistaServicios === 'horizontal'} onClick={() => setVistaServicios('horizontal')}>Horizontal</button>
-    </div>
-  );
-
   const terminar = (h: Hecho) => {
     setAbierto(null);
     setVerCarrito(false);
@@ -222,7 +214,7 @@ export default function Escaparate({ esc: todo, slug, whatsapp, puedePedir, pued
           </div>
         )}
         <div className="tp-catalogo__resultados">
-        {tipos.length <= 1 && !catalogoLuxuryDestacado && <div className="tp-catalogo__cabeza"><h2 className="tp-seccion">{cap(v.items)}</h2><div className="tp-catalogo__cabeza-acciones"><small>{visibles.length} {visibles.length === 1 ? 'resultado' : 'resultados'}</small>{controlesServicios}</div></div>}
+        {tipos.length <= 1 && !catalogoLuxuryDestacado && <div className="tp-catalogo__cabeza"><h2 className="tp-seccion">{cap(v.items)}</h2><small>{visibles.length} {visibles.length === 1 ? 'resultado' : 'resultados'}</small></div>}
         {disposicion === 'carta' ? (
           [...new Set(visibles.map((i) => i.familia))].map((f) => (
             <div key={f || '-'} className="tp-carta">
@@ -245,8 +237,8 @@ export default function Escaparate({ esc: todo, slug, whatsapp, puedePedir, pued
                   <button type="button" aria-label="Productos anteriores" onClick={() => carruselProductos.current?.scrollBy({ left: -carruselProductos.current.clientWidth * .8, behavior: 'smooth' })}><ChevronLeft size={24} aria-hidden="true" /></button>
                   <button type="button" aria-label="Productos siguientes" onClick={() => carruselProductos.current?.scrollBy({ left: carruselProductos.current.clientWidth * .8, behavior: 'smooth' })}><ChevronRight size={24} aria-hidden="true" /></button>
                 </div>
-              </div> : t && <div className="tp-luxury-servicios__cabecera"><h2 className="tp-seccion">{cap(vocabularioDe(t).items)}</h2>{t !== 'producto' && controlesServicios}</div>}
-              <div ref={catalogoLuxuryDestacado && (t ?? tipos[0]) === 'producto' ? carruselProductos : undefined} className={`tp-grid${disposicion === 'cuadricula' ? '' : ' tp-grid--lista'}${plantillaLuxury && (t ?? tipos[0]) !== 'producto' && vistaServicios === 'horizontal' ? ' tp-grid--luxury-horizontal' : ''}`}>
+              </div> : t && <div className="tp-luxury-servicios__cabecera"><h2 className="tp-seccion">{cap(vocabularioDe(t).items)}</h2></div>}
+              <div ref={catalogoLuxuryDestacado && (t ?? tipos[0]) === 'producto' ? carruselProductos : undefined} className={`tp-grid${disposicion === 'cuadricula' ? '' : ' tp-grid--lista'}${plantillaLuxury && (t ?? tipos[0]) !== 'producto' && vistaServiciosLuxury === 'horizontal' ? ' tp-grid--luxury-horizontal' : ''}`}>
                 {deEste.map((i, indice) => (
                   <Tarjeta key={i.id} item={i} plantillaLuxury={plantillaLuxury} indice={indice} alAbrir={() => setAbierto(i.id)} />
                 ))}

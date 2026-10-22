@@ -11,6 +11,8 @@ export interface AparienciaPagina {
   mostrarWhatsapp?: boolean;
   /** Luxury: presenta los productos en un carrusel y muestra el acceso desde la portada. */
   catalogoLuxuryDestacado?: boolean;
+  /** El dueño decide cómo se presentan los servicios Luxury a sus clientes. */
+  vistaServiciosLuxury?: 'vertical' | 'horizontal';
   /** Restaurantes y cafeterías: solicitud de atención con número de mesa por WhatsApp. */
   mostrarMesero?: boolean;
   /** Foto de ejemplo que hace de portada sin foto propia (dominio/fotos.ts). */

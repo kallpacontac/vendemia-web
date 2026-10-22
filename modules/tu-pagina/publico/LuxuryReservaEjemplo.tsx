@@ -29,7 +29,7 @@ export default function LuxuryReservaEjemplo({ hoy, inicial }: { hoy: string; in
 
   return <main className="tp lx-reserva" data-diseno="agenda" data-plantilla="luxury" style={{ '--tp-color': '#D0AB75', '--tp-tinta': '#171717' } as React.CSSProperties}>
     <header className="lx-reserva__nav"><a href="/ejemplos/barberia"><ArrowLeft size={18} aria-hidden="true" /> Volver a Atelier Norte</a><span>ATELIER NORTE</span><small>VISTA DE EJEMPLO</small></header>
-    <div className="lx-reserva__intro"><span>ELIGE TU MOMENTO</span><h1>Una cita hecha<br />para ti.</h1><p>Selecciona el servicio, el día y la hora. Los horarios de esta muestra son ilustrativos y no registran una cita.</p></div>
+    <div className="lx-reserva__intro"><span>AGENDA · ATELIER NORTE</span><h1>Elige tu cita</h1><p>Servicio, día y hora. Los horarios de esta muestra son ilustrativos.</p></div>
     <section className="lx-reserva__panel" aria-label="Agenda de ejemplo">
       <aside className="lx-reserva__servicio">
         <div className="lx-reserva__foto" style={{ backgroundImage: `url("${actual.foto}")` }} role="img" aria-label={actual.nombre} />
@@ -50,7 +50,7 @@ export default function LuxuryReservaEjemplo({ hoy, inicial }: { hoy: string; in
           {dias.slice(semana * 6, semana * 6 + 6).map((d) => <button type="button" key={clave(d)} aria-pressed={fecha === clave(d)} onClick={() => { setFecha(clave(d)); setHora(''); setResumen(false); }}><small>{new Intl.DateTimeFormat('es-PE', { weekday: 'short', timeZone: 'UTC' }).format(d)}</small><b>{d.getUTCDate()}</b></button>)}
         </div>
         <p className="lx-reserva__fecha">{diaElegido ? fechaLarga(diaElegido) : 'Selecciona un día para ver las horas.'}</p>
-        <div className="lx-reserva__horas"><span>03 / HORA</span><h2>Escoge tu horario</h2>{diaElegido ? <div role="group" aria-label="Horas disponibles">{HORAS_BARBERIA.map((h) => <button type="button" key={h} aria-pressed={hora === h} onClick={() => { setHora(h); setResumen(false); }}>{h}</button>)}</div> : <p>Primero elige un día.</p>}</div>
+        <div className="lx-reserva__horas" key={fecha || 'sin-fecha'}><span>03 / HORA</span><h2>Escoge tu horario</h2>{diaElegido ? <div role="group" aria-label="Horas disponibles">{HORAS_BARBERIA.map((h) => <button type="button" key={h} aria-pressed={hora === h} onClick={() => { setHora(h); setResumen(false); }}>{h}</button>)}</div> : <p>Primero elige un día.</p>}</div>
         {diaElegido && hora && <button type="button" className="lx-reserva__confirmar" onClick={() => setResumen(true)}>Ver resumen de ejemplo <ArrowRight size={18} aria-hidden="true" /></button>}
       </div>
     </section>
