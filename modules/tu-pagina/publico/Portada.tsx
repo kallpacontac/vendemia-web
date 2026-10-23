@@ -25,6 +25,7 @@ import { esPlantillaEjemplo } from '@/modules/tu-pagina/dominio/ejemplo';
 import { esFotoPlantilla, fotoDePlantilla } from '@/modules/tu-pagina/dominio/fotos';
 import { FOTOS_SERVICIOS_LUXURY } from '@/modules/tu-pagina/dominio/fotos';
 import { soles } from '@/modules/tu-pagina/dominio/tienda';
+import AgendaPortada from '@/modules/tu-pagina/publico/AgendaPortada';
 
 type Props = { params: { slug: string }; searchParams?: Record<string, string | undefined> };
 
@@ -103,6 +104,27 @@ export default async function Portada({ params, searchParams }: Props) {
   const reservables = p.secciones.reservar ? (esc?.items ?? []).filter((i) => i.tipo !== 'producto') : [];
   const soloGrupos = reservables.length > 0 && reservables.every((i) => i.tipo === 'grupo');
   const reservaGrande = !envioPrimero && tipo !== 'tienda' && !esLuxury;
+
+  // Las demos de agenda y la página del negocio comparten ahora la misma
+  // composición: portada, servicios y el selector de horarios real.
+  const agendaDisenada = p.secciones.apariencia?.plantillaActiva && tipo === 'agenda' && (plantilla === 'agenda' || plantilla === 'lista');
+  if (agendaDisenada) {
+    const reservarHref = reservables.some((i) => i.tipo === 'cita') ? '#reservar' : `./${p.slug}/reservar`;
+    return <Marco pagina={p} portada>
+      <AgendaPortada pagina={p} editorial={plantilla === 'lista'} reservarHref={reservarHref} />
+      <main className="tp-agenda-contenido">
+        {esc && hayItems && <section className="tp-agenda-servicios" aria-label="Servicios disponibles">
+          <div className="tp-agenda-seccion-titulo"><span>QUÉ OFRECEMOS</span><h2>Servicios para ti</h2><p>Conoce los detalles y elige el que necesitas.</p></div>
+          <Escaparate esc={esc} slug={p.slug} whatsapp={p.whatsapp} puedePedir={false} puedeReservar disposicion="cuadricula" agendaEstilo={plantilla} agendaNombre={p.titulo} />
+        </section>}
+        {esc && reservables.some((i) => i.tipo === 'cita') && <section className="tp-agenda-reservar" id="reservar" aria-label="Elegir fecha y hora">
+          <div className="tp-agenda-seccion-titulo"><span>EN POCOS PASOS</span><h2>Encuentra tu momento</h2><p>Selecciona el servicio, el día y la hora.</p></div>
+          <Escaparate esc={esc} slug={p.slug} whatsapp={p.whatsapp} puedePedir={false} puedeReservar disposicion="filas" solo="reservas" agendaEstilo={plantilla} agendaNombre={p.titulo} />
+        </section>}
+        {p.secciones.apariencia?.mostrarWhatsapp !== false && <a className="tp-agenda-contacto" href={urlWhatsApp(p.whatsapp, `Hola ${p.titulo}`)} rel="noopener"><MessageCircle size={20} aria-hidden="true" /><span><b>Escríbenos por WhatsApp</b><small>Te respondemos ahí</small></span><span aria-hidden="true">→</span></a>}
+      </main>
+    </Marco>;
+  }
 
   const reservar = reservables.length > 0 && (
     <a className={`tp-accion${reservaGrande ? ' tp-accion--grande' : ''}`} href={`./${p.slug}/reservar`}>

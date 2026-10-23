@@ -55,6 +55,8 @@ interface Props {
   plantillaLuxury?: boolean;
   catalogoLuxuryDestacado?: boolean;
   vistaServiciosLuxury?: 'vertical' | 'horizontal';
+  agendaEstilo?: 'agenda' | 'lista';
+  agendaNombre?: string;
 }
 
 const ORDEN_TIPOS: TipoItem[] = ['cita', 'grupo', 'producto'];
@@ -116,14 +118,15 @@ const MENSAJE_FALLO: Record<string, string> = {
   not_found: 'Esta página ya no recibe reservas en línea. Escríbenos por WhatsApp.',
 };
 
-export default function Escaparate({ esc: todo, slug, whatsapp, puedePedir, puedeReservar, disposicion, solo, plantillaLuxury = false, catalogoLuxuryDestacado = false, vistaServiciosLuxury = 'vertical' }: Props) {
+export default function Escaparate({ esc: todo, slug, whatsapp, puedePedir, puedeReservar, disposicion, solo, plantillaLuxury = false, catalogoLuxuryDestacado = false, vistaServiciosLuxury = 'vertical', agendaEstilo, agendaNombre = '' }: Props) {
   const esc = useMemo(
     () => {
       const items = solo === 'reservas' ? todo.items.filter((i) => i.tipo !== 'producto') : todo.items;
-      return solo || plantillaLuxury ? { ...todo, items: plantillaLuxury ? items.map((i, indice) =>
-        i.tipo !== 'producto' && !i.fotos.length ? { ...i, fotos: [fotoServicioLuxury(i.nombre, indice)] } : i) : items } : todo;
+      return solo || plantillaLuxury || agendaEstilo ? { ...todo, items: (plantillaLuxury || agendaEstilo) ? items.map((i, indice) =>
+        i.tipo !== 'producto' && !i.fotos.length ? { ...i, fotos: [agendaEstilo && !/barber|peluquer|sal[oó]n|estil|cabello|corte/i.test(agendaNombre)
+          ? `/assets/negocios-ejemplo/dental-${indice % 3}.webp` : fotoServicioLuxury(i.nombre, indice)] } : i) : items } : todo;
     },
-    [todo, solo, plantillaLuxury],
+    [todo, solo, plantillaLuxury, agendaEstilo, agendaNombre],
   );
   // Los tipos que hay, en orden; con uno solo, el título es el suyo y no hay secciones.
   const tipos = ORDEN_TIPOS.filter((t) => esc.items.some((i) => i.tipo === t));
@@ -156,8 +159,8 @@ export default function Escaparate({ esc: todo, slug, whatsapp, puedePedir, pued
     (!familia || i.familia === familia) &&
     (!termino || `${i.nombre} ${i.descripcion} ${i.familia}`.toLocaleLowerCase('es').includes(termino)));
   const item = abierto ? porId.get(abierto) ?? null : null;
-  const citaInline = plantillaLuxury && solo === 'reservas' && esc.items.length > 0 && esc.items.every((i) => i.tipo === 'cita');
-  const servicioInline = esc.items.find((i) => i.id === servicioInlineId) ?? esc.items[0];
+  const citaInline = (plantillaLuxury || Boolean(agendaEstilo)) && solo === 'reservas' && esc.items.some((i) => i.tipo === 'cita');
+  const servicioInline = esc.items.find((i) => i.id === servicioInlineId && i.tipo === 'cita') ?? esc.items.find((i) => i.tipo === 'cita') ?? esc.items[0];
   const terminar = (h: Hecho) => {
     setAbierto(null);
     setVerCarrito(false);
@@ -186,6 +189,20 @@ export default function Escaparate({ esc: todo, slug, whatsapp, puedePedir, pued
   }
 
   if (citaInline) {
+    if (agendaEstilo) return <div className="tp-agenda-widget">
+      <aside className="tp-agenda-widget__resumen">
+        <span className="tp-agenda-widget__marca" aria-hidden="true">✦</span>
+        <b>{agendaNombre}</b>
+        <h3>{servicioInline.nombre}</h3>
+        <p>{servicioInline.descripcion}</p>
+        <span><Clock size={17} aria-hidden="true" /> {servicioInline.duracion} minutos</span>
+        <label htmlFor="tp-servicio-inline">Servicio</label>
+        <select id="tp-servicio-inline" value={servicioInline.id} onChange={(e) => setServicioInlineId(e.target.value)}>
+          {esc.items.filter((i) => i.tipo === 'cita').map((servicio) => <option key={servicio.id} value={servicio.id}>{servicio.nombre}</option>)}
+        </select>
+      </aside>
+      <Reservar key={servicioInline.id} item={servicioInline} esc={esc} slug={slug} alTerminar={terminar} presentacion="agenda" />
+    </div>;
     return <section className="tp-luxury-reserva-real" aria-label="Elegir cita">
       <div className="tp-luxury-reserva-real__selector">
         <span>01 / SERVICIO</span>
@@ -240,7 +257,7 @@ export default function Escaparate({ esc: todo, slug, whatsapp, puedePedir, pued
               </div> : t && <div className="tp-luxury-servicios__cabecera"><h2 className="tp-seccion">{cap(vocabularioDe(t).items)}</h2></div>}
               <div ref={catalogoLuxuryDestacado && (t ?? tipos[0]) === 'producto' ? carruselProductos : undefined} className={`tp-grid${disposicion === 'cuadricula' ? '' : ' tp-grid--lista'}${plantillaLuxury && (t ?? tipos[0]) !== 'producto' && vistaServiciosLuxury === 'horizontal' ? ' tp-grid--luxury-horizontal' : ''}`}>
                 {deEste.map((i, indice) => (
-                  <Tarjeta key={i.id} item={i} plantillaLuxury={plantillaLuxury} indice={indice} alAbrir={() => setAbierto(i.id)} />
+                  <Tarjeta key={i.id} item={i} plantillaLuxury={plantillaLuxury} agendaEstilo={agendaEstilo} agendaNombre={agendaNombre} indice={indice} alAbrir={() => setAbierto(i.id)} />
                 ))}
               </div>
             </div>
@@ -315,9 +332,10 @@ export default function Escaparate({ esc: todo, slug, whatsapp, puedePedir, pued
    Piezas
    ═══════════════════════════════════════════════════════════════════════ */
 
-function Tarjeta({ item, alAbrir, plantillaLuxury, indice }: { item: Item; alAbrir: () => void; plantillaLuxury: boolean; indice: number }) {
+function Tarjeta({ item, alAbrir, plantillaLuxury, agendaEstilo, agendaNombre, indice }: { item: Item; alAbrir: () => void; plantillaLuxury: boolean; agendaEstilo?: 'agenda' | 'lista'; agendaNombre: string; indice: number }) {
   const foto = item.fotos[0];
-  const respaldo = plantillaLuxury && item.tipo !== 'producto' ? fotoServicioLuxury(item.nombre, indice) : undefined;
+  const respaldo = (plantillaLuxury || agendaEstilo) && item.tipo !== 'producto' ? (agendaEstilo && !/barber|peluquer|sal[oó]n|estil|cabello|corte/i.test(agendaNombre)
+    ? `/assets/negocios-ejemplo/dental-${indice % 3}.webp` : fotoServicioLuxury(item.nombre, indice)) : undefined;
   const agotado =
     item.tipo === 'producto' &&
     (item.opciones.length ? item.opciones.every((o) => o.quedan === 0) : item.quedan === 0);
@@ -337,7 +355,8 @@ function Tarjeta({ item, alAbrir, plantillaLuxury, indice }: { item: Item; alAbr
               : '';
   return (
     <button type="button" className={`tp-tarjeta${agotado ? ' tp-tarjeta--agotado' : ''}`} onClick={alAbrir}>
-      <span className="tp-tarjeta__foto" style={foto || respaldo ? { backgroundImage: foto && respaldo && foto !== respaldo ? `url("${foto}"), url("${respaldo}")` : `url("${foto || respaldo}")` } : undefined} aria-hidden="true">
+      <span className="tp-tarjeta__foto" style={respaldo ? { backgroundImage: `url("${respaldo}")` } : foto ? { backgroundImage: `url("${foto}")` } : undefined} aria-hidden="true">
+        {foto && respaldo && foto !== respaldo && <img src={foto} alt="" loading="lazy" style={{ opacity: 0 }} onError={(e) => { e.currentTarget.style.display = 'none'; }} onLoad={(e) => { if (e.currentTarget.naturalWidth <= 2 || e.currentTarget.naturalHeight <= 2) e.currentTarget.style.display = 'none'; else e.currentTarget.style.opacity = '1'; }} />}
         {!foto && !respaldo && (item.tipo === 'grupo' ? <Users size={26} /> : item.tipo === 'cita' ? <Clock size={26} /> : <ShoppingBag size={26} />)}
       </span>
       <span className="tp-tarjeta__texto">
@@ -348,6 +367,7 @@ function Tarjeta({ item, alAbrir, plantillaLuxury, indice }: { item: Item; alAbr
           {sub && <small>{sub}</small>}
         </span>
         {plantillaLuxury && item.tipo !== 'producto' && <span className="tp-tarjeta__reservar">Elegir horario <span aria-hidden="true">→</span></span>}
+        {agendaEstilo && item.tipo !== 'producto' && <span className="tp-agenda-tarjeta__ver">Ver servicio <span aria-hidden="true">→</span></span>}
       </span>
     </button>
   );
@@ -552,7 +572,7 @@ function useEnviar(ruta: string) {
   return { enviar, enviando };
 }
 
-function Reservar({ item, esc, slug, alTerminar, presentacion }: { item: Item; esc: Datos; slug: string; alTerminar: (h: Hecho) => void; presentacion?: 'inline' }) {
+function Reservar({ item, esc, slug, alTerminar, presentacion }: { item: Item; esc: Datos; slug: string; alTerminar: (h: Hecho) => void; presentacion?: 'inline' | 'agenda' }) {
   const { cliente, setCliente, recordar } = useCliente();
   const [profesional, setProfesional] = useState<string>('');
   const [tomadas, setTomadas] = useState<Set<string>>(new Set());
@@ -614,6 +634,21 @@ function Reservar({ item, esc, slug, alTerminar, presentacion }: { item: Item; e
     if (j.errores) setErrores(j.errores as ErroresCliente);
     setFallo(MENSAJE_FALLO[String(j.status)] ?? (j.status === 'sin_red' ? 'Sin conexión. Revisa tu internet.' : 'No pudimos separar tu cita. Inténtalo otra vez.'));
   }
+
+  if (presentacion === 'agenda') return <>
+    <div className="tp-agenda-widget__calendario">
+      {esc.pideProfesional && <div className="tp-campo"><label htmlFor="tp-agenda-profesional">Profesional</label><select id="tp-agenda-profesional" value={profesional} onChange={(e) => setProfesional(e.target.value)}><option value="">El primero libre</option>{esc.agenda.equipo.map((e) => <option key={e.id} value={e.id}>{e.nombre}</option>)}</select></div>}
+      <h3>Elige un día</h3>
+      <div className="tp-agenda-widget__dias" role="group" aria-label="Días disponibles">{dias.map((f) => { const libres = horasDe(f).length; return <button key={f} type="button" disabled={!libres} aria-pressed={dia === f} onClick={() => { setDia(f); setHora(''); }}><small>{ETIQUETA_DIA(f, esc.hoy)}</small><b>{fechaCorta(f).split(' ').slice(1).join(' ')}</b></button>; })}</div>
+      <p>{dia ? `Seleccionado: ${fechaCorta(dia)}` : 'Selecciona un día para ver horarios'}</p>
+    </div>
+    <div className="tp-agenda-widget__horas">
+      <h3>Hora disponible</h3>
+      {horas.length ? <div role="group" aria-label="Horas disponibles">{horas.map((h) => <button key={h.hora} type="button" aria-pressed={hora === h.hora} onClick={() => setHora(h.hora)}>{h.hora}</button>)}</div> : <p>Elige un día con horarios disponibles.</p>}
+    </div>
+    {inicio && <div className="tp-agenda-widget__datos"><h3>Tus datos</h3><CamposCliente d={cliente} errores={errores} alCambiar={(k, val) => { setCliente((c) => ({ ...c, [k]: val })); setErrores((e) => ({ ...e, [k]: undefined })); }} extra={<div className="tp-campo"><label htmlFor="tp-para">¿Es para otra persona? <small>(opcional)</small></label><input id="tp-para" value={beneficiario} maxLength={80} placeholder="Su nombre" onChange={(e) => setBeneficiario(e.target.value)} /></div>} />{fallo && <p className="tp-aviso" role="alert">{fallo}</p>}<button type="button" className="tp-boton" disabled={enviando} onClick={() => void confirmar()}>{enviando ? 'Separando…' : `Separar mi cita · ${cuandoCita(inicio)}`}</button><p className="tp-nota">Hasta las {sumarMin(inicio, item.duracion).slice(11)} · Luego nos avisas por WhatsApp.</p></div>}
+    {!inicio && fallo && <p className="tp-aviso" role="alert">{fallo}</p>}
+  </>;
 
   return (
     <Detalle item={item}>

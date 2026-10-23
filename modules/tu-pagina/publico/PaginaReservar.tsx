@@ -27,6 +27,15 @@ export default async function PaginaReservar({ params }: Props) {
   const reservables = (esc?.items ?? []).filter((i) => i.tipo !== 'producto');
   const soloGrupos = reservables.length > 0 && reservables.every((i) => i.tipo === 'grupo');
   const luxury = p.secciones.apariencia?.plantillaActiva && p.plantilla === 'luxury';
+  const agendaDisenada = p.secciones.apariencia?.plantillaActiva && (p.plantilla === 'agenda' || p.plantilla === 'lista');
+
+  if (agendaDisenada) return <Marco pagina={p} vista="agenda">
+    <main className="tp-agenda-reserva-pagina">
+      <a className="tp-volver" href={`../${p.slug}`}><ChevronLeft size={18} aria-hidden="true" /> Volver a {p.titulo}</a>
+      <div className="tp-agenda-seccion-titulo"><span>EN POCOS PASOS</span><h1>Encuentra tu momento</h1><p>Selecciona el servicio, el día y la hora.</p></div>
+      {esc && reservables.length > 0 ? <Escaparate esc={esc} slug={p.slug} whatsapp={p.whatsapp} disposicion="filas" puedePedir={false} puedeReservar solo="reservas" agendaEstilo={p.plantilla as 'agenda' | 'lista'} agendaNombre={p.titulo} /> : <p className="tp-vacio">Por ahora no hay nada para reservar aquí. Escríbenos por WhatsApp.</p>}
+    </main>
+  </Marco>;
 
   return (
     <Marco pagina={p} vista="agenda">
