@@ -28,7 +28,6 @@ import { fotoServicioLuxury } from '@/modules/tu-pagina/dominio/fotos';
 import { abreEl, horasLibres, sumarDias, sumarMin } from '@/modules/tu-pagina/dominio/agenda';
 import { fechaCorta, urlWhatsApp } from '@/modules/tu-pagina/dominio/envio';
 import {
-  cuandoCita,
   mensajePedido,
   mensajeReserva,
   soles,
@@ -567,6 +566,31 @@ function CamposCliente({ d, errores, alCambiar, extra }: {
   );
 }
 
+function ResumenCita({ item, esc, inicio, profesional, esBarberia }: {
+  item: Item;
+  esc: Datos;
+  inicio: string;
+  profesional: string;
+  esBarberia: boolean;
+}) {
+  const nombreProfesional = esc.agenda.equipo.find((persona) => persona.id === profesional)?.nombre
+    ?? (esBarberia ? 'Cualquiera' : 'El primero libre');
+  return (
+    <section className="tp-reserva-resumen" aria-label="Resumen de tu cita">
+      <span className="tp-reserva-resumen__etiqueta">RESUMEN DE TU CITA</span>
+      <h4>{item.nombre}</h4>
+      <dl>
+        <div><dt>Fecha</dt><dd>{fechaCorta(inicio.slice(0, 10))}</dd></div>
+        <div><dt>Hora</dt><dd>{inicio.slice(11, 16)} – {sumarMin(inicio, item.duracion).slice(11, 16)}</dd></div>
+        <div><dt>Duración</dt><dd>{item.duracion} min</dd></div>
+        {esc.pideProfesional && <div><dt>{esBarberia ? 'Barbero' : 'Profesional'}</dt><dd>{nombreProfesional}</dd></div>}
+        {esc.direccion && <div><dt>Dirección</dt><dd>{esc.direccion}</dd></div>}
+        {item.precio !== null && <div className="tp-reserva-resumen__precio"><dt>Precio</dt><dd>{soles(item.precio)}</dd></div>}
+      </dl>
+    </section>
+  );
+}
+
 /** El envío al servidor con su idem: un doble toque no separa dos veces. */
 function useEnviar(ruta: string) {
   const idem = useRef(nuevoIdem());
@@ -595,7 +619,6 @@ function Reservar({ item, esc, slug, alTerminar, presentacion, esBarberia = fals
   const { cliente, setCliente, recordar } = useCliente();
   const [profesional, setProfesional] = useState<string>('');
   const [tomadas, setTomadas] = useState<Set<string>>(new Set());
-  const [beneficiario, setBeneficiario] = useState('');
   const [errores, setErrores] = useState<ErroresCliente>({});
   const [fallo, setFallo] = useState('');
   const { enviar, enviando } = useEnviar('/api/tu-pagina/publico/reserva');
@@ -643,7 +666,6 @@ function Reservar({ item, esc, slug, alTerminar, presentacion, esBarberia = fals
       profesional: profesional || undefined,
       nombre: cliente.nombre,
       telefono: cliente.telefono,
-      beneficiario,
       web: '',
     });
     if (j.status === 'ok' && typeof j.codigo === 'string') {
@@ -653,7 +675,7 @@ function Reservar({ item, esc, slug, alTerminar, presentacion, esBarberia = fals
         titulo: '¡Tu cita está separada!',
         codigo: j.codigo,
         mensaje: mensajeReserva(j.codigo, {
-          servicio: item.nombre, precio: item.precio, inicio, profesional: pro, beneficiario, nombre: cliente.nombre, esGrupo: false,
+          servicio: item.nombre, precio: item.precio, inicio, profesional: pro, beneficiario: '', nombre: cliente.nombre, esGrupo: false,
         }),
       });
       return;
@@ -679,7 +701,15 @@ function Reservar({ item, esc, slug, alTerminar, presentacion, esBarberia = fals
       <h3>Hora disponible</h3>
       {horas.length ? <div role="group" aria-label="Horas disponibles">{horas.map((h) => <button key={h.hora} type="button" aria-pressed={hora === h.hora} onClick={() => setHora(h.hora)}>{h.hora}</button>)}</div> : <p>Elige un día con horarios disponibles.</p>}
     </div>
-    {inicio && <div className="tp-agenda-widget__datos" id="tp-agenda-datos"><span className="tp-agenda-widget__paso">4 · TUS DATOS</span><h3>Confirma tu cita</h3><CamposCliente d={cliente} errores={errores} alCambiar={(k, val) => { setCliente((c) => ({ ...c, [k]: val })); setErrores((e) => ({ ...e, [k]: undefined })); }} extra={<div className="tp-campo"><label htmlFor="tp-para">¿Es para otra persona? <small>(opcional)</small></label><input id="tp-para" value={beneficiario} maxLength={80} placeholder="Su nombre" onChange={(e) => setBeneficiario(e.target.value)} /></div>} />{fallo && <p className="tp-aviso" role="alert">{fallo}</p>}<button type="button" className="tp-boton" disabled={enviando} onClick={() => void confirmar()}>{enviando ? 'Separando…' : `Separar mi cita · ${cuandoCita(inicio)}`}</button><p className="tp-nota">Hasta las {sumarMin(inicio, item.duracion).slice(11)} · Luego nos avisas por WhatsApp.</p></div>}
+    {inicio && <div className="tp-agenda-widget__datos" id="tp-agenda-datos">
+      <span className="tp-agenda-widget__paso">4 · TUS DATOS</span>
+      <h3>Revisa y separa tu cita</h3>
+      <CamposCliente d={cliente} errores={errores} alCambiar={(k, val) => { setCliente((c) => ({ ...c, [k]: val })); setErrores((e) => ({ ...e, [k]: undefined })); }} />
+      <ResumenCita item={item} esc={esc} inicio={inicio} profesional={profesional} esBarberia={esBarberia} />
+      {fallo && <p className="tp-aviso" role="alert">{fallo}</p>}
+      <button type="button" className="tp-boton" disabled={enviando} onClick={() => void confirmar()}>{enviando ? 'Separando…' : 'Separar mi cita'}</button>
+      <p className="tp-nota">Después de separar tu horario, podrás avisar al negocio por WhatsApp.</p>
+    </div>}
     {!inicio && fallo && <p className="tp-aviso" role="alert">{fallo}</p>}
   </>;
 
@@ -730,18 +760,13 @@ function Reservar({ item, esc, slug, alTerminar, presentacion, esBarberia = fals
             d={cliente}
             errores={errores}
             alCambiar={(k, val) => { setCliente((c) => ({ ...c, [k]: val })); setErrores((e) => ({ ...e, [k]: undefined })); }}
-            extra={
-              <div className="tp-campo">
-                <label htmlFor="tp-para">¿Es para otra persona? <small>(opcional)</small></label>
-                <input id="tp-para" value={beneficiario} maxLength={80} placeholder="Su nombre" onChange={(e) => setBeneficiario(e.target.value)} />
-              </div>
-            }
           />
+          <ResumenCita item={item} esc={esc} inicio={inicio} profesional={profesional} esBarberia={esBarberia} />
           {fallo && <p className="tp-aviso" role="alert">{fallo}</p>}
           <button type="button" className="tp-boton" disabled={enviando} onClick={() => void confirmar()}>
-            {enviando ? 'Separando…' : `Separar mi cita · ${cuandoCita(inicio)}`}
+            {enviando ? 'Separando…' : 'Separar mi cita'}
           </button>
-          <p className="tp-nota">Hasta las {sumarMin(inicio, item.duracion).slice(11)} · Luego nos avisas por WhatsApp.</p>
+          <p className="tp-nota">Después de separar tu horario, podrás avisar al negocio por WhatsApp.</p>
         </>
       )}
       {!inicio && fallo && <p className="tp-aviso" role="alert">{fallo}</p>}
