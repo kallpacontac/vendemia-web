@@ -12,16 +12,19 @@ import Marco from '@/modules/tu-pagina/publico/Marco';
 import Escaparate from '@/modules/tu-pagina/publico/Escaparate';
 import { paginaDe } from '@/modules/tu-pagina/servidor/pagina';
 import { escaparateDe } from '@/modules/tu-pagina/servidor/escaparate';
+import { conVista, consultaVista } from '@/modules/tu-pagina/dominio/vista';
 
-type Props = { params: { slug: string } };
+type Props = { params: { slug: string }; searchParams?: Record<string, string | undefined> };
 
-export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const p = await paginaDe(params.slug).catch(() => null);
-  return p?.secciones.reservar ? { title: `Reservar · ${p.titulo}` } : { title: 'Vendemia', robots: { index: false } };
+export async function generateMetadata({ params, searchParams }: Props): Promise<Metadata> {
+  const guardada = await paginaDe(params.slug).catch(() => null);
+  const p = guardada ? conVista(guardada, searchParams) : null;
+  return p?.secciones.reservar ? { title: `Reservar · ${p.titulo}`, ...(searchParams?.vista === '1' ? { robots: { index: false, follow: false } } : {}) } : { title: 'Vendemia', robots: { index: false } };
 }
 
-export default async function PaginaReservar({ params }: Props) {
-  const p = await paginaDe(params.slug);
+export default async function PaginaReservar({ params, searchParams }: Props) {
+  const guardada = await paginaDe(params.slug);
+  const p = guardada ? conVista(guardada, searchParams) : null;
   if (!p?.secciones.reservar) notFound();
   const esc = await escaparateDe(p.slug, p.secciones);
   const reservables = (esc?.items ?? []).filter((i) => i.tipo !== 'producto');
@@ -31,9 +34,9 @@ export default async function PaginaReservar({ params }: Props) {
 
   if (agendaDisenada) return <Marco pagina={p} vista="agenda">
     <main className="tp-agenda-reserva-pagina">
-      <a className="tp-volver" href={`../${p.slug}`}><ChevronLeft size={18} aria-hidden="true" /> Volver a {p.titulo}</a>
-      <div className="tp-agenda-seccion-titulo"><span>EN POCOS PASOS</span><h1>Encuentra tu momento</h1><p>Selecciona el servicio, el día y la hora.</p></div>
-      {esc && reservables.length > 0 ? <Escaparate esc={esc} slug={p.slug} whatsapp={p.whatsapp} disposicion="filas" puedePedir={false} puedeReservar solo="reservas" agendaEstilo={p.plantilla as 'agenda' | 'lista'} agendaNombre={p.titulo} /> : <p className="tp-vacio">Por ahora no hay nada para reservar aquí. Escríbenos por WhatsApp.</p>}
+      <a className="tp-volver" href={`../${p.slug}${consultaVista(searchParams)}`}><ChevronLeft size={18} aria-hidden="true" /> Volver a {p.titulo}</a>
+      <div className="tp-agenda-seccion-titulo"><span>RESERVA EN LÍNEA</span><h1>Elige tu cita</h1><p>Servicio → día → hora → tus datos</p></div>
+      {esc && reservables.length > 0 ? <Escaparate esc={esc} slug={p.slug} whatsapp={p.whatsapp} disposicion="filas" puedePedir={false} puedeReservar solo="reservas" agendaEstilo={p.plantilla as 'agenda' | 'lista'} agendaNombre={p.titulo} servicioInicialId={searchParams?.servicio} /> : <p className="tp-vacio">Por ahora no hay nada para reservar aquí. Escríbenos por WhatsApp.</p>}
     </main>
   </Marco>;
 
@@ -58,6 +61,7 @@ export default async function PaginaReservar({ params }: Props) {
             puedeReservar
             solo="reservas"
             plantillaLuxury={luxury}
+            agendaNombre={p.titulo}
           />
         ) : (
           <p className="tp-vacio">Por ahora no hay nada para reservar aquí. Escríbenos por WhatsApp.</p>

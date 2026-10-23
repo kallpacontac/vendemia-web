@@ -57,6 +57,7 @@ interface Props {
   vistaServiciosLuxury?: 'vertical' | 'horizontal';
   agendaEstilo?: 'agenda' | 'lista';
   agendaNombre?: string;
+  servicioInicialId?: string;
 }
 
 const ORDEN_TIPOS: TipoItem[] = ['cita', 'grupo', 'producto'];
@@ -118,7 +119,8 @@ const MENSAJE_FALLO: Record<string, string> = {
   not_found: 'Esta página ya no recibe reservas en línea. Escríbenos por WhatsApp.',
 };
 
-export default function Escaparate({ esc: todo, slug, whatsapp, puedePedir, puedeReservar, disposicion, solo, plantillaLuxury = false, catalogoLuxuryDestacado = false, vistaServiciosLuxury = 'vertical', agendaEstilo, agendaNombre = '' }: Props) {
+export default function Escaparate({ esc: todo, slug, whatsapp, puedePedir, puedeReservar, disposicion, solo, plantillaLuxury = false, catalogoLuxuryDestacado = false, vistaServiciosLuxury = 'vertical', agendaEstilo, agendaNombre = '', servicioInicialId = '' }: Props) {
+  const esBarberia = /barber|peluquer|sal[oó]n|estil|cabello|corte/i.test(agendaNombre);
   const esc = useMemo(
     () => {
       const items = solo === 'reservas' ? todo.items.filter((i) => i.tipo !== 'producto') : todo.items;
@@ -136,7 +138,7 @@ export default function Escaparate({ esc: todo, slug, whatsapp, puedePedir, pued
   const carruselProductos = useRef<HTMLDivElement>(null);
   const [familia, setFamilia] = useState('');
   const [busqueda, setBusqueda] = useState('');
-  const [servicioInlineId, setServicioInlineId] = useState('');
+  const [servicioInlineId, setServicioInlineId] = useState(servicioInicialId);
   const [abierto, setAbierto] = useState<string | null>(null);
   const [verCarrito, setVerCarrito] = useState(false);
   const [hecho, setHecho] = useState<Hecho | null>(null);
@@ -191,6 +193,7 @@ export default function Escaparate({ esc: todo, slug, whatsapp, puedePedir, pued
   if (citaInline) {
     if (agendaEstilo) return <div className="tp-agenda-widget">
       <aside className="tp-agenda-widget__resumen">
+        <span className="tp-agenda-widget__paso">1 · SERVICIO</span>
         <span className="tp-agenda-widget__marca" aria-hidden="true">✦</span>
         <b>{agendaNombre}</b>
         <h3>{servicioInline.nombre}</h3>
@@ -201,7 +204,7 @@ export default function Escaparate({ esc: todo, slug, whatsapp, puedePedir, pued
           {esc.items.filter((i) => i.tipo === 'cita').map((servicio) => <option key={servicio.id} value={servicio.id}>{servicio.nombre}</option>)}
         </select>
       </aside>
-      <Reservar key={servicioInline.id} item={servicioInline} esc={esc} slug={slug} alTerminar={terminar} presentacion="agenda" />
+      <Reservar key={servicioInline.id} item={servicioInline} esc={esc} slug={slug} alTerminar={terminar} presentacion="agenda" esBarberia={esBarberia} />
     </div>;
     return <section className="tp-luxury-reserva-real" aria-label="Elegir cita">
       <div className="tp-luxury-reserva-real__selector">
@@ -212,7 +215,7 @@ export default function Escaparate({ esc: todo, slug, whatsapp, puedePedir, pued
         </select>
       </div>
       <div className="tp-luxury-reserva-real__panel">
-        <Reservar key={servicioInline.id} item={servicioInline} esc={esc} slug={slug} alTerminar={terminar} presentacion="inline" />
+        <Reservar key={servicioInline.id} item={servicioInline} esc={esc} slug={slug} alTerminar={terminar} presentacion="inline" esBarberia={esBarberia} />
       </div>
     </section>;
   }
@@ -279,7 +282,7 @@ export default function Escaparate({ esc: todo, slug, whatsapp, puedePedir, pued
       )}
 
       {item && (
-        <Hoja titulo={item.nombre} variante={item.tipo === 'producto' ? 'tienda' : 'agenda'} alCerrar={() => setAbierto(null)}>
+        <Hoja titulo={item.nombre} variante={item.tipo === 'producto' ? 'tienda' : 'agenda'} disenoAgenda={Boolean(agendaEstilo && item.tipo !== 'producto')} alCerrar={() => setAbierto(null)}>
           {item.tipo === 'producto' ? (
             <FichaProducto
               item={item}
@@ -301,8 +304,18 @@ export default function Escaparate({ esc: todo, slug, whatsapp, puedePedir, pued
                 <MessageCircle size={20} aria-hidden="true" /> Preguntar por WhatsApp
               </a>
             </Detalle>
+          ) : item.tipo === 'cita' && agendaEstilo ? (
+            <Detalle item={item} respaldo={esBarberia ? fotoServicioLuxury(item.nombre, 0) : '/assets/negocios-ejemplo/dental-0.webp'}>
+              <p className="tp-agenda-detalle__ayuda">Para reservar este servicio, elige un profesional, un día y una hora disponible.</p>
+              <button type="button" className="tp-boton tp-agenda-detalle__accion" onClick={() => {
+                const url = new URL(`${window.location.pathname.replace(/\/$/, '')}/reservar`, window.location.origin);
+                url.search = window.location.search;
+                url.searchParams.set('servicio', item.id);
+                window.location.assign(url.toString());
+              }}>Elegir horario <ChevronRight size={20} aria-hidden="true" /></button>
+            </Detalle>
           ) : item.tipo === 'cita' ? (
-            <Reservar item={item} esc={esc} slug={slug} alTerminar={terminar} />
+            <Reservar item={item} esc={esc} slug={slug} alTerminar={terminar} esBarberia={esBarberia} />
           ) : (
             <Inscribir item={item} slug={slug} persona={vocabularioDe('grupo').persona} alTerminar={terminar} />
           )}
@@ -393,7 +406,7 @@ function FilaCarta({ item, alAbrir }: { item: Item; alAbrir: () => void }) {
   );
 }
 
-function Hoja({ titulo, alCerrar, children, variante }: { titulo: string; alCerrar: () => void; children: React.ReactNode; variante: 'agenda' | 'tienda' }) {
+function Hoja({ titulo, alCerrar, children, variante, disenoAgenda = false }: { titulo: string; alCerrar: () => void; children: React.ReactNode; variante: 'agenda' | 'tienda'; disenoAgenda?: boolean }) {
   useEffect(() => {
     const antes = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
@@ -406,7 +419,7 @@ function Hoja({ titulo, alCerrar, children, variante }: { titulo: string; alCerr
   }, [alCerrar]);
   return (
     <div className="tp-velo" onClick={alCerrar}>
-      <div className={`tp-hojita tp-hojita--${variante}`} role="dialog" aria-modal="true" aria-label={titulo} onClick={(e) => e.stopPropagation()}>
+      <div className={`tp-hojita tp-hojita--${variante}${disenoAgenda ? ' tp-hojita--agenda-diseno' : ''}`} role="dialog" aria-modal="true" aria-label={titulo} onClick={(e) => e.stopPropagation()}>
         <button type="button" className="tp-hojita__cerrar" aria-label="Cerrar" onClick={alCerrar}><X size={20} /></button>
         {children}
       </div>
@@ -414,17 +427,23 @@ function Hoja({ titulo, alCerrar, children, variante }: { titulo: string; alCerr
   );
 }
 
-function Galeria({ fotos, nombre }: { fotos: string[]; nombre: string }) {
+function Galeria({ fotos, nombre, respaldo }: { fotos: string[]; nombre: string; respaldo?: string }) {
   const [i, setI] = useState(0);
+  const [fallida, setFallida] = useState('');
   if (!fotos.length) return null;
+  const fuente = fallida === fotos[i] && respaldo ? respaldo : fotos[i];
   return (
-    <div className="tp-galeria">
+    <div className="tp-galeria" style={respaldo ? { backgroundImage: `url("${respaldo}")` } : undefined}>
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={fotos[i]} alt={nombre} onError={(evento) => {
+      <img key={fuente} src={fuente} alt={nombre} style={respaldo ? { opacity: 0 } : undefined} onLoad={(evento) => {
+        if (respaldo && (evento.currentTarget.naturalWidth <= 2 || evento.currentTarget.naturalHeight <= 2) && fuente !== respaldo) setFallida(fotos[i]);
+        else evento.currentTarget.style.opacity = '1';
+      }} onError={(evento) => {
+        if (respaldo && fuente !== respaldo) { setFallida(fotos[i]); return; }
         const imagen = evento.currentTarget;
         if (!imagen.closest('.tp[data-plantilla="luxury"]')) return;
-        const respaldo = fotoServicioLuxury(nombre, 0);
-        if (!imagen.src.endsWith(respaldo)) imagen.src = respaldo;
+        const fotoLuxury = fotoServicioLuxury(nombre, 0);
+        if (!imagen.src.endsWith(fotoLuxury)) imagen.src = fotoLuxury;
       }} />
       {fotos.length > 1 && (
         <>
@@ -437,10 +456,10 @@ function Galeria({ fotos, nombre }: { fotos: string[]; nombre: string }) {
   );
 }
 
-function Detalle({ item, children }: { item: Item; children?: React.ReactNode }) {
+function Detalle({ item, children, respaldo }: { item: Item; children?: React.ReactNode; respaldo?: string }) {
   return (
     <>
-      <Galeria fotos={item.fotos} nombre={item.nombre} />
+      <Galeria fotos={item.fotos} nombre={item.nombre} respaldo={respaldo} />
       <div className="tp-ficha">
         <h2 className="tp-ficha__nombre">{item.nombre}</h2>
         <p className="tp-ficha__precio">
@@ -572,7 +591,7 @@ function useEnviar(ruta: string) {
   return { enviar, enviando };
 }
 
-function Reservar({ item, esc, slug, alTerminar, presentacion }: { item: Item; esc: Datos; slug: string; alTerminar: (h: Hecho) => void; presentacion?: 'inline' | 'agenda' }) {
+function Reservar({ item, esc, slug, alTerminar, presentacion, esBarberia = false }: { item: Item; esc: Datos; slug: string; alTerminar: (h: Hecho) => void; presentacion?: 'inline' | 'agenda'; esBarberia?: boolean }) {
   const { cliente, setCliente, recordar } = useCliente();
   const [profesional, setProfesional] = useState<string>('');
   const [tomadas, setTomadas] = useState<Set<string>>(new Set());
@@ -592,13 +611,25 @@ function Reservar({ item, esc, slug, alTerminar, presentacion }: { item: Item; e
   );
   const [dia, setDia] = useState('');
   const [hora, setHora] = useState('');
+  const [paginaDias, setPaginaDias] = useState(0);
   useEffect(() => {
     if (!dia || !horasDe(dia).length) setDia(dias.find((f) => horasDe(f).length > 0) ?? dias[0] ?? '');
     setHora('');
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [profesional]);
   const horas = dia ? horasDe(dia) : [];
+  const diasVisibles = dias.slice(paginaDias * 6, paginaDias * 6 + 6);
+  const moverDias = (pagina: number) => {
+    setPaginaDias(pagina);
+    setDia(dias.slice(pagina * 6, pagina * 6 + 6).find((f) => horasDe(f).length > 0) ?? '');
+    setHora('');
+  };
   const inicio = dia && hora ? `${dia} ${hora}` : '';
+  useEffect(() => {
+    if (presentacion === 'agenda' && inicio && window.innerWidth <= 650) {
+      requestAnimationFrame(() => document.getElementById('tp-agenda-datos')?.scrollIntoView({ behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' }));
+    }
+  }, [inicio, presentacion]);
 
   async function confirmar() {
     const e = validarCliente(cliente);
@@ -637,16 +668,18 @@ function Reservar({ item, esc, slug, alTerminar, presentacion }: { item: Item; e
 
   if (presentacion === 'agenda') return <>
     <div className="tp-agenda-widget__calendario">
-      {esc.pideProfesional && <div className="tp-campo"><label htmlFor="tp-agenda-profesional">Profesional</label><select id="tp-agenda-profesional" value={profesional} onChange={(e) => setProfesional(e.target.value)}><option value="">El primero libre</option>{esc.agenda.equipo.map((e) => <option key={e.id} value={e.id}>{e.nombre}</option>)}</select></div>}
-      <h3>Elige un día</h3>
-      <div className="tp-agenda-widget__dias" role="group" aria-label="Días disponibles">{dias.map((f) => { const libres = horasDe(f).length; return <button key={f} type="button" disabled={!libres} aria-pressed={dia === f} onClick={() => { setDia(f); setHora(''); }}><small>{ETIQUETA_DIA(f, esc.hoy)}</small><b>{fechaCorta(f).split(' ').slice(1).join(' ')}</b></button>; })}</div>
+      <span className="tp-agenda-widget__paso">{esBarberia && esc.pideProfesional ? '2 · BARBERO Y DÍA' : '2 · DÍA'}</span>
+      {esc.pideProfesional && <div className="tp-campo"><label htmlFor="tp-agenda-profesional">{esBarberia ? 'Barbero' : 'Profesional'}</label><select id="tp-agenda-profesional" value={profesional} onChange={(e) => setProfesional(e.target.value)}><option value="">{esBarberia ? 'Cualquiera' : 'El primero libre'}</option>{esc.agenda.equipo.map((e) => <option key={e.id} value={e.id}>{e.nombre}</option>)}</select></div>}
+      <div className="tp-agenda-widget__cabecera"><h3>Elige un día</h3><div><button type="button" aria-label="Días anteriores" disabled={paginaDias === 0} onClick={() => moverDias(paginaDias - 1)}><ChevronLeft size={18} aria-hidden="true" /></button><button type="button" aria-label="Días siguientes" disabled={(paginaDias + 1) * 6 >= dias.length} onClick={() => moverDias(paginaDias + 1)}><ChevronRight size={18} aria-hidden="true" /></button></div></div>
+      <div className="tp-agenda-widget__dias" role="group" aria-label="Días disponibles">{diasVisibles.map((f) => { const libres = horasDe(f).length; return <button key={f} type="button" disabled={!libres} aria-pressed={dia === f} onClick={() => { setDia(f); setHora(''); }}><small>{ETIQUETA_DIA(f, esc.hoy)}</small><b>{fechaCorta(f).split(' ').slice(1).join(' ')}</b></button>; })}</div>
       <p>{dia ? `Seleccionado: ${fechaCorta(dia)}` : 'Selecciona un día para ver horarios'}</p>
     </div>
     <div className="tp-agenda-widget__horas">
+      <span className="tp-agenda-widget__paso">3 · HORA</span>
       <h3>Hora disponible</h3>
       {horas.length ? <div role="group" aria-label="Horas disponibles">{horas.map((h) => <button key={h.hora} type="button" aria-pressed={hora === h.hora} onClick={() => setHora(h.hora)}>{h.hora}</button>)}</div> : <p>Elige un día con horarios disponibles.</p>}
     </div>
-    {inicio && <div className="tp-agenda-widget__datos"><h3>Tus datos</h3><CamposCliente d={cliente} errores={errores} alCambiar={(k, val) => { setCliente((c) => ({ ...c, [k]: val })); setErrores((e) => ({ ...e, [k]: undefined })); }} extra={<div className="tp-campo"><label htmlFor="tp-para">¿Es para otra persona? <small>(opcional)</small></label><input id="tp-para" value={beneficiario} maxLength={80} placeholder="Su nombre" onChange={(e) => setBeneficiario(e.target.value)} /></div>} />{fallo && <p className="tp-aviso" role="alert">{fallo}</p>}<button type="button" className="tp-boton" disabled={enviando} onClick={() => void confirmar()}>{enviando ? 'Separando…' : `Separar mi cita · ${cuandoCita(inicio)}`}</button><p className="tp-nota">Hasta las {sumarMin(inicio, item.duracion).slice(11)} · Luego nos avisas por WhatsApp.</p></div>}
+    {inicio && <div className="tp-agenda-widget__datos" id="tp-agenda-datos"><span className="tp-agenda-widget__paso">4 · TUS DATOS</span><h3>Confirma tu cita</h3><CamposCliente d={cliente} errores={errores} alCambiar={(k, val) => { setCliente((c) => ({ ...c, [k]: val })); setErrores((e) => ({ ...e, [k]: undefined })); }} extra={<div className="tp-campo"><label htmlFor="tp-para">¿Es para otra persona? <small>(opcional)</small></label><input id="tp-para" value={beneficiario} maxLength={80} placeholder="Su nombre" onChange={(e) => setBeneficiario(e.target.value)} /></div>} />{fallo && <p className="tp-aviso" role="alert">{fallo}</p>}<button type="button" className="tp-boton" disabled={enviando} onClick={() => void confirmar()}>{enviando ? 'Separando…' : `Separar mi cita · ${cuandoCita(inicio)}`}</button><p className="tp-nota">Hasta las {sumarMin(inicio, item.duracion).slice(11)} · Luego nos avisas por WhatsApp.</p></div>}
     {!inicio && fallo && <p className="tp-aviso" role="alert">{fallo}</p>}
   </>;
 
@@ -654,13 +687,11 @@ function Reservar({ item, esc, slug, alTerminar, presentacion }: { item: Item; e
     <Detalle item={item}>
       {esc.pideProfesional && (
         <div className="tp-campo">
-          <label id="tp-pro-l">¿Con quién?</label>
-          <div className="tp-opciones tp-opciones--chicas" role="group" aria-labelledby="tp-pro-l">
-            <button type="button" className="tp-opcion" aria-pressed={!profesional} onClick={() => setProfesional('')}>El primero libre</button>
-            {esc.agenda.equipo.map((e) => (
-              <button key={e.id} type="button" className="tp-opcion" aria-pressed={profesional === e.id} onClick={() => setProfesional(e.id)}>{e.nombre}</button>
-            ))}
-          </div>
+          <label htmlFor="tp-pro">{esBarberia ? 'Barbero' : 'Profesional'}</label>
+          <select id="tp-pro" value={profesional} onChange={(e) => setProfesional(e.target.value)}>
+            <option value="">{esBarberia ? 'Cualquiera' : 'El primero libre'}</option>
+            {esc.agenda.equipo.map((e) => <option key={e.id} value={e.id}>{e.nombre}</option>)}
+          </select>
         </div>
       )}
       <div className="tp-campo">

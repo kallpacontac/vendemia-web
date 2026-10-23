@@ -16,13 +16,13 @@ import Marco, { Cabecera } from '@/modules/tu-pagina/publico/Marco';
 import Escaparate from '@/modules/tu-pagina/publico/Escaparate';
 import CatalogoEjemplo from '@/modules/tu-pagina/publico/CatalogoEjemplo';
 import LlamarMesero from '@/modules/tu-pagina/publico/LlamarMesero';
-import { paginaDe, type PaginaPublica } from '@/modules/tu-pagina/servidor/pagina';
+import { paginaDe } from '@/modules/tu-pagina/servidor/pagina';
 import { escaparateDe } from '@/modules/tu-pagina/servidor/escaparate';
 import { urlWhatsApp } from '@/modules/tu-pagina/dominio/envio';
-import { disposicionDe, plantillaPorDefecto, plantillaValida, tipoPagina, type TipoPagina } from '@/modules/tu-pagina/dominio/plantillas';
-import { esHex } from '@/modules/tu-pagina/dominio/apariencia';
+import { disposicionDe, plantillaPorDefecto, plantillaValida, tipoPagina } from '@/modules/tu-pagina/dominio/plantillas';
 import { esPlantillaEjemplo } from '@/modules/tu-pagina/dominio/ejemplo';
-import { esFotoPlantilla, fotoDePlantilla } from '@/modules/tu-pagina/dominio/fotos';
+import { fotoDePlantilla } from '@/modules/tu-pagina/dominio/fotos';
+import { conVista, consultaVista } from '@/modules/tu-pagina/dominio/vista';
 import { FOTOS_SERVICIOS_LUXURY } from '@/modules/tu-pagina/dominio/fotos';
 import { soles } from '@/modules/tu-pagina/dominio/tienda';
 import AgendaPortada from '@/modules/tu-pagina/publico/AgendaPortada';
@@ -38,37 +38,6 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
     description: p.frase || `Pide, reserva o escribe a ${p.titulo}`,
     openGraph: { title: p.titulo, description: p.frase || undefined, images: foto ? [foto] : undefined },
     ...(searchParams?.vista ? { robots: { index: false, follow: false } } : {}),
-  };
-}
-
-/** La vista previa cambia contenido y diseño solo en esta respuesta. */
-function conVista(p: PaginaPublica, q: Props['searchParams']): PaginaPublica {
-  if (q?.vista !== '1') return p;
-  const tipo: TipoPagina = q.tipo === 'agenda' || q.tipo === 'tienda' || q.tipo === 'ambos' ? q.tipo : tipoPagina(p.secciones);
-  const anterior = p.secciones.apariencia ?? {};
-  return {
-    ...p,
-    // `sp=1`: el dueño quitó su portada y aún no guarda. Nunca se acepta otra URL por aquí.
-    portada_url: q.sp === '1' ? null : p.portada_url,
-    color: esHex(q.color) ? q.color : p.color,
-    plantilla: plantillaValida(q.plantilla) ? q.plantilla : p.plantilla,
-    secciones: {
-      ...p.secciones, catalogo: tipo !== 'agenda', reservar: tipo !== 'tienda',
-      apariencia: {
-        ...anterior,
-        plantillaActiva: q.pa === '1',
-        colorTienda: esHex(q.ct) ? q.ct : anterior.colorTienda,
-        fondoAgenda: esHex(q.fa) ? q.fa : anterior.fondoAgenda,
-        fondoTienda: esHex(q.ft) ? q.ft : anterior.fondoTienda,
-        colorBanner: esHex(q.cb) ? q.cb : anterior.colorBanner,
-        mostrarBanner: q.mb === '0' ? false : q.mb === '1' ? true : anterior.mostrarBanner,
-        mostrarWhatsapp: q.mw === '0' ? false : q.mw === '1' ? true : anterior.mostrarWhatsapp,
-        catalogoLuxuryDestacado: q.lcd === '0' ? false : q.lcd === '1' ? true : anterior.catalogoLuxuryDestacado,
-        vistaServiciosLuxury: q.vs === 'horizontal' ? 'horizontal' : q.vs === 'vertical' ? 'vertical' : anterior.vistaServiciosLuxury,
-        mostrarMesero: q.lm === '0' ? false : q.lm === '1' ? true : anterior.mostrarMesero,
-        fotoPlantilla: q.fp === undefined ? anterior.fotoPlantilla : esFotoPlantilla(q.fp) ? q.fp : undefined,
-      },
-    },
   };
 }
 
@@ -109,17 +78,13 @@ export default async function Portada({ params, searchParams }: Props) {
   // composición: portada, servicios y el selector de horarios real.
   const agendaDisenada = p.secciones.apariencia?.plantillaActiva && tipo === 'agenda' && (plantilla === 'agenda' || plantilla === 'lista');
   if (agendaDisenada) {
-    const reservarHref = reservables.some((i) => i.tipo === 'cita') ? '#reservar' : `./${p.slug}/reservar`;
+    const reservarHref = `./${p.slug}/reservar${consultaVista(searchParams)}`;
     return <Marco pagina={p} portada>
       <AgendaPortada pagina={p} editorial={plantilla === 'lista'} reservarHref={reservarHref} />
       <main className="tp-agenda-contenido">
         {esc && hayItems && <section className="tp-agenda-servicios" aria-label="Servicios disponibles">
           <div className="tp-agenda-seccion-titulo"><span>QUÉ OFRECEMOS</span><h2>Servicios para ti</h2><p>Conoce los detalles y elige el que necesitas.</p></div>
           <Escaparate esc={esc} slug={p.slug} whatsapp={p.whatsapp} puedePedir={false} puedeReservar disposicion="cuadricula" agendaEstilo={plantilla} agendaNombre={p.titulo} />
-        </section>}
-        {esc && reservables.some((i) => i.tipo === 'cita') && <section className="tp-agenda-reservar" id="reservar" aria-label="Elegir fecha y hora">
-          <div className="tp-agenda-seccion-titulo"><span>EN POCOS PASOS</span><h2>Encuentra tu momento</h2><p>Selecciona el servicio, el día y la hora.</p></div>
-          <Escaparate esc={esc} slug={p.slug} whatsapp={p.whatsapp} puedePedir={false} puedeReservar disposicion="filas" solo="reservas" agendaEstilo={plantilla} agendaNombre={p.titulo} />
         </section>}
         {p.secciones.apariencia?.mostrarWhatsapp !== false && <a className="tp-agenda-contacto" href={urlWhatsApp(p.whatsapp, `Hola ${p.titulo}`)} rel="noopener"><MessageCircle size={20} aria-hidden="true" /><span><b>Escríbenos por WhatsApp</b><small>Te respondemos ahí</small></span><span aria-hidden="true">→</span></a>}
       </main>
@@ -155,6 +120,7 @@ export default async function Portada({ params, searchParams }: Props) {
       puedePedir={Boolean(p.secciones.catalogo)}
       puedeReservar={Boolean(p.secciones.reservar)}
       plantillaLuxury={Boolean(esLuxury)}
+      agendaNombre={p.titulo}
       catalogoLuxuryDestacado={catalogoLuxuryDestacado}
       vistaServiciosLuxury={p.secciones.apariencia?.vistaServiciosLuxury}
     />

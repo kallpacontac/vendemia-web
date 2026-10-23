@@ -901,6 +901,8 @@ html:has(.tp[data-plantilla='luxury']), body:has(.tp[data-plantilla='luxury']) {
 .tp-agenda-widget > * { min-width: 0; padding: 26px; }
 .tp-agenda-widget > * + * { border-left: 1px solid #d4e0ed; }
 .tp-agenda-widget__resumen { display: grid; align-content: start; gap: 9px; }
+.tp-agenda-widget__paso { display: block; margin-bottom: 12px; color: var(--tp-color); font-size: 11px; font-weight: 850; letter-spacing: .12em; }
+.tp-agenda-widget__resumen > .tp-agenda-widget__paso { display: block !important; color: var(--tp-color) !important; font-size: 11px !important; }
 .tp-agenda-widget__marca { width: 46px; height: 46px; display: grid; place-items: center; border-radius: 10px; background: var(--tp-color); color: var(--tp-tinta); font-size: 24px; }
 .tp-agenda-widget__resumen > b { margin-top: 8px; color: #476788; font-size: 12px; }
 .tp-agenda-widget h3 { margin: 0; color: #0b3558; font-size: 20px; line-height: 1.25; }
@@ -908,6 +910,10 @@ html:has(.tp[data-plantilla='luxury']), body:has(.tp[data-plantilla='luxury']) {
 .tp-agenda-widget__resumen > span:not(.tp-agenda-widget__marca) { display: inline-flex; align-items: center; gap: 7px; color: #476788; font-size: 13px; }
 .tp-agenda-widget label { margin-top: 16px; color: #0b3558; font-size: 12px; font-weight: 800; }
 .tp-agenda-widget select { width: 100%; min-height: 44px; padding: 8px 11px; border: 1px solid #d4e0ed; border-radius: 9px; background: #fff; color: #0b3558; font: inherit; }
+.tp-agenda-widget__cabecera { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.tp-agenda-widget__cabecera > div { display: flex; gap: 6px; }
+.tp-agenda-widget__cabecera button { width: 34px; height: 34px; display: grid; place-items: center; border: 1px solid #d4e0ed; border-radius: 50%; background: #fff; color: #0b3558; cursor: pointer; }
+.tp-agenda-widget__cabecera button:disabled { opacity: .35; cursor: default; }
 .tp-agenda-widget__dias { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin: 22px 0; }
 .tp-agenda-widget__dias button { min-height: 69px; display: grid; place-items: center; padding: 6px; border: 1px solid #d4e0ed; border-radius: 10px; background: #fff; color: #0b3558; cursor: pointer; transition: background .2s ease, transform .2s ease; }
 .tp-agenda-widget__dias button:hover:not(:disabled) { transform: translateY(-2px); background: #eff5ff; }
@@ -920,13 +926,29 @@ html:has(.tp[data-plantilla='luxury']), body:has(.tp[data-plantilla='luxury']) {
 .tp-agenda-widget__horas button[aria-pressed='true'] { background: var(--tp-color); color: var(--tp-tinta); }
 .tp-agenda-widget__horas p { margin-top: 22px; }
 .tp-agenda-widget__datos { grid-column: 1 / -1; border-top: 1px solid #d4e0ed; border-left: 0 !important; }
+.tp-agenda-widget__datos { scroll-margin-top: 14px; }
 .tp-agenda-widget__datos .tp-boton { margin-top: 18px; }
+.tp-hojita--agenda-diseno { width: min(900px, calc(100vw - 32px)); max-width: 900px !important; display: grid; grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr); padding: 0; overflow-x: hidden; border: 1px solid #d4e0ed; border-radius: 20px; background: #fff; box-shadow: 0 28px 85px #09294735; }
+.tp-hojita--agenda-diseno .tp-hojita__cerrar { position: absolute; top: 14px; right: 14px; width: 44px; height: 44px; margin: 0; float: none; }
+.tp-hojita--agenda-diseno .tp-galeria { min-height: 100%; background-color: #e4edf6; background-position: center; background-size: cover; }
+.tp-hojita--agenda-diseno .tp-galeria img { width: 100%; height: 100%; min-height: 440px; aspect-ratio: auto; object-fit: cover; }
+.tp-hojita--agenda-diseno .tp-ficha { min-width: 0; padding: clamp(25px, 4vw, 48px); display: flex; flex-direction: column; justify-content: center; }
+.tp-hojita--agenda-diseno .tp-ficha__nombre { margin: 0 40px 8px 0; color: #0b3558; font-size: clamp(26px, 3vw, 36px); line-height: 1.1; }
+.tp-hojita--agenda-diseno .tp-ficha__precio { color: var(--tp-color); font-size: 24px; }
+.tp-hojita--agenda-diseno .tp-ficha__desc { color: #476788; font-size: 16px; line-height: 1.55; }
+.tp-agenda-detalle__ayuda { margin: 10px 0 20px; padding: 13px 15px; border-radius: 10px; background: #eef5fc; color: #0b3558; font-size: 14px; line-height: 1.5; }
+.tp-hojita--agenda-diseno .tp-agenda-detalle__accion { width: 100%; min-height: 52px; display: flex; align-items: center; justify-content: center; gap: 12px; border-radius: 10px; background: var(--tp-color); color: var(--tp-tinta); font-size: 15px; font-weight: 800; }
+.tp-hojita--agenda-diseno .tp-agenda-detalle__accion:hover { filter: brightness(.94); }
+.tp-hojita--agenda .tp-campo select, .tp-agenda-widget .tp-campo select { appearance: auto; cursor: pointer; }
 .tp-agenda-contacto { max-width: 620px; min-height: 65px; margin: 35px auto 10px; padding: 13px 18px; display: flex; align-items: center; gap: 15px; border: 1px solid #d4e0ed; border-radius: 12px; background: #fff; color: #0b3558; text-decoration: none; box-shadow: 0 8px 18px #253b5c0d; }
 .tp-agenda-contacto > span:nth-child(2) { display: grid; flex: 1; }
 .tp-agenda-contacto small { color: #476788; }
 .tp-agenda-reserva-pagina { max-width: 1200px; min-height: 70vh; margin: auto; padding: 26px 24px 70px; }
-.tp-agenda-reserva-pagina .tp-agenda-seccion-titulo { margin-top: 25px; }
+.tp-agenda-reserva-pagina .tp-agenda-seccion-titulo { margin: 12px 0 20px; }
+.tp-agenda-reserva-pagina .tp-agenda-seccion-titulo h1 { font-size: clamp(27px, 3vw, 38px); }
 @media (max-width: 900px) { .tp-agenda-widget { grid-template-columns: 240px minmax(0, 1fr); } .tp-agenda-widget__horas { grid-column: 1 / -1; border-top: 1px solid #d4e0ed; border-left: 0 !important; } .tp-agenda-widget__horas > div { grid-template-columns: repeat(4, 1fr); } }
+@media (max-width: 650px) { .tp-hojita--agenda-diseno { width: 100%; max-width: 100% !important; max-height: min(92dvh, 760px); display: block; border-radius: 22px 22px 0 0; } .tp-hojita--agenda-diseno .tp-galeria { min-height: 0; height: min(32dvh, 230px); } .tp-hojita--agenda-diseno .tp-galeria img { width: 100%; height: 100%; min-height: 0; } .tp-hojita--agenda-diseno .tp-ficha { display: block; padding: 22px 22px max(24px, env(safe-area-inset-bottom)); } .tp-hojita--agenda-diseno .tp-ficha__nombre { font-size: 27px; } .tp-hojita--agenda-diseno .tp-ficha__desc { font-size: 15px; } .tp-agenda-detalle__ayuda { margin: 12px 0 16px; } .tp-hojita--agenda-diseno .tp-agenda-detalle__accion { position: sticky; bottom: 0; } }
+@media (max-width: 650px) { .tp-agenda-reserva-pagina { padding-top: 12px; } .tp-agenda-reserva-pagina .tp-agenda-seccion-titulo { margin: 8px 0 14px; } .tp-agenda-reserva-pagina .tp-agenda-seccion-titulo h1 { font-size: 28px; } .tp-agenda-reserva-pagina .tp-agenda-seccion-titulo p { display: none; } .tp-agenda-widget > * { padding: 18px; } .tp-agenda-widget__resumen { gap: 5px; } .tp-agenda-widget__resumen .tp-agenda-widget__marca, .tp-agenda-widget__resumen > b, .tp-agenda-widget__resumen > p, .tp-agenda-widget__resumen h3 { display: none; } .tp-agenda-widget__resumen label { margin-top: 8px; } .tp-agenda-widget__paso { margin-bottom: 8px; } }
 @media (max-width: 650px) { .tp-agenda-nav { min-height: 68px; padding: 10px 15px; } .tp-agenda-nav nav > a:first-child { display: none; } .tp-agenda-nav nav .tp-agenda-nav__cta { padding: 10px; font-size: 11px; } .tp-agenda-brand strong { font-size: 15px; } .tp-agenda-hero { grid-template-columns: 1fr; gap: 0; margin: 0 12px; } .tp-agenda-hero__texto { padding: 22px 10px; } .tp-agenda-hero h1 { font-size: clamp(34px, 9vw, 44px); } .tp-agenda-hero p { font-size: 15px; } .tp-agenda-hero__foto { min-height: 280px; } .tp-agenda-hero--editorial { min-height: 390px; } .tp-agenda-hero--editorial .tp-agenda-hero__texto { padding: 28px; } .tp-agenda-hero--editorial h1 { color: #fff; } .tp-agenda-confianza { margin: 18px 12px 0; padding: 14px; justify-content: start; } .tp-agenda-contenido { padding: 0 14px 40px; } .tp-agenda-servicios, .tp-agenda-reservar { padding-top: 38px; } .tp[data-diseno='agenda'][data-plantilla='agenda'] .tp-agenda-servicios .tp-grid, .tp[data-diseno='agenda'][data-plantilla='lista'] .tp-agenda-servicios .tp-grid { grid-template-columns: 1fr; } .tp-agenda-widget { grid-template-columns: 1fr; } .tp-agenda-widget > * + * { border-left: 0; border-top: 1px solid #d4e0ed; } .tp-agenda-widget__horas { grid-column: auto; } .tp-agenda-widget__horas > div { grid-template-columns: repeat(3, 1fr); } .tp-agenda-widget__datos { grid-column: auto; } .tp-agenda-reserva-pagina { padding: 20px 14px 55px; } .tp[data-plantilla='lista'] .tp-agenda-servicios .tp-grid .tp-tarjeta__foto { width: 112px; min-height: 125px; } }
 @media (prefers-reduced-motion: reduce) { .tp-agenda-hero__cta, .tp-agenda-servicios .tp-grid .tp-tarjeta, .tp-agenda-widget__dias button { transition: none; } }
 
