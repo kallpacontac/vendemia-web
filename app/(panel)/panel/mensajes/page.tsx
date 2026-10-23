@@ -103,6 +103,10 @@ function etiquetaEscalacion(kind: string, detalle: Record<string, unknown>, v: V
   if (kind === 'paid_removal') return `Quitar ${v.reserva} (pagad${v.a})`;
   if (kind === 'paid_reschedule') return `Reprogramar ${v.reserva} (pagad${v.a})`;
   if (kind === 'paid_order_cancel') return 'Cancelar pedido (pagado)';
+  /* Mia Gerente le mandó una oferta con rebaja y el cliente la aceptó. Un precio
+     pactado de un servicio o un plan todavía no llega al cobro, así que Mia no
+     lo cierra: se lo pasa a una persona (bot, tools/oferta.ts). */
+  if (kind === 'oferta_por_confirmar') return 'Aceptó la oferta que le mandaste: confírmale el precio';
   return kind;
 }
 
@@ -929,6 +933,15 @@ function escalacionesPendientes(
 
 /** El `detail` es JSON abierto: se enseña algo legible sin dar por hecho su forma. */
 function resumenDetalle(detalle: Record<string, unknown>): string {
+  // oferta_por_confirmar: { producto, precio_oferta, precio_lista, vence, … }.
+  if (typeof detalle.precio_oferta === 'number') {
+    const de = typeof detalle.precio_lista === 'number' ? ` (de ${soles(detalle.precio_lista)})` : '';
+    const vence =
+      typeof detalle.vence === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(detalle.vence)
+        ? ` · la oferta vale hasta el ${diaMes(new Date(`${detalle.vence}T12:00:00`))}`
+        : '';
+    return `${String(detalle.producto ?? 'Lo ofrecido')} a ${soles(detalle.precio_oferta)}${de}${vence}`;
+  }
   // paid_slot_full de una cita: { slot: "2026-10-22 16:00", motivo }.
   if (typeof detalle.slot === 'string' && /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/.test(detalle.slot)) {
     const d = new Date(`${detalle.slot.slice(0, 10)}T12:00:00`);
