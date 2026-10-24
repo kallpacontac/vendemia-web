@@ -28,6 +28,7 @@ import {
   cuandoSale,
   descartarBorrador,
   lineaDelEncargo,
+  tieneHueco,
   type Borrador,
 } from '@/lib/panel/borradores';
 
@@ -37,17 +38,23 @@ const LARGO_PLEGADO = 180;
 export function TarjetaBorrador({
   borrador: b,
   yo,
+  miNombre = null,
+  enMia = false,
   alCambiar,
 }: {
   borrador: Borrador;
   /** El usuario de la sesión, para decir «lo pediste tú». */
   yo: string | null;
+  /** Con qué nombre firma quien aprueba (el de su cuenta); null = «[tu nombre]». */
+  miNombre?: string | null;
+  /** Dentro de la burbuja de Mia Gerente: a lo ancho, sin alinearse a la derecha. */
+  enMia?: boolean;
   /** Tras aprobar o descartar: releer los borradores. */
   alCambiar: () => void;
 }) {
   const avisar = useAvisar();
   const [editando, setEditando] = useState(false);
-  const [texto, setTexto] = useState(() => conFirmaVisible(b.texto));
+  const [texto, setTexto] = useState(() => conFirmaVisible(b.texto, miNombre));
   const [abierto, setAbierto] = useState(false);
   const [verGuion, setVerGuion] = useState(false);
   const [ocupado, setOcupado] = useState(false);
@@ -55,9 +62,9 @@ export function TarjetaBorrador({
   // Otro borrador para el mismo cliente (Mia lo rehízo): se empieza de cero.
   useEffect(() => {
     setEditando(false);
-    setTexto(conFirmaVisible(b.texto));
+    setTexto(conFirmaVisible(b.texto, miNombre));
     setAbierto(false);
-  }, [b.id, b.texto]);
+  }, [b.id, b.texto, miNombre]);
 
   const quien =
     b.creado_por === null ? 'Lo propuso Mia' : b.creado_por === yo ? 'Lo pediste tú' : 'Lo pidió alguien del equipo';
@@ -66,12 +73,13 @@ export function TarjetaBorrador({
     if (ocupado) return;
     setOcupado(true);
     try {
-      const corregido = editando ? conFirmaGuardable(texto.trim()) : null;
-      if (editando && !corregido) {
+      // Lo que se ve es lo que sale: con el nombre ya puesto, o con lo corregido.
+      const final = conFirmaGuardable(texto.trim());
+      if (!final) {
         avisar('El mensaje no puede ir vacío.', 'error');
         return;
       }
-      const r = await aprobarBorrador(b.id, corregido && corregido !== b.texto ? corregido : null);
+      const r = await aprobarBorrador(b.id, final !== b.texto ? final : null);
       avisar(
         r.programado_para
           ? `Aprobado. De noche no se escribe a clientes: sale ${cuandoSale(r.programado_para)}.`
@@ -100,10 +108,36 @@ export function TarjetaBorrador({
     }
   }
 
+  const clase = `borrador ${enMia ? 'borrador--en-mia' : ''}`;
+
+  // ── Ya salió ──
+  if (b.estado === 'enviado') {
+    return (
+      <div className={`${clase} borrador--hecho`} role="status">
+        <div className="borrador__cab">
+          <Check size={14} /> Enviado
+        </div>
+        <p className="borrador__texto borrador__texto--plegado">{b.texto_final ?? b.texto}</p>
+      </div>
+    );
+  }
+
+  // ── Descartado o caducado: una línea y nada más ──
+  if (b.estado === 'descartado' || b.estado === 'caducado') {
+    return (
+      <div className={`${clase} borrador--apagado`} role="status">
+        <div className="borrador__cab">
+          <X size={14} />{' '}
+          {b.estado === 'descartado' ? 'Descartado: no se envió' : 'Caducó sin aprobarse: pídele a Mia uno nuevo'}
+        </div>
+      </div>
+    );
+  }
+
   // ── Ya aprobado: saliendo, o programado para la mañana ──
   if (b.estado === 'aprobado') {
     return (
-      <div className="borrador borrador--hecho" role="status">
+      <div className={`${clase} borrador--hecho`} role="status">
         <div className="borrador__cab">
           <Check size={14} /> Aprobado ·{' '}
           {b.programado_para && new Date(b.programado_para).getTime() > Date.now()
@@ -118,7 +152,7 @@ export function TarjetaBorrador({
   // ── No salió: se cuenta por qué ──
   if (b.estado === 'rechazado') {
     return (
-      <div className="borrador borrador--mal" role="status">
+      <div className={`${clase} borrador--mal`} role="status">
         <div className="borrador__cab">
           <X size={14} /> No salió
         </div>
@@ -135,7 +169,7 @@ export function TarjetaBorrador({
   // ── Por aprobar ──
   const largo = texto.length > LARGO_PLEGADO;
   return (
-    <div className="borrador" aria-label="Mensaje de Mia por aprobar">
+    <div className={clase} aria-label="Mensaje de Mia por aprobar">
       <div className="borrador__cab">
         <Sparkles size={14} /> Mia · por aprobar <span className="borrador__quien">· {quien}</span>
         <button
@@ -169,8 +203,8 @@ export function TarjetaBorrador({
           )}
         </>
       )}
-      {texto.includes('[tu nombre]') && (
-        <small className="borrador__nota">«[tu nombre]» se cambia por el tuyo al aprobar.</small>
+      {tieneHueco(texto) && (
+        <small className="borrador__nota">Tu cuenta no tiene nombre: pulsa «Corregir» y pon el tuyo donde dice «[tu nombre]».</small>
       )}
 
       {(b.adjunto || b.audio) && (

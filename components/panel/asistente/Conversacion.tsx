@@ -34,8 +34,7 @@
  * descartar sin dejar nada detrás.
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
-import Link from 'next/link';
-import { ArrowUp, MessageSquare, Mic, Trash2, Volume2, X } from 'lucide-react';
+import { ArrowUp, Mic, Trash2, Volume2, X } from 'lucide-react';
 import {
   ESPERA_EN_CURSO_MS,
   MAX_AUDIO_BYTES,
@@ -55,6 +54,7 @@ import type { BusinessMode } from '@/lib/supabase/types';
 import { demoActivo } from '@/lib/panel/demo';
 import Reproductor from './Reproductor';
 import TextoMia from './TextoMia';
+import BorradorEnChat from './BorradorEnChat';
 import { useGrabadora } from './useGrabadora';
 
 /** El audio de una burbuja de Mia, ya del lado de la pantalla. */
@@ -82,7 +82,7 @@ type Burbuja =
       voz: Voz;
       aviso: boolean;
       /** Mia dejó un mensaje por aprobar en el chat de este cliente. */
-      borrador?: { lead_id: string; nombre: string } | null;
+      borrador?: { id: string; lead_id: string; nombre: string } | null;
     };
 
 let siguienteId = 1;
@@ -159,7 +159,7 @@ export default function Conversacion({
   );
 
   const diceMia = useCallback(
-    (texto: string, aviso = false, voz: Voz = null, borrador: { lead_id: string; nombre: string } | null = null): number => {
+    (texto: string, aviso = false, voz: Voz = null, borrador: { id: string; lead_id: string; nombre: string } | null = null): number => {
       const id = siguienteId++;
       setBurbujas((l) => [...l, { id, de: 'mia', texto, voz, aviso, borrador }]);
       return id;
@@ -404,11 +404,7 @@ export default function Conversacion({
           ) : (
             <div key={b.id} className={`asis-b asis-b--mia ${b.aviso ? 'asis-b--aviso' : ''}`}>
               <TextoMia texto={b.texto} />
-              {b.borrador && (
-                <Link className="btn btn-ghost btn-sm asis-b__borrador" href={`/panel/mensajes?lead=${encodeURIComponent(b.borrador.lead_id)}`}>
-                  <MessageSquare size={14} /> Ver el chat de {b.borrador.nombre || 'este cliente'}
-                </Link>
-              )}
+              {b.borrador && <BorradorEnChat id={b.borrador.id} leadId={b.borrador.lead_id} nombre={b.borrador.nombre} />}
               {b.voz?.estado === 'generando' && (
                 <span className="asis-b__preparando">
                   <Volume2 size={14} /> preparando el audio…

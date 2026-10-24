@@ -73,6 +73,18 @@ export async function getBorradores(companyId: string): Promise<Borrador[]> {
   return (data ?? []) as Borrador[];
 }
 
+/** Uno solo, para la tarjeta dentro del chat de Mia Gerente. null si no se ve (o no existe). */
+export async function getBorrador(id: string): Promise<Borrador | null> {
+  if (demoActivo()) return null;
+  const { data, error } = await supabase()
+    .from('borradores')
+    .select('id, company_id, lead_id, objetivo, texto, adjunto, audio, encargo, creado_por, estado, motivo, texto_final, programado_para, created_at')
+    .eq('id', id)
+    .maybeSingle();
+  if (error) return null;
+  return (data as Borrador | null) ?? null;
+}
+
 /** El borrador que se enseña en el chat de cada cliente: el más reciente. */
 export function porCliente(borradores: Borrador[]): Map<string, Borrador> {
   const m = new Map<string, Borrador>();
@@ -109,12 +121,21 @@ export async function descartarBorrador(id: string): Promise<void> {
 }
 
 /**
- * «{firma}» es el hueco para el nombre de quien aprueba: la base lo cambia al
- * aprobar. En la tarjeta se enseña como «[tu nombre]» para que se entienda.
+ * «{firma}» es el hueco para el nombre de quien aprueba. Si la cuenta tiene
+ * nombre (Google lo trae), la tarjeta ya lo enseña puesto y se aprueba así; si
+ * no, se ve «[tu nombre]» y la base pide escribirlo antes de aprobar.
  */
 export const FIRMA = '{firma}';
-export const conFirmaVisible = (t: string) => t.split(FIRMA).join('[tu nombre]');
-export const conFirmaGuardable = (t: string) => t.split('[tu nombre]').join(FIRMA);
+const HUECO = '[tu nombre]';
+export const conFirmaVisible = (t: string, nombre?: string | null) => t.split(FIRMA).join(nombre || HUECO);
+export const conFirmaGuardable = (t: string) => t.split(HUECO).join(FIRMA);
+export const tieneHueco = (t: string) => t.includes(HUECO);
+
+/** El nombre de pila de la cuenta, para firmar: «Alvaro» de «Alvaro Pérez». */
+export function nombreParaFirmar(meta: Record<string, unknown> | undefined | null): string | null {
+  const completo = [meta?.full_name, meta?.name].find((x): x is string => typeof x === 'string' && x.trim() !== '');
+  return completo ? completo.trim().split(/\s+/)[0] : null;
+}
 
 const soles = (n: number) => `S/ ${Number.isInteger(n) ? n : n.toFixed(2)}`;
 

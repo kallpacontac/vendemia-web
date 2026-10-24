@@ -2065,3 +2065,7 @@ body{background:var(--bg-app)}
 .aviso-stock .field-label{display:flex;align-items:center;gap:6px}
 .aviso-stock__fila{display:flex;align-items:center;gap:6px;margin-bottom:4px}
 .aviso-stock__fila .input{width:90px}
+/* La tarjeta dentro de la burbuja de Mia Gerente: a lo ancho, sin irse a la derecha. */
+.borrador--en-mia{align-self:auto;width:100%;margin:0 0 6px;border-radius:14px}
+.borrador--apagado{border-style:solid;border-color:var(--line);background:var(--bg-soft)}
+.borrador--apagado .borrador__cab{color:var(--ink-mute);margin:0}

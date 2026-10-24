@@ -41,7 +41,7 @@ import { BotonAdjunto, ChipAdjunto, useAdjunto } from '@/components/panel/Select
 import { useEnviarMensaje } from '@/components/panel/useEnviarMensaje';
 import { useSondeo } from '@/components/panel/useSondeo';
 import { TarjetaBorrador } from '@/components/panel/TarjetaBorrador';
-import { getBorradores, porCliente } from '@/lib/panel/borradores';
+import { getBorradores, nombreParaFirmar, porCliente } from '@/lib/panel/borradores';
 import {
   escucharMensajes,
   getCitas,
@@ -633,6 +633,7 @@ function Mensajes() {
               <TarjetaBorrador
                 borrador={borradorActivo}
                 yo={session?.user?.id ?? null}
+                miNombre={nombreParaFirmar(session?.user?.user_metadata)}
                 alCambiar={releerBorradores}
               />
             )}
