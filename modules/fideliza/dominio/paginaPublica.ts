@@ -243,7 +243,9 @@ export function htmlPagina(d: DatosPagina, o: { vista?: boolean; indexable?: boo
   /**
    * Quien ya tiene tarjeta en este teléfono (localStorage `fz:card:<slug>`, lo
    * guarda la propia tarjeta) no tiene que volver a darse de alta: el botón pasa
-   * a «Ver mi tarjeta de puntos» y la abre. Sin JavaScript, sigue siendo el alta.
+   * a «Ver mi tarjeta de puntos» y la abre, con un aviso abajo con su avance.
+   * Quien no la tiene ve un aviso que invita a crearla (cerrado, 7 días sin salir).
+   * Sin JavaScript, sigue siendo el botón del alta.
    */
   const scriptMiTarjeta = !o.vista && botones.includes('data-fz-alta=')
     ? `<style>
@@ -256,33 +258,43 @@ export function htmlPagina(d: DatosPagina, o: { vista?: boolean; indexable?: boo
 </style><script>
 (function(){
   var a=document.querySelector('a[data-fz-alta]');if(!a)return;
-  var slug=a.getAttribute('data-fz-alta'),clave='fz:card:'+slug,t=null;
+  var slug=a.getAttribute('data-fz-alta'),clave='fz:card:'+slug,claveInv='fz:invita:'+slug,alta=a.href,t=null;
   try{t=localStorage.getItem(clave);}catch(e){}
-  if(!t||!/^[A-Za-z0-9_-]{30,64}$/.test(t))return;
-  var url=new URL(a.href).origin+'/m/'+t;
-  function boton(){document.querySelectorAll('a[data-fz-alta]').forEach(function(x){x.href=url;var b=x.querySelector('.tx b');if(b)b.textContent='Ver mi tarjeta de puntos';var s=x.querySelector('.tx small');if(s)s.textContent='Tus sellos y premios';});}
-  function aviso(titulo,detalle){
+  function aviso(titulo,detalle,href,accion,alCerrar){
     var d=document.createElement('div');d.className='mt';d.setAttribute('role','status');
     var tx=document.createElement('div');tx.className='mt__tx';
     var b=document.createElement('b');b.textContent=titulo;var s=document.createElement('small');s.textContent=detalle;
     tx.appendChild(b);tx.appendChild(s);
-    var ir=document.createElement('a');ir.className='mt__ir';ir.href=url;ir.textContent='Ver mi tarjeta';
+    var ir=document.createElement('a');ir.className='mt__ir';ir.href=href;ir.textContent=accion;
     var x=document.createElement('button');x.type='button';x.className='mt__x';x.setAttribute('aria-label','Cerrar');x.textContent='\u00d7';
-    x.addEventListener('click',function(){d.classList.remove('vis');setTimeout(function(){d.remove();},400);});
+    x.addEventListener('click',function(){if(alCerrar)alCerrar();d.classList.remove('vis');setTimeout(function(){d.remove();},400);});
     d.appendChild(tx);d.appendChild(ir);d.appendChild(x);document.body.appendChild(d);
     requestAnimationFrame(function(){requestAnimationFrame(function(){d.classList.add('vis');});});
   }
+  // Sin tarjeta: se invita a crearla. Si la cierra, no vuelve en 7 días.
+  function invitar(){
+    try{if(Date.now()<(+localStorage.getItem(claveInv)||0))return;}catch(e){}
+    var sub=a.querySelector('.tx small');
+    setTimeout(function(){
+      aviso('Crea tu tarjeta de puntos',sub&&sub.textContent?sub.textContent:'Suma con cada compra y gana premios',alta,'Crear',
+        function(){try{localStorage.setItem(claveInv,String(Date.now()+7*864e5));}catch(e){}});
+    },1500);
+  }
+  if(!t||!/^[A-Za-z0-9_-]{30,64}$/.test(t)){invitar();return;}
+  var url=new URL(alta).origin+'/m/'+t;
+  function boton(){document.querySelectorAll('a[data-fz-alta]').forEach(function(x){x.href=url;var b=x.querySelector('.tx b');if(b)b.textContent='Ver mi tarjeta de puntos';var s=x.querySelector('.tx small');if(s)s.textContent='Tus sellos y premios';});}
   // Se comprueba que la tarjeta sigue existiendo (tras un reinicio, el teléfono la recuerda igual).
   fetch('/api/fideliza/publico/tarjeta',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({accion:'ver',token:t})})
     .then(function(r){return r.ok?r.json():null;})
     .then(function(c){
       if(!c){boton();return;}
-      if(c.status!=='ok'){try{localStorage.removeItem(clave);}catch(e){}return;}
+      if(c.status!=='ok'){try{localStorage.removeItem(clave);}catch(e){}invitar();return;}
       boton();
       var m=c.member||{},p=c.program||{},u=p.rule_type==='points'?'puntos':p.rule_type==='visits'?'visitas':'sellos';
       var premios=m.rewards_available||0;
       aviso(premios>0?'¡Tienes '+(premios>1?premios+' premios':'un premio')+' para canjear!':'Tu tarjeta de puntos',
-            premios>0?(p.reward||'Enséñala en caja'):(p.threshold?(m.balance||0)+' de '+p.threshold+' '+u+(p.reward?' · '+p.reward:''):'Tus '+u+' y premios'));
+            premios>0?(p.reward||'Enséñala en caja'):(p.threshold?(m.balance||0)+' de '+p.threshold+' '+u+(p.reward?' · '+p.reward:''):'Tus '+u+' y premios'),
+            url,'Ver mi tarjeta');
     })
     .catch(function(){boton();});
 })();
