@@ -36,7 +36,10 @@ const CLAVES: ClaveDia[] = [
 
 export interface Reserva {
   id: string;
+  /** Quien recibe la cita: el beneficiario, o el propio lead. */
   cliente: string;
+  /** «reserva de Pedro» si la pidió otro; '' si es para quien escribe. */
+  deQuien: string;
   servicio: string;
   trabajador: string;
   estado: AppointmentStatus | null;
@@ -210,13 +213,17 @@ export function construirSemana(offset: number, e: Entrada): Semana {
             c.inicio < fin &&
             ocupaHora({ status: c.status ?? 'confirmed', slot_start: c.slot_start ?? '', created_at: c.created_at ?? null }, ahora),
         )
-        .map((c) => ({
-          id: c.id,
-          cliente: quienDeCita({ ...c, slot_start: c.slot_start ?? '' }, e.nombrePorLead.get(c.lead_id)).nombre,
-          servicio: c.service || 'Cita',
-          trabajador: c.employee_id ? (e.nombrePorTrabajador.get(c.employee_id) ?? '') : '',
-          estado: c.status,
-        }));
+        .map((c) => {
+          const quien = quienDeCita({ ...c, slot_start: c.slot_start ?? '' }, e.nombrePorLead.get(c.lead_id));
+          return {
+            id: c.id,
+            cliente: quien.nombre,
+            deQuien: quien.deQuien,
+            servicio: c.service || 'Cita',
+            trabajador: c.employee_id ? (e.nombrePorTrabajador.get(c.employee_id) ?? '') : '',
+            estado: c.status,
+          };
+        });
 
       /**
        * ⚠️ UN BLOQUEO ES DE UNA PERSONA, NO DEL LOCAL.

@@ -567,6 +567,7 @@ function Celda({
               title={dnd && !hueco.pasado ? 'Arrástrala a otro hueco para cambiarle la hora' : undefined}
             >
               <b>{r.cliente}</b>
+              {r.deQuien && <span className="dq">{r.deQuien}</span>}
               <span className="sv">{r.servicio}</span>
               {r.trabajador && <span className="bb">{r.trabajador}</span>}
             </div>
