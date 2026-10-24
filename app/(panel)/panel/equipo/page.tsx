@@ -53,6 +53,7 @@ import { useAvisar, useComando } from '@/components/panel/Avisos';
 import { useCargar } from '@/components/panel/useCargar';
 import { diaMes, hora } from '@/lib/panel/format';
 import { hoyLima } from '@/lib/panel/inscripciones';
+import { quienDeCita } from '@/lib/panel/ficha';
 import {
   getBloqueos,
   getCitas,
@@ -579,9 +580,12 @@ function Ficha({
 
 /* ═══════════════════════════════════════════════════════════════════════ */
 
+/** Lo que se enseña de una cita colgada. El bot no devuelve el beneficiario: se toma de la agenda. */
+type CitaColgada = Pick<Cita, 'id' | 'slot_start' | 'service' | 'lead_id' | 'beneficiario' | 'beneficiario_edad'>;
+
 interface Colgadas {
   rango: string;
-  citas: { id: string; slot_start: string; service: string | null; lead_id: string }[];
+  citas: CitaColgada[];
   /** true = la lista la dio el bot. false = el bot aún no contestó y es la del panel. */
   delBot: boolean;
 }
@@ -649,14 +653,32 @@ function Ausencias({
         n ? `Ausencia guardada. ${t.name} tenía ${n} cita(s) esos días: revísalas.` : `Ausencia guardada. ${t.name} no tenía citas esos días.`,
         n ? 'espera' : 'ok',
       );
-      if (n) setColgadas({ rango, citas: r.citas_afectadas, delBot: true });
+      if (n) {
+        const porId = new Map(citas.map((c) => [c.id, c]));
+        setColgadas({
+          rango,
+          citas: r.citas_afectadas.map((c) => ({
+            ...c,
+            beneficiario: porId.get(c.id)?.beneficiario,
+            beneficiario_edad: porId.get(c.id)?.beneficiario_edad,
+          })),
+          delBot: true,
+        });
+      }
     } else if (previa.length) {
       /* El bot no contestó a tiempo: el bloqueo está en la cola, pero su lista
          no llegó. La del panel es la misma consulta sobre las mismas filas, y
          no enseñar nada es lo único que no se puede hacer. */
       setColgadas({
         rango,
-        citas: previa.map((c) => ({ id: c.id, slot_start: c.slot_start, service: c.service, lead_id: c.lead_id })),
+        citas: previa.map((c) => ({
+          id: c.id,
+          slot_start: c.slot_start,
+          service: c.service,
+          lead_id: c.lead_id,
+          beneficiario: c.beneficiario,
+          beneficiario_edad: c.beneficiario_edad,
+        })),
         delBot: false,
       });
     }
@@ -821,7 +843,7 @@ function ListaCitas({
   excluir,
   alCambiar,
 }: {
-  citas: { id: string; slot_start: string; service: string | null; lead_id: string }[];
+  citas: CitaColgada[];
   nombrePorLead: Map<string, string>;
   equipo: Trabajador[];
   /** El trabajador que se ausenta: pasarle a él sus propias citas no arregla nada. */
@@ -857,10 +879,12 @@ function ListaCitas({
           .sort((a, b) => a.slot_start.localeCompare(b.slot_start))
           .map((c) => {
             const d = parseSlot(c.slot_start);
-            const quien = nombrePorLead.get(c.lead_id) ?? 'Cliente';
+            const persona = quienDeCita(c, nombrePorLead.get(c.lead_id));
+            const quien = persona.nombre;
             return (
               <li key={c.id}>
                 <b>{quien}</b>
+                {persona.deQuien && <span className="muted">{persona.deQuien}</span>}
                 <span>{d ? `${diaMes(d)} · ${hora(d)}` : c.slot_start}</span>
                 {c.service && <span className="muted">{c.service}</span>}
                 {otros.length > 0 && (

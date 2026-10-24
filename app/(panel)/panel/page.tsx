@@ -18,6 +18,7 @@ import { useCargar } from '@/components/panel/useCargar';
 import { useSondeo } from '@/components/panel/useSondeo';
 import { cuando, hora, intent, isoLocal, soles } from '@/lib/panel/format';
 import { esAppointmentFamily } from '@/lib/panel/modo';
+import { quienDeCita, quienEnUnaLinea } from '@/lib/panel/ficha';
 import { anterior, rangoDe, total } from '@/lib/panel/serie';
 import { cap, vocabulario } from '@/lib/panel/vocabulario';
 import {
@@ -186,7 +187,7 @@ export default function Dashboard() {
                       <div className="today-row__icon" style={{ background: fondo, color }}><Icono size={17} /></div>
                       <div className="today-row__info">
                         <b>{c.service || cap(v.sesion)}</b>
-                        <span>{nombrePorLead.get(c.lead_id) ?? cap(v.persona)}</span>
+                        <span>{quienEnUnaLinea(quienDeCita(c, nombrePorLead.get(c.lead_id), cap(v.persona)))}</span>
                       </div>
                     </div>
                   );

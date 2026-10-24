@@ -49,6 +49,7 @@ import { RegistrarPago } from '@/components/panel/Saldos';
 import { diaMes, ESTADO_CITA, hora as horaDe, soles } from '@/lib/panel/format';
 import { estadoInscripcion, type EstadoInscripcion, type Saldo, type VentaLead } from '@/lib/panel/saldo';
 import { selloCita, type SelloCita } from '@/lib/panel/adelantos';
+import { quienDeCita, quienEnUnaLinea } from '@/lib/panel/ficha';
 import {
   adelantada,
   claveGrupo,
@@ -251,7 +252,7 @@ export default function Agenda() {
       detalle: (
         <>
           <p>
-            <b>{lead?.name || lead?.phone || 'Cliente'}</b>
+            <b>{quienEnUnaLinea(quienDeCita(cita, lead?.name || lead?.phone))}</b>
             {cita.service ? ` · ${cita.service}` : ''}
           </p>
           <p>
@@ -784,10 +785,11 @@ function Recurrentes({
             {abierto === f.clave && (
               <ul className="grupo-alumnos">
                 {detalle.map((c) => {
-                  const quien = nombrePorLead.get(c.lead_id) ?? 'Alumno';
+                  const { nombre: quien, deQuien } = quienDeCita(c, nombrePorLead.get(c.lead_id), 'Alumno');
                   return (
                     <li key={c.id}>
                       <b>{quien}</b>
+                      {deQuien && <small className="muted">{deQuien}</small>}
                       {/* `service` ya dice el pack Y el nivel donde ocupa plaza:
                           «Pack Promo Cyber — 10 Clases (Nivel Básico / Pollito)». */}
                       {c.service && c.service !== f.servicio && <small className="muted">{c.service}</small>}
@@ -1051,7 +1053,7 @@ function Proximas({
       detalle: (
         <>
           <p>
-            <b>{nombrePorLead.get(c.lead_id) ?? 'Cliente'}</b>
+            <b>{quienEnUnaLinea(quienDeCita(c, nombrePorLead.get(c.lead_id)))}</b>
             {c.service ? ` · ${c.service}` : ''}
           </p>
           {cambiaHora && (
@@ -1135,7 +1137,8 @@ function Proximas({
 
       <div className="confirmar-lista">
         {pag.visibles.map((c) => {
-          const quien = nombrePorLead.get(c.lead_id) ?? 'Cliente';
+          const persona = quienDeCita(c, nombrePorLead.get(c.lead_id));
+          const quien = quienEnUnaLinea(persona);
           const estado = ESTADO_CITA[c.status ?? 'confirmed'];
           /* Apartada (esperando pago / caducada), pagó sin hora, o por cobrar (pagos a cuenta).
              En una apartada el sello SUSTITUYE al estado: «Esperando pago»
@@ -1150,7 +1153,8 @@ function Proximas({
             <div key={c.id}>
               <div className="confirmar-fila">
                 <div className="confirmar-quien">
-                  <b>{quien}</b>
+                  <b>{persona.nombre}</b>
+                  {persona.deQuien && <small className="muted">{persona.deQuien}</small>}
                   <small className="muted">
                     {c.inicio ? `${diaMes(c.inicio)} · ${horaDe(c.inicio)}` : '—'}
                     {c.service ? ` · ${c.service}` : ''}
@@ -1433,7 +1437,7 @@ function PorConfirmar({
             <FilaPorConfirmar
               key={c.id}
               cita={c}
-              cliente={nombrePorLead.get(c.lead_id) ?? 'Cliente'}
+              quien={quienDeCita(c, nombrePorLead.get(c.lead_id))}
               sello={selloCita(c, pagosCitas.get(c.id), soles)}
               ocupado={enVuelo === c.id}
               alResolver={(vino) => void resolver(c, vino)}
@@ -1450,14 +1454,15 @@ function PorConfirmar({
 
 function FilaPorConfirmar({
   cita,
-  cliente,
+  quien,
   sello,
   ocupado,
   alResolver,
   alCobrar,
 }: {
   cita: Cita;
-  cliente: string;
+  /** Quien recibe y quien reservó. Ver quienDeCita(). */
+  quien: { nombre: string; deQuien: string };
   /** Adelanto, apartada o pagó sin hora. Ver lib/panel/adelantos.ts. */
   sello: SelloCita | null;
   ocupado: boolean;
@@ -1471,7 +1476,8 @@ function FilaPorConfirmar({
   return (
     <div className={`confirmar-fila ${revisar ? 'revisar' : ''}`}>
       <div className="confirmar-quien">
-        <b>{cliente}</b>
+        <b>{quien.nombre}</b>
+        {quien.deQuien && <small className="muted">{quien.deQuien}</small>}
         <small className="muted">
           {cita.inicio ? `${diaMes(cita.inicio)} · ${horaDe(cita.inicio)}` : '—'}
           {cita.service ? ` · ${cita.service}` : ''}

@@ -235,8 +235,14 @@ export function Reservas({ companyId, nombre }: { companyId: string; nombre: str
                     <b>{r.servicio}</b> · {cuando}{con ? ` · con ${con}` : ''}
                   </div>
                   <small>
+                    {/* Quien recibe primero; quien escribe y paga, después. Ver quienDeCita(). */}
+                    {r.beneficiario ? (
+                      <>
+                        <b>{r.beneficiario}</b>
+                        <span className="muted"> · {r.tipo === 'grupo' ? 'inscrito por' : 'reserva de'} </span>
+                      </>
+                    ) : null}
                     {r.nombre}<span className="muted"> · {telefonoBonito(r.telefono)}</span>
-                    {r.beneficiario ? <span className="muted"> · para {r.beneficiario}</span> : null}
                     {r.precio !== null ? <span className="muted"> · {soles(Number(r.precio))}</span> : null}
                   </small>
                   <div className="tp-panel-fila__linea" style={{ flexWrap: 'wrap', marginTop: 4 }}>

@@ -16,6 +16,7 @@
 import type { AppointmentStatus, ClaveDia, Horario } from '@/lib/supabase/types';
 import { isoLocal } from './format';
 import { ocupaHora } from './adelantos';
+import { quienDeCita } from './ficha';
 
 const CLAVES: ClaveDia[] = [
   'sunday',
@@ -80,7 +81,10 @@ interface Entrada {
     lead_id: string;
     slot_start?: string;
     created_at?: number | null;
+    beneficiario?: string | null;
+    beneficiario_edad?: string | null;
   }[];
+  /** El nombre de quien escribe. La celda pinta a quien recibe: ver quienDeCita(). */
   nombrePorLead: Map<string, string>;
   nombrePorTrabajador: Map<string, string>;
   bloqueos: { start: string; end: string; reason: string | null; employee_id: string }[];
@@ -208,7 +212,7 @@ export function construirSemana(offset: number, e: Entrada): Semana {
         )
         .map((c) => ({
           id: c.id,
-          cliente: e.nombrePorLead.get(c.lead_id) ?? 'Cliente',
+          cliente: quienDeCita({ ...c, slot_start: c.slot_start ?? '' }, e.nombrePorLead.get(c.lead_id)).nombre,
           servicio: c.service || 'Cita',
           trabajador: c.employee_id ? (e.nombrePorTrabajador.get(c.employee_id) ?? '') : '',
           estado: c.status,

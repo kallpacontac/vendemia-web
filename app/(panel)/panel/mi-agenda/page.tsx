@@ -35,6 +35,7 @@ import { useCargar } from '@/components/panel/useCargar';
 import { esRecurrente } from '@/lib/panel/modo';
 import { diaMes, hora, isoLocal } from '@/lib/panel/format';
 import { claveGrupo, hoyLima, ocupa, reservando } from '@/lib/panel/inscripciones';
+import { quienDeCita } from '@/lib/panel/ficha';
 import {
   getCatalogoDelEquipo,
   getCitasDelPeriodo,
@@ -179,14 +180,16 @@ function FilaCita({
 }) {
   // Solo se puede decir si vino de una cita que ya empezó y sigue «confirmada».
   const porMarcar = c.status === 'confirmed' && c.inicio !== null && c.inicio.getTime() <= Date.now();
+  const quien = quienDeCita(c, cliente?.name?.trim());
   return (
     <div className="mia-fila">
       <span className="mia-hora">{c.inicio ? hora(c.inicio) : '—'}</span>
       <div className="mia-quien">
         <b>
-          {cliente?.name?.trim() || 'Cliente'}
+          {quien.nombre}
           {sinAsignar && <span className="mia-sin">Sin asignar</span>}
         </b>
+        {quien.deQuien && <small>{quien.deQuien}</small>}
         {c.service && <small>{c.service}</small>}
         <NotasDelCliente cliente={cliente} negocio={negocio} />
       </div>
@@ -275,7 +278,7 @@ function MisClases({ companyId }: { companyId: string }) {
   const grupos = useMemo(() => {
     if (!datos) return [];
     const hoy = hoyLima();
-    const nombre = new Map(datos.clientes.map((c) => [c.lead_id, c.name?.trim() || 'Alumno']));
+    const nombre = new Map(datos.clientes.map((c) => [c.lead_id, c.name?.trim()]));
     return datos.catalogo
       .filter((item) => Number(item.is_active ?? 1) !== 0)
       .flatMap((item) => {
@@ -291,7 +294,9 @@ function MisClases({ companyId }: { companyId: string }) {
             clave,
             nivel: item.name,
             franja: f,
-            alumnos: datos.plazas.filter((p) => ocupa(p, clave, hoy)).map((p) => nombre.get(p.lead_id) ?? 'Alumno'),
+            alumnos: datos.plazas
+              .filter((p) => ocupa(p, clave, hoy))
+              .map((p) => ({ id: p.id, ...quienDeCita(p, nombre.get(p.lead_id), 'Alumno') })),
             reservando: datos.plazas.filter((p) => reservando(p, clave, hoy)).length,
           };
         });
@@ -323,8 +328,11 @@ function MisClases({ companyId }: { companyId: string }) {
               <p className="vacio">Nadie inscrito todavía.</p>
             ) : (
               <ul className="mia-alumnos">
-                {g.alumnos.map((n, i) => (
-                  <li key={i}>{n}</li>
+                {g.alumnos.map((a) => (
+                  <li key={a.id}>
+                    {a.nombre}
+                    {a.deQuien && <small className="muted"> · {a.deQuien}</small>}
+                  </li>
                 ))}
               </ul>
             )}

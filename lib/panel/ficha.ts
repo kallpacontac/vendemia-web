@@ -72,6 +72,38 @@ export function separar(citas: Cita[], ahora = new Date()): Historial {
   return { proximas, pasadas };
 }
 
+/**
+ * El nombre que se pinta en una cita o inscripción, y quién la pidió.
+ *
+ * ⚠️ Quien recibe la clase es `beneficiario`; `leads.name` es quien escribe y
+ * paga. Solo cuando `beneficiario` está vacío son la misma persona («es para
+ * él mismo»). Pintar `leads.name` como alumno con un beneficiario puesto pone
+ * al padre en la lista del grupo de su hijo de 8 años (kallpa, 24-oct-2026).
+ *
+ * `contacto` es el nombre del lead (o su teléfono). `deQuien` viene vacío
+ * cuando es la misma persona; si no, «inscrito por Pedro» en una inscripción y
+ * «reserva de Pedro» en una cita puntual.
+ */
+export function quienDeCita(
+  c: Pick<Cita, 'beneficiario' | 'beneficiario_edad' | 'slot_start'>,
+  contacto: string | null | undefined,
+  sinNombre = 'Cliente',
+): { nombre: string; deQuien: string } {
+  const nombre = c.beneficiario?.trim();
+  if (!nombre) return { nombre: contacto || sinNombre, deQuien: '' };
+  const edad = c.beneficiario_edad?.trim();
+  const recurrente = c.slot_start?.startsWith('sched:');
+  return {
+    nombre: edad ? `${nombre} (${edad})` : nombre,
+    deQuien: contacto ? (recurrente ? `inscrito por ${contacto}` : `reserva de ${contacto}`) : '',
+  };
+}
+
+/** `quienDeCita` en una línea, para un título o un cuadro de confirmación. */
+export function quienEnUnaLinea(q: { nombre: string; deQuien: string }): string {
+  return q.deQuien ? `${q.nombre} · ${q.deQuien}` : q.nombre;
+}
+
 /** «para Jorge (8)», o `''` si la cita es para quien escribe. */
 export function paraQuien(c: Cita): string {
   const nombre = c.beneficiario?.trim();

@@ -38,6 +38,7 @@ import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { Plus, Trash2, Wallet } from 'lucide-react';
 import CajaResumen from '@/components/panel/CajaResumen';
+import QuienCita from '@/components/panel/QuienCita';
 import Topbar from '@/components/panel/Topbar';
 import { useSesion } from '@/components/panel/Sesion';
 import { useAvisar, useComando } from '@/components/panel/Avisos';
@@ -290,7 +291,7 @@ export default function Caja() {
                     <div key={cita.id}>
                       <div className="confirmar-fila">
                         <div className="confirmar-quien">
-                          <b>{nombrePorLead.get(cita.lead_id) ?? 'Cliente'}</b>
+                          <QuienCita c={cita} contacto={nombrePorLead.get(cita.lead_id)} />
                           <small className="muted">
                             {cita.inicio ? hora(cita.inicio) : ''}
                             {cita.service ? ` · ${cita.service}` : ''}
@@ -352,7 +353,7 @@ export default function Caja() {
             {calculo.sinHora.map(({ cita, sello }) => (
               <div className="confirmar-fila" key={cita.id}>
                 <div className="confirmar-quien">
-                  <b>{nombrePorLead.get(cita.lead_id) ?? 'Cliente'}</b>
+                  <QuienCita c={cita} contacto={nombrePorLead.get(cita.lead_id)} />
                   <small className="muted">
                     {cita.inicio ? hora(cita.inicio) : ''}
                     {cita.service ? ` · ${cita.service}` : ''} · dale otra hora en la Agenda o devuélvele el dinero
@@ -365,7 +366,7 @@ export default function Caja() {
               <div key={cita.id}>
                 <div className="confirmar-fila">
                   <div className="confirmar-quien">
-                    <b>{nombrePorLead.get(cita.lead_id) ?? 'Cliente'}</b>
+                    <QuienCita c={cita} contacto={nombrePorLead.get(cita.lead_id)} />
                     <small className="muted">
                       {cita.inicio ? hora(cita.inicio) : ''}
                       {cita.service ? ` · ${cita.service}` : ''}
