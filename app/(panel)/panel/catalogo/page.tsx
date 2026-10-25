@@ -73,6 +73,7 @@ import {
 import Topbar from '@/components/panel/Topbar';
 import { useSesion } from '@/components/panel/Sesion';
 import { AvisoStock } from '@/components/panel/AvisoStock';
+import { DatosDeCompra } from '@/components/panel/DatosDeCompra';
 import { useLoQueHaceLaPagina, type LoQueHaceLaPagina } from '@/modules/tu-pagina/ui/secciones';
 import Mayorista from '@/modules/tu-pagina/ui/Mayorista';
 import { soloLeeLoDelDueno } from '@/lib/panel/roles';
@@ -999,6 +1000,11 @@ function Ficha({
                   </div>
                 )}
               </>
+            )}
+
+            {/* Solo productos con stock ya guardado: sin stock no hay cuánto pedir. */}
+            {!esCita && item.stock != null && !esPendiente(item.id) && (
+              <DatosDeCompra catalogId={item.id} moneda={f.currency || 'PEN'} />
             )}
 
             {companyId && (modo === 'ecommerce' || pagina.vende) && !esPendiente(item.id) && (
