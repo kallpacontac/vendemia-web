@@ -26,7 +26,7 @@
  * síntoma —vuelve al login sin decir nada— no apunta ni de lejos al script de
  * la intro. Queda avisado en los dos sitios.
  */
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useSesionDeLaUrl } from '@/components/panel/useSesionDeLaUrl';
@@ -36,6 +36,13 @@ import { rutaActivacionPlaca, type FuentePlaca } from '@/modules/fideliza/domini
 export default function Callback() {
   const router = useRouter();
   const { estado, error } = useSesionDeLaUrl();
+  /**
+   * ¿Llegó con un `?code=`? Se mira al montar: si el canje sale bien,
+   * supabase-js limpia la URL; si no sale, la deja como estaba.
+   */
+  const [traiaCodigo] = useState(
+    () => typeof window !== 'undefined' && new URLSearchParams(window.location.search).has('code'),
+  );
 
   useEffect(() => {
     // Vuelta de Google o del correo de confirmación: retoma lo que se pidió. Ver lib/panel/destino.ts.
@@ -47,6 +54,39 @@ export default function Callback() {
     }
   }, [estado, router]);
 
+  /**
+   * ⚠️ EL CORREO SÍ QUEDÓ CONFIRMADO, AUNQUE AQUÍ NO HAYA SESIÓN.
+   *
+   * El enlace de «confirma tu correo» pasa primero por Supabase, que marca la
+   * cuenta como confirmada, y DESPUÉS vuelve aquí con un `?code=`. Ese código
+   * solo se canjea con el verificador PKCE que guardó el navegador donde se
+   * hizo el alta (ver flowType en lib/supabase/client.ts). Abierto desde la app
+   * del correo en el celular, o en otro navegador, no hay verificador:
+   * supabase-js ni lo intenta y no deja error. Antes eso acababa en «No se pudo
+   * entrar», con la cuenta ya lista. Lo único que falta es entrar.
+   *
+   * Google no cae aquí: empieza y acaba en el mismo navegador.
+   */
+  if (estado === 'sin-sesion' && !error && traiaCodigo) {
+    return (
+      <div className="acceso">
+        <div className="acceso__card">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img className="acceso__logo" src="/assets/logos/logo-naranja.webp" alt="Vendemia" />
+          <h1>Tu correo está confirmado</h1>
+          <p className="sub">Ya puedes entrar con tu correo y tu contraseña.</p>
+          <Link
+            href="/login"
+            className="btn btn-primary"
+            style={{ marginTop: 20, width: '100%', justifyContent: 'center' }}
+          >
+            Entrar
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
   if (estado === 'sin-sesion') {
     return (
       <div className="acceso">
@@ -54,7 +94,7 @@ export default function Callback() {
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img className="acceso__logo" src="/assets/logos/logo-naranja.webp" alt="Vendemia" />
           <h1>No se pudo entrar</h1>
-          <p className="sub">La vuelta de Google no traía una sesión válida.</p>
+          <p className="sub">El enlace no traía una sesión válida.</p>
           {error && <div className="acceso__error">{error}</div>}
           <Link
             href="/login"

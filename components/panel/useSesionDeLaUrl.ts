@@ -75,7 +75,12 @@ export function useSesionDeLaUrl(): { estado: EstadoUrl; error: string | null } 
     });
 
     void sb.auth.getSession().then(({ data }) => {
-      if (vivo && data.session) setEstado('con-sesion');
+      if (!vivo) return;
+      if (data.session) setEstado('con-sesion');
+      // getSession() espera a que la librería termine con la URL: si el
+      // `?code=` sigue ahí sin sesión, ya no va a llegar —no había verificador
+      // PKCE en este navegador—. No hace falta esperar los 5 s.
+      else if (new URLSearchParams(window.location.search).has('code')) setEstado('sin-sesion');
     });
 
     const reloj = setTimeout(() => {
