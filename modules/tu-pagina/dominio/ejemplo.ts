@@ -17,7 +17,7 @@ export const urlEjemplo = (plantilla: PlantillaEjemplo = 'vitrina') =>
   `/ejemplos/catalogo?plantilla=${plantilla}`;
 
 export const urlEjemploPara = (tipo: TipoPagina, plantilla: PlantillaGuardada, vistaServicios: 'vertical' | 'horizontal' = 'vertical') => {
-  if (plantilla === 'restaurante') return '/ejemplos/pizzeria';
+  if (plantilla === 'restaurante') return '/ejemplos/la-baguette';
   if (plantilla === 'luxury') return `/ejemplos/barberia?tipo=${tipo}&servicios=${vistaServicios}`;
   if (tipo === 'agenda') return `/ejemplos/clinica-dental?diseno=${plantilla === 'lista' ? 'editorial' : 'clara'}`;
   if (tipo === 'tienda' && plantilla === 'agenda') return '/ejemplos/cafeteria';

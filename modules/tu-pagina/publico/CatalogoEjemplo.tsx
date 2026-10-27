@@ -66,12 +66,12 @@ export default function CatalogoEjemplo({ plantilla, incrustado = false, reclamo
           <div><b>Explora las plantillas</b><span>Así las verán tus clientes</span></div>
           <nav>
             <a href="/ejemplos/barberia">Luxury · barbería</a>
-            <a href="/ejemplos/pizzeria">Forno Norte · restaurante</a>
+            <a href="/ejemplos/la-baguette">La Baguette · panadería</a>
             {PLANTILLAS_EJEMPLO.map((p) => <a key={p.id} href={urlEjemplo(p.id)} aria-current={plantilla === p.id ? 'page' : undefined}>{p.nombre}</a>)}
           </nav>
         </div>
       )}
-      {!incrustado && <div className="ce-negocios"><span>¿Quieres ver un negocio completo?</span><a href="/ejemplos/pizzeria">Forno Norte · restaurante <ArrowRight size={14} /></a><a href="/ejemplos/cafeteria">Cafetería · tienda <ArrowRight size={14} /></a><a href="/ejemplos/clinica-dental?diseno=clara">Clínica dental · agenda <ArrowRight size={14} /></a><a href="/ejemplos/barberia">Barbería · Luxury <ArrowRight size={14} /></a></div>}
+      {!incrustado && <div className="ce-negocios"><span>¿Quieres ver un negocio completo?</span><a href="/ejemplos/la-baguette">La Baguette · panadería <ArrowRight size={14} /></a><a href="/ejemplos/cafeteria">Cafetería · tienda <ArrowRight size={14} /></a><a href="/ejemplos/clinica-dental?diseno=clara">Clínica dental · agenda <ArrowRight size={14} /></a><a href="/ejemplos/barberia">Barbería · Luxury <ArrowRight size={14} /></a></div>}
       <div className="ce-tienda">
         <header className="ce-cabecera">
           <div className="ce-cabecera__marca"><span className="ce-monograma">{incrustado ? 'V' : esImpulso ? 'T' : 'A'}</span><span><b>{marca}</b><small>{esImpulso ? 'Hecho para seguir' : 'Objetos para disfrutar lo cotidiano'}</small></span></div>

@@ -1090,3 +1090,80 @@ body:has(.tp[data-plantilla='restaurante']) { margin: 0; }
   .tp { background: #fff !important; }
   .tp-hoja-reclamo { border: 0; padding: 0; margin: 0; }
 }
+
+/* La paleta del negocio gobierna también superficies, tinta y reservas. */
+.tp[data-diseno='agenda'], .tp[data-diseno='ambos'],
+.tp[data-diseno='agenda']:is([data-plantilla='agenda'], [data-plantilla='lista']) {
+  --tp-texto: var(--tp-texto-agenda);
+  --tp-suave: var(--tp-muted);
+  --tp-borde: var(--tp-line);
+  --tp-campo: var(--tp-tint);
+}
+.tp[data-diseno='agenda'] .tp-cabeza, .tp[data-diseno='ambos'] .tp-cabeza,
+.tp[data-diseno='agenda'] .tp-accion, .tp[data-diseno='ambos'] .tp-accion,
+.tp[data-diseno='agenda'] .tp-bloque, .tp[data-diseno='ambos'] .tp-bloque,
+.tp[data-diseno='agenda'] .tp-tarjeta, .tp[data-diseno='ambos'] .tp-modulo--agenda .tp-tarjeta {
+  color: var(--tp-ink);
+  box-shadow: 0 12px 34px var(--tp-shadow);
+}
+.tp[data-diseno='agenda'] .tp-accion--grande, .tp[data-diseno='ambos'] .tp-accion--grande { color: var(--tp-tinta); }
+.tp[data-diseno='agenda'][data-plantilla='agenda'] .tp-portada,
+.tp[data-diseno='agenda'][data-plantilla='lista'] .tp-portada { background-color: var(--tp-tint); }
+.tp-agenda-brand, .tp-agenda-nav nav a:not(.tp-agenda-nav__cta),
+.tp-agenda-hero h1, .tp-agenda-seccion-titulo h1, .tp-agenda-seccion-titulo h2 { color: var(--tp-texto-agenda); }
+.tp-agenda-brand small, .tp-agenda-hero p, .tp-agenda-hero__puntos,
+.tp-agenda-confianza, .tp-agenda-seccion-titulo p { color: var(--tp-muted); }
+.tp-agenda-hero__foto, .tp-agenda-servicios .tp-grid .tp-tarjeta__foto,
+.tp-hojita--agenda-diseno .tp-galeria { background-color: var(--tp-tint); }
+.tp-agenda-hero__foto, .tp-agenda-servicios .tp-grid .tp-tarjeta,
+.tp-agenda-widget, .tp-hojita--agenda-diseno, .tp-agenda-contacto {
+  box-shadow: 0 18px 44px var(--tp-shadow);
+}
+.tp-agenda-confianza, .tp-agenda-servicios .tp-grid .tp-tarjeta,
+.tp-agenda-widget, .tp-hojita--agenda-diseno, .tp-agenda-contacto { border-color: var(--tp-line); }
+.tp-agenda-servicios .tp-grid .tp-tarjeta:hover { box-shadow: 0 23px 48px var(--tp-shadow); }
+.tp-agenda-servicios .tp-grid .tp-tarjeta__pie { border-color: var(--tp-line); }
+.tp-agenda-servicios .tp-grid .tp-tarjeta__pie b,
+.tp-agenda-widget h3, .tp-agenda-widget label, .tp-agenda-widget select,
+.tp-agenda-widget__cabecera button, .tp-agenda-widget__dias button,
+.tp-hojita--agenda-diseno .tp-ficha__nombre, .tp-agenda-contacto { color: var(--tp-ink); }
+.tp-agenda-widget p, .tp-agenda-widget__resumen > b,
+.tp-agenda-widget__resumen > span:not(.tp-agenda-widget__marca),
+.tp-hojita--agenda-diseno .tp-ficha__desc, .tp-agenda-contacto small { color: var(--tp-muted); }
+.tp-agenda-widget, .tp-agenda-widget > * + *, .tp-agenda-widget__horas,
+.tp-agenda-widget__datos, .tp-agenda-widget select,
+.tp-agenda-widget__cabecera button, .tp-agenda-widget__dias button { border-color: var(--tp-line); }
+.tp-agenda-widget__dias button:hover:not(:disabled),
+.tp-agenda-widget__dias button[aria-pressed='true'],
+.tp-agenda-detalle__ayuda { background: var(--tp-tint); color: var(--tp-ink); }
+.tp-agenda-hero--editorial { background: color-mix(in srgb, var(--tp-color) 35%, #111); }
+.tp-agenda-hero--editorial::after { background: linear-gradient(90deg, color-mix(in srgb, var(--tp-color) 30%, #090909) 2%, color-mix(in srgb, var(--tp-color) 18%, transparent) 60%, transparent 95%); }
+.tp-agenda-hero--editorial .tp-agenda-hero__etiqueta { color: #fff; }
+.tp-hojita--agenda-diseno, .tp-agenda-contacto { border-color: var(--tp-line); }
+.tp-agenda-detalle__ayuda { border: 1px solid var(--tp-line); }
+.tp-luxury-reserva-real__panel .tp-opcion, .lx-reserva__dias button,
+.lx-reserva__horas button, .lx-reserva__flechas button,
+.lx-reserva__servicio-info select { border-color: var(--tp-line); background: var(--tp-tint); color: var(--tp-ink); }
+.tp-luxury-reserva-real__panel .tp-opcion:hover:not(:disabled),
+.lx-reserva__dias button:hover:not(:disabled), .lx-reserva__horas button:hover:not(:disabled) { background: color-mix(in srgb, var(--tp-color) 17%, white); }
+.lx-reserva__panel { border-color: var(--tp-line); box-shadow: 0 24px 60px var(--tp-shadow); }
+.lx-reserva__flechas button, .lx-reserva__resumen { border-color: var(--tp-line); }
+.lx-reserva__resumen { background: var(--tp-tint); color: var(--tp-ink); }
+.lx-reserva__resumen small { color: var(--tp-muted); }
+.tp[data-plantilla='restaurante'], .tp[data-plantilla='luxury'] {
+  --tp-texto: var(--tp-ink);
+  --tp-suave: var(--tp-muted);
+  --tp-borde: var(--tp-line);
+  --tp-campo: var(--tp-tint);
+}
+.tp[data-plantilla='restaurante'] .tp-hero--restaurante { background-color: color-mix(in srgb, var(--tp-color) 40%, #17110c); }
+.tp[data-plantilla='restaurante'] .tp-hero--restaurante::before { background: linear-gradient(90deg, color-mix(in srgb, var(--tp-color) 32%, #090909) 0%, color-mix(in srgb, var(--tp-color) 18%, transparent) 62%, transparent 95%); }
+.tp[data-plantilla='restaurante'] .tp-chip__imagen, .tp[data-plantilla='restaurante'] .tp-tarjeta { box-shadow: 0 5px 22px var(--tp-shadow); }
+.tp[data-plantilla='restaurante'] .tp-tarjeta:hover { box-shadow: 0 12px 30px var(--tp-shadow); }
+.tp[data-plantilla='luxury'] .tp-tarjeta, .tp[data-plantilla='luxury'] .tp-tarjeta__pie b,
+.tp[data-plantilla='luxury'] .tp-tarjeta__reservar { color: var(--tp-ink); }
+.tp[data-plantilla='luxury'] .tp-luxury-productos__cabecera,
+.tp[data-plantilla='luxury'] .tp-luxury-productos__controles button,
+.tp[data-plantilla='luxury'] .tp-modulo--luxury-productos .tp-tarjeta { border-color: var(--tp-line); }
+.tp[data-plantilla='luxury'] .tp-luxury-productos__controles button { color: var(--tp-ink); }
+.tp[data-plantilla='luxury'] .tp-luxury-productos__controles button:hover { background: var(--tp-tint); }

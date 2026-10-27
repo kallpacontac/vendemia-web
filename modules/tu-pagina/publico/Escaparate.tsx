@@ -360,6 +360,7 @@ export default function Escaparate({ esc: todo, slug, whatsapp, puedePedir, pued
 
 function Tarjeta({ item, alAbrir, plantillaLuxury, plantillaRestaurante, agendaEstilo, agendaNombre, indice }: { item: Item; alAbrir: () => void; plantillaLuxury: boolean; plantillaRestaurante: boolean; agendaEstilo?: 'agenda' | 'lista'; agendaNombre: string; indice: number }) {
   const foto = item.fotos[0];
+  const [fotoFallida, setFotoFallida] = useState(false);
   const respaldo = plantillaRestaurante && item.tipo === 'producto' ? fotoProductoRestaurante(item.nombre, item.familia) : (plantillaLuxury || agendaEstilo) && item.tipo !== 'producto' ? (agendaEstilo && !/barber|peluquer|sal[oó]n|estil|cabello|corte/i.test(agendaNombre)
     ? `/assets/negocios-ejemplo/dental-${indice % 3}.webp` : fotoServicioLuxury(item.nombre, indice)) : undefined;
   const agotado =
@@ -381,8 +382,8 @@ function Tarjeta({ item, alAbrir, plantillaLuxury, plantillaRestaurante, agendaE
               : '';
   return (
     <button type="button" className={`tp-tarjeta${agotado ? ' tp-tarjeta--agotado' : ''}`} onClick={alAbrir}>
-      <span className="tp-tarjeta__foto" style={respaldo ? { backgroundImage: `url("${respaldo}")` } : foto ? { backgroundImage: `url("${foto}")` } : undefined} aria-hidden="true">
-        {foto && respaldo && foto !== respaldo && <img src={foto} alt="" loading="lazy" style={{ opacity: 0 }} onError={(e) => { e.currentTarget.style.display = 'none'; }} onLoad={(e) => { if (e.currentTarget.naturalWidth <= 2 || e.currentTarget.naturalHeight <= 2) e.currentTarget.style.display = 'none'; else e.currentTarget.style.opacity = '1'; }} />}
+      <span className="tp-tarjeta__foto" style={foto && !fotoFallida ? { backgroundImage: `url("${foto}")` } : respaldo ? { backgroundImage: `url("${respaldo}")` } : undefined} aria-hidden="true">
+        {foto && respaldo && foto !== respaldo && !fotoFallida && <img src={foto} alt="" loading="lazy" onError={() => setFotoFallida(true)} onLoad={(e) => { if (e.currentTarget.naturalWidth <= 2 || e.currentTarget.naturalHeight <= 2) setFotoFallida(true); }} />}
         {!foto && !respaldo && (item.tipo === 'grupo' ? <Users size={26} /> : item.tipo === 'cita' ? <Clock size={26} /> : <ShoppingBag size={26} />)}
       </span>
       <span className="tp-tarjeta__texto">
@@ -447,11 +448,10 @@ function Galeria({ fotos, nombre, respaldo }: { fotos: string[]; nombre: string;
   if (!fotos.length) return null;
   const fuente = fallida === fotos[i] && respaldo ? respaldo : fotos[i];
   return (
-    <div className="tp-galeria" style={respaldo ? { backgroundImage: `url("${respaldo}")` } : undefined}>
+    <div className="tp-galeria" style={{ backgroundImage: `url("${fuente}")` }}>
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img key={fuente} src={fuente} alt={nombre} style={respaldo ? { opacity: 0 } : undefined} onLoad={(evento) => {
+      <img key={fuente} src={fuente} alt={nombre} onLoad={(evento) => {
         if (respaldo && (evento.currentTarget.naturalWidth <= 2 || evento.currentTarget.naturalHeight <= 2) && fuente !== respaldo) setFallida(fotos[i]);
-        else evento.currentTarget.style.opacity = '1';
       }} onError={(evento) => {
         if (respaldo && fuente !== respaldo) { setFallida(fotos[i]); return; }
         const imagen = evento.currentTarget;

@@ -14,20 +14,25 @@ import '@/modules/tu-pagina/estilos/publica.css';
 export function estiloDe(p: Pick<PaginaPublica, 'color' | 'secciones'>): React.CSSProperties {
   const principal = colorValido(p.color);
   const a = p.secciones.apariencia ?? {};
-  const tienda = colorO(a.colorTienda, '#111111');
+  const tienda = colorO(a.colorTienda, principal);
   const fondoAgenda = colorO(a.fondoAgenda, '#F8F9FB');
   const fondoTienda = colorO(a.fondoTienda, '#FFFFFF');
   const portada = colorO(a.colorBanner, principal);
   return {
     ['--tp-color' as string]: principal,
     ['--tp-tinta' as string]: tintaSobre(principal),
+    ['--tp-ink' as string]: `color-mix(in srgb, ${principal} 24%, #191919)`,
+    ['--tp-muted' as string]: `color-mix(in srgb, ${principal} 20%, #666666)`,
+    ['--tp-line' as string]: `color-mix(in srgb, ${principal} 14%, #e4e4e4)`,
+    ['--tp-tint' as string]: `color-mix(in srgb, ${principal} 10%, #ffffff)`,
+    ['--tp-shadow' as string]: `color-mix(in srgb, ${principal} 11%, transparent)`,
     ['--tp-acento-negocio' as string]: principal,
     ['--tp-tinta-acento-negocio' as string]: tintaSobre(principal),
     ['--tp-tienda' as string]: tienda,
     ['--tp-tinta-tienda' as string]: tintaSobre(tienda),
     ['--tp-fondo-agenda' as string]: fondoAgenda,
     ['--tp-fondo-tienda' as string]: fondoTienda,
-    ['--tp-texto-agenda' as string]: tintaSobre(fondoAgenda) === '#FFFFFF' ? '#FFFFFF' : '#0B3558',
+    ['--tp-texto-agenda' as string]: tintaSobre(fondoAgenda) === '#FFFFFF' ? '#FFFFFF' : `color-mix(in srgb, ${principal} 24%, #191919)`,
     ['--tp-texto-tienda' as string]: tintaSobre(fondoTienda),
     ['--tp-portada-color' as string]: portada,
     ['--tp-portada-tinta' as string]: tintaSobre(portada),

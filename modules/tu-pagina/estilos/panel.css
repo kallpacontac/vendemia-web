@@ -46,6 +46,18 @@
 .tp-panel-vista-servicios button { min-height: 38px; padding: 7px 17px; border: 0; border-radius: 999px; background: transparent; color: var(--ink); font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; }
 .tp-panel-vista-servicios button[aria-pressed='true'] { background: var(--brand); color: var(--on-brand); }
 .tp-panel-vista-servicios button:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+.tp-panel-borrador { overflow: hidden; border: 1px solid #e5e2df; border-radius: 16px; background: #fff; }
+.tp-panel-borrador__marca { display: flex; align-items: center; gap: 10px; min-height: 58px; padding: 9px 13px; color: #25211e; font-size: 14px; }
+.tp-panel-borrador__marca img, .tp-panel-borrador__marca span { width: 36px; height: 36px; flex: none; display: grid; place-items: center; border-radius: 9px; object-fit: cover; background: var(--borrador-color); color: var(--borrador-tinta); font-size: 20px; font-weight: 800; }
+.tp-panel-borrador__portada { min-height: 260px; display: flex; flex-direction: column; align-items: flex-start; justify-content: flex-end; gap: 10px; padding: 24px; background: linear-gradient(135deg, var(--borrador-color), #25211e); background-position: center; background-size: cover; color: #fff; }
+.tp-panel-borrador__portada strong { max-width: 95%; font-size: clamp(28px, 4vw, 45px); line-height: 1.05; overflow-wrap: anywhere; }
+.tp-panel-borrador__portada p { margin: 0; font-size: 13px; line-height: 1.4; }
+.tp-panel-borrador__portada > span { display: inline-block; margin-top: 5px; padding: 10px 15px; border-radius: 7px; background: var(--borrador-color); color: var(--borrador-tinta); font-size: 12px; font-weight: 800; }
+.tp-panel-borrador__contenido { display: grid; gap: 4px; padding: 18px; color: #25211e; }
+.tp-panel-borrador__contenido small { color: #68635e; line-height: 1.4; }
+.tp-panel-borrador--luxury .tp-panel-borrador__portada { min-height: 350px; }
+.tp-panel-borrador--luxury .tp-panel-borrador__portada strong { font-family: Georgia, serif; font-weight: 500; }
+.tp-panel-borrador--restaurante .tp-panel-borrador__portada { border-radius: 14px; margin: 0 10px; min-height: 225px; }
 .tp-panel-mal { color: var(--hot); font-weight: 700; }
 
 .tp-panel-slug { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
@@ -98,10 +110,10 @@
 .tp-panel-plantilla__dibujo--luxury i:nth-child(4) { background-image: url('/assets/luxury-ejemplo/peinado.webp'); }
 .tp-panel-plantilla__dibujo--restaurante { grid-template-columns: repeat(3, 1fr); grid-template-rows: 55% 1fr; gap: 4px; background: #fff; }
 .tp-panel-plantilla__dibujo--restaurante i { border-radius: 4px; background-position: center; background-size: cover; }
-.tp-panel-plantilla__dibujo--restaurante i:first-child { grid-column: 1 / -1; background-image: url('/assets/restaurante-ejemplo/portada.webp'); }
-.tp-panel-plantilla__dibujo--restaurante i:nth-child(2) { background-image: url('/assets/restaurante-ejemplo/margarita.webp'); }
-.tp-panel-plantilla__dibujo--restaurante i:nth-child(3) { background-image: url('/assets/restaurante-ejemplo/pepperoni.webp'); }
-.tp-panel-plantilla__dibujo--restaurante i:nth-child(4) { background-image: url('/assets/restaurante-ejemplo/fettuccine.webp'); }
+.tp-panel-plantilla__dibujo--restaurante i:first-child { grid-column: 1 / -1; background-image: url('/assets/negocios-ejemplo/cafeteria-hero.webp'); }
+.tp-panel-plantilla__dibujo--restaurante i:nth-child(2) { background-image: url('/assets/negocios-ejemplo/cafe-3.webp'); }
+.tp-panel-plantilla__dibujo--restaurante i:nth-child(3) { background-image: url('/assets/negocios-ejemplo/cafe-2.webp'); }
+.tp-panel-plantilla__dibujo--restaurante i:nth-child(4) { background-image: url('/assets/negocios-ejemplo/cafe-0.webp'); }
 .tp-panel-esquema--luxury { grid-template-rows: 58% 1fr; grid-template-columns: repeat(3, 1fr); background: #f4f1ec; }
 .tp-panel-esquema--luxury i:first-child { grid-column: 1 / -1; background: url('/assets/luxury-ejemplo/portada.webp') center / cover; }
 .tp-panel-esquema--luxury i:nth-child(n + 2) { display: block; background: #d8d0c6; }

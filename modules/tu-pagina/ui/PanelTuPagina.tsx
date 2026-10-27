@@ -25,13 +25,13 @@ import { useSesion } from '@/components/panel/Sesion';
 import { useAvisar } from '@/components/panel/Avisos';
 import { useCargar } from '@/components/panel/useCargar';
 import { supabase } from '@/lib/supabase/client';
-import { COLORES } from '@/modules/fideliza/dominio/estilo';
+import { COLORES, tintaSobre } from '@/modules/fideliza/dominio/estilo';
 import Link from 'next/link';
 import { urlPagina, urlEnvio, urlReservar } from '@/modules/tu-pagina/dominio/config';
 import { esAppointmentFamily, esEcommerce, esRecurrente } from '@/lib/panel/modo';
 import { tipoPorDefecto, type TiposDePagina } from '@/modules/tu-pagina/dominio/tienda';
 import type { BusinessMode } from '@/lib/supabase/types';
-import { EXPERIENCIAS, PLANTILLAS, PLANTILLAS_AGENDA, PLANTILLAS_AMBOS, pedidoGastronomicoDe, plantillaPorDefecto, plantillaValida, tipoPagina, tipoPorDefecto as tipoPaginaPorDefecto, type PlantillaGuardada, type TipoPagina } from '@/modules/tu-pagina/dominio/plantillas';
+import { EXPERIENCIAS, PLANTILLAS, PLANTILLAS_AGENDA, PLANTILLAS_AMBOS, esNegocioGastronomico, pedidoGastronomicoDe, plantillaSugerida, plantillaValida, tipoPagina, tipoPorDefecto as tipoPaginaPorDefecto, type PlantillaGuardada, type TipoPagina } from '@/modules/tu-pagina/dominio/plantillas';
 import { esHex, esUrlPublica, type AparienciaPagina } from '@/modules/tu-pagina/dominio/apariencia';
 import { urlEjemploPara } from '@/modules/tu-pagina/dominio/ejemplo';
 import { FOTOS_PLANTILLA, FOTOS_SERVICIOS_LUXURY, esFotoPlantilla, fotoPlantillaPorDefecto } from '@/modules/tu-pagina/dominio/fotos';
@@ -202,6 +202,7 @@ function MiPagina({ companyId, nombre, pagina, agendaNube, alGuardar }: {
   const [whatsapp, setWhatsapp] = useState(telefonoBonito(pagina?.whatsapp ?? ''));
   const modo = compania?.business_mode;
   const tienda = esEcommerce(modo);
+  const tipoSugerido = tienda || esNegocioGastronomico(nombre) ? 'tienda' : 'agenda';
   const [envios, setEnvios] = useState(pagina?.secciones?.envios ?? false);
   const [reclamos, setReclamos] = useState(pagina?.secciones?.reclamos ?? false);
   const [funcionesAbiertas, setFuncionesAbiertas] = useState(Boolean(pagina?.secciones?.envios || pagina?.secciones?.reclamos));
@@ -212,9 +213,10 @@ function MiPagina({ companyId, nombre, pagina, agendaNube, alGuardar }: {
   });
   // Por defecto, lo que hace cada negocio: la tienda vende, el de citas o clases reserva.
   // Una página antigua solo de envíos no es ninguna de las tres, y así se queda si no se elige.
-  const [es, setEs] = useState<Es>(pagina ? esDe(pagina.secciones) ?? tipoPaginaPorDefecto(modo) : tienda ? 'tienda' : 'agenda');
+  const [es, setEs] = useState<Es>(pagina ? esDe(pagina.secciones) ?? tipoPaginaPorDefecto(modo) : tipoSugerido);
+  const [tipoManual, setTipoManual] = useState(false);
   const [plantilla, setPlantilla] = useState<PlantillaGuardada>(
-    plantillaValida(pagina?.plantilla) ? pagina.plantilla : plantillaPorDefecto(pagina ? esDe(pagina.secciones) ?? tipoPaginaPorDefecto(modo) : tienda ? 'tienda' : 'agenda'),
+    plantillaValida(pagina?.plantilla) ? pagina.plantilla : plantillaSugerida(pagina ? esDe(pagina.secciones) ?? tipoPaginaPorDefecto(modo) : tipoSugerido, nombre),
   );
   const [plantillaManual, setPlantillaManual] = useState(false);
   const [paso, setPaso] = useState<1 | 2 | 3>(1);
@@ -222,10 +224,11 @@ function MiPagina({ companyId, nombre, pagina, agendaNube, alGuardar }: {
   const catalogo = es === 'tienda' || es === 'ambos';
   const reservar = es === 'agenda' || es === 'ambos';
   const [distritos, setDistritos] = useState((pagina?.distritos ?? []).join(', '));
-  const [color, setColor] = useState(pagina?.color ?? (tienda ? '#111111' : '#006BFF'));
+  const [color, setColor] = useState(pagina?.color ?? (esNegocioGastronomico(nombre) ? '#B9662F' : /barber|peluquer|sal[oó]n|estil|cabello|spa|beauty/i.test(nombre) ? '#D0AB75' : tienda ? '#111111' : '#006BFF'));
+  const [colorManual, setColorManual] = useState(false);
   const [logo, setLogo] = useState(pagina?.logo_url ?? '');
   const [portada, setPortada] = useState(pagina?.portada_url ?? '');
-  const [apariencia, setApariencia] = useState<AparienciaPagina>(pagina?.secciones?.apariencia ?? {});
+  const [apariencia, setApariencia] = useState<AparienciaPagina>(pagina?.secciones?.apariencia ?? (esNegocioGastronomico(nombre) ? { fotoPlantilla: /pizzer|pizza/i.test(nombre) ? 'pizzeria' : 'cafeteria' } : {}));
   const [subiendo, setSubiendo] = useState<'logo' | 'portada' | 'portadaLuxurySecundaria' | null>(null);
   const [libre, setLibre] = useState<boolean | null>(null);
   const [errorSlug, setErrorSlug] = useState(false);
@@ -339,7 +342,15 @@ function MiPagina({ companyId, nombre, pagina, agendaNube, alGuardar }: {
         <div className="tp-panel-paso" hidden={!verPaso(1)}>
         <label className="tp-panel-campo">
           <span>Nombre que verán tus clientes</span>
-          <input className="input" value={titulo} maxLength={60} onChange={(e) => { setTitulo(e.target.value); if (!pagina?.publicada && !slugManual) setSlug(sugerirSlug(e.target.value)); }} />
+          <input className="input" value={titulo} maxLength={60} onChange={(e) => {
+            const nombreNuevo = e.target.value;
+            const tipoNuevo = !pagina && !tipoManual ? (tienda || esNegocioGastronomico(nombreNuevo) ? 'tienda' : 'agenda') : es;
+            setTitulo(nombreNuevo);
+            if (tipoNuevo !== es) setEs(tipoNuevo);
+            if (!pagina?.publicada && !slugManual) setSlug(sugerirSlug(nombreNuevo));
+            if (!plantillaManual) setPlantilla(plantillaSugerida(tipoNuevo, nombreNuevo));
+            if (!pagina && !colorManual) setColor(esNegocioGastronomico(nombreNuevo) ? '#B9662F' : /barber|peluquer|sal[oó]n|estil|cabello|spa|beauty/i.test(nombreNuevo) ? '#D0AB75' : tienda ? '#111111' : '#006BFF');
+          }} />
         </label>
         <label className="tp-panel-campo">
           <span>Una línea debajo <small className="muted">(opcional)</small></span>
@@ -363,11 +374,11 @@ function MiPagina({ companyId, nombre, pagina, agendaNube, alGuardar }: {
                   <button type="button" role="radio" aria-checked={plantilla === opcion.id} onClick={() => {
                     if (opcion.id === 'luxury' && plantilla !== 'luxury') {
                       setApariencia((actual) => ({ ...actual, fotoPlantilla: 'barberia' }));
-                      if (!pagina?.publicada && color === '#006BFF') setColor('#D0AB75');
+                      if (!pagina?.publicada && !colorManual) setColor('#D0AB75');
                     }
                     if (opcion.id === 'restaurante' && plantilla !== 'restaurante') {
-                      setApariencia((actual) => ({ ...actual, fotoPlantilla: 'pizzeria' }));
-                      if (!pagina?.publicada && color === '#006BFF') setColor('#EF3C24');
+                      setApariencia((actual) => ({ ...actual, fotoPlantilla: /pizzer|pizza/i.test(titulo) ? 'pizzeria' : 'cafeteria' }));
+                      if (!pagina?.publicada && !colorManual) setColor('#B9662F');
                     }
                     setPlantilla(opcion.id);
                     setPlantillaManual(true);
@@ -410,7 +421,7 @@ function MiPagina({ companyId, nombre, pagina, agendaNube, alGuardar }: {
           <span>¿Qué harán tus clientes en tu página?</span>
           <div className="tp-panel-es" role="radiogroup" aria-label="Tu página es">
             {ES.map((o) => (
-              <button key={o.id} type="button" role="radio" aria-checked={es === o.id} className={es === o.id ? 'activa' : ''} onClick={() => { setEs(o.id); if (!plantillaManual) setPlantilla(plantillaPorDefecto(o.id)); }}>
+              <button key={o.id} type="button" role="radio" aria-checked={es === o.id} className={es === o.id ? 'activa' : ''} onClick={() => { setTipoManual(true); setEs(o.id); if (!plantillaManual) setPlantilla(plantillaSugerida(o.id, titulo)); }}>
                 <span className={`tp-panel-es__mini tp-panel-es__mini--${o.id}`} aria-hidden="true"><i /><i /><i /></span>
                 <b>{o.nombre}</b>
                 <small>{o.id === 'agenda' && esRecurrente(modo) ? 'Separan cupos y eligen horario.' : o.describe}</small>
@@ -427,10 +438,10 @@ function MiPagina({ companyId, nombre, pagina, agendaNube, alGuardar }: {
         <div className="tp-panel-campo">
           <span>Color principal</span>
           <div className="tp-panel-colores">
-            {COLORES.map((c) => <button key={c} type="button" aria-label={`Elegir ${c}`} aria-pressed={color.toUpperCase() === c} style={{ background: c }} onClick={() => setColor(c)} />)}
-            <label className="tp-panel-color-libre"><input type="color" value={esHex(color) ? color : '#006BFF'} onChange={(e) => setColor(e.target.value.toUpperCase())} /><span>Otro color</span></label>
+            {COLORES.map((c) => <button key={c} type="button" aria-label={`Elegir ${c}`} aria-pressed={color.toUpperCase() === c} style={{ background: c }} onClick={() => { setColorManual(true); setColor(c); }} />)}
+            <label className="tp-panel-color-libre"><input type="color" value={esHex(color) ? color : '#006BFF'} onChange={(e) => { setColorManual(true); setColor(e.target.value.toUpperCase()); }} /><span>Otro color</span></label>
           </div>
-          <small className="muted">Se aplica a botones y selecciones. En “Agenda y tienda”, la tienda mantiene un contraste propio que puedes ajustar abajo.</small>
+          <small className="muted">Tu color define también los textos, contornos, fondos suaves y detalles de la reserva. En “Agenda y tienda” puedes ajustar el color de tienda abajo.</small>
         </div>
         {plantilla === 'luxury' && es !== 'tienda' && <div className="tp-panel-campo">
           <span>Cómo se ven tus servicios</span>
@@ -524,7 +535,7 @@ function MiPagina({ companyId, nombre, pagina, agendaNube, alGuardar }: {
       </section>
 
       <div className="tp-panel-lado">
-        {!publicada && paso === 2 && <VistaBorrador plantilla={plantilla} tipo={es} />}
+        {!publicada && paso === 2 && <VistaBorrador plantilla={plantilla} tipo={es} titulo={titulo} frase={frase} logo={logo} portada={portada} color={color} fotoPlantilla={apariencia.fotoPlantilla} />}
         {publicada && (
           <section className="card">
             <div className="card-mini-head">
@@ -549,11 +560,12 @@ function MiPagina({ companyId, nombre, pagina, agendaNube, alGuardar }: {
 /** Sin foto propia, la portada lleva la de un ejemplo; al subir la suya, esta deja de salir. */
 function FotosPlantilla({ tipo, plantilla, elegida, alElegir }: { tipo: TipoPagina; plantilla: PlantillaGuardada; elegida?: string; alElegir: (id: string) => void }) {
   const actual = plantilla === 'luxury' && elegida === 'ninguna' ? fotoPlantillaPorDefecto(tipo, plantilla) : esFotoPlantilla(elegida) ? elegida : fotoPlantillaPorDefecto(tipo, plantilla);
+  const categorias = plantilla === 'luxury' ? ['barberia'] : plantilla === 'restaurante' ? ['cafeteria', 'pizzeria'] : tipo === 'agenda' ? ['clinica', 'barberia'] : tipo === 'tienda' ? ['cafeteria', 'pizzeria', 'clinica'] : ['clinica', 'barberia', 'cafeteria', 'pizzeria'];
   return (
     <div className="tp-panel-fotos">
       <small className="muted">Mientras no subas la tuya, tu portada usa una foto de la plantilla:</small>
       <div className="tp-panel-fotos__lista" role="radiogroup" aria-label="Foto de la plantilla">
-        {FOTOS_PLANTILLA.map((f) => (
+        {FOTOS_PLANTILLA.filter((f) => categorias.includes(f.id) || f.id === actual).map((f) => (
           <button key={f.id} type="button" role="radio" aria-checked={actual === f.id} className={actual === f.id ? 'activa' : ''} onClick={() => alElegir(f.id)}>
             <span style={{ backgroundImage: `url("${f.url}")` }} aria-hidden="true" />
             <small>{f.nombre}</small>
@@ -568,16 +580,28 @@ function FotosPlantilla({ tipo, plantilla, elegida, alElegir }: { tipo: TipoPagi
   );
 }
 
-/** Demo real, con fotos, búsqueda y fichas; el catálogo propio aparece al publicar. */
-function VistaBorrador({ plantilla, tipo }: { plantilla: PlantillaGuardada; tipo: TipoPagina }) {
-  const ejemplo = urlEjemploPara(tipo, plantilla);
+/** Vista del negocio que se está configurando, sin datos prestados de otro negocio. */
+function VistaBorrador({ plantilla, tipo, titulo, frase, logo, portada, color, fotoPlantilla }: {
+  plantilla: PlantillaGuardada; tipo: TipoPagina; titulo: string; frase: string; logo: string; portada: string; color: string; fotoPlantilla?: string;
+}) {
+  const id = esFotoPlantilla(fotoPlantilla) && fotoPlantilla !== 'ninguna' ? fotoPlantilla : fotoPlantillaPorDefecto(tipo, plantilla);
+  const imagen = portada || (fotoPlantilla === 'ninguna' && plantilla !== 'luxury' ? '' : FOTOS_PLANTILLA.find((f) => f.id === id)?.url ?? '');
   return (
     <section className="card">
-      <div className="card-mini-head"><h3>Explora el ejemplo</h3><a className="btn btn-sm btn-ghost" href={ejemplo} target="_blank" rel="noopener"><ExternalLink size={14} /> Abrir</a></div>
-      <div className="tp-panel-vista">
-        <iframe title="Página de negocio de ejemplo" src={ejemplo} />
+      <div className="card-mini-head"><h3>Tu marca en el diseño</h3></div>
+      <div className={`tp-panel-borrador tp-panel-borrador--${plantilla}`} style={{ ['--borrador-color' as string]: color, ['--borrador-tinta' as string]: tintaSobre(color) }}>
+        <div className="tp-panel-borrador__marca">
+          {logo ? <img src={logo} alt="Tu logo" /> : <span>{titulo.trim().charAt(0).toUpperCase() || '·'}</span>}
+          <b>{titulo.trim() || 'Tu negocio'}</b>
+        </div>
+        <div className="tp-panel-borrador__portada" style={imagen ? { backgroundImage: `linear-gradient(90deg, #111b, #1112), url("${imagen}")` } : undefined}>
+          <strong>{titulo.trim() || 'Tu negocio'}</strong>
+          {frase.trim() && <p>{frase.trim()}</p>}
+          <span>{tipo === 'tienda' ? 'Ver catálogo' : 'Agendar una cita'} →</span>
+        </div>
+        <div className="tp-panel-borrador__contenido"><b>{tipo === 'tienda' ? 'Tu catálogo' : 'Tus servicios'}</b><small>Los productos y servicios de tu negocio aparecerán aquí al publicar.</small></div>
       </div>
-      <small className="muted">Ejemplo con fotos y datos ilustrativos. Al publicar, aparecerán los datos y servicios o productos de tu negocio.</small>
+      <small className="muted">Vista rápida con tu nombre, frase, logo, portada y color. Puedes reemplazar las fotos de la plantilla cuando quieras.</small>
     </section>
   );
 }

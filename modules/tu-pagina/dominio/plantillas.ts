@@ -47,6 +47,16 @@ export const tipoPorDefecto = (modo: BusinessMode | null | undefined): TipoPagin
 export const plantillaPorDefecto = (tipo: TipoPagina): PlantillaGuardada =>
   tipo === 'agenda' ? 'agenda' : tipo === 'ambos' ? 'lista' : 'vitrina';
 
+/** Recomienda un diseño sin imponerlo cuando el dueño ya eligió otro. */
+export const esNegocioGastronomico = (nombre: string): boolean =>
+  /restaur|pizzer|caf[eé]|panader|pasteler|baguette|bistr[oó]|hamburgues|comida|sabor|cocina/i.test(nombre);
+
+export const plantillaSugerida = (tipo: TipoPagina, nombre: string): PlantillaGuardada => {
+  if (tipo !== 'agenda' && esNegocioGastronomico(nombre)) return 'restaurante';
+  if (tipo !== 'tienda' && /barber|peluquer|sal[oó]n|estil|cabello|spa|beauty/i.test(nombre)) return 'luxury';
+  return plantillaPorDefecto(tipo);
+};
+
 /** La carta nocturna de tienda usa el ejemplo de cafetería y el pedido gastronómico. */
 export const pedidoGastronomicoDe = (plantilla: PlantillaGuardada, tipo: TipoPagina): boolean =>
   plantilla === 'restaurante' || (plantilla === 'agenda' && tipo === 'tienda');
