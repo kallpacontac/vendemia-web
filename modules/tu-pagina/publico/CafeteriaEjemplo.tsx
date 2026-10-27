@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { ArrowRight, Check, Coffee, Info, MapPin, Minus, Plus, Search, ShoppingBag, Trash2, X, ZoomIn } from 'lucide-react';
 import ImagenAmpliada from './ImagenAmpliada';
+import AnimacionesPlantilla from './AnimacionesPlantilla';
 import LlamarMesero from './LlamarMesero';
 import { mensajePedido, validarCliente, type ErroresCliente } from '@/modules/tu-pagina/dominio/tienda';
 import './negocios-ejemplo.css';
@@ -90,6 +91,7 @@ export default function CafeteriaEjemplo() {
   }, [verCarrito]);
 
   return <div className="ne ne-cafe">
+    <AnimacionesPlantilla />
     <div className="ne-aviso-demo"><span><Info size={15} /> Ejemplo de cafetería · fotos, productos y precios ilustrativos</span><a href="/panel/tu-pagina">Crear mi página <ArrowRight size={15} /></a></div>
     <nav className="ne-ejemplos" aria-label="Ejemplos de negocios"><b>Explorar ejemplos</b><a href="/ejemplos/la-baguette">La Baguette · panadería</a><a href="/ejemplos/barberia">Barbería · Luxury</a><a aria-current="page" href="/ejemplos/cafeteria">Cafetería · tienda</a><a href="/ejemplos/clinica-dental?diseno=clara">Clínica · agenda clara</a><a href="/ejemplos/clinica-dental?diseno=editorial">Clínica · agenda editorial</a><a href="/ejemplos/clinica-dental?diseno=tienda">Clínica · tienda</a></nav>
     <div className="ne-cafe-promo">CAFÉ DE ORIGEN PERUANO · PAN RECIÉN HORNEADO · TODOS LOS DÍAS</div>

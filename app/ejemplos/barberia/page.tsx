@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import LuxuryPortada from '@/modules/tu-pagina/publico/LuxuryPortada';
+import AnimacionesPlantilla from '@/modules/tu-pagina/publico/AnimacionesPlantilla';
 import LuxuryCatalogoEjemplo from '@/modules/tu-pagina/publico/LuxuryCatalogoEjemplo';
 import LuxuryServiciosEjemplo from '@/modules/tu-pagina/publico/LuxuryServiciosEjemplo';
 import EjemplosNav from '@/modules/tu-pagina/publico/EjemplosNav';
@@ -15,6 +16,7 @@ export default function BarberiaLuxuryEjemplo({ searchParams }: { searchParams?:
   const conProductos = searchParams?.tipo === 'ambos';
   const vistaServicios = searchParams?.servicios === 'horizontal' ? 'horizontal' : 'vertical';
   return <div className="tp" data-diseno={conProductos ? 'ambos' : 'agenda'} data-plantilla="luxury" style={{ '--tp-color': '#D0AB75', '--tp-tinta': '#171717' } as React.CSSProperties}>
+    <AnimacionesPlantilla />
     <EjemplosNav actual="barberia" />
     <LuxuryPortada
       titulo="Atelier Norte"

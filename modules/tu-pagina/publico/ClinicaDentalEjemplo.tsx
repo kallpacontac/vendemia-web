@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { ArrowRight, CalendarDays, Check, ChevronLeft, ChevronRight, Clock3, Info, MapPin, Search, ShieldCheck, Sparkles, X, ZoomIn } from 'lucide-react';
 import ImagenAmpliada from './ImagenAmpliada';
+import AnimacionesPlantilla from './AnimacionesPlantilla';
 import './negocios-ejemplo.css';
 
 export type DisenoClinica = 'clara' | 'editorial' | 'tienda';
@@ -50,6 +51,7 @@ export default function ClinicaDentalEjemplo({ diseno, hoy }: { diseno: DisenoCl
   }, [detalle, zoom]);
 
   return <div className={`ne ne-dental ne-dental--${diseno}`}>
+    <AnimacionesPlantilla />
     <div className="ne-aviso-demo"><span><Info size={15} /> Clínica dental de ejemplo · horarios y precios ilustrativos</span><a href="/panel/tu-pagina">Crear mi página <ArrowRight size={15} /></a></div>
     <nav className="ne-ejemplos" aria-label="Ejemplos de negocios"><b>Explorar ejemplos</b><a href="/ejemplos/la-baguette">La Baguette · panadería</a><a href="/ejemplos/barberia">Barbería · Luxury</a><a href="/ejemplos/cafeteria">Cafetería · tienda</a><a aria-current={diseno === 'clara' ? 'page' : undefined} href="/ejemplos/clinica-dental?diseno=clara">Agenda clara</a><a aria-current={diseno === 'editorial' ? 'page' : undefined} href="/ejemplos/clinica-dental?diseno=editorial">Agenda editorial</a><a aria-current={diseno === 'tienda' ? 'page' : undefined} href="/ejemplos/clinica-dental?diseno=tienda">Clínica · tienda</a></nav>
     <header className="ne-dental-header"><div className="ne-dental-brand"><span>✳</span><div><b>Sonrisa Norte</b><small>Clínica dental · Lima</small></div></div><nav><a href="#servicios">Tratamientos</a><a href="#equipo">Nosotros</a><a className="ne-dental-header-cta" href={diseno === 'tienda' ? '#servicios' : '#reservar'}>{diseno === 'tienda' ? 'Ver servicios' : 'Reservar cita'} <ArrowRight size={15} /></a></nav></header>

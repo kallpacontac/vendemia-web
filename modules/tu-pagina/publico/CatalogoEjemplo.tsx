@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react';
 import { ArrowRight, Check, Info, Minus, Plus, Search, ShoppingBag, X } from 'lucide-react';
 import { PLANTILLAS_EJEMPLO, urlEjemplo, type PlantillaEjemplo } from '@/modules/tu-pagina/dominio/ejemplo';
+import AnimacionesPlantilla from './AnimacionesPlantilla';
 import './catalogo-ejemplo.css';
 
 const PRODUCTOS = [
@@ -57,6 +58,7 @@ export default function CatalogoEjemplo({ plantilla, incrustado = false, reclamo
 
   return (
     <div className={`ce ce--${plantilla}${incrustado ? ' ce--incrustado' : ''}`}>
+      <AnimacionesPlantilla />
       <div className="ce-demo-barra">
         <span><Info size={15} aria-hidden="true" /> Catálogo de ejemplo · los productos y precios son ilustrativos</span>
         {!incrustado && <a href="/panel/tu-pagina">Crear mi página <ArrowRight size={15} aria-hidden="true" /></a>}

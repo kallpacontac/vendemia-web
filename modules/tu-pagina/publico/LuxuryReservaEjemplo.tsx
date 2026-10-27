@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react';
 import { ArrowLeft, ArrowRight, Check, ChevronLeft, ChevronRight, Clock3, MapPin } from 'lucide-react';
 import { HORAS_BARBERIA, SERVICIOS_BARBERIA } from '@/modules/tu-pagina/dominio/barberia-ejemplo';
+import AnimacionesPlantilla from './AnimacionesPlantilla';
 
 function proximosDias(hoy: string) {
   const dias: Date[] = [];
@@ -28,6 +29,7 @@ export default function LuxuryReservaEjemplo({ hoy, inicial }: { hoy: string; in
   const diaElegido = dias.find((d) => clave(d) === fecha);
 
   return <main className="tp lx-reserva" data-diseno="agenda" data-plantilla="luxury" style={{ '--tp-color': '#D0AB75', '--tp-tinta': '#171717' } as React.CSSProperties}>
+    <AnimacionesPlantilla />
     <header className="lx-reserva__nav"><a href="/ejemplos/barberia"><ArrowLeft size={18} aria-hidden="true" /> Volver a Atelier Norte</a><span>ATELIER NORTE</span><small>VISTA DE EJEMPLO</small></header>
     <div className="lx-reserva__intro"><span>AGENDA · ATELIER NORTE</span><h1>Elige tu cita</h1><p>Servicio, día y hora. Los horarios de esta muestra son ilustrativos.</p></div>
     <section className="lx-reserva__panel" aria-label="Agenda de ejemplo">
