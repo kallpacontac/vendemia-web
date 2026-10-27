@@ -20,7 +20,7 @@ import { accion, ErrorFideliza, lecturas, mensaje, sincronizarEnSegundoPlano, ty
 import { urlAyuda, urlSuelta } from '@/modules/fideliza/dominio/botones';
 import { urlNegocio } from '@/modules/fideliza/dominio/config';
 import { aCentimos, fecha, fraseRegla, soles, unidades, type TipoRegla } from '@/modules/fideliza/dominio/formato';
-import { resolverEstilo, tintaSobre, type Estilo } from '@/modules/fideliza/dominio/estilo';
+import { PLANTILLAS_TARJETA, resolverEstilo, tarjetaValida, tintaSobre, type Estilo, type PlantillaTarjeta } from '@/modules/fideliza/dominio/estilo';
 import { datosArteWallet, esCartilla, svgArteWallet } from '@/modules/fideliza/dominio/wallet-arte';
 import { SELLOS, selloValido, type Sello } from '@/modules/fideliza/dominio/sellos';
 
@@ -109,7 +109,7 @@ function ProgramaPagina() {
 
   // ── Borrador local ────────────────────────────────────────────────────
   const [negocio, setNegocio] = useState({ display_name: '', slug: '', tagline: '' });
-  const [marca, setMarca] = useState({ bg_color: '#FF4900', logo_url: '', support_url: '', require_external_ref: false, sello: 'check' as Sello });
+  const [marca, setMarca] = useState({ bg_color: '#FF4900', logo_url: '', support_url: '', require_external_ref: false, sello: 'check' as Sello, tarjeta: 'viva' as PlantillaTarjeta });
   const [prog, setProg] = useState({ name: '', description: '', objective: null as string | null });
   const [b, setB] = useState<Borrador>({ rule_type: 'stamps', stamps_per_purchase: 1, points_per_unit: 1, unit_cents: 100, rounding: 'floor', min_purchase_cents: 0 });
   const [textos, setTextos] = useState({ min: '', unidad: '1,00', ejemplo: '50' });
@@ -126,6 +126,7 @@ function ProgramaPagina() {
         support_url: ajustes.support_url ?? '',
         require_external_ref: ajustes.require_external_ref,
         sello: selloValido((ajustes.page_style as Partial<Estilo> | null)?.sello),
+        tarjeta: tarjetaValida((ajustes.page_style as Partial<Estilo> | null)?.tarjeta),
       });
       if (ajustes.logo_checked) setLogo({ ok: Boolean(ajustes.logo_checked.ok), errores: ajustes.logo_checked.errores ?? [], avisos: ajustes.logo_checked.avisos ?? [] });
     }
@@ -269,9 +270,9 @@ function ProgramaPagina() {
         datos: { bg_color: marca.bg_color, logo_url: marca.logo_url ? urlSuelta(marca.logo_url) : '', support_url: supportUrl, require_external_ref: marca.require_external_ref },
       });
       const estiloActual = (ajustes?.page_style ?? null) as Partial<Estilo> | null;
-      if (selloValido(estiloActual?.sello) !== marca.sello) {
-        // page_style se guarda entero: se conserva lo de «Mi página» y solo cambia el sello.
-        await accion('estilo.guardar', { companyId, estilo: { plantilla: 'clasica', ...(estiloActual ?? {}), sello: marca.sello } });
+      if (selloValido(estiloActual?.sello) !== marca.sello || tarjetaValida(estiloActual?.tarjeta) !== marca.tarjeta) {
+        // page_style se guarda entero: se conserva lo de «Mi página».
+        await accion('estilo.guardar', { companyId, estilo: { plantilla: 'clasica', ...(estiloActual ?? {}), sello: marca.sello, tarjeta: marca.tarjeta } });
       }
       setMarca((actual) => ({ ...actual, support_url: supportUrl, logo_url: actual.logo_url ? urlSuelta(actual.logo_url) : '' }));
       setLogo(r.logo);
@@ -434,7 +435,7 @@ function ProgramaPagina() {
   const p = datos?.programa;
   const metaVistaWallet = b.reward_threshold && b.reward_threshold > 0 ? b.reward_threshold : 10;
   const saldoVistaWallet = Math.min(3, metaVistaWallet);
-  const estiloVistaWallet = { ...((ajustes?.page_style ?? {}) as Partial<Estilo>), sello: marca.sello };
+  const estiloVistaWallet = { ...((ajustes?.page_style ?? {}) as Partial<Estilo>), sello: marca.sello, tarjeta: marca.tarjeta };
   const fondoVistaWallet = esCartilla(b.rule_type ?? 'stamps', metaVistaWallet) ? '' : resolverEstilo(estiloVistaWallet).fondo;
   const arteVistaWallet =
     fondoVistaWallet ||
@@ -644,6 +645,21 @@ function ProgramaPagina() {
                   <span>{logo.ok ? 'El logo sirve para Google Wallet.' : logo.errores.join(' ')} {logo.avisos.join(' ')}</span>
                 </div>
               )}
+              <div className="fz-campo">
+                <label className="field-label">Diseño de tu tarjeta de fidelidad</label>
+                <div className="fz-tarjetas" role="radiogroup" aria-label="Diseño de la tarjeta">
+                  {PLANTILLAS_TARJETA.map((t) => (
+                    <button key={t.id} type="button" role="radio" aria-checked={marca.tarjeta === t.id}
+                      className={`fz-tarjetas__opcion ${marca.tarjeta === t.id ? 'activa' : ''}`}
+                      disabled={!editable} onClick={() => setMarca({ ...marca, tarjeta: t.id })}>
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img alt="" src={`data:image/svg+xml,${encodeURIComponent(svgArteWallet(datosArteWallet(marca.bg_color, { ...estiloVistaWallet, tarjeta: t.id }, b.rule_type ?? 'stamps', metaVistaWallet, saldoVistaWallet)))}`} />
+                      <b>{t.nombre}</b><small>{t.describe}</small>
+                    </button>
+                  ))}
+                </div>
+                <small>Se aplica a la tarjeta web y al pase de Google Wallet. Si usas una foto de fondo con puntos, esa foto reemplaza la ilustración del pase.</small>
+              </div>
               {b.rule_type !== 'points' && (
                 <div className="fz-campo">
                   <label className="field-label">Icono del sello</label>

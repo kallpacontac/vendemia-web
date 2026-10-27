@@ -144,6 +144,7 @@ export const ACCIONES = {
       estilo: z
         .object({
           plantilla: z.enum(['clasica', 'oscura', 'vidrio', 'foto', 'marco', 'color']),
+          tarjeta: z.enum(['viva', 'organica', 'nocturna']).optional(),
           fondo: urlHttps.or(z.literal('')).optional(),
           botones: z.enum(['auto', 'relleno', 'contorno', 'vidrio']).optional(),
           forma: z.enum(['auto', 'pildora', 'redondeado', 'recto']).optional(),
@@ -152,7 +153,7 @@ export const ACCIONES = {
           place_id: z.string().max(200).regex(/^[A-Za-z0-9_-]*$/).optional(),
           place_nombre: textoCorto(120).optional(),
           historia: z.enum(['instagram', 'tiktok', '']).optional(),
-          sello: z.enum(['check', 'corazon', 'estrella', 'cafe', 'tijera', 'regalo']).optional(),
+          sello: z.enum(['check', 'corazon', 'estrella', 'cafe', 'hamburguesa', 'sillon', 'tijera', 'regalo']).optional(),
         })
         .strict(),
     }),

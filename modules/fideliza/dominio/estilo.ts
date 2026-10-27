@@ -14,6 +14,14 @@
 import type { Sello } from './sellos';
 
 export type Plantilla = 'clasica' | 'oscura' | 'vidrio' | 'foto' | 'marco' | 'color';
+export type PlantillaTarjeta = 'viva' | 'organica' | 'nocturna';
+export const PLANTILLAS_TARJETA: { id: PlantillaTarjeta; nombre: string; describe: string }[] = [
+  { id: 'viva', nombre: 'Vibrante', describe: 'Color intenso y sellos protagonistas' },
+  { id: 'organica', nombre: 'Orgánica', describe: 'Fondo claro y estilo artesanal' },
+  { id: 'nocturna', nombre: 'Nocturna', describe: 'Contraste oscuro y sello destacado' },
+];
+export const tarjetaValida = (x: unknown): PlantillaTarjeta =>
+  PLANTILLAS_TARJETA.some((p) => p.id === x) ? x as PlantillaTarjeta : 'viva';
 export type EstiloBotones = 'auto' | 'relleno' | 'contorno' | 'vidrio';
 export type Forma = 'auto' | 'pildora' | 'redondeado' | 'recto';
 export type PosicionRedes = 'auto' | 'arriba' | 'abajo';
@@ -21,6 +29,8 @@ export type RedHistoria = 'instagram' | 'tiktok';
 
 export interface Estilo {
   plantilla: Plantilla;
+  /** Diseño de la tarjeta de fidelidad web y de la ilustración del pase. */
+  tarjeta?: PlantillaTarjeta;
   /** Foto de portada o de fondo (https). Opcional. */
   fondo?: string;
   botones?: EstiloBotones;
@@ -65,6 +75,7 @@ export function resolverEstilo(e: Partial<Estilo> | null | undefined) {
   const historia: RedHistoria | '' = e?.historia === 'instagram' || e?.historia === 'tiktok' ? e.historia : '';
   return {
     plantilla,
+    tarjeta: tarjetaValida(e?.tarjeta),
     fondo: e?.fondo && /^https:\/\/\S+$/.test(e.fondo) ? e.fondo : '',
     botones: e?.botones && e.botones !== 'auto' ? e.botones : b.botones,
     forma: e?.forma && e.forma !== 'auto' ? e.forma : b.forma,

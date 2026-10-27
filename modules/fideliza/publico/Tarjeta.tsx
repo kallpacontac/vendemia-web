@@ -1,9 +1,11 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { Check, Gift, Sparkles } from 'lucide-react';
+import { ArrowLeft, Check, Gift, Sparkles } from 'lucide-react';
 import { UNIDAD, fechaHora, type TipoRegla } from '@/modules/fideliza/dominio/formato';
 import { colorValido, mezcla, resolverEstilo, tintaSobre, type Estilo } from '@/modules/fideliza/dominio/estilo';
+import { urlNegocio } from '@/modules/fideliza/dominio/config';
+import { selloValido, trazoSello } from '@/modules/fideliza/dominio/sellos';
 
 export interface DatosTarjeta {
   status: 'ok' | 'not_found';
@@ -256,6 +258,7 @@ export default function Tarjeta(props: {
 
   const marca = colorValido(d.brand.bg_color);
   const plantilla = resolverEstilo(d.brand.style);
+  const sello = selloValido(d.brand.style?.sello);
   const fondoOscuro = plantilla.plantilla === 'oscura' || plantilla.plantilla === 'vidrio' || plantilla.plantilla === 'foto';
   const fondo = fondoOscuro ? mezcla(marca, '#101014', .87) : plantilla.plantilla === 'color' ? mezcla(marca, '#FFFFFF', .86) : '#F9F9F6';
   const estilo = {
@@ -280,7 +283,7 @@ export default function Tarjeta(props: {
   }
 
   return (
-    <main className="fz" style={estilo} data-plantilla={plantilla.plantilla}>
+    <main className="fz" style={estilo} data-plantilla={plantilla.plantilla} data-tarjeta={plantilla.tarjeta}>
       <header className="fz-cab">
         <div className="fz-cab__marca">
           {d.brand.logo_url ? (
@@ -370,12 +373,19 @@ export default function Tarjeta(props: {
             <img className="fz-carnet__foto" src={plantilla.fondo} alt="" />
           </>}
           <div className="fz-carnet__contenido">
-            <div className="fz-carnet__arriba"><span>FIDELIDAD</span><span>{d.program?.name || 'Tu programa'}</span></div>
+            <div className="fz-carnet__arriba">
+              <span className="fz-carnet__marca">
+                {d.brand.logo_url ? <img src={d.brand.logo_url} alt="" /> : <i aria-hidden="true">{d.brand.display_name.slice(0, 1).toUpperCase()}</i>}
+                <b>{d.brand.display_name}</b>
+              </span>
+              <span>FIDELIDAD</span>
+            </div>
+            <div className="fz-carnet__programa">{d.program?.name || 'Tu programa'}</div>
             <div className="fz-carnet__saludo">{d.member.alias ? `Hola, ${d.member.alias}` : 'Tu tarjeta'}</div>
             <div className="fz-carnet__saldo"><b>{d.member.balance.toLocaleString('es-PE')}</b><span>{UNIDAD[tipo].varias}</span></div>
             {sellos ? (
               <div className="fz-sellos" role="img" aria-label={`${progreso} de ${umbral} sellos`}>
-                {Array.from({ length: umbral }, (_, i) => <span key={i} className={i < progreso ? 'fz-sello fz-sello--lleno' : 'fz-sello'}><Check aria-hidden="true" /></span>)}
+                {Array.from({ length: umbral }, (_, i) => <span key={i} className={i < progreso ? 'fz-sello fz-sello--lleno' : 'fz-sello'}><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" dangerouslySetInnerHTML={{ __html: trazoSello(i === umbral - 1 ? 'regalo' : sello) }} /></span>)}
               </div>
             ) : umbral > 0 ? (
               <div className="fz-barra" role="progressbar" aria-label={`Progreso de ${UNIDAD[tipo].varias}`} aria-valuemin={0} aria-valuemax={umbral} aria-valuenow={progreso}>
@@ -383,6 +393,10 @@ export default function Tarjeta(props: {
               </div>
             ) : null}
             {umbral > 0 && <p className="fz-carnet__meta">{progreso} de {umbral} {UNIDAD[tipo].varias} para tu próximo premio</p>}
+            <div className="fz-carnet__qr">
+              <div className="fz-qr" aria-label="Código QR para mostrar en caja" dangerouslySetInnerHTML={{ __html: props.qrSvg }} />
+              <span>{d.member.public_code}</span>
+            </div>
           </div>
         </div>
         {d.program?.reward && <div className="fz-meta-premio"><Gift aria-hidden="true" /><span>{d.member.balance >= umbral && umbral > 0 ? 'Premio alcanzado' : 'Tu próximo premio'}<b>{d.program.reward}</b></span></div>}
@@ -399,8 +413,6 @@ export default function Tarjeta(props: {
             ))}
           </div>
         )}
-        <div className="fz-qr" aria-label="Código QR para mostrar en caja" dangerouslySetInnerHTML={{ __html: props.qrSvg }} />
-        <p className="fz-codigo">{d.member.public_code}</p>
         <p className="fz-nota">Enséñalo en caja para acumular o canjear.</p>
         <p className="fz-mini">
           Leído el {fechaHora(leido)} ·{' '}
@@ -409,6 +421,7 @@ export default function Tarjeta(props: {
           </button>
         </p>
       </section>
+      <a className="fz-volver" href={urlNegocio(d.brand.slug)}><ArrowLeft size={18} aria-hidden="true" /> Volver a la página de enlaces</a>
 
       {pushPosible && d.member.status === 'active' && (
         <section className="fz-caja fz-caja--flujo" aria-label="Avisos">
@@ -471,6 +484,7 @@ export default function Tarjeta(props: {
           Borrar mis datos y esta tarjeta
         </button>
       </details>
+
     </main>
   );
 }

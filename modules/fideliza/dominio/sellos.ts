@@ -1,9 +1,9 @@
 /**
  * El icono del sello de la tarjeta (Wallet y vista previa). Trazos de 24×24
- * tomados de Lucide (licencia ISC), para pintarlos dentro de un SVG propio.
+ * inspirados en formas simples y en Lucide (licencia ISC), para SVG propio.
  * Son constantes: nunca llevan datos de fuera.
  */
-export type Sello = 'check' | 'corazon' | 'estrella' | 'cafe' | 'tijera' | 'regalo';
+export type Sello = 'check' | 'corazon' | 'estrella' | 'cafe' | 'hamburguesa' | 'sillon' | 'tijera' | 'regalo';
 
 export const SELLOS: { id: Sello; nombre: string; trazo: string }[] = [
   { id: 'check', nombre: 'Check', trazo: '<path d="M20 6 9 17l-5-5"/>' },
@@ -18,6 +18,8 @@ export const SELLOS: { id: Sello; nombre: string; trazo: string }[] = [
     nombre: 'Café',
     trazo: '<path d="M17 8h1a4 4 0 1 1 0 8h-1"/><path d="M3 8h14v9a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4Z"/><path d="M6 2v2M10 2v2M14 2v2"/>',
   },
+  { id: 'hamburguesa', nombre: 'Hamburguesa', trazo: '<path d="M3 10a9 9 0 0 1 18 0H3Z"/><path d="M2 14h20M4 18h16a2 2 0 0 1-2 3H6a2 2 0 0 1-2-3Z"/><path d="M6 6h.01M12 5h.01M17 7h.01"/>' },
+  { id: 'sillon', nombre: 'Sillón', trazo: '<path d="M5 13V7a4 4 0 0 1 4-4h6a4 4 0 0 1 4 4v6"/><path d="M4 11a2 2 0 0 0-2 2v4a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-4a2 2 0 0 0-2-2"/><path d="M6 19v3m12-3v3"/>' },
   {
     id: 'tijera',
     nombre: 'Tijera',

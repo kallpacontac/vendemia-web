@@ -131,15 +131,16 @@ test('4c · el pase explica cuánto falta según la regla y el saldo real', () =
 test('4d · la cartilla de Wallet lleva el avance, nunca quién es el cliente', () => {
   const estilo = { plantilla: 'color', sello: 'corazon' };
   const d = walletArte.datosArteWallet('#CB5C2F', estilo, 'stamps', 10, 7);
-  assert.deepEqual(Object.keys(d).sort(), ['color', 'llenos', 'plantilla', 'sello', 'tipo', 'umbral']);
+  assert.deepEqual(Object.keys(d).sort(), ['color', 'llenos', 'plantilla', 'sello', 'tarjeta', 'tipo', 'umbral']);
   assert.equal(walletArte.validarArteWallet(d), true);
   assert.equal(walletArte.validarArteWallet({ ...d, balance: 7, alias: 'Ana' }), false);
   assert.equal(walletArte.validarArteWallet({ ...d, llenos: 11 }), false, 'más llenos que la meta');
   assert.equal(walletArte.validarArteWallet({ ...d, sello: '<script>' }), false);
+  assert.equal(walletArte.validarArteWallet({ ...d, tarjeta: '<script>' }), false);
   // Los pases emitidos antes siguen teniendo imagen.
   assert.deepEqual(walletArte.leerDatosArte({ color: '#CB5C2F', plantilla: 'color', tipo: 'stamps', umbral: 10 })?.llenos, 0);
   const svg = walletArte.svgArteWallet(d);
-  assert.match(svg, /width="1032" height="336"/);
+  assert.match(svg, /width="1032" height="812"/);
   assert.equal((svg.match(/class="lleno"/g) ?? []).length, 7);
   assert.equal((svg.match(/class="vacio"/g) ?? []).length, 3);
   assert.ok(!svg.includes('Ana'));
@@ -148,6 +149,9 @@ test('4d · la cartilla de Wallet lleva el avance, nunca quién es el cliente', 
   // Puntos: barra, no cartilla.
   assert.equal(walletArte.esCartilla('points', 10), false);
   assert.match(walletArte.svgArteWallet(walletArte.datosArteWallet('#CB5C2F', estilo, 'points', 100, 18)), /class="lleno"/);
+  assert.equal(walletArte.leerDatosArte({ ...d, tarjeta: 'organica' })?.tarjeta, 'organica');
+  assert.match(walletArte.svgArteWallet({ ...d, tarjeta: 'nocturna' }), /fill="#F7F1E5"/);
+  assert.match(walletArte.svgArteWallet({ ...d, tarjeta: 'organica' }), /stroke-dasharray="0"/);
 });
 
 test('4e · el objeto de Wallet recibe su arte y los sellos reales solo en el texto privado', () => {
@@ -163,6 +167,7 @@ test('4e · el objeto de Wallet recibe su arte y los sellos reales solo en el te
   assert.match(o.textModulesData[0].body, /●{3}○{5} · 3\/8/);
   assert.match(o.heroImage.sourceUri.uri, /wallet-arte/);
   assert.ok(!o.heroImage.sourceUri.uri.includes('Ana'));
+  assert.equal(o.linksModuleData.uris[0].description, 'Volver a la página de enlaces');
 });
 
 test('5 · importes en céntimos, sin decimales flotantes', () => {

@@ -105,6 +105,32 @@
 .fz-btn,.fz-input{background:var(--superficie);color:var(--tinta);border-color:var(--borde)}
 .fz-movs li{border-color:var(--borde)}
 .fz:focus-visible,.fz :focus-visible{outline:3px solid var(--marca);outline-offset:3px}
+/* Tres diseños de cartilla; el color y el icono los elige cada negocio. */
+.fz-carnet__contenido{min-height:420px}
+.fz-carnet__arriba{text-transform:none;letter-spacing:0;align-items:center}
+.fz-carnet__marca{display:flex;align-items:center;gap:8px;min-width:0;max-width:70%;font-size:13px}
+.fz-carnet__marca img,.fz-carnet__marca i{display:grid;place-items:center;width:32px;height:32px;flex:0 0 32px;object-fit:cover;border-radius:50%;background:#fff;color:#171716;font-style:normal}
+.fz-carnet__marca b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fz-carnet__programa{margin-top:12px;font-size:20px;font-weight:800;line-height:1.15}
+.fz-carnet__saludo{margin-top:14px}
+.fz-sellos{justify-content:center;gap:8px}
+.fz-sello{width:clamp(34px,10vw,48px);height:clamp(34px,10vw,48px)}
+.fz-sello svg{width:22px;height:22px;opacity:.5}
+.fz-sello--lleno svg{opacity:1}
+.fz-carnet__qr{align-self:center;display:flex;flex-direction:column;align-items:center;margin-top:18px;padding:8px 11px 6px;border-radius:13px;background:#fff;color:#171716}
+.fz-carnet__qr .fz-qr{width:120px;max-width:none;margin:0;padding:0;border:0}
+.fz-carnet__qr span{font:700 10px ui-monospace,Consolas,monospace;letter-spacing:.08em}
+.fz-volver{order:2;display:flex;align-items:center;justify-content:center;gap:8px;min-height:48px;margin:-2px 0 16px;border:1.5px solid var(--borde);border-radius:14px;background:var(--superficie);color:var(--tinta);font-size:14px;font-weight:750;text-decoration:none}
+.fz[data-tarjeta="organica"] .fz-carnet{background:color-mix(in srgb,var(--marca) 20%,#F7EFD4);color:#1E1B17;border:1px solid color-mix(in srgb,var(--marca) 40%,#D8CDB0);box-shadow:0 12px 25px rgba(44,38,20,.11)}
+.fz[data-tarjeta="organica"] .fz-carnet:before{background:radial-gradient(circle at 90% 5%,rgba(255,255,255,.5),transparent 35%)}
+.fz[data-tarjeta="organica"] .fz-carnet__foto,.fz[data-tarjeta="nocturna"] .fz-carnet__foto{display:none}
+.fz[data-tarjeta="organica"] .fz-sello{border-style:solid;background:transparent;opacity:.7}
+.fz[data-tarjeta="organica"] .fz-sello--lleno{background:#1E1B17;color:#F7EFD4;opacity:1}
+.fz[data-tarjeta="nocturna"] .fz-carnet{background:color-mix(in srgb,var(--marca) 24%,#101014);color:#F7F1E5;box-shadow:0 16px 32px rgba(0,0,0,.25)}
+.fz[data-tarjeta="nocturna"] .fz-carnet:before{background:radial-gradient(circle at 90% 0%,color-mix(in srgb,var(--marca) 35%,transparent),transparent 48%)}
+.fz[data-tarjeta="nocturna"] .fz-sellos{padding:13px 9px;border-radius:15px;background:#F7F1E5;color:#211F1D}
+.fz[data-tarjeta="nocturna"] .fz-sello--lleno{background:#211F1D;color:#F7F1E5}
+.fz[data-tarjeta="nocturna"] .fz-carnet__qr{border:3px solid #F7F1E5}
 @keyframes fz-entrar{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
 @keyframes fz-celebrar{from{transform:scale(.45) rotate(-30deg)}60%{transform:scale(1.13) rotate(8deg)}to{transform:scale(1) rotate(0)}}
 @keyframes fz-brillo{from{opacity:0;transform:scale(.2) rotate(-30deg)}50%{opacity:1}to{opacity:.6;transform:scale(1.1) rotate(15deg)}}

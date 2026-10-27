@@ -124,7 +124,7 @@ async function subirObjeto(d: DatosObjetoRpc) {
       urlNegocio: urlNegocio(d.brand.slug),
       urlArte: fondo || urlArteWallet(datosArteWallet(
         demo ? '#FF4900' : d.brand.bg_color,
-        demo ? { plantilla: 'color' } : d.brand.style,
+        demo ? { plantilla: 'color', tarjeta: d.brand.style?.tarjeta, sello: d.brand.style?.sello } : d.brand.style,
         tipo,
         meta,
         // Cuántos lleva: la cartilla se llena con cada compra (una imagen por avance, no por cliente).

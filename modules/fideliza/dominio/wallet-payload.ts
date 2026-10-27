@@ -78,7 +78,7 @@ export function cuerpoClase(
     countryCode: 'PE',
     accountIdLabel: 'Código',
     accountNameLabel: 'Cliente',
-    homepageUri: { uri: opciones.urlNegocio, description: nombreEmisor.slice(0, 40) },
+    homepageUri: { uri: opciones.urlNegocio, description: 'Página principal de enlaces' },
     multipleDevicesAndHoldersAllowedStatus: 'ONE_USER_ALL_DEVICES',
   };
 }
@@ -132,7 +132,7 @@ export function cuerpoObjeto(d: DatosObjeto, classId: string, opciones: { urlNeg
     textModulesData: frase ? [{ id: 'premio', header: premios > 0 ? 'Premio disponible' : 'Tu avance y premio', body: frase.slice(0, 200) }] : [],
     linksModuleData: {
       uris: [
-        { id: 'negocio', uri: opciones.urlNegocio, description: d.brand.display_name.slice(0, 40) },
+        { id: 'negocio', uri: opciones.urlNegocio, description: 'Volver a la página de enlaces' },
         ...(d.brand.support_url ? [{ id: 'soporte', uri: d.brand.support_url, description: 'Ayuda' }] : []),
       ],
     },

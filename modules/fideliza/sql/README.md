@@ -38,8 +38,9 @@ tocar ese repositorio. No chocan: todo usa el prefijo `loyalty_`.
 | `0009_alta_rapida.sql` | Alta propia del negocio desde el panel (`loyalty_business_create`) y código de **pedido**: uno solo activa todas las placas de un lote (`loyalty_admin_device_order`). Pruebas: `tests/pruebas_0009.sql` |
 | `0010_enlace_libre.sql` | Guarda de duplicados en el alta: `loyalty_business_slug_check` dice qué enlace le toca al negocio y si el natural ya está ocupado, antes de crearlo |
 | `0011_wallet_resync_existentes.sql` | Permite actualizar en Google Wallet también clases y pases que Postgres marca «al día» después de un cambio de diseño |
+| `0012_plantillas_tarjeta.sql` | Pone en cola los pases de Google Wallet cuando cambias la plantilla o el icono de la tarjeta |
 
-**Aplicar:** SQL Editor de Supabase, en orden (0001 → 0011), cada fichero entero. Primero en
+**Aplicar:** SQL Editor de Supabase, en orden (0001 → 0012), cada fichero entero. Primero en
 staging, y allí pegar `tests/pruebas.sql` (no deja nada escrito: acaba en
 `ROLLBACK`). Tiene que terminar con «TODAS LAS PRUEBAS PASARON».
 
