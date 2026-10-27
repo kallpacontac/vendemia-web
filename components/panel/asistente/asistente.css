@@ -42,8 +42,11 @@
 .asis-b__hablado p{margin-top:6px;line-height:1.5}
 
 .asis-texto b{font-weight:800}
-.asis-wa{display:inline-flex;align-items:center;gap:6px;margin:3px 0;padding:6px 12px;border-radius:var(--r-full);
-  background:#EAFBF3;border:1px solid #C9F0DE;color:#0B6B43;font-size:13px;font-weight:700;text-decoration:none;white-space:nowrap}
+/* Puede partirse en dos líneas y nunca pasa del ancho de la burbuja: con nowrap, en un celular
+   «Escribirle por WhatsApp +51955514003» se salía por la derecha (24-oct, Android). */
+.asis-wa{display:inline-flex;flex-wrap:wrap;align-items:center;gap:2px 6px;max-width:100%;margin:3px 0;padding:6px 12px;
+  border-radius:18px;background:#EAFBF3;border:1px solid #C9F0DE;color:#0B6B43;font-size:13px;font-weight:700;
+  text-decoration:none;white-space:normal}
 .asis-wa:hover{background:#DDF7EA}
 .asis-wa small{font-weight:600;opacity:.75;font-variant-numeric:tabular-nums}
 
@@ -114,6 +117,8 @@
 @media(max-width:820px){
   .asis__msgs{padding:16px 14px}
   .asis-b{max-width:88%}
+  /* En el celular el número va debajo del texto, no al lado. */
+  .asis-wa small{flex-basis:100%;padding-left:20px}
   /* Por debajo de 16px, iOS hace zoom al tocar la caja. */
   .asis__caja textarea,.asis-tarjeta__form .input{font-size:16px}
   .asis-tarjeta{margin-top:2vh;padding:24px 20px 20px}

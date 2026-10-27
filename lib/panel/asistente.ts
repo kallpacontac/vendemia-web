@@ -93,7 +93,12 @@ const INTENTOS_AUDIO = 25;
 
 export type Pregunta =
   | { pregunta: string; con_voz?: boolean }
-  | { audio: { base64: string; mime: string }; con_voz?: boolean };
+  /**
+   * `segundos`: lo que midió el navegador al grabar. El bot mide por su cuenta
+   * (ffprobe) y manda la suya; este es para que, si las dos no cuadran, quede
+   * dicho en su registro (un audio de 6 s rechazado por «largo», 27-oct).
+   */
+  | { audio: { base64: string; mime: string; segundos?: number }; con_voz?: boolean };
 
 /**
  * En qué acabó una pregunta. Los fallos van aquí como datos y no como

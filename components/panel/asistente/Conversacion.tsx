@@ -355,7 +355,7 @@ export default function Conversacion({
       }
       if (!vivo.current) return;
       void enviar(
-        { audio: { base64, mime: audio.type }, ...(conVoz && { con_voz: true }) },
+        { audio: { base64, mime: audio.type, segundos: Math.round(segundos * 10) / 10 }, ...(conVoz && { con_voz: true }) },
         { texto: null, audioS: segundos, transcripcion: null },
       );
     },
