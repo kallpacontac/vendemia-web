@@ -31,7 +31,7 @@ import { urlPagina, urlEnvio, urlReservar } from '@/modules/tu-pagina/dominio/co
 import { esAppointmentFamily, esEcommerce, esRecurrente } from '@/lib/panel/modo';
 import { tipoPorDefecto, type TiposDePagina } from '@/modules/tu-pagina/dominio/tienda';
 import type { BusinessMode } from '@/lib/supabase/types';
-import { EXPERIENCIAS, PLANTILLAS, PLANTILLAS_AGENDA, PLANTILLAS_AMBOS, plantillaPorDefecto, plantillaValida, tipoPagina, tipoPorDefecto as tipoPaginaPorDefecto, type PlantillaGuardada, type TipoPagina } from '@/modules/tu-pagina/dominio/plantillas';
+import { EXPERIENCIAS, PLANTILLAS, PLANTILLAS_AGENDA, PLANTILLAS_AMBOS, pedidoGastronomicoDe, plantillaPorDefecto, plantillaValida, tipoPagina, tipoPorDefecto as tipoPaginaPorDefecto, type PlantillaGuardada, type TipoPagina } from '@/modules/tu-pagina/dominio/plantillas';
 import { esHex, esUrlPublica, type AparienciaPagina } from '@/modules/tu-pagina/dominio/apariencia';
 import { urlEjemploPara } from '@/modules/tu-pagina/dominio/ejemplo';
 import { FOTOS_PLANTILLA, FOTOS_SERVICIOS_LUXURY, esFotoPlantilla, fotoPlantillaPorDefecto } from '@/modules/tu-pagina/dominio/fotos';
@@ -53,9 +53,9 @@ const urlVista = (slug: string, valores: {
     vs: valores.apariencia.vistaServiciosLuxury === 'horizontal' ? 'horizontal' : 'vertical',
     lm: valores.apariencia.mostrarMesero === true ? '1' : '0',
     mpi: valores.apariencia.mensajePedidoIntro ?? '',
-    pmp: (valores.apariencia.pedirMetodoPago ?? valores.plantilla === 'restaurante') ? '1' : '0',
-    pnp: (valores.apariencia.pedirNotaPedido ?? valores.plantilla === 'restaurante') ? '1' : '0',
-    pup: (valores.apariencia.pedirUbicacion ?? valores.plantilla === 'restaurante') ? '1' : '0',
+    pmp: (valores.apariencia.pedirMetodoPago ?? pedidoGastronomicoDe(valores.plantilla, valores.tipo)) ? '1' : '0',
+    pnp: (valores.apariencia.pedirNotaPedido ?? pedidoGastronomicoDe(valores.plantilla, valores.tipo)) ? '1' : '0',
+    pup: (valores.apariencia.pedirUbicacion ?? pedidoGastronomicoDe(valores.plantilla, valores.tipo)) ? '1' : '0',
     fp: valores.apariencia.fotoPlantilla ?? '', sp: valores.sinPortada ? '1' : '0',
   });
   return `/tu-pagina/${slug}?${q.toString()}`;
@@ -478,9 +478,9 @@ function MiPagina({ companyId, nombre, pagina, agendaNube, alGuardar }: {
               <small className="muted">Personaliza el saludo. El código, cliente, productos, total y entrega se añaden automáticamente. Usa {'{negocio}'} para insertar tu nombre.</small>
               <textarea className="input" rows={3} maxLength={240} value={apariencia.mensajePedidoIntro ?? ''} placeholder={'Hola 👋\nVengo de la carta digital de {negocio} y envío aquí mi pedido por favor.'} onChange={(e) => setApariencia({ ...apariencia, mensajePedidoIntro: e.target.value })} />
             </div>}
-            {es !== 'agenda' && <label className="tp-panel-check"><input type="checkbox" checked={apariencia.pedirMetodoPago ?? plantilla === 'restaurante'} onChange={(e) => setApariencia({ ...apariencia, pedirMetodoPago: e.target.checked })} /><span><b>Preguntar cómo pagará</b><small className="muted">Se incluye en el aviso de WhatsApp.</small></span></label>}
-            {es !== 'agenda' && <label className="tp-panel-check"><input type="checkbox" checked={apariencia.pedirNotaPedido ?? plantilla === 'restaurante'} onChange={(e) => setApariencia({ ...apariencia, pedirNotaPedido: e.target.checked })} /><span><b>Permitir una nota para cocina</b><small className="muted">Por ejemplo, «sin cebolla».</small></span></label>}
-            {es !== 'agenda' && <label className="tp-panel-check"><input type="checkbox" checked={apariencia.pedirUbicacion ?? plantilla === 'restaurante'} onChange={(e) => setApariencia({ ...apariencia, pedirUbicacion: e.target.checked })} /><span><b>Permitir enlace de ubicación para delivery</b><small className="muted">El cliente puede pegar un enlace de Google Maps.</small></span></label>}
+            {es !== 'agenda' && <label className="tp-panel-check"><input type="checkbox" checked={apariencia.pedirMetodoPago ?? pedidoGastronomicoDe(plantilla, es)} onChange={(e) => setApariencia({ ...apariencia, pedirMetodoPago: e.target.checked })} /><span><b>Preguntar cómo pagará</b><small className="muted">Se incluye en el aviso de WhatsApp.</small></span></label>}
+            {es !== 'agenda' && <label className="tp-panel-check"><input type="checkbox" checked={apariencia.pedirNotaPedido ?? pedidoGastronomicoDe(plantilla, es)} onChange={(e) => setApariencia({ ...apariencia, pedirNotaPedido: e.target.checked })} /><span><b>Permitir una nota para cocina</b><small className="muted">Por ejemplo, «sin cebolla».</small></span></label>}
+            {es !== 'agenda' && <label className="tp-panel-check"><input type="checkbox" checked={apariencia.pedirUbicacion ?? pedidoGastronomicoDe(plantilla, es)} onChange={(e) => setApariencia({ ...apariencia, pedirUbicacion: e.target.checked })} /><span><b>Permitir enlace de ubicación para delivery</b><small className="muted">El cliente puede pegar un enlace de Google Maps.</small></span></label>}
 
 
             <div className="tp-panel-colores-avanzados">

@@ -116,6 +116,14 @@
 .ne-carrito-entrega .ne-carrito-nota { padding: 13px; border: 1px solid #515047; border-radius: 9px; background: #292925; color: #bbb9b1; font-size: 12px; }
 .ne-carrito-exito { display: flex; flex-direction: column; align-items: flex-start; gap: 12px; }.ne-carrito-exito h3 { margin: 0; font-size: 23px; }.ne-carrito-exito p { margin: 0; }.ne-carrito-exito > button { width: 100%; margin-top: 14px; }
 .ne-carrito-exito-icono { width: 50px; height: 50px; display: grid; place-items: center; border-radius: 50%; background: #28513c; color: #a9edbd; }
+.ne-carrito-entrega > label { display: grid; gap: 7px; margin-top: 17px; color: #f8f6f2; font-size: 13px; font-weight: 750; }
+.ne-carrito-entrega > label small { color: #aaa9a4; font-weight: 400; }
+.ne-carrito-entrega input, .ne-carrito-entrega select, .ne-carrito-entrega textarea { width: 100%; min-height: 46px; padding: 10px 13px; border: 1px solid #55564f; border-radius: 10px; outline: none; background: #282925; color: #fff; font: inherit; font-weight: 400; }
+.ne-carrito-entrega textarea { min-height: 78px; resize: vertical; }
+.ne-carrito-entrega input:focus-visible, .ne-carrito-entrega select:focus-visible, .ne-carrito-entrega textarea:focus-visible { border-color: #ff914f; box-shadow: 0 0 0 2px #ff914f44; }
+.ne-carrito-entrega input[aria-invalid='true'] { border-color: #ff8476; }
+.ne-carrito-error { display: block; margin: 8px 0 0; color: #ffb4a8; font-size: 12px; }
+.ne-carrito-exito .ne-carrito-resumen { width: 100%; padding: 16px; border: 1px solid #515047; border-radius: 12px; background: #242520; color: #f8f6f2; white-space: pre-wrap; overflow-wrap: anywhere; font-size: 13px; line-height: 1.65; }
 @keyframes ne-carrito-entrar { from { transform: translateX(24px); opacity: .8; } to { transform: translateX(0); opacity: 1; } }
 .ne-cafe-footer { max-width: 1320px; margin: auto; padding: 28px 24px; display: flex; flex-wrap: wrap; align-items: center; gap: 12px; border-top: 1px solid #393a36; color: #aaa; font-size: 12px; }.ne-cafe-footer b { color: #fff; font-size: 17px; }.ne-cafe-footer a { margin-left: auto; color: #ff9859; font-weight: 700; }
 

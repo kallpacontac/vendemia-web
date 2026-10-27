@@ -35,7 +35,7 @@ export default function EjemploPizzeria() {
     <div className="tp-ejemplo-restaurante"><span>Forno Norte es un negocio de ejemplo. Los pedidos son una simulación.</span><a href="/panel/tu-pagina">Crear mi página →</a></div>
     <Cabecera pagina={pagina} catalogoDisponible fotoDestacada="/assets/restaurante-ejemplo/portada.webp" />
     <main className="tp-hoja">
-      <Escaparate esc={esc} slug={pagina.slug} whatsapp="" puedePedir puedeReservar={false} disposicion="cuadricula" plantillaRestaurante nombreNegocio={pagina.titulo} apariencia={pagina.secciones.apariencia} demoPedido />
+      <Escaparate esc={esc} slug={pagina.slug} whatsapp="" puedePedir puedeReservar={false} disposicion="cuadricula" plantillaRestaurante pedidoGastronomico nombreNegocio={pagina.titulo} apariencia={pagina.secciones.apariencia} demoPedido />
     </main>
   </Marco>;
 }

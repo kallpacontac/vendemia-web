@@ -47,6 +47,10 @@ export const tipoPorDefecto = (modo: BusinessMode | null | undefined): TipoPagin
 export const plantillaPorDefecto = (tipo: TipoPagina): PlantillaGuardada =>
   tipo === 'agenda' ? 'agenda' : tipo === 'ambos' ? 'lista' : 'vitrina';
 
+/** La carta nocturna de tienda usa el ejemplo de cafetería y el pedido gastronómico. */
+export const pedidoGastronomicoDe = (plantilla: PlantillaGuardada, tipo: TipoPagina): boolean =>
+  plantilla === 'restaurante' || (plantilla === 'agenda' && tipo === 'tienda');
+
 export const disposicionDe = (plantilla: PlantillaGuardada, tipo: TipoPagina): Disposicion =>
   plantilla === 'carta' ? 'carta' : plantilla === 'lista' || plantilla === 'agenda' || plantilla === 'clases'
     ? 'filas' : plantilla === 'vitrina' || plantilla === 'impulso' || plantilla === 'luxury' || plantilla === 'restaurante' ? 'cuadricula' : tipo === 'agenda' ? 'filas' : 'cuadricula';

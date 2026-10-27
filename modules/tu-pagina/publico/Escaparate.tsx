@@ -59,6 +59,7 @@ interface Props {
   agendaNombre?: string;
   servicioInicialId?: string;
   plantillaRestaurante?: boolean;
+  pedidoGastronomico?: boolean;
   nombreNegocio?: string;
   apariencia?: AparienciaPagina;
   demoPedido?: boolean;
@@ -124,7 +125,7 @@ const MENSAJE_FALLO: Record<string, string> = {
   not_found: 'Esta página ya no recibe reservas en línea. Escríbenos por WhatsApp.',
 };
 
-export default function Escaparate({ esc: todo, slug, whatsapp, puedePedir, puedeReservar, disposicion, solo, plantillaLuxury = false, catalogoLuxuryDestacado = false, vistaServiciosLuxury = 'vertical', agendaEstilo, agendaNombre = '', servicioInicialId = '', plantillaRestaurante = false, nombreNegocio = '', apariencia, demoPedido = false }: Props) {
+export default function Escaparate({ esc: todo, slug, whatsapp, puedePedir, puedeReservar, disposicion, solo, plantillaLuxury = false, catalogoLuxuryDestacado = false, vistaServiciosLuxury = 'vertical', agendaEstilo, agendaNombre = '', servicioInicialId = '', plantillaRestaurante = false, pedidoGastronomico = false, nombreNegocio = '', apariencia, demoPedido = false }: Props) {
   const esBarberia = /barber|peluquer|sal[oó]n|estil|cabello|corte/i.test(agendaNombre);
   const esc = useMemo(
     () => {
@@ -339,7 +340,7 @@ export default function Escaparate({ esc: todo, slug, whatsapp, puedePedir, pued
             slug={slug}
             nombreNegocio={nombreNegocio}
             apariencia={apariencia}
-            plantillaRestaurante={plantillaRestaurante}
+            pedidoGastronomico={pedidoGastronomico}
             demoPedido={demoPedido}
             alCambiar={ponerCarrito}
             alTerminar={(h) => {
@@ -874,7 +875,7 @@ function Inscribir({ item, slug, persona, alTerminar }: { item: Item; slug: stri
   );
 }
 
-function Carrito({ lineas, porId, esc, slug, alCambiar, alTerminar, nombreNegocio, apariencia, plantillaRestaurante, demoPedido }: {
+function Carrito({ lineas, porId, esc, slug, alCambiar, alTerminar, nombreNegocio, apariencia, pedidoGastronomico, demoPedido }: {
   lineas: EnCarrito[];
   porId: Map<string, Item>;
   esc: Datos;
@@ -883,7 +884,7 @@ function Carrito({ lineas, porId, esc, slug, alCambiar, alTerminar, nombreNegoci
   alTerminar: (h: Hecho) => void;
   nombreNegocio: string;
   apariencia?: AparienciaPagina;
-  plantillaRestaurante: boolean;
+  pedidoGastronomico: boolean;
   demoPedido: boolean;
 }) {
   const { cliente, setCliente, recordar } = useCliente();
@@ -895,9 +896,9 @@ function Carrito({ lineas, porId, esc, slug, alCambiar, alTerminar, nombreNegoci
   const [metodoPago, setMetodoPago] = useState('');
   const [nota, setNota] = useState('');
   const [ubicacion, setUbicacion] = useState('');
-  const pideMetodoPago = apariencia?.pedirMetodoPago ?? plantillaRestaurante;
-  const pideNota = apariencia?.pedirNotaPedido ?? plantillaRestaurante;
-  const pideUbicacion = apariencia?.pedirUbicacion ?? plantillaRestaurante;
+  const pideMetodoPago = apariencia?.pedirMetodoPago ?? pedidoGastronomico;
+  const pideNota = apariencia?.pedirNotaPedido ?? pedidoGastronomico;
+  const pideUbicacion = apariencia?.pedirUbicacion ?? pedidoGastronomico;
   const [errores, setErrores] = useState<ErroresCliente>({});
   const [fallo, setFallo] = useState('');
   const { enviar, enviando } = useEnviar('/api/tu-pagina/publico/pedido');
@@ -929,7 +930,7 @@ function Carrito({ lineas, porId, esc, slug, alCambiar, alTerminar, nombreNegoci
         metodoPago: pideMetodoPago ? metodoPago : '',
         nota: pideNota ? nota : '',
         ubicacion: entrega === 'delivery' && pideUbicacion ? ubicacion.trim() : '',
-      }, { detallado: plantillaRestaurante || Boolean(apariencia?.mensajePedidoIntro?.trim()) || pideMetodoPago || pideNota || pideUbicacion, introduccion: apariencia?.mensajePedidoIntro }),
+      }, { detallado: pedidoGastronomico || Boolean(apariencia?.mensajePedidoIntro?.trim()) || pideMetodoPago || pideNota || pideUbicacion, introduccion: apariencia?.mensajePedidoIntro }),
     });
   };
 

@@ -19,7 +19,7 @@ import LlamarMesero from '@/modules/tu-pagina/publico/LlamarMesero';
 import { paginaDe } from '@/modules/tu-pagina/servidor/pagina';
 import { escaparateDe } from '@/modules/tu-pagina/servidor/escaparate';
 import { urlWhatsApp } from '@/modules/tu-pagina/dominio/envio';
-import { disposicionDe, plantillaPorDefecto, plantillaValida, tipoPagina } from '@/modules/tu-pagina/dominio/plantillas';
+import { disposicionDe, pedidoGastronomicoDe, plantillaPorDefecto, plantillaValida, tipoPagina } from '@/modules/tu-pagina/dominio/plantillas';
 import { esPlantillaEjemplo } from '@/modules/tu-pagina/dominio/ejemplo';
 import { fotoDePlantilla } from '@/modules/tu-pagina/dominio/fotos';
 import { conVista, consultaVista } from '@/modules/tu-pagina/dominio/vista';
@@ -124,6 +124,7 @@ export default async function Portada({ params, searchParams }: Props) {
       catalogoLuxuryDestacado={catalogoLuxuryDestacado}
       vistaServiciosLuxury={p.secciones.apariencia?.vistaServiciosLuxury}
       plantillaRestaurante={Boolean(plantilla === 'restaurante' && p.secciones.apariencia?.plantillaActiva)}
+      pedidoGastronomico={Boolean(p.secciones.apariencia?.plantillaActiva && pedidoGastronomicoDe(plantilla, tipo))}
       nombreNegocio={p.titulo}
       apariencia={p.secciones.apariencia}
     />

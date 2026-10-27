@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { ArrowRight, Check, Coffee, Info, MapPin, Minus, Plus, Search, ShoppingBag, Trash2, X, ZoomIn } from 'lucide-react';
 import ImagenAmpliada from './ImagenAmpliada';
 import LlamarMesero from './LlamarMesero';
+import { mensajePedido, validarCliente, type ErroresCliente } from '@/modules/tu-pagina/dominio/tienda';
 import './negocios-ejemplo.css';
 
 const PRODUCTOS = [
@@ -27,7 +28,16 @@ export default function CafeteriaEjemplo() {
   const [verCarrito, setVerCarrito] = useState(false);
   const [pasoCarrito, setPasoCarrito] = useState<'carrito' | 'entrega' | 'hecho'>('carrito');
   const [entrega, setEntrega] = useState<'delivery' | 'recojo'>('recojo');
-  const [resumenPedido, setResumenPedido] = useState<{ unidades: number; total: number; entrega: 'delivery' | 'recojo' } | null>(null);
+  const [nombre, setNombre] = useState('');
+  const [telefono, setTelefono] = useState('');
+  const [direccion, setDireccion] = useState('');
+  const [referencia, setReferencia] = useState('');
+  const [ubicacion, setUbicacion] = useState('');
+  const [metodoPago, setMetodoPago] = useState('');
+  const [nota, setNota] = useState('');
+  const [errores, setErrores] = useState<ErroresCliente>({});
+  const [aviso, setAviso] = useState('');
+  const [resumenPedido, setResumenPedido] = useState('');
   const visibles = useMemo(() => PRODUCTOS.filter((p) =>
     (categoria === 'Todos' || (categoria === 'Ofertas' ? p.destacado : p.categoria === categoria)) &&
     `${p.nombre} ${p.descripcion}`.toLocaleLowerCase('es').includes(busqueda.trim().toLocaleLowerCase('es')),
@@ -50,7 +60,17 @@ export default function CafeteriaEjemplo() {
     setVerCarrito(true);
   };
   const confirmarEjemplo = () => {
-    setResumenPedido({ unidades, total, entrega });
+    const nuevosErrores = validarCliente({ nombre, telefono, direccion, conDelivery: entrega === 'delivery' });
+    setErrores(nuevosErrores);
+    if (Object.keys(nuevosErrores).length) { setAviso('Completa los datos indicados para ver el resumen.'); return; }
+    if (!metodoPago) { setAviso('Elige cómo pagarías.'); return; }
+    if (entrega === 'delivery' && ubicacion.trim() && !/^https:\/\/(?:www\.)?(?:maps\.google\.[^/\s]+|google\.[^/\s]+\/maps|goo\.gl\/maps|maps\.app\.goo\.gl)\//i.test(ubicacion.trim())) { setAviso('Pega un enlace válido de Google Maps o deja la ubicación vacía.'); return; }
+    setAviso('');
+    setResumenPedido(mensajePedido('PED-EJEMPLO', {
+      negocio: 'Grano de Barrio', enlace: window.location.href.split('?')[0],
+      lineas: lineas.map(({ producto: p, cantidad }) => ({ nombre: p.nombre, opcion: '', precio: p.precio, cantidad })),
+      total, entrega, direccion, referencia, nombre, telefono, metodoPago, ubicacion: entrega === 'delivery' ? ubicacion : '', nota,
+    }, { detallado: true }));
     setCarrito({});
     setPasoCarrito('hecho');
   };
@@ -93,8 +113,17 @@ export default function CafeteriaEjemplo() {
     {producto && zoom && <ImagenAmpliada src={`/assets/negocios-ejemplo/cafe-${producto.id}.webp`} alt={producto.nombre} onClose={() => setZoom(false)} />}
     {verCarrito && <div className="ne-carrito-fondo" role="presentation" onClick={() => setVerCarrito(false)}><aside className="ne-carrito" role="dialog" aria-modal="true" aria-label="Pedido de ejemplo" onClick={(e) => e.stopPropagation()}>
       <div className="ne-carrito-cabecera"><div><small>GRANO DE BARRIO · DEMOSTRACIÓN</small><h2>{pasoCarrito === 'hecho' ? 'Pedido de ejemplo' : pasoCarrito === 'entrega' ? '¿Cómo lo recibirías?' : 'Tu pedido'}</h2></div><button type="button" aria-label="Cerrar carrito" onClick={() => setVerCarrito(false)}><X size={21} /></button></div>
-      {pasoCarrito === 'hecho' && resumenPedido ? <div className="ne-carrito-contenido ne-carrito-exito"><span className="ne-carrito-exito-icono"><Check size={27} /></span><h3>Así terminaría el pedido</h3><p>{resumenPedido.unidades} {resumenPedido.unidades === 1 ? 'producto' : 'productos'} · S/ {resumenPedido.total.toFixed(2)} · {resumenPedido.entrega === 'delivery' ? 'Delivery' : 'Recojo en tienda'}.</p><p>En una página publicada, el pedido se guarda en <b>Pedidos</b> del panel y el cliente puede avisar al negocio por WhatsApp. Esta muestra no envió nada.</p><button type="button" onClick={() => { setVerCarrito(false); setPasoCarrito('carrito'); }}>Volver a la carta</button></div> : <>
-        {pasoCarrito === 'carrito' ? <div className="ne-carrito-contenido">{lineas.length ? <ul className="ne-carrito-lineas">{lineas.map(({ producto: p, cantidad }) => <li key={p.id}><span className={`ne-cafe-foto ne-cafe-foto--${p.id}`} /><div><b>{p.nombre}</b><small>S/ {p.precio.toFixed(2)} c/u</small><div className="ne-carrito-cantidad"><button type="button" aria-label={`Quitar una unidad de ${p.nombre}`} onClick={() => cambiarCantidad(p.id, -1)}>{cantidad === 1 ? <Trash2 size={16} /> : <Minus size={16} />}</button><output>{cantidad}</output><button type="button" aria-label={`Añadir una unidad de ${p.nombre}`} onClick={() => cambiarCantidad(p.id, 1)}><Plus size={16} /></button></div></div><strong>S/ {(p.precio * cantidad).toFixed(2)}</strong></li>)}</ul> : <div className="ne-carrito-vacio"><ShoppingBag size={32} /><h3>Tu carrito está vacío</h3><p>Explora la carta y añade algo que te guste.</p><button type="button" onClick={() => setVerCarrito(false)}>Ver la carta</button></div>}</div> : <div className="ne-carrito-contenido ne-carrito-entrega"><p>En una página real, aquí el cliente elige cómo recibir su pedido y deja sus datos antes de confirmarlo.</p><div role="group" aria-label="Forma de entrega de ejemplo"><button type="button" aria-pressed={entrega === 'recojo'} onClick={() => setEntrega('recojo')}>Recojo en tienda</button><button type="button" aria-pressed={entrega === 'delivery'} onClick={() => setEntrega('delivery')}>Delivery</button></div><p className="ne-carrito-nota">Es una simulación: no pedimos datos personales ni enviamos órdenes desde este ejemplo.</p></div>}
+      {pasoCarrito === 'hecho' && resumenPedido ? <div className="ne-carrito-contenido ne-carrito-exito"><span className="ne-carrito-exito-icono"><Check size={27} /></span><h3>Así llegaría por WhatsApp</h3><p className="ne-carrito-resumen">{resumenPedido.split(/(\*[^*\n]+\*)/g).map((parte, indice) => parte.startsWith('*') && parte.endsWith('*') ? <strong key={indice}>{parte.slice(1, -1)}</strong> : <span key={indice}>{parte}</span>)}</p><p>En la página publicada se guarda el pedido y aparece el botón para avisar por WhatsApp. Esta muestra no guardó ni envió datos.</p><button type="button" onClick={() => { setVerCarrito(false); setPasoCarrito('carrito'); }}>Volver a la carta</button></div> : <>
+        {pasoCarrito === 'carrito' ? <div className="ne-carrito-contenido">{lineas.length ? <ul className="ne-carrito-lineas">{lineas.map(({ producto: p, cantidad }) => <li key={p.id}><span className={`ne-cafe-foto ne-cafe-foto--${p.id}`} /><div><b>{p.nombre}</b><small>S/ {p.precio.toFixed(2)} c/u</small><div className="ne-carrito-cantidad"><button type="button" aria-label={`Quitar una unidad de ${p.nombre}`} onClick={() => cambiarCantidad(p.id, -1)}>{cantidad === 1 ? <Trash2 size={16} /> : <Minus size={16} />}</button><output>{cantidad}</output><button type="button" aria-label={`Añadir una unidad de ${p.nombre}`} onClick={() => cambiarCantidad(p.id, 1)}><Plus size={16} /></button></div></div><strong>S/ {(p.precio * cantidad).toFixed(2)}</strong></li>)}</ul> : <div className="ne-carrito-vacio"><ShoppingBag size={32} /><h3>Tu carrito está vacío</h3><p>Explora la carta y añade algo que te guste.</p><button type="button" onClick={() => setVerCarrito(false)}>Ver la carta</button></div>}</div> : <div className="ne-carrito-contenido ne-carrito-entrega">
+          <p>Prueba cómo un cliente completaría el pedido. Usa datos ficticios: esta muestra no los guarda ni envía.</p>
+          <div className="ne-carrito-entrega-opciones" role="group" aria-label="Forma de entrega de ejemplo"><button type="button" aria-pressed={entrega === 'recojo'} onClick={() => setEntrega('recojo')}>Recojo en tienda</button><button type="button" aria-pressed={entrega === 'delivery'} onClick={() => setEntrega('delivery')}>Delivery</button></div>
+          {entrega === 'delivery' && <><label>Dirección de entrega<input value={direccion} maxLength={200} placeholder="Av. Principal 123" onChange={(e) => setDireccion(e.target.value)} aria-invalid={Boolean(errores.direccion)} /></label>{errores.direccion && <small className="ne-carrito-error">{errores.direccion}</small>}<label>Referencia <small>(opcional)</small><input value={referencia} maxLength={200} placeholder="Frente al parque" onChange={(e) => setReferencia(e.target.value)} /></label><label>Enlace de Google Maps <small>(opcional)</small><input value={ubicacion} type="url" maxLength={300} placeholder="https://maps.google.com/?q=…" onChange={(e) => setUbicacion(e.target.value)} /></label></>}
+          <label>Tu nombre<input value={nombre} autoComplete="off" maxLength={80} placeholder="María" onChange={(e) => setNombre(e.target.value)} aria-invalid={Boolean(errores.nombre)} /></label>{errores.nombre && <small className="ne-carrito-error">{errores.nombre}</small>}
+          <label>Tu celular<input value={telefono} type="tel" inputMode="tel" autoComplete="off" maxLength={20} placeholder="987 654 321" onChange={(e) => setTelefono(e.target.value)} aria-invalid={Boolean(errores.telefono)} /></label>{errores.telefono && <small className="ne-carrito-error">{errores.telefono}</small>}
+          <label>¿Cómo pagarás?<select value={metodoPago} onChange={(e) => setMetodoPago(e.target.value)}><option value="">Elige una opción</option><option>Yape</option><option>Plin</option><option>Efectivo</option><option>Tarjeta</option><option>Transferencia</option></select></label>
+          <label>Nota para el pedido <small>(opcional)</small><textarea value={nota} maxLength={300} placeholder="Ej. Café sin azúcar" onChange={(e) => setNota(e.target.value)} /></label>
+          {aviso && <p className="ne-carrito-error" role="alert">{aviso}</p>}
+        </div>}
         {lineas.length > 0 && <div className="ne-carrito-pie"><div><span>Total estimado</span><strong>S/ {total.toFixed(2)}</strong></div><button type="button" onClick={() => pasoCarrito === 'carrito' ? setPasoCarrito('entrega') : confirmarEjemplo()}>{pasoCarrito === 'carrito' ? 'Continuar pedido' : 'Simular confirmación'} <ArrowRight size={17} /></button>{pasoCarrito === 'entrega' && <button className="ne-carrito-volver" type="button" onClick={() => setPasoCarrito('carrito')}>Volver al carrito</button>}</div>}
       </>}
     </aside></div>}
