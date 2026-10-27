@@ -27,14 +27,12 @@
  * la intro. Queda avisado en los dos sitios.
  */
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useSesionDeLaUrl } from '@/components/panel/useSesionDeLaUrl';
 import { tomarDestino } from '@/lib/panel/destino';
 import { rutaActivacionPlaca, type FuentePlaca } from '@/modules/fideliza/dominio/activacion';
 
 export default function Callback() {
-  const router = useRouter();
   const { estado, error } = useSesionDeLaUrl();
   /**
    * ¿Llegó con un `?code=`? Se mira al montar: si el canje sale bien,
@@ -50,9 +48,19 @@ export default function Callback() {
       const params = new URLSearchParams(window.location.search);
       const fuente: FuentePlaca = params.get('fuente') === 'qr' ? 'qr' : 'nfc';
       const respaldo = params.get('origen') === 'placa' ? rutaActivacionPlaca(fuente) : '/panel';
-      router.replace(tomarDestino() ?? respaldo);
+      /**
+       * ⚠️ CARGA NUEVA, NO router.replace.
+       *
+       * En Chrome de Android, volviendo de Google, el panel se pintaba como de
+       * escritorio (sin «Sitio de escritorio» puesto) y se arreglaba al recargar.
+       * Navegando sin recargar, el panel heredaba ese documento recién llegado
+       * de accounts.google.com; uno nuevo del mismo origen es lo que hace la
+       * recarga. Cuesta una carga más, y solo al entrar con Google o por el
+       * enlace del correo. No reproducido en emulación: si vuelve, mirar aquí.
+       */
+      window.location.replace(tomarDestino() ?? respaldo);
     }
-  }, [estado, router]);
+  }, [estado]);
 
   /**
    * ⚠️ EL CORREO SÍ QUEDÓ CONFIRMADO, AUNQUE AQUÍ NO HAYA SESIÓN.
