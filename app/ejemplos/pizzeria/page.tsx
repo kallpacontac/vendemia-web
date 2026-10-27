@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import Marco, { Cabecera } from '@/modules/tu-pagina/publico/Marco';
 import Escaparate from '@/modules/tu-pagina/publico/Escaparate';
+import EjemplosNav from '@/modules/tu-pagina/publico/EjemplosNav';
 import type { PaginaPublica } from '@/modules/tu-pagina/servidor/pagina';
 import type { Escaparate as Datos, Item } from '@/modules/tu-pagina/dominio/tienda';
 
@@ -33,6 +34,7 @@ const esc: Datos = {
 export default function EjemploPizzeria() {
   return <Marco pagina={pagina} portada>
     <div className="tp-ejemplo-restaurante"><span>Forno Norte es un negocio de ejemplo. Los pedidos son una simulación.</span><a href="/panel/tu-pagina">Crear mi página →</a></div>
+    <EjemplosNav actual="restaurante" />
     <Cabecera pagina={pagina} catalogoDisponible fotoDestacada="/assets/restaurante-ejemplo/portada.webp" />
     <main className="tp-hoja">
       <Escaparate esc={esc} slug={pagina.slug} whatsapp="" puedePedir puedeReservar={false} disposicion="cuadricula" plantillaRestaurante pedidoGastronomico nombreNegocio={pagina.titulo} apariencia={pagina.secciones.apariencia} demoPedido />

@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import LuxuryPortada from '@/modules/tu-pagina/publico/LuxuryPortada';
 import LuxuryCatalogoEjemplo from '@/modules/tu-pagina/publico/LuxuryCatalogoEjemplo';
 import LuxuryServiciosEjemplo from '@/modules/tu-pagina/publico/LuxuryServiciosEjemplo';
+import EjemplosNav from '@/modules/tu-pagina/publico/EjemplosNav';
 import { SERVICIOS_BARBERIA } from '@/modules/tu-pagina/dominio/barberia-ejemplo';
 import '@/modules/tu-pagina/estilos/publica.css';
 
@@ -14,6 +15,7 @@ export default function BarberiaLuxuryEjemplo({ searchParams }: { searchParams?:
   const conProductos = searchParams?.tipo === 'ambos';
   const vistaServicios = searchParams?.servicios === 'horizontal' ? 'horizontal' : 'vertical';
   return <div className="tp" data-diseno={conProductos ? 'ambos' : 'agenda'} data-plantilla="luxury" style={{ '--tp-color': '#D0AB75', '--tp-tinta': '#171717' } as React.CSSProperties}>
+    <EjemplosNav actual="barberia" />
     <LuxuryPortada
       titulo="Atelier Norte"
       frase="El buen estilo empieza con tiempo para ti."

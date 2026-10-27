@@ -103,7 +103,7 @@ export default function LuxuryPortada({ titulo, frase, etiqueta, logo, portada, 
   return <div className="tp-luxury-motion" ref={marco} data-escena={escena}>
     <div className="tp-luxury-motion__fijo" ref={fijo}>
       <div className="tp-luxury-motion__pista" ref={pista}>
-        <section className="tp-luxury-hero" aria-label={`Bienvenidos a ${titulo}`} style={fondo(portada, PORTADA_LUXURY)}>
+        <section className={`tp-luxury-hero${!portada || portada === PORTADA_LUXURY ? ' tp-luxury-hero--foto-ejemplo' : ''}`} aria-label={`Bienvenidos a ${titulo}`} style={fondo(portada, PORTADA_LUXURY)}>
           <nav className="tp-luxury-nav" aria-label="Navegación de la página">
             <a className="tp-luxury-brand" href={inicioHref} aria-label={`${titulo}, inicio`}>
               {logo && <span className="tp-luxury-brand__logo" style={{ backgroundImage: `url("${logo}")` }} aria-hidden="true" />}
