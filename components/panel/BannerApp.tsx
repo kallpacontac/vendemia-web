@@ -61,7 +61,7 @@ function escribir(m: Memoria) {
 const permitido = (m: Memoria) => !m.hecho && m.veces < 2 && Date.now() >= m.hasta;
 
 export default function BannerApp() {
-  const { companyId } = useSesion();
+  const { companyId, rol } = useSesion();
   const avisar = useAvisar();
   const instalar = useInstalarAndroid();
   const [variante, setVariante] = useState<Variante | null>(null);
@@ -145,7 +145,12 @@ export default function BannerApp() {
       const r = await activarAvisos(companyId);
       setOcupado(false);
       if (r.ok) {
-        avisar('Listo: te avisaremos de pagos y reservas. Puedes elegir qué avisos en Ajustes.', 'ok');
+        avisar(
+          rol === 'empleado'
+            ? 'Listo: te avisaremos de tus citas nuevas y antes de cada una.'
+            : 'Listo: te avisaremos de pagos y reservas. Puedes elegir qué avisos en Ajustes.',
+          'ok',
+        );
         hecho();
       } else if (r.motivo === 'denegado') {
         hecho(); // Rechazado: el navegador ya no deja volver a preguntar.

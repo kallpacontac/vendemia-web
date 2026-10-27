@@ -17,7 +17,17 @@
 import { vocabulario } from '@/lib/panel/vocabulario';
 import type { BusinessMode } from '@/lib/supabase/types';
 
-export type TipoAviso = 'pago' | 'reserva' | 'whatsapp' | 'plan' | 'persona' | 'stock' | 'por_aprobar';
+export type TipoAviso =
+  | 'pago'
+  | 'reserva'
+  | 'whatsapp'
+  | 'plan'
+  | 'persona'
+  | 'stock'
+  | 'por_aprobar'
+  /** Al empleado: un cambio en SU agenda (0004). Sin importes ni teléfonos. */
+  | 'mi_agenda'
+  | 'recordatorio';
 
 export interface Destino {
   id: string;
@@ -60,6 +70,49 @@ const soles = (n: unknown) => {
   return Number.isFinite(v) ? `S/ ${Number.isInteger(v) ? v : v.toFixed(2)}` : '';
 };
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+
+const DIAS = ['dom', 'lun', 'mar', 'mié', 'jue', 'vie', 'sáb'];
+const MESES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+const SLOT = /^(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2})$/;
+
+/** «4:30 pm» de un slot "YYYY-MM-DD HH:MM". `''` si no es una hora. */
+export function horaDeSlot(slot: unknown): string {
+  const m = typeof slot === 'string' ? SLOT.exec(slot) : null;
+  if (!m) return '';
+  const h = Number(m[4]);
+  return `${h % 12 || 12}:${m[5]} ${h < 12 ? 'am' : 'pm'}`;
+}
+
+/**
+ * «hoy 4:30 pm», «mañana 9:00 am», «jue 30 oct 5:00 pm». El slot es hora de Lima
+ * y el servidor no lo es: «hoy» se calcula en Lima, no con la fecha del servidor.
+ */
+export function cuandoSlot(slot: unknown, ahora: Date = new Date()): string {
+  const m = typeof slot === 'string' ? SLOT.exec(slot) : null;
+  if (!m) return '';
+  const hoy = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Lima' }).format(ahora).split('-').map(Number);
+  const dia = Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+  const dif = Math.round((dia - Date.UTC(hoy[0], hoy[1] - 1, hoy[2])) / 86_400_000);
+  const fecha =
+    dif === 0
+      ? 'hoy'
+      : dif === 1
+        ? 'mañana'
+        : `${DIAS[new Date(dia).getUTCDay()]} ${Number(m[3])} ${MESES[Number(m[2]) - 1]}`;
+  return `${fecha} ${horaDeSlot(slot)}`;
+}
+
+/** Dónde abre un aviso del equipo: Mi agenda, en el día de la cita y con ella marcada. */
+function urlMiAgenda(eventos: EventoPendiente[]): string {
+  const slots = eventos.map((x) => String(x.datos.slot ?? '')).filter((s) => SLOT.test(s)).sort();
+  if (!slots.length) return '/panel/mi-agenda';
+  const cita = eventos.length === 1 && typeof eventos[0].datos.cita === 'string' ? `&cita=${encodeURIComponent(eventos[0].datos.cita)}` : '';
+  return `/panel/mi-agenda?dia=${slots[0].slice(0, 10)}${cita}`;
+}
+
+/** El nombre de quien se atiende, sin teléfono: el beneficiario si lo hay («Jorge»), si no el cliente. */
+const atendido = (e: EventoPendiente, sinNombre: string) =>
+  (typeof e.datos.beneficiario === 'string' && e.datos.beneficiario) || e.cliente || sinNombre;
 
 /** Un aviso para un grupo de eventos del mismo negocio y tipo. */
 export function redactar(eventos: EventoPendiente[]): Mensaje {
@@ -198,6 +251,87 @@ export function redactar(eventos: EventoPendiente[]): Mensaje {
         tag,
       };
     }
+    case 'mi_agenda': {
+      // Un pedido es de la tienda: aquí todo es lo que se agenda (cita, reserva, clase).
+      const palabra = v.reserva === 'pedido' ? 'reserva' : v.reserva;
+      const url = urlMiAgenda(eventos);
+      if (n > 1) {
+        const horas = eventos.map((x) => cuandoSlot(x.datos.slot)).filter(Boolean);
+        return {
+          title: `${prefijo}${n} cambios en tu agenda`,
+          body: horas.length ? `${cap(horas.slice(0, 3).join(' · '))}${horas.length > 3 ? '…' : ''}` : 'Ábrela para verlos.',
+          url,
+          tag,
+        };
+      }
+      const quien = atendido(e, cap(v.persona));
+      const cuando = cuandoSlot(e.datos.slot);
+      const servicio = typeof e.datos.servicio === 'string' ? e.datos.servicio : '';
+      const detalle = [quien, servicio].filter(Boolean).join(' · ');
+      const unaTag = `${tag}:${String(e.datos.cita ?? '')}`;
+      // Academia: no hay hora, hay grupo. Lo único que avisa es un alumno nuevo.
+      if (e.datos.recurrente) {
+        return {
+          title: `${prefijo}Nuevo ${v.persona}${servicio ? ` en ${servicio}` : ''}`,
+          body: quien,
+          url: '/panel/mi-agenda',
+          tag: unaTag,
+        };
+      }
+      const sinAsignar = !e.datos.empleado;
+      switch (e.datos.que) {
+        case 'nueva':
+          return {
+            title: sinAsignar
+              ? `${prefijo}${cap(palabra)} sin asignar · ${cuando}`
+              : `${prefijo}Nuev${v.a} ${palabra} · ${cuando}`,
+            body: sinAsignar ? `${detalle}. Todavía no la atiende nadie.` : detalle,
+            url,
+            tag: unaTag,
+          };
+        case 'asignada':
+          return { title: `${prefijo}Te asignaron ${v.una} ${palabra} · ${cuando}`, body: detalle, url, tag: unaTag };
+        case 'quitada':
+          return {
+            title: `${prefijo}${cap(v.la)} ${palabra} de ${cuando} pasó a otra persona`,
+            body: `${detalle}. Ya no está en tu agenda.`,
+            url,
+            tag: unaTag,
+          };
+        case 'movida': {
+          const antes = cuandoSlot(e.datos.antes);
+          return {
+            title: `${prefijo}Se movió tu ${palabra} · ahora ${cuando}`,
+            body: antes ? `${detalle}. Antes: ${antes}.` : detalle,
+            url,
+            tag: unaTag,
+          };
+        }
+        case 'cancelada':
+          return { title: `${prefijo}Se canceló tu ${palabra} de ${cuando}`, body: detalle, url, tag: unaTag };
+        default:
+          return { title: `${prefijo}Cambió tu ${palabra} de ${cuando}`, body: detalle, url, tag: unaTag };
+      }
+    }
+    case 'recordatorio': {
+      const palabra = v.reserva === 'pedido' ? 'reserva' : v.reserva;
+      const url = urlMiAgenda(eventos);
+      if (n > 1) {
+        return {
+          title: `${prefijo}En 15 min: ${n} ${v.reserva === 'pedido' ? 'reservas' : v.reservas}`,
+          body: eventos.map((x) => `${horaDeSlot(x.datos.slot)} ${atendido(x, cap(v.persona))}`).join(' · '),
+          url,
+          tag,
+        };
+      }
+      const servicio = typeof e.datos.servicio === 'string' ? e.datos.servicio : '';
+      return {
+        title: `${prefijo}Tu ${palabra} de las ${horaDeSlot(e.datos.slot)} empieza en 15 min`,
+        body: [atendido(e, cap(v.persona)), servicio].filter(Boolean).join(' · '),
+        url,
+        tag: `${tag}:${String(e.datos.cita ?? '')}`,
+      };
+    }
     case 'por_aprobar':
       return n === 1
         ? {
@@ -226,6 +360,9 @@ const NOMBRE_RESUMEN: Record<TipoAviso, (n: number, r: Resumen) => string> = {
   plan: () => 'aviso del plan',
   stock: (n) => `${n} ${n === 1 ? 'producto llegó' : 'productos llegaron'} a su mínimo`,
   por_aprobar: (n) => `${n} ${n === 1 ? 'mensaje' : 'mensajes'} de Mia por aprobar`,
+  // Son del empleado y no entran en el resumen del dueño (0004); por si un día llegan.
+  mi_agenda: (n) => `${n} ${n === 1 ? 'cambio' : 'cambios'} en la agenda del equipo`,
+  recordatorio: (n) => `${n} ${n === 1 ? 'recordatorio' : 'recordatorios'}`,
 };
 
 /** El resumen de la mañana: UN aviso con lo que pasó durante el silencio. */

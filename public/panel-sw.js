@@ -34,15 +34,26 @@ self.addEventListener('push', (e) => {
   );
 });
 
+/*
+ * Al tocar un aviso: la pantalla donde se actúa, CARGADA DE NUEVO (lo que se ve
+ * es lo de ahora, no lo que había cuando se abrió la app hace una hora).
+ * `navigate` recarga aunque ya esté en esa misma dirección. Si no se puede
+ * (una ventana que este worker no controla), se abre una nueva: nunca se queda
+ * en la pantalla vieja sin decir nada.
+ */
 self.addEventListener('notificationclick', (e) => {
   e.notification.close();
   const url = (e.notification.data && e.notification.data.url) || '/panel';
   e.waitUntil(
-    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((ventanas) => {
-      for (const v of ventanas) {
-        if (new URL(v.url).pathname.startsWith('/panel') && 'focus' in v) {
-          v.navigate(url).catch(() => {});
-          return v.focus();
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(async (ventanas) => {
+      const panel = ventanas.find((v) => new URL(v.url).pathname.startsWith('/panel'));
+      if (panel) {
+        try {
+          await panel.focus();
+          const nueva = await panel.navigate(url);
+          if (nueva) return;
+        } catch {
+          /* no la controla este worker: abajo, una nueva */
         }
       }
       return self.clients.openWindow(url);

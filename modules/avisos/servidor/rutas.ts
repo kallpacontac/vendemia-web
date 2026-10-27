@@ -71,20 +71,32 @@ export async function prueba(req: Request) {
   try {
     const { endpoint } = ((await cuerpo(req, 4000)) ?? {}) as { endpoint?: string };
     if (!endpoint || typeof endpoint !== 'string') return fallo('falta_endpoint');
-    const { data, error } = await deUsuario(jwt)
+    const sb = deUsuario(jwt);
+    const { data, error } = await sb
       .from('panel_push_subscriptions')
-      .select('endpoint, p256dh, auth, companies(name)')
+      .select('endpoint, p256dh, auth, auth_user_id, company_id, companies(name)')
       .eq('endpoint', endpoint)
       .is('revoked_at', null)
       .limit(1)
       .maybeSingle();
     if (error) throw error;
     if (!data) return fallo('sin_suscripcion', 404);
-    const negocio = (data as { companies?: { name?: string } | null }).companies?.name;
+    const fila = data as { auth_user_id: string; company_id: string; companies?: { name?: string } | null };
+    const negocio = fila.companies?.name;
+    // Al empleado le llega lo de SU agenda (0004), no pagos: la prueba se lo dice así.
+    const { data: m } = await sb
+      .from('memberships')
+      .select('role')
+      .eq('company_id', fila.company_id)
+      .eq('auth_user_id', fila.auth_user_id)
+      .maybeSingle();
+    const delEquipo = !['owner', 'admin'].includes(String((m as { role?: string } | null)?.role ?? 'owner'));
     const r = await enviarPush([data as { endpoint: string; p256dh: string; auth: string }], {
       title: `${negocio ? `${negocio} · ` : ''}Avisos activados`,
-      body: 'Así te llegará cuando haya un pago por revisar o una reserva nueva.',
-      url: '/panel/configuracion?avisos=1',
+      body: delEquipo
+        ? 'Así te llegará cuando te asignen una cita y 15 min antes de cada una.'
+        : 'Así te llegará cuando haya un pago por revisar o una reserva nueva.',
+      url: delEquipo ? '/panel/mi-agenda' : '/panel/configuracion?avisos=1',
       tag: 'prueba',
     });
     return r.aceptados ? ok({ enviado: true }) : fallo('no_aceptado', 502, { detalle: r.error, caducado: r.caducados.length > 0 });

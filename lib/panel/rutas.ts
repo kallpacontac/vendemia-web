@@ -102,6 +102,8 @@ export function rutaPermitida(ruta: string, rol: RolNegocio | null): boolean {
 export function inicioDe(rol: RolNegocio | null, modo: BusinessMode | null | undefined): string {
   if (!rolesEnVigor() || rol === 'dueno' || rol === null) return '/panel';
   if (rol === 'admin') return esEcommerce(modo) ? '/panel/pedidos' : '/panel/agenda';
-  // En una tienda no hay citas que atender: al empleado le queda Fideliza.
-  return esEcommerce(modo) ? '/panel/fideliza' : RUTA_MI_AGENDA;
+  // En una tienda o un restaurante no hay citas que atender: al empleado le
+  // queda Fideliza, y lo que hace ahí es escanear tarjetas. Entra directo a la
+  // caja, con el botón «Escanear QR» a mano (Alvaro, 27-oct-2026).
+  return esEcommerce(modo) ? '/panel/fideliza/caja' : RUTA_MI_AGENDA;
 }

@@ -845,6 +845,40 @@ a{color:inherit;text-decoration:none}
 .mia-dia input{background:#fff;border:1px solid var(--line-2);border-radius:9px;padding:8px 10px;font:600 13px 'Plus Jakarta Sans'}
 .mia-alumnos{margin:6px 0 0;padding-left:18px;font-size:13px;line-height:1.7}
 @media(max-width:820px){.mia-fila{grid-template-columns:52px minmax(0,1fr)}.mia-acciones{grid-column:1/-1;justify-content:flex-start}}
+/* Mi agenda del empleado (27-oct-2026). Usa las piezas del panel —.cal para la
+   semana, .card + .card-mini-head + .mia-fila para el día, .badge-pill para el
+   estado— y aquí solo va lo que les falta: el calendario de una sola semana con
+   botones de verdad, la duración bajo la hora y la cita en curso o la del aviso. */
+/* En la computadora no se estira: la cabecera sí, el contenido no. */
+.mag .mag-semana,.mag .mia-grupo,.mag .mag-avisos,.mag .equipo-aviso{max-width:720px}
+.mag-semana{padding:16px 18px;margin-bottom:16px}
+.mag .cal-nav{align-items:center}
+.cal-nav button{width:26px;height:26px;border-radius:8px;background:var(--bg-input);display:grid;place-items:center;cursor:pointer;color:var(--ink-soft);border:none;padding:0}
+.cal-nav button.mag-hoy{width:auto;padding:0 10px;font:700 11.5px 'Plus Jakarta Sans'}
+.mag .cal .day{aspect-ratio:auto;height:44px;border:none;background:none;font-family:inherit;font-size:13px}
+.mag .cal .day.sel:not(.today){background:var(--brand-soft);color:var(--brand-txt);font-weight:800}
+/* Hoy, relleno como en el calendario del dueño (la regla de arriba lo apagaba). */
+.mag .cal .day.today{background:var(--brand);color:var(--on-brand);font-weight:800}
+.mag .cal .day.today.sel{box-shadow:0 0 0 3px var(--brand-soft)}
+.mag .card-mini-head{gap:10px}
+.mag .card-mini-head .badge-pill{white-space:nowrap;flex:none}
+.mia-hora small{display:block;font-size:11.5px;font-weight:600;color:var(--ink-mute);margin-top:2px}
+.mia-sellos{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:5px}
+.mia-sellos .mia-sin{margin-left:0}
+/* La que está pasando ahora: el mismo filete que «por revisar» en la Agenda del dueño, en naranja. */
+.mia-fila--ahora{border-left:3px solid var(--brand);padding-left:10px}
+/* La cita del aviso: se ilumina un momento al llegar. */
+.mia-fila--foco{animation:mia-foco 2.4s ease-out;border-radius:12px}
+@keyframes mia-foco{0%,40%{background:var(--brand-soft)}100%{background:transparent}}
+@media(prefers-reduced-motion:reduce){.mia-fila--foco{animation:none;background:var(--brand-soft)}}
+.mag-avisos{display:flex;align-items:center;gap:12px;padding:16px 18px;margin-bottom:16px}
+.mag-avisos__ico{width:38px;height:38px;flex:none;border-radius:12px;display:grid;place-items:center;background:var(--brand-soft);color:var(--brand-txt)}
+.mag-avisos__txt{flex:1;min-width:0}
+.mag-avisos__txt b{display:block;font-size:14px;font-weight:800}
+.mag-avisos__txt small{display:block;font-size:12.5px;color:var(--ink-soft);line-height:1.45;margin-top:2px}
+.mag-avisos--ok{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:0 0 14px;font-size:12.5px;color:var(--ink-soft)}
+.mag-avisos__link{border:none;background:none;padding:0;font:700 12.5px 'Plus Jakarta Sans';color:var(--brand-txt);cursor:pointer}
+.mag-avisos__link:hover{text-decoration:underline}
 /* Mi catálogo: sin columna de hora, el precio a la derecha también en el celular. */
 .mia-fila.mia-fila--catalogo{grid-template-columns:minmax(0,1fr) auto}
 .mia-fila--catalogo .mia-acciones{grid-column:auto;justify-content:flex-end}
