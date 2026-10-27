@@ -96,6 +96,12 @@
 .tp-panel-plantilla__dibujo--luxury i:nth-child(2) { background-image: url('/assets/luxury-ejemplo/corte.webp'); }
 .tp-panel-plantilla__dibujo--luxury i:nth-child(3) { background-image: url('/assets/luxury-ejemplo/barba.webp'); }
 .tp-panel-plantilla__dibujo--luxury i:nth-child(4) { background-image: url('/assets/luxury-ejemplo/peinado.webp'); }
+.tp-panel-plantilla__dibujo--restaurante { grid-template-columns: repeat(3, 1fr); grid-template-rows: 55% 1fr; gap: 4px; background: #fff; }
+.tp-panel-plantilla__dibujo--restaurante i { border-radius: 4px; background-position: center; background-size: cover; }
+.tp-panel-plantilla__dibujo--restaurante i:first-child { grid-column: 1 / -1; background-image: url('/assets/restaurante-ejemplo/portada.webp'); }
+.tp-panel-plantilla__dibujo--restaurante i:nth-child(2) { background-image: url('/assets/restaurante-ejemplo/margarita.webp'); }
+.tp-panel-plantilla__dibujo--restaurante i:nth-child(3) { background-image: url('/assets/restaurante-ejemplo/pepperoni.webp'); }
+.tp-panel-plantilla__dibujo--restaurante i:nth-child(4) { background-image: url('/assets/restaurante-ejemplo/fettuccine.webp'); }
 .tp-panel-esquema--luxury { grid-template-rows: 58% 1fr; grid-template-columns: repeat(3, 1fr); background: #f4f1ec; }
 .tp-panel-esquema--luxury i:first-child { grid-column: 1 / -1; background: url('/assets/luxury-ejemplo/portada.webp') center / cover; }
 .tp-panel-esquema--luxury i:nth-child(n + 2) { display: block; background: #d8d0c6; }

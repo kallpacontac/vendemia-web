@@ -52,6 +52,10 @@ const urlVista = (slug: string, valores: {
     lcd: valores.apariencia.catalogoLuxuryDestacado === true ? '1' : '0',
     vs: valores.apariencia.vistaServiciosLuxury === 'horizontal' ? 'horizontal' : 'vertical',
     lm: valores.apariencia.mostrarMesero === true ? '1' : '0',
+    mpi: valores.apariencia.mensajePedidoIntro ?? '',
+    pmp: (valores.apariencia.pedirMetodoPago ?? valores.plantilla === 'restaurante') ? '1' : '0',
+    pnp: (valores.apariencia.pedirNotaPedido ?? valores.plantilla === 'restaurante') ? '1' : '0',
+    pup: (valores.apariencia.pedirUbicacion ?? valores.plantilla === 'restaurante') ? '1' : '0',
     fp: valores.apariencia.fotoPlantilla ?? '', sp: valores.sinPortada ? '1' : '0',
   });
   return `/tu-pagina/${slug}?${q.toString()}`;
@@ -361,6 +365,10 @@ function MiPagina({ companyId, nombre, pagina, agendaNube, alGuardar }: {
                       setApariencia((actual) => ({ ...actual, fotoPlantilla: 'barberia' }));
                       if (!pagina?.publicada && color === '#006BFF') setColor('#D0AB75');
                     }
+                    if (opcion.id === 'restaurante' && plantilla !== 'restaurante') {
+                      setApariencia((actual) => ({ ...actual, fotoPlantilla: 'pizzeria' }));
+                      if (!pagina?.publicada && color === '#006BFF') setColor('#EF3C24');
+                    }
                     setPlantilla(opcion.id);
                     setPlantillaManual(true);
                   }}>
@@ -465,6 +473,14 @@ function MiPagina({ companyId, nombre, pagina, agendaNube, alGuardar }: {
             <label className="tp-panel-check"><input type="checkbox" checked={apariencia.mostrarWhatsapp !== false} onChange={(e) => setApariencia({ ...apariencia, mostrarWhatsapp: e.target.checked })} /><span><b>Mostrar botón de WhatsApp</b><small className="muted">Los pedidos y reservas siguen enviando su aviso.</small></span></label>
             {plantilla === 'luxury' && es === 'ambos' && <label className="tp-panel-check"><input type="checkbox" checked={apariencia.catalogoLuxuryDestacado === true} onChange={(e) => setApariencia({ ...apariencia, catalogoLuxuryDestacado: e.target.checked })} /><span><b>Mostrar botón «Ver catálogo» y carrusel de productos</b><small className="muted">Los servicios siguen primero. Si lo desactivas, tus productos conservan la vista actual.</small></span></label>}
             {es !== 'agenda' && <label className="tp-panel-check"><input type="checkbox" checked={apariencia.mostrarMesero === true} onChange={(e) => setApariencia({ ...apariencia, mostrarMesero: e.target.checked })} /><span><b>Mostrar «Llamar al mesero»</b><small className="muted">Para restaurantes y cafeterías. El cliente indica su mesa y abre WhatsApp con el aviso listo para enviar.</small></span></label>}
+            {es !== 'agenda' && <div className="tp-panel-campo">
+              <span>Mensaje de pedido por WhatsApp</span>
+              <small className="muted">Personaliza el saludo. El código, cliente, productos, total y entrega se añaden automáticamente. Usa {'{negocio}'} para insertar tu nombre.</small>
+              <textarea className="input" rows={3} maxLength={240} value={apariencia.mensajePedidoIntro ?? ''} placeholder={'Hola 👋\nVengo de la carta digital de {negocio} y envío aquí mi pedido por favor.'} onChange={(e) => setApariencia({ ...apariencia, mensajePedidoIntro: e.target.value })} />
+            </div>}
+            {es !== 'agenda' && <label className="tp-panel-check"><input type="checkbox" checked={apariencia.pedirMetodoPago ?? plantilla === 'restaurante'} onChange={(e) => setApariencia({ ...apariencia, pedirMetodoPago: e.target.checked })} /><span><b>Preguntar cómo pagará</b><small className="muted">Se incluye en el aviso de WhatsApp.</small></span></label>}
+            {es !== 'agenda' && <label className="tp-panel-check"><input type="checkbox" checked={apariencia.pedirNotaPedido ?? plantilla === 'restaurante'} onChange={(e) => setApariencia({ ...apariencia, pedirNotaPedido: e.target.checked })} /><span><b>Permitir una nota para cocina</b><small className="muted">Por ejemplo, «sin cebolla».</small></span></label>}
+            {es !== 'agenda' && <label className="tp-panel-check"><input type="checkbox" checked={apariencia.pedirUbicacion ?? plantilla === 'restaurante'} onChange={(e) => setApariencia({ ...apariencia, pedirUbicacion: e.target.checked })} /><span><b>Permitir enlace de ubicación para delivery</b><small className="muted">El cliente puede pegar un enlace de Google Maps.</small></span></label>}
 
 
             <div className="tp-panel-colores-avanzados">

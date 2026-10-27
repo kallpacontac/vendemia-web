@@ -4,7 +4,7 @@ import type { BusinessMode } from '@/lib/supabase/types';
 
 export type TipoPagina = 'agenda' | 'tienda' | 'ambos';
 export type Disposicion = 'cuadricula' | 'filas' | 'carta';
-export type PlantillaGuardada = 'agenda' | 'vitrina' | 'lista' | 'carta' | 'clases' | 'envios' | 'impulso' | 'luxury';
+export type PlantillaGuardada = 'agenda' | 'vitrina' | 'lista' | 'carta' | 'clases' | 'envios' | 'impulso' | 'luxury' | 'restaurante';
 
 const LUXURY: { id: PlantillaGuardada; nombre: string; describe: string } =
   { id: 'luxury', nombre: 'Luxury', describe: 'Fotografía editorial y servicios para salones y barberías.' };
@@ -15,6 +15,7 @@ export const PLANTILLAS: { id: PlantillaGuardada; nombre: string; describe: stri
   { id: 'carta', nombre: 'Clásico cálido', describe: 'Categorías y precios como una carta.' },
   { id: 'agenda', nombre: 'Nocturna', describe: 'Fondo oscuro y acentos luminosos.' },
   { id: 'impulso', nombre: 'Impulso', describe: 'Tienda deportiva con portada editorial y productos protagonistas.' },
+  { id: 'restaurante', nombre: 'Carta visual', describe: 'Portada, categorías con fotos y platos listos para pedir.' },
 ];
 
 /** Diseños para negocios que atienden con cita. */
@@ -28,7 +29,7 @@ export const PLANTILLAS_AMBOS: { id: PlantillaGuardada; nombre: string; describe
 
 export const plantillaValida = (valor: unknown): valor is PlantillaGuardada =>
   valor === 'vitrina' || valor === 'lista' || valor === 'carta' ||
-  valor === 'agenda' || valor === 'clases' || valor === 'envios' || valor === 'impulso' || valor === 'luxury';
+  valor === 'agenda' || valor === 'clases' || valor === 'envios' || valor === 'impulso' || valor === 'luxury' || valor === 'restaurante';
 
 export const EXPERIENCIAS: { id: TipoPagina; nombre: string; describe: string }[] = [
   { id: 'agenda', nombre: 'Agenda', describe: 'Reservas claras, con servicios, día y hora.' },
@@ -48,4 +49,4 @@ export const plantillaPorDefecto = (tipo: TipoPagina): PlantillaGuardada =>
 
 export const disposicionDe = (plantilla: PlantillaGuardada, tipo: TipoPagina): Disposicion =>
   plantilla === 'carta' ? 'carta' : plantilla === 'lista' || plantilla === 'agenda' || plantilla === 'clases'
-    ? 'filas' : plantilla === 'vitrina' || plantilla === 'impulso' || plantilla === 'luxury' ? 'cuadricula' : tipo === 'agenda' ? 'filas' : 'cuadricula';
+    ? 'filas' : plantilla === 'vitrina' || plantilla === 'impulso' || plantilla === 'luxury' || plantilla === 'restaurante' ? 'cuadricula' : tipo === 'agenda' ? 'filas' : 'cuadricula';

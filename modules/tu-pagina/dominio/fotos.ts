@@ -9,7 +9,7 @@
 import type { AparienciaPagina } from './apariencia';
 import type { PlantillaGuardada, TipoPagina } from './plantillas';
 
-export type FotoPlantilla = 'clinica' | 'cafeteria' | 'barberia';
+export type FotoPlantilla = 'clinica' | 'cafeteria' | 'barberia' | 'pizzeria';
 
 export const FOTOS_SERVICIOS_LUXURY = {
   corte: '/assets/luxury-ejemplo/corte.webp',
@@ -29,6 +29,7 @@ export const FOTOS_PLANTILLA: { id: FotoPlantilla; nombre: string; url: string }
   { id: 'clinica', nombre: 'Sonrisa Norte', url: '/assets/negocios-ejemplo/clinica-hero.webp' },
   { id: 'cafeteria', nombre: 'Grano de Barrio', url: '/assets/negocios-ejemplo/cafeteria-hero.webp' },
   { id: 'barberia', nombre: 'Atelier Norte', url: '/assets/luxury-ejemplo/portada.webp' },
+  { id: 'pizzeria', nombre: 'Forno Norte', url: '/assets/restaurante-ejemplo/portada.webp' },
 ];
 
 /** `ninguna` = el dueño prefiere solo el color de portada. */
@@ -37,7 +38,14 @@ export const esFotoPlantilla = (v: unknown): v is FotoPlantilla | 'ninguna' =>
 
 /** La del ejemplo que enseña cada diseño (dominio/ejemplo.ts → urlEjemploPara). */
 export const fotoPlantillaPorDefecto = (tipo: TipoPagina, plantilla?: PlantillaGuardada): FotoPlantilla =>
-  plantilla === 'luxury' ? 'barberia' : tipo === 'tienda' ? 'cafeteria' : 'clinica';
+  plantilla === 'luxury' ? 'barberia' : plantilla === 'restaurante' ? 'pizzeria' : tipo === 'tienda' ? 'cafeteria' : 'clinica';
+
+export function fotoProductoRestaurante(nombre: string, familia: string): string {
+  const clave = `${nombre} ${familia}`.toLocaleLowerCase('es');
+  if (/pasta|fettuccine|tallar[ií]n/.test(clave)) return '/assets/restaurante-ejemplo/fettuccine.webp';
+  if (/pepperoni|salami|americana/.test(clave)) return '/assets/restaurante-ejemplo/pepperoni.webp';
+  return '/assets/restaurante-ejemplo/margarita.webp';
+}
 
 /** La elegida, o la del diseño si no se eligió ninguna; null = solo color. */
 export function fotoDePlantilla(a: AparienciaPagina, tipo: TipoPagina, plantilla?: PlantillaGuardada): string | null {

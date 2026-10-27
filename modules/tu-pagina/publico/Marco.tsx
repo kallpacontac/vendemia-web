@@ -106,12 +106,12 @@ export function Cabecera({ pagina, fotoDestacada, servicioDestacado, catalogoDis
           {pagina.frase && <p className="tp-frase">{pagina.frase}</p>}
         </header>
       </div>
-      {heroCatalogo && <section className="tp-hero tp-hoja" aria-label={`Bienvenidos a ${pagina.titulo}`}>
+      {heroCatalogo && <section className={`tp-hero tp-hoja${plantilla === 'restaurante' ? ' tp-hero--restaurante' : ''}`} aria-label={`Bienvenidos a ${pagina.titulo}`}>
         <div className="tp-hero__contenido">
-          <span className="tp-hero__etiqueta">{pagina.titulo}</span>
+          <span className="tp-hero__etiqueta">{plantilla === 'restaurante' ? 'CARTA DIGITAL · RECIÉN HECHO' : pagina.titulo}</span>
           <h2>{a.tituloBanner || pagina.frase || `Descubre ${pagina.titulo}`}</h2>
-          <p>{a.tituloBanner && pagina.frase ? pagina.frase : 'Explora nuestro catálogo y encuentra algo para ti.'}</p>
-          <a href="#catalogo">Explorar catálogo <ArrowRight size={17} aria-hidden="true" /></a>
+          <p>{a.tituloBanner && pagina.frase ? pagina.frase : plantilla === 'restaurante' ? 'Recién hecho, listo para ti.' : 'Explora nuestro catálogo y encuentra algo para ti.'}</p>
+          <a href="#catalogo">{plantilla === 'restaurante' ? 'Ver la carta' : 'Explorar catálogo'} <ArrowRight size={17} aria-hidden="true" /></a>
         </div>
         <div className="tp-hero__arte" style={fotoHero ? { backgroundImage: `url("${fotoHero}")` } : undefined} aria-hidden="true" />
       </section>}

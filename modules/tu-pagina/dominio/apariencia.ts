@@ -19,6 +19,11 @@ export interface AparienciaPagina {
   fotoPlantilla?: string;
   /** Foto opcional del segundo banner de Luxury; sin ella se usa la de la plantilla. */
   portadaLuxurySecundaria?: string;
+  /** Primera línea del pedido enviado por WhatsApp. El resto del resumen se genera con los datos reales. */
+  mensajePedidoIntro?: string;
+  pedirMetodoPago?: boolean;
+  pedirNotaPedido?: boolean;
+  pedirUbicacion?: boolean;
 }
 
 export const esHex = (v: unknown): v is string => typeof v === 'string' && /^#[0-9a-fA-F]{6}$/.test(v);

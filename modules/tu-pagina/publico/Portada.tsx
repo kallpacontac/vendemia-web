@@ -123,6 +123,9 @@ export default async function Portada({ params, searchParams }: Props) {
       agendaNombre={p.titulo}
       catalogoLuxuryDestacado={catalogoLuxuryDestacado}
       vistaServiciosLuxury={p.secciones.apariencia?.vistaServiciosLuxury}
+      plantillaRestaurante={Boolean(plantilla === 'restaurante' && p.secciones.apariencia?.plantillaActiva)}
+      nombreNegocio={p.titulo}
+      apariencia={p.secciones.apariencia}
     />
   );
 

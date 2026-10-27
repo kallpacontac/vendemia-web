@@ -24,7 +24,8 @@ import { useRouter } from 'next/navigation';
 import { Check, ChevronLeft, ChevronRight, Clock, MessageCircle, Minus, Plus, Search, ShoppingBag, Trash2, Users, X } from 'lucide-react';
 import { cap, vocabulario } from '@/lib/panel/vocabulario';
 import type { Disposicion } from '@/modules/tu-pagina/dominio/plantillas';
-import { fotoServicioLuxury } from '@/modules/tu-pagina/dominio/fotos';
+import type { AparienciaPagina } from '@/modules/tu-pagina/dominio/apariencia';
+import { fotoProductoRestaurante, fotoServicioLuxury } from '@/modules/tu-pagina/dominio/fotos';
 import { abreEl, horasLibres, sumarDias, sumarMin } from '@/modules/tu-pagina/dominio/agenda';
 import { fechaCorta, urlWhatsApp } from '@/modules/tu-pagina/dominio/envio';
 import {
@@ -57,6 +58,10 @@ interface Props {
   agendaEstilo?: 'agenda' | 'lista';
   agendaNombre?: string;
   servicioInicialId?: string;
+  plantillaRestaurante?: boolean;
+  nombreNegocio?: string;
+  apariencia?: AparienciaPagina;
+  demoPedido?: boolean;
 }
 
 const ORDEN_TIPOS: TipoItem[] = ['cita', 'grupo', 'producto'];
@@ -75,6 +80,7 @@ interface Hecho {
   titulo: string;
   codigo: string;
   mensaje: string;
+  demo?: boolean;
 }
 
 const DIAS_A_LA_VISTA = 14;
@@ -118,7 +124,7 @@ const MENSAJE_FALLO: Record<string, string> = {
   not_found: 'Esta página ya no recibe reservas en línea. Escríbenos por WhatsApp.',
 };
 
-export default function Escaparate({ esc: todo, slug, whatsapp, puedePedir, puedeReservar, disposicion, solo, plantillaLuxury = false, catalogoLuxuryDestacado = false, vistaServiciosLuxury = 'vertical', agendaEstilo, agendaNombre = '', servicioInicialId = '' }: Props) {
+export default function Escaparate({ esc: todo, slug, whatsapp, puedePedir, puedeReservar, disposicion, solo, plantillaLuxury = false, catalogoLuxuryDestacado = false, vistaServiciosLuxury = 'vertical', agendaEstilo, agendaNombre = '', servicioInicialId = '', plantillaRestaurante = false, nombreNegocio = '', apariencia, demoPedido = false }: Props) {
   const esBarberia = /barber|peluquer|sal[oó]n|estil|cabello|corte/i.test(agendaNombre);
   const esc = useMemo(
     () => {
@@ -166,9 +172,11 @@ export default function Escaparate({ esc: todo, slug, whatsapp, puedePedir, pued
     setAbierto(null);
     setVerCarrito(false);
     setHecho(h);
-    window.scrollTo({ top: 0 });
     router.refresh();
   };
+  useEffect(() => {
+    if (hecho) requestAnimationFrame(() => document.querySelector('.tp-hecho')?.scrollIntoView({ behavior: 'auto', block: 'start' }));
+  }, [hecho]);
 
   if (hecho) {
     return (
@@ -177,11 +185,11 @@ export default function Escaparate({ esc: todo, slug, whatsapp, puedePedir, pued
         <h2 className="tp-h1">{hecho.titulo}</h2>
         <p className="tp-lead">Tu código es</p>
         <div className="tp-codigo">{hecho.codigo}</div>
-        <p className="tp-resumen">{hecho.mensaje}</p>
-        <a className="tp-boton tp-boton--wsp" href={urlWhatsApp(whatsapp, hecho.mensaje)} rel="noopener">
+        <p className="tp-resumen">{hecho.mensaje.split(/(\*[^*\n]+\*)/g).map((parte, indice) => parte.startsWith('*') && parte.endsWith('*') ? <strong key={indice}>{parte.slice(1, -1)}</strong> : <span key={indice}>{parte}</span>)}</p>
+        {!hecho.demo && <><a className="tp-boton tp-boton--wsp" href={urlWhatsApp(whatsapp, hecho.mensaje)} rel="noopener">
           <MessageCircle size={20} aria-hidden="true" /> Avisar por WhatsApp
-        </a>
-        <p className="tp-nota">Avísanos para confirmarte. Ya quedó guardado aunque no lo envíes.</p>
+        </a><p className="tp-nota">Avísanos para confirmarte. Ya quedó guardado aunque no lo envíes.</p></>}
+        {hecho.demo && <p className="tp-nota">Es una demostración: no se guardó ni se envió ningún pedido.</p>}
         <button type="button" className="tp-boton tp-boton--suave" onClick={() => setHecho(null)}>
           Volver
         </button>
@@ -221,14 +229,14 @@ export default function Escaparate({ esc: todo, slug, whatsapp, puedePedir, pued
 
   return (
     <>
-      <section className={`tp-catalogo${catalogoLuxuryDestacado ? ' tp-catalogo--luxury-productos' : ''}`} id="catalogo" aria-label={tipos.length > 1 ? 'Lo que ofrecemos' : cap(v.items)}>
+      <section className={`tp-catalogo${catalogoLuxuryDestacado ? ' tp-catalogo--luxury-productos' : ''}${plantillaRestaurante ? ' tp-catalogo--restaurante' : ''}`} id="catalogo" aria-label={tipos.length > 1 ? 'Lo que ofrecemos' : cap(v.items)}>
         {(!plantillaLuxury || esc.items.length > 6) && <label className="tp-catalogo__busqueda"><Search size={19} aria-hidden="true" /><input type="search" value={busqueda} onChange={(e) => setBusqueda(e.target.value)} placeholder={`Buscar ${v.items}`} aria-label={`Buscar ${v.items}`} /></label>}
         <div className="tp-catalogo__layout">
         {familias.length > 1 && (
           <div className="tp-familias" role="group" aria-label="Filtrar por categoría">
-            <button type="button" className="tp-chip" aria-pressed={!familia} onClick={() => setFamilia('')}>Todo <small>{esc.items.length}</small></button>
+            <button type="button" className="tp-chip" aria-pressed={!familia} onClick={() => setFamilia('')}>{plantillaRestaurante && <span className="tp-chip__imagen tp-chip__imagen--todo" aria-hidden="true">✦</span>}<span>Todo</span> <small>{esc.items.length}</small></button>
             {familias.map((f) => (
-              <button key={f} type="button" className="tp-chip" aria-pressed={familia === f} onClick={() => setFamilia(f)}>{f} <small>{esc.items.filter((i) => i.familia === f).length}</small></button>
+              <button key={f} type="button" className="tp-chip" aria-pressed={familia === f} onClick={() => setFamilia(f)}>{plantillaRestaurante && <span className="tp-chip__imagen" style={{ backgroundImage: `url("${esc.items.find((i) => i.familia === f)?.fotos[0] || fotoProductoRestaurante(f, f)}")` }} aria-hidden="true" />}<span>{f}</span> <small>{esc.items.filter((i) => i.familia === f).length}</small></button>
             ))}
           </div>
         )}
@@ -259,7 +267,7 @@ export default function Escaparate({ esc: todo, slug, whatsapp, puedePedir, pued
               </div> : t && <div className="tp-luxury-servicios__cabecera"><h2 className="tp-seccion">{cap(vocabularioDe(t).items)}</h2></div>}
               <div ref={catalogoLuxuryDestacado && (t ?? tipos[0]) === 'producto' ? carruselProductos : undefined} className={`tp-grid${disposicion === 'cuadricula' ? '' : ' tp-grid--lista'}${plantillaLuxury && (t ?? tipos[0]) !== 'producto' && vistaServiciosLuxury === 'horizontal' ? ' tp-grid--luxury-horizontal' : ''}`}>
                 {deEste.map((i, indice) => (
-                  <Tarjeta key={i.id} item={i} plantillaLuxury={plantillaLuxury} agendaEstilo={agendaEstilo} agendaNombre={agendaNombre} indice={indice} alAbrir={() => setAbierto(i.id)} />
+                  <Tarjeta key={i.id} item={i} plantillaLuxury={plantillaLuxury} plantillaRestaurante={plantillaRestaurante} agendaEstilo={agendaEstilo} agendaNombre={agendaNombre} indice={indice} alAbrir={() => setAbierto(i.id)} />
                 ))}
               </div>
             </div>
@@ -285,6 +293,7 @@ export default function Escaparate({ esc: todo, slug, whatsapp, puedePedir, pued
           {item.tipo === 'producto' ? (
             <FichaProducto
               item={item}
+              respaldo={plantillaRestaurante ? fotoProductoRestaurante(item.nombre, item.familia) : undefined}
               enCarrito={lineas}
               puedePedir={puedePedir}
               whatsapp={whatsapp}
@@ -328,6 +337,10 @@ export default function Escaparate({ esc: todo, slug, whatsapp, puedePedir, pued
             porId={porId}
             esc={esc}
             slug={slug}
+            nombreNegocio={nombreNegocio}
+            apariencia={apariencia}
+            plantillaRestaurante={plantillaRestaurante}
+            demoPedido={demoPedido}
             alCambiar={ponerCarrito}
             alTerminar={(h) => {
               ponerCarrito([]);
@@ -344,9 +357,9 @@ export default function Escaparate({ esc: todo, slug, whatsapp, puedePedir, pued
    Piezas
    ═══════════════════════════════════════════════════════════════════════ */
 
-function Tarjeta({ item, alAbrir, plantillaLuxury, agendaEstilo, agendaNombre, indice }: { item: Item; alAbrir: () => void; plantillaLuxury: boolean; agendaEstilo?: 'agenda' | 'lista'; agendaNombre: string; indice: number }) {
+function Tarjeta({ item, alAbrir, plantillaLuxury, plantillaRestaurante, agendaEstilo, agendaNombre, indice }: { item: Item; alAbrir: () => void; plantillaLuxury: boolean; plantillaRestaurante: boolean; agendaEstilo?: 'agenda' | 'lista'; agendaNombre: string; indice: number }) {
   const foto = item.fotos[0];
-  const respaldo = (plantillaLuxury || agendaEstilo) && item.tipo !== 'producto' ? (agendaEstilo && !/barber|peluquer|sal[oó]n|estil|cabello|corte/i.test(agendaNombre)
+  const respaldo = plantillaRestaurante && item.tipo === 'producto' ? fotoProductoRestaurante(item.nombre, item.familia) : (plantillaLuxury || agendaEstilo) && item.tipo !== 'producto' ? (agendaEstilo && !/barber|peluquer|sal[oó]n|estil|cabello|corte/i.test(agendaNombre)
     ? `/assets/negocios-ejemplo/dental-${indice % 3}.webp` : fotoServicioLuxury(item.nombre, indice)) : undefined;
   const agotado =
     item.tipo === 'producto' &&
@@ -429,6 +442,7 @@ function Hoja({ titulo, alCerrar, children, variante, disenoAgenda = false }: { 
 function Galeria({ fotos, nombre, respaldo }: { fotos: string[]; nombre: string; respaldo?: string }) {
   const [i, setI] = useState(0);
   const [fallida, setFallida] = useState('');
+  if (!fotos.length && respaldo) return <div className="tp-galeria" role="img" aria-label={nombre} style={{ backgroundImage: `url("${respaldo}")` }} />;
   if (!fotos.length) return null;
   const fuente = fallida === fotos[i] && respaldo ? respaldo : fotos[i];
   return (
@@ -483,11 +497,12 @@ function Contador({ valor, max, alCambiar }: { valor: number; max: number; alCam
   );
 }
 
-function FichaProducto({ item, enCarrito, puedePedir, whatsapp, alAnadir }: {
+function FichaProducto({ item, enCarrito, puedePedir, whatsapp, alAnadir, respaldo }: {
   item: Item;
   enCarrito: EnCarrito[];
   puedePedir: boolean;
   whatsapp: string;
+  respaldo?: string;
   alAnadir: (opcion: string, cantidad: number) => void;
 }) {
   const [opcion, setOpcion] = useState(item.opciones.find((o) => o.quedan !== 0)?.id ?? '');
@@ -500,7 +515,7 @@ function FichaProducto({ item, enCarrito, puedePedir, whatsapp, alAnadir }: {
   useEffect(() => setCantidad(1), [opcion]);
 
   return (
-    <Detalle item={item}>
+    <Detalle item={item} respaldo={respaldo}>
       {item.opciones.length > 0 && (
         <div className="tp-campo">
           <label id="tp-op-l">Elige</label>
@@ -859,13 +874,17 @@ function Inscribir({ item, slug, persona, alTerminar }: { item: Item; slug: stri
   );
 }
 
-function Carrito({ lineas, porId, esc, slug, alCambiar, alTerminar }: {
+function Carrito({ lineas, porId, esc, slug, alCambiar, alTerminar, nombreNegocio, apariencia, plantillaRestaurante, demoPedido }: {
   lineas: EnCarrito[];
   porId: Map<string, Item>;
   esc: Datos;
   slug: string;
   alCambiar: (c: EnCarrito[]) => void;
   alTerminar: (h: Hecho) => void;
+  nombreNegocio: string;
+  apariencia?: AparienciaPagina;
+  plantillaRestaurante: boolean;
+  demoPedido: boolean;
 }) {
   const { cliente, setCliente, recordar } = useCliente();
   const conDelivery = esc.entrega !== 'pickup';
@@ -873,6 +892,12 @@ function Carrito({ lineas, porId, esc, slug, alCambiar, alTerminar }: {
   const [entrega, setEntrega] = useState<'recojo' | 'delivery'>(conDelivery ? 'delivery' : 'recojo');
   const [direccion, setDireccion] = useState('');
   const [referencia, setReferencia] = useState('');
+  const [metodoPago, setMetodoPago] = useState('');
+  const [nota, setNota] = useState('');
+  const [ubicacion, setUbicacion] = useState('');
+  const pideMetodoPago = apariencia?.pedirMetodoPago ?? plantillaRestaurante;
+  const pideNota = apariencia?.pedirNotaPedido ?? plantillaRestaurante;
+  const pideUbicacion = apariencia?.pedirUbicacion ?? plantillaRestaurante;
   const [errores, setErrores] = useState<ErroresCliente>({});
   const [fallo, setFallo] = useState('');
   const { enviar, enviando } = useEnviar('/api/tu-pagina/publico/pedido');
@@ -888,11 +913,39 @@ function Carrito({ lineas, porId, esc, slug, alCambiar, alTerminar }: {
   const cambiar = (k: number, cantidad: number) =>
     alCambiar(cantidad <= 0 ? lineas.filter((_, j) => j !== k) : lineas.map((l, j) => (j === k ? { ...l, cantidad } : l)));
 
+  const pedidoConfirmado = (codigo: string, guardadas: LineaPedido[], importe: number) => {
+    recordar(cliente);
+    alTerminar({
+      titulo: demoPedido ? 'Así llegaría tu pedido' : '¡Pedido recibido!',
+      codigo,
+      demo: demoPedido,
+      mensaje: mensajePedido(codigo, {
+        lineas: guardadas.map((x) => ({ ...x, precio: Number(x.precio), cantidad: Number(x.cantidad) })),
+        total: importe,
+        entrega, direccion, referencia,
+        nombre: cliente.nombre, telefono: cliente.telefono,
+        negocio: nombreNegocio,
+        enlace: window.location.href.split('?')[0],
+        metodoPago: pideMetodoPago ? metodoPago : '',
+        nota: pideNota ? nota : '',
+        ubicacion: entrega === 'delivery' && pideUbicacion ? ubicacion.trim() : '',
+      }, { detallado: plantillaRestaurante || Boolean(apariencia?.mensajePedidoIntro?.trim()) || pideMetodoPago || pideNota || pideUbicacion, introduccion: apariencia?.mensajePedidoIntro }),
+    });
+  };
+
   async function pedir() {
     const e = validarCliente({ ...cliente, direccion, conDelivery: entrega === 'delivery' });
     setErrores(e);
     setFallo('');
     if (Object.keys(e).length) return;
+    if (pideMetodoPago && !metodoPago) { setFallo('Elige cómo pagarás para completar el pedido.'); return; }
+    if (entrega === 'delivery' && pideUbicacion && ubicacion.trim() && !/^https:\/\/(?:www\.)?(?:maps\.google\.[^/\s]+|google\.[^/\s]+\/maps|goo\.gl\/maps|maps\.app\.goo\.gl)\//i.test(ubicacion.trim())) {
+      setFallo('Pega un enlace válido de Google Maps o deja la ubicación vacía.'); return;
+    }
+    if (demoPedido) {
+      pedidoConfirmado('PED-EJEMPLO', detalle.map((d) => ({ nombre: d.i.nombre, opcion: d.opcion, precio: d.i.precio ?? 0, cantidad: d.cantidad })), total);
+      return;
+    }
     const j = await enviar({
       slug,
       nombre: cliente.nombre,
@@ -904,21 +957,8 @@ function Carrito({ lineas, porId, esc, slug, alCambiar, alTerminar }: {
       web: '',
     });
     if (j.status === 'ok' && typeof j.codigo === 'string') {
-      recordar(cliente);
       const guardadas = (Array.isArray(j.lineas) ? j.lineas : []) as LineaPedido[];
-      alTerminar({
-        titulo: '¡Pedido recibido!',
-        codigo: j.codigo,
-        mensaje: mensajePedido(j.codigo, {
-          lineas: guardadas.map((x) => ({ ...x, precio: Number(x.precio), cantidad: Number(x.cantidad) })),
-          total: Number(j.total ?? total),
-          entrega,
-          direccion,
-          referencia,
-          nombre: cliente.nombre,
-          telefono: cliente.telefono,
-        }),
-      });
+      pedidoConfirmado(j.codigo, guardadas, Number(j.total ?? total));
       return;
     }
     if (j.errores) setErrores(j.errores as ErroresCliente);
@@ -980,12 +1020,20 @@ function Carrito({ lineas, porId, esc, slug, alCambiar, alTerminar }: {
         )}
       </section>
 
+      {(pideMetodoPago || pideNota || (pideUbicacion && entrega === 'delivery')) && <section className="tp-bloque">
+        <h2>Detalles para el negocio</h2>
+        {pideMetodoPago && <div className="tp-campo"><label htmlFor="tp-pago">¿Cómo pagarás?</label><select id="tp-pago" value={metodoPago} onChange={(e) => { setMetodoPago(e.target.value); setFallo(''); }}><option value="">Elige una opción</option><option>Yape</option><option>Plin</option><option>Efectivo</option><option>Tarjeta</option><option>Transferencia</option></select></div>}
+        {pideUbicacion && entrega === 'delivery' && <div className="tp-campo"><label htmlFor="tp-ubicacion">Enlace de Google Maps <small>(opcional)</small></label><input id="tp-ubicacion" type="url" value={ubicacion} maxLength={300} placeholder="https://maps.google.com/?q=…" onChange={(e) => setUbicacion(e.target.value)} /></div>}
+        {pideNota && <div className="tp-campo"><label htmlFor="tp-nota-pedido">Nota para el pedido <small>(opcional)</small></label><textarea id="tp-nota-pedido" value={nota} maxLength={300} placeholder="Ej. Sin cebolla" onChange={(e) => setNota(e.target.value)} /></div>}
+        <p className="tp-nota" style={{ textAlign: 'left' }}>Estos detalles se incluyen al enviar el aviso por WhatsApp.</p>
+      </section>}
+
       <CamposCliente d={cliente} errores={errores} alCambiar={(k, val) => { setCliente((c) => ({ ...c, [k]: val })); setErrores((e) => ({ ...e, [k]: undefined })); }} />
       {fallo && <p className="tp-aviso" role="alert">{fallo}</p>}
       <button type="button" className="tp-boton" disabled={enviando} onClick={() => void pedir()}>
-        {enviando ? 'Guardando…' : `Hacer pedido · ${soles(total)}`}
+        {enviando ? 'Guardando…' : `${demoPedido ? 'Simular pedido' : 'Hacer pedido'} · ${soles(total)}`}
       </button>
-      <p className="tp-nota">Separamos tus productos y luego nos avisas por WhatsApp para coordinar el pago.</p>
+      <p className="tp-nota">{demoPedido ? 'Esta muestra no guarda pedidos ni abre WhatsApp.' : 'Guardamos tu pedido y después podrás enviar el resumen por WhatsApp.'}</p>
     </div>
   );
 }

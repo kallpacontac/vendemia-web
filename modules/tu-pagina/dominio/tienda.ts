@@ -319,8 +319,22 @@ export interface LineaPedido {
 
 export function mensajePedido(
   codigo: string,
-  p: { lineas: LineaPedido[]; total: number; entrega: 'recojo' | 'delivery'; direccion: string; referencia: string; nombre: string; telefono: string },
+  p: { lineas: LineaPedido[]; total: number; entrega: 'recojo' | 'delivery'; direccion: string; referencia: string; nombre: string; telefono: string; negocio?: string; enlace?: string; metodoPago?: string; ubicacion?: string; nota?: string },
+  configuracion?: { detallado?: boolean; introduccion?: string },
 ): string {
+  if (configuracion?.detallado) {
+    const intro = (configuracion.introduccion?.trim() || 'Hola 👋\nVengo de la carta digital de *{negocio}* y envío aquí mi pedido por favor.')
+      .replaceAll('{negocio}', p.negocio?.trim() || 'tu restaurante');
+    const l = [intro, '', `🔗 *Carta digital:* ${p.enlace || ''}`, '', `📋 *N.° de pedido:* ${codigo}`, `👤 *Cliente:* ${p.nombre.trim()}`, `📱 *Celular:* ${telefonoBonito(telefonoNormal(p.telefono))}`];
+    if (p.metodoPago) l.push(`💵 *Pagará con:* ${p.metodoPago}`);
+    l.push(p.entrega === 'delivery' ? `📍 *Dirección:* ${p.direccion.trim()}${p.referencia.trim() ? ` · ${p.referencia.trim()}` : ''}` : '📍 *Entrega:* Recojo en el local');
+    if (p.entrega === 'delivery' && p.ubicacion) l.push(`📌 *Ubicación:* ${p.ubicacion}`);
+    l.push('', '🍽️ *Detalle del pedido:*', '');
+    for (const x of p.lineas) l.push(`• ${x.cantidad}x ${x.nombre} (${soles(x.precio * x.cantidad)})${x.opcion ? ` · *Opción:* ${x.opcion}` : ''}`);
+    if (p.nota?.trim()) l.push('', `📝 *Nota:* ${p.nota.trim()}`);
+    l.push('', `💰 *Total a pagar:* ${soles(p.total)}`);
+    return l.join('\n');
+  }
   const l = [`Hola, hice un pedido en tu página (${codigo}):`];
   for (const x of p.lineas) {
     l.push(`• ${x.cantidad} × ${x.nombre}${x.opcion ? ` · ${x.opcion}` : ''} — ${soles(x.precio * x.cantidad)}`);
