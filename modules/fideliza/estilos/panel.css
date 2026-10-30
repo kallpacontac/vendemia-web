@@ -55,6 +55,11 @@
 .input[aria-invalid="true"],.select[aria-invalid="true"]{border-color:#D93025!important;box-shadow:0 0 0 3px rgba(217,48,37,.12)}
 .fz-resumen-errores ul{margin:6px 0 0;padding-left:18px}
 .fz-resumen-errores button{background:none;border:0;padding:2px 0;color:inherit;text-align:left;text-decoration:underline;cursor:pointer;font:inherit}
+.fz-rubros{display:flex;gap:6px;overflow-x:auto;padding-bottom:6px;margin-bottom:8px;scrollbar-width:thin}
+.fz-rubro{flex:none;padding:6px 12px;border:1px solid var(--line,#e5e5e5);border-radius:999px;background:transparent;font-size:12.5px;color:inherit;cursor:pointer;white-space:nowrap}
+.fz-rubro[aria-selected="true"]{background:#14110F;border-color:#14110F;color:#fff}
+.fz-rubro small{opacity:.75}
+.fz-movil__sellos span svg{width:62%;height:62%}
 .fz-sellos{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:6px}
 .fz-sello{display:flex;flex-direction:column;align-items:center;gap:4px;min-width:64px;padding:8px 6px;border:1px solid var(--line,#e5e5e5);border-radius:12px;background:transparent;cursor:pointer;font-size:12px;color:inherit}
 .fz-sello svg{width:26px;height:26px}

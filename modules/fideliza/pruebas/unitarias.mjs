@@ -451,3 +451,19 @@ test('17 · las direcciones web se aceptan sin https://', () => {
   assert.equal(botones.urlSuelta('tunegocio.com'), 'https://tunegocio.com');
   assert.equal(botones.urlSuelta('http://tunegocio.com'), 'https://tunegocio.com');
 });
+
+test('18 · catálogo de sellos por rubro', () => {
+  const s = cargar('modules/fideliza/dominio/sellos.ts');
+  const ids = s.SELLOS.map((x) => x.id);
+  assert.equal(new Set(ids).size, ids.length, 'ids únicos');
+  // Los 8 de siempre siguen existiendo: hay tarjetas guardadas con ellos.
+  for (const id of ['check', 'corazon', 'estrella', 'cafe', 'hamburguesa', 'sillon', 'tijera', 'regalo']) assert.ok(ids.includes(id), id);
+  for (const x of s.SELLOS) assert.match(x.trazo, /^(<(path|circle|rect|line|polyline|polygon|ellipse) [^<>]*\/>)+$/, x.id);
+  for (const r of s.RUBROS) assert.ok(s.sellosDe(r.id).length >= 5, r.id);
+  assert.equal(s.sugerirRubro('Barbería El Centro'), 'belleza');
+  assert.equal(s.sugerirRubro('Pollería Doña Rosa'), 'comida');
+  assert.equal(s.sugerirRubro('Panadería Sol'), 'cafe');
+  assert.equal(s.sugerirRubro('Vet Patitas'), 'salud');
+  assert.equal(s.sugerirRubro('Kallpa'), null);
+  assert.equal(s.selloValido('<script>'), 'check');
+});

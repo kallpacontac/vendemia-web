@@ -22,7 +22,7 @@ import { urlNegocio } from '@/modules/fideliza/dominio/config';
 import { aCentimos, fecha, fraseRegla, soles, unidades, type TipoRegla } from '@/modules/fideliza/dominio/formato';
 import { PLANTILLAS_TARJETA, resolverEstilo, tarjetaValida, tintaSobre, type Estilo, type PlantillaTarjeta } from '@/modules/fideliza/dominio/estilo';
 import { datosArteWallet, esCartilla, svgArteWallet } from '@/modules/fideliza/dominio/wallet-arte';
-import { SELLOS, selloValido, type Sello } from '@/modules/fideliza/dominio/sellos';
+import { RUBROS, SELLOS, sellosDe, selloValido, sugerirRubro, type Rubro, type Sello } from '@/modules/fideliza/dominio/sellos';
 
 const PASOS = ['Negocio y sucursal', 'Objetivo', 'Tipo de regla', 'Beneficio', 'Marca', 'Probar y publicar'];
 const OBJETIVOS = [
@@ -115,6 +115,8 @@ function ProgramaPagina() {
   const [textos, setTextos] = useState({ min: '', unidad: '1,00', ejemplo: '50' });
   const [logo, setLogo] = useState<{ ok: boolean; errores: string[]; avisos: string[] } | null>(null);
   const [nuevaSucursal, setNuevaSucursal] = useState('');
+  /** El rubro que se está mirando en el selector de iconos (null = el sugerido). */
+  const [rubroVisto, setRubroVisto] = useState<Rubro | null>(null);
   const [slugOcupado, setSlugOcupado] = useState<string | null>(null);
 
   useEffect(() => {
@@ -433,6 +435,11 @@ function ProgramaPagina() {
   };
 
   const p = datos?.programa;
+  // El rubro sugerido sale del nombre y la descripción del negocio; si el icono
+  // elegido es de otro rubro, el selector se abre en el suyo para que se vea marcado.
+  const rubroSugerido = sugerirRubro(negocio.display_name, negocio.tagline, (ajustes?.page_style as Partial<Estilo> | null)?.categoria);
+  const rubroDelSello = SELLOS.find((x) => x.id === marca.sello)?.rubro ?? 'general';
+  const rubroActivo: Rubro = rubroVisto ?? (marca.sello !== 'check' ? rubroDelSello : rubroSugerido ?? 'general');
   const metaVistaWallet = b.reward_threshold && b.reward_threshold > 0 ? b.reward_threshold : 10;
   const saldoVistaWallet = Math.min(3, metaVistaWallet);
   const estiloVistaWallet = { ...((ajustes?.page_style ?? {}) as Partial<Estilo>), sello: marca.sello, tarjeta: marca.tarjeta };
@@ -663,8 +670,23 @@ function ProgramaPagina() {
               {b.rule_type !== 'points' && (
                 <div className="fz-campo">
                   <label className="field-label">Icono del sello</label>
-                  <div className="fz-sellos" role="group" aria-label="Icono del sello">
-                    {SELLOS.map((s) => (
+                  <div className="fz-rubros" role="tablist" aria-label="Tipo de negocio">
+                    {RUBROS.map((r) => (
+                      <button
+                        key={r.id}
+                        type="button"
+                        role="tab"
+                        className="fz-rubro"
+                        aria-selected={rubroActivo === r.id}
+                        onClick={() => setRubroVisto(r.id)}
+                      >
+                        {r.nombre}
+                        {r.id === rubroSugerido && <small> · sugerido</small>}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="fz-sellos" role="group" aria-label={`Iconos de ${RUBROS.find((r) => r.id === rubroActivo)?.nombre ?? ''}`}>
+                    {sellosDe(rubroActivo).map((s) => (
                       <button
                         key={s.id}
                         type="button"
@@ -678,7 +700,9 @@ function ProgramaPagina() {
                       </button>
                     ))}
                   </div>
-                  <small>Se marca uno por cada sello que gana el cliente. La última casilla siempre es un regalo: el premio.</small>
+                  <small>
+                    Elegido: <b>{SELLOS.find((s) => s.id === marca.sello)?.nombre}</b>. Se marca uno por cada sello que gana el cliente, en su tarjeta, en la app y en Google Wallet. La última casilla siempre es un regalo: el premio.
+                  </small>
                 </div>
               )}
               {campo(
@@ -811,7 +835,8 @@ function ProgramaPagina() {
             negocio: negocio.display_name,
             frase: negocio.tagline,
             color: marca.bg_color,
-            estilo: (ajustes?.page_style ?? null) as Partial<Estilo> | null,
+            // Con el icono elegido aunque aún no se haya guardado: la vista previa sigue al selector.
+            estilo: { ...((ajustes?.page_style ?? {}) as Partial<Estilo>), sello: marca.sello },
             logo: marca.logo_url,
             programa: prog.name,
             descripcion: prog.description,

@@ -10,6 +10,7 @@
  */
 import { UNIDAD, fraseRegla, soles, type TipoRegla } from '@/modules/fideliza/dominio/formato';
 import { colorValido, resolverEstilo, tintaSobre, type Estilo } from '@/modules/fideliza/dominio/estilo';
+import { selloValido, trazoSello } from '@/modules/fideliza/dominio/sellos';
 
 export interface DatosVista {
   negocio: string;
@@ -38,6 +39,7 @@ export default function VistaTarjeta({ d, foco }: { d: DatosVista; foco: string 
   const u = UNIDAD[tipo];
   const color = colorValido(d.color);
   const estilo = resolverEstilo(d.estilo);
+  const sello = selloValido(d.estilo?.sello);
   const conFoto = Boolean(estilo.fondo);
 
   return (
@@ -69,7 +71,11 @@ export default function VistaTarjeta({ d, foco }: { d: DatosVista; foco: string 
               <div className="fz-movil__saldo">{ejemplo} <span>{u.varias}</span></div>
               {tipo === 'stamps' && umbral <= 12 ? (
                 <div className="fz-movil__sellos" aria-label={`${ejemplo} de ${umbral} sellos`}>
-                  {Array.from({ length: umbral }, (_, i) => <span key={i} className={i < ejemplo ? 'lleno' : ''}>{i < ejemplo ? '✓' : ''}</span>)}
+                  {Array.from({ length: umbral }, (_, i) => (
+                    <span key={i} className={i < ejemplo ? 'lleno' : ''}>
+                      <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" dangerouslySetInnerHTML={{ __html: trazoSello(i === umbral - 1 ? 'regalo' : sello) }} />
+                    </span>
+                  ))}
                 </div>
               ) : <div className="fz-movil__barra"><i style={{ width: `${(ejemplo / umbral) * 100}%`, background: tintaSobre(color) }} /></div>}
               <small>{ejemplo} de {umbral} {u.varias} para tu premio</small>

@@ -7,6 +7,7 @@ import { comprobarLogo } from './logo';
 import { buscarLugares } from './lugares';
 import { drenar } from './worker';
 import { urlAyuda, urlSuelta } from '../dominio/botones';
+import { IDS_SELLO } from '../dominio/sellos';
 
 /**
  * ══════════════════════════════════════════════════════════════════════════
@@ -153,7 +154,7 @@ export const ACCIONES = {
           place_id: z.string().max(200).regex(/^[A-Za-z0-9_-]*$/).optional(),
           place_nombre: textoCorto(120).optional(),
           historia: z.enum(['instagram', 'tiktok', '']).optional(),
-          sello: z.enum(['check', 'corazon', 'estrella', 'cafe', 'hamburguesa', 'sillon', 'tijera', 'regalo']).optional(),
+          sello: z.enum(IDS_SELLO).optional(),
         })
         .strict(),
     }),
