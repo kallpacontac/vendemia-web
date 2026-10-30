@@ -166,6 +166,52 @@ número y qué viste (mejor con captura).
 
 ---
 
+## 7 · Demo en Barber Shop con «Diego Ramos» 🤖
+
+Cliente de prueba creado el 27-oct (número que termina en 8007, `source = 'demo'`; lo quita
+`npm run demo -- borrar barberia-01` en el bot). Su historia, para que Mia tenga de dónde sacar:
+
+- **22-sep**: pregunta hasta qué hora atienden porque **sale tarde del trabajo**; el Pack Pelo + Barba
+  (S/ 40) le parece **caro**; el **18-oct es el matrimonio de su hermano** y quiere ir bien.
+- **14-oct**: pide turno para el viernes; le sale trabajo y lo deja: «si no me corto por mi casa».
+- Desde entonces no ha vuelto a escribir. No tiene citas.
+
+### Antes
+
+- [ ] **7.0** En el `.env` del bot, `ALLOWED_NUMBERS` incluye ese número, y el bot está reiniciado.
+      Sin esto los mensajes de Mia **sí** le llegan, pero lo que él conteste se ignora (2.1 no sale).
+- [ ] **7.1** En **Mensajes**, Diego Ramos aparece con su conversación (si no, el bot está apagado y
+      no la ha subido).
+
+### Historial
+
+- [ ] **7.2** Mia Gerente (Barber Shop): «¿Qué hablé con Diego Ramos?» → resume las dos charlas: el
+      precio, que sale tarde, el matrimonio y que el 14 lo dejó por trabajo. Nada que no esté ahí.
+- [ ] **7.3** «¿Diego tiene alguna cita?» → que no.
+
+### Escribirle (cada uno: leer la tarjeta → aprobar → mirar el celular de Diego)
+
+- [ ] **7.4** Recuperar: «Escríbele a Diego, que hace tiempo que no viene» → cálido, recuerda algo
+      suyo (el trabajo, el matrimonio) sin sonar a vigilancia; si ofrece hora, que sea en la noche.
+- [ ] **7.5** Ofrecer con descuento: «Ofrécele el Pack Pelo + Barba, puedes bajarle hasta 10 soles,
+      entra por que sale tarde del trabajo» → la tarjeta dice «empieza ofreciendo S/ X · como mínimo
+      S/ 30»; el mensaje lleva el precio de entrada, nunca S/ 30.
+- [ ] **7.6** Corregir: en 7.5 pulsa «Corregir», cambia el precio a S/ 25 → no sale y avisa del mínimo.
+- [ ] **7.7** Aprueba 7.5 → «Enviado», llega a su celular y se ve en su chat en Mensajes.
+- [ ] **7.8** Desde el celular de Diego: «Ya, me animo con ese precio» → Mia de ventas no lo cierra
+      sola; en Mensajes sale «Aceptó la oferta que le mandaste: confírmale el precio» con el detalle.
+- [ ] **7.9** Desde el celular de Diego, pide un turno → lo atiende como cliente normal (no como dueño).
+
+### Desde el celular del dueño
+
+- [ ] **7.10** Repite 7.4 desde el panel instalado → la tarjeta cabe en la burbuja y los botones se
+      pulsan sin hacer zoom.
+- [ ] **7.11** Pide uno y no lo apruebes → en Mensajes, Diego lleva la etiqueta «Por aprobar».
+      (El aviso al celular **no** sale aquí: solo salta con los mensajes que Mia propone sola, y eso
+      aún no está.)
+
+---
+
 ## Si algo falla
 
 Anota: número de la prueba · qué hiciste · qué esperabas · qué pasó · hora. Si es del panel me lo
