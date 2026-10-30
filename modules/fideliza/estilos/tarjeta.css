@@ -135,3 +135,21 @@
 @keyframes fz-celebrar{from{transform:scale(.45) rotate(-30deg)}60%{transform:scale(1.13) rotate(8deg)}to{transform:scale(1) rotate(0)}}
 @keyframes fz-brillo{from{opacity:0;transform:scale(.2) rotate(-30deg)}50%{opacity:1}to{opacity:.6;transform:scale(1.1) rotate(15deg)}}
 @media(prefers-reduced-motion:reduce){.fz-ok,.fz-ok__icono,.fz-ok__brillo{animation:none}}
+
+/* ── El aviso de abajo: instalar la tarjeta como app · AvisoInstalar.tsx ───
+   Mismo aspecto que el aviso «Tu tarjeta de puntos» de la página del negocio
+   (.mt en dominio/paginaPublica.ts). */
+.fz:has(.fz-aviso-app){padding-bottom:120px}
+.fz-aviso-app{position:fixed;z-index:50;left:12px;right:12px;bottom:calc(14px + env(safe-area-inset-bottom,0px));max-width:460px;margin:0 auto;
+  display:flex;align-items:center;gap:12px;padding:14px 14px 14px 16px;border-radius:18px;background:#14110F;color:#fff;
+  box-shadow:0 14px 40px rgba(0,0,0,.35);font:500 14px/1.35 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;text-align:left;
+  animation:fz-aviso-sube .35s cubic-bezier(.2,.8,.2,1) both}
+@keyframes fz-aviso-sube{from{transform:translateY(140%)}to{transform:none}}
+.fz-aviso-app__tx{flex:1;min-width:0}
+.fz-aviso-app__tx b{display:block;font-size:15px}
+.fz-aviso-app__tx small{display:block;font-size:13px;opacity:.8}
+.fz-aviso-app__tx small svg{vertical-align:-2px}
+.fz-aviso-app button{font-family:inherit;cursor:pointer}
+.fz-aviso-app__ir{flex:none;display:inline-flex;align-items:center;gap:6px;padding:10px 14px;border:0;border-radius:12px;background:#fff;color:#14110F;font-size:14px;font-weight:700}
+.fz-aviso-app__x{flex:none;display:grid;place-items:center;width:30px;height:30px;padding:0;border:0;border-radius:50%;background:rgba(255,255,255,.14);color:#fff}
+@media(prefers-reduced-motion:reduce){.fz-aviso-app{animation:none}}

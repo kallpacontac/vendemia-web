@@ -10,7 +10,8 @@
     "logo": "node scripts/logo.mjs",
     "typecheck": "tsc --noEmit",
     "publicar": "node scripts/publicar.mjs",
-    "test:fideliza": "node --test modules/fideliza/pruebas/unitarias.mjs"
+    "test:fideliza": "node --test modules/fideliza/pruebas/unitarias.mjs",
+    "aviso-instalar": "node scripts/fideliza-aviso-instalar.mjs"
   },
   "dependencies": {
     "@react-pdf/renderer": "^4.9.0",

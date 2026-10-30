@@ -1,11 +1,12 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { ArrowLeft, Check, Gift, Sparkles } from 'lucide-react';
 import { UNIDAD, fechaHora, type TipoRegla } from '@/modules/fideliza/dominio/formato';
 import { colorValido, mezcla, resolverEstilo, tintaSobre, type Estilo } from '@/modules/fideliza/dominio/estilo';
 import { urlNegocio } from '@/modules/fideliza/dominio/config';
 import { selloValido, trazoSello } from '@/modules/fideliza/dominio/sellos';
+import AvisoInstalar, { type EventoInstalar } from './AvisoInstalar';
 
 export interface DatosTarjeta {
   status: 'ok' | 'not_found';
@@ -68,8 +69,10 @@ export default function Tarjeta(props: {
   const [quiereAvisos, setQuiereAvisos] = useState(false);
   const [alias, setAlias] = useState(props.inicial.member.alias ?? '');
   const [borrado, setBorrado] = useState(false);
-  // El «Instalar» de Android llega una sola vez al cargar: se guarda para el botón.
-  const [instalar, setInstalar] = useState<{ prompt: () => Promise<void> } | null>(null);
+  // El «Instalar» de Android llega una sola vez al cargar: se guarda para el aviso y el botón.
+  const [instalar, setInstalar] = useState<EventoInstalar | null>(null);
+  const [avisoVisible, setAvisoVisible] = useState(false);
+  const soltarInstalar = useCallback(() => setInstalar(null), []);
   // Abierta desde el icono (ya instalada): no se vuelve a explicar cómo instalarla.
   const [enApp, setEnApp] = useState(false);
 
@@ -141,7 +144,7 @@ export default function Tarjeta(props: {
     );
     const alPoder = (e: Event) => {
       e.preventDefault();
-      setInstalar(e as unknown as { prompt: () => Promise<void> });
+      setInstalar(e as unknown as EventoInstalar);
     };
     const alInstalar = () => setInstalar(null);
     window.addEventListener('beforeinstallprompt', alPoder);
@@ -256,6 +259,12 @@ export default function Tarjeta(props: {
     }
   }
 
+  // Lo de instalar va en el aviso de abajo; la caja lo repite solo si el aviso no está a la vista.
+  const conWallet = plataforma !== 'ios' && props.walletDisponible && (walletVerificada || !d.wallet?.links_issued);
+  const respaldoIos = plataforma === 'ios' && !enApp && !avisoVisible;
+  const respaldoInstalar = plataforma !== 'ios' && !enApp && instalar !== null && !avisoVisible;
+  const notaFavoritos = plataforma === 'otra' && !props.walletDisponible && !enApp;
+
   const marca = colorValido(d.brand.bg_color);
   const plantilla = resolverEstilo(d.brand.style);
   const sello = selloValido(d.brand.style?.sello);
@@ -318,9 +327,9 @@ export default function Tarjeta(props: {
         </div>
       )}
 
-      {d.member.status === 'active' && !walletGuardada && (
+      {d.member.status === 'active' && !walletGuardada && (conWallet || respaldoIos || respaldoInstalar || notaFavoritos) && (
         <section className="fz-caja fz-caja--flujo fz-wallet-caja" aria-label="Guardar la tarjeta">
-          {plataforma !== 'ios' && props.walletDisponible && (walletVerificada || !d.wallet?.links_issued) && (
+          {conWallet && (
             <>
               <div>
                 <p className="fz-grande">Lleva tu tarjeta siempre contigo</p>
@@ -344,13 +353,13 @@ export default function Tarjeta(props: {
               )}
             </>
           )}
-          {plataforma === 'ios' && !enApp && (
+          {respaldoIos && (
             <p className="fz-nota">
               <b>Guárdala en tu iPhone:</b> pulsa <b>Compartir</b> y luego <b>Añadir a pantalla de inicio</b>. Tu tarjeta quedará como una app
               {props.vapid ? ' y, desde ahí, podrás recibir avisos de tus premios' : ''}.
             </p>
           )}
-          {plataforma !== 'ios' && !enApp && instalar && (
+          {respaldoInstalar && instalar && (
             <button
               type="button"
               className="fz-btn"
@@ -359,7 +368,7 @@ export default function Tarjeta(props: {
               Instalar mi tarjeta como app
             </button>
           )}
-          {plataforma === 'otra' && !props.walletDisponible && (
+          {notaFavoritos && (
             <p className="fz-nota">Guarda esta página en tus favoritos o en la pantalla de inicio.</p>
           )}
         </section>
@@ -485,6 +494,17 @@ export default function Tarjeta(props: {
         </button>
       </details>
 
+      {d.member.status === 'active' && (
+        <AvisoInstalar
+          slug={d.brand.slug}
+          plataforma={plataforma}
+          enApp={enApp}
+          instalar={instalar}
+          conAvisos={Boolean(props.vapid)}
+          alCambiar={setAvisoVisible}
+          alUsarInstalar={soltarInstalar}
+        />
+      )}
     </main>
   );
 }
