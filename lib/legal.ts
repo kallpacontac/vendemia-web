@@ -8,7 +8,7 @@ import { BRAND, WHATSAPP } from '@/lib/content';
  * ⚠️ ESTO LO TIENE QUE REVISAR UN ABOGADO ANTES DE PUBLICARSE.
  *
  * Lo que hay aquí es un punto de partida escrito sobre lo que la landing YA
- * promete —S/89 a S/189 al mes, sin permanencia, 30 días de garantía, atención
+ * promete —S/89 a S/229 al mes, sin permanencia, 30 días de garantía, atención
  * por WhatsApp— para que la web deje de anunciar cuatro páginas legales que no
  * existían. No sustituye a un abogado, y menos en la parte de datos personales:
  * Vendemia trata conversaciones de WhatsApp de terceros (los clientes de tus

@@ -1119,10 +1119,10 @@ export const PRICING = {
       // Decía "para el que tiene más de un local", pero varias sedes todavía
       // no existe. Lo que sí tiene hoy es todo lo de manejar a un equipo.
       header: 'Best Seller · para el que ya tiene equipo',
-      price: 189,
+      price: 229,
       featured: false,
       cta: 'Empiezo con Best Seller',
-      waMessage: 'Hola 👋 Quiero el plan Best Seller de Vendemia (S/189 al mes) para mi negocio.',
+      waMessage: 'Hola 👋 Quiero el plan Best Seller de Vendemia (S/229 al mes) para mi negocio.',
       incluye: 'Todo lo de Seller, y además:',
       specs: [
         { icon: 'chat', label: `Hasta ${miles(PLANES.best_seller.tope)} conversaciones/mes` },

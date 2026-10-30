@@ -169,7 +169,7 @@ export const NUESTRO_PRECIO: Bloque[] = [
     h: 'Y lo que cuesta Vendemia',
     p: [
       'Esta guía la escribe Vendemia, así que lo justo es poner nuestros números en la misma tabla y que los compares.',
-      'S/89 al mes el plan de entrada, S/149 y S/189 los otros dos. Cero de instalación, sin permanencia y con treinta días de devolución. Trabaja sobre el número que ya tienes, y los precios, los horarios y los servicios los cambias tú desde un panel sin pedírnoslo a nadie.',
+      'S/89 al mes el plan de entrada, S/149 y S/229 los otros dos. Cero de instalación, sin permanencia y con treinta días de devolución. Trabaja sobre el número que ya tienes, y los precios, los horarios y los servicios los cambias tú desde un panel sin pedírnoslo a nadie.',
       'No somos los únicos que puedes contratar, y para algunos casos —una integración con tu propio sistema— no somos la respuesta correcta. Pero si lo que necesitas es que alguien atienda tu WhatsApp a tiempo, ese es el precio completo, y no hay una segunda cifra esperando en la letra pequeña.',
     ],
   },
