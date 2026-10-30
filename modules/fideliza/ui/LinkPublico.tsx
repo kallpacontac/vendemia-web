@@ -6,7 +6,8 @@
  * también donde el portapapeles moderno no existe.
  */
 import { useState } from 'react';
-import { Check, Copy, ExternalLink, MessageCircle } from 'lucide-react';
+import { Check, Copy, ExternalLink, MessageCircle, Printer } from 'lucide-react';
+import { abrirCartel, type DatosCartel } from './cartel';
 import { Qr } from './Estados';
 import { urlNegocio, urlPlaca, urlPlacaQr, urlUnirse } from '@/modules/fideliza/dominio/config';
 
@@ -72,18 +73,21 @@ export default function LinkPublico({
   programaActivo,
   hayEnlaces,
   placa,
+  cartel,
 }: {
   slug: string;
   nombre: string;
   programaActivo: boolean;
   hayEnlaces: boolean;
   placa?: { public_token: string; kind: 'nfc_qr' | 'qr' } | null;
+  /** Con esto aparece «Cartel para imprimir» (todo menos la URL, que se pone aquí). */
+  cartel?: Omit<DatosCartel, 'url' | 'negocio'>;
 }) {
   const vacio = !programaActivo && !hayEnlaces;
   const paginaUrl = placa ? (placa.kind === 'qr' ? urlPlacaQr(placa.public_token) : urlPlaca(placa.public_token)) : urlNegocio(slug);
   const qrUrl = placa ? urlPlacaQr(placa.public_token) : paginaUrl;
   return (
-    <div className="card fz-copia-card">
+    <div className="card fz-copia-card" id="invitar">
       <div className="fz-copia-card__texto">
         <h3 style={{ fontSize: 16, marginBottom: 4 }}>Tu link público</h3>
         <p className="fz-def" style={{ marginTop: 0 }}>
@@ -113,6 +117,11 @@ export default function LinkPublico({
       <div className="fz-copia-card__qr">
         <Qr valor={qrUrl} tam={150} descargar={`qr-${slug}`} />
         <small className="fz-def" style={{ textAlign: 'center' }}>QR de tu página, para imprimir</small>
+        {cartel && (
+          <button type="button" className="btn btn-primary btn-sm" style={{ marginTop: 8 }} onClick={() => void abrirCartel({ ...cartel, negocio: nombre, url: qrUrl })}>
+            <Printer size={14} /> Cartel para imprimir
+          </button>
+        )}
       </div>
     </div>
   );

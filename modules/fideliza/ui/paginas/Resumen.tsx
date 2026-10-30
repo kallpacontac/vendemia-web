@@ -19,6 +19,8 @@ import { accion, lecturas, type Enlace } from '@/modules/fideliza/cliente/api';
 import { urlNegocio, urlPlaca, urlPlacaQr } from '@/modules/fideliza/dominio/config';
 import { fechaHora, soles, ESTADO_PLACA } from '@/modules/fideliza/dominio/formato';
 import { DEFINICIONES, pct, type Metricas } from '@/modules/fideliza/dominio/metricas';
+import { selloValido } from '@/modules/fideliza/dominio/sellos';
+import type { Estilo } from '@/modules/fideliza/dominio/estilo';
 
 const hoyLima = () => new Date().toLocaleDateString('sv-SE', { timeZone: 'America/Lima' });
 const haceDias = (n: number) => new Date(Date.now() - n * 86400000).toLocaleDateString('sv-SE', { timeZone: 'America/Lima' });
@@ -210,7 +212,21 @@ export default function Resumen() {
     <>
       {puede('program.edit') && <PrimerosPasos pasos={pasos} />}
       {ajustes && (
-        <LinkPublico slug={ajustes.slug} nombre={ajustes.display_name} programaActivo={programaActivo} hayEnlaces={botones > 0} placa={placaPrincipal} />
+        <LinkPublico
+          slug={ajustes.slug}
+          nombre={ajustes.display_name}
+          programaActivo={programaActivo}
+          hayEnlaces={botones > 0}
+          placa={placaPrincipal}
+          cartel={{
+            color: ajustes.bg_color,
+            logo: ajustes.logo_url,
+            sello: selloValido((ajustes.page_style as Partial<Estilo> | null)?.sello),
+            meta: programaActivo ? version?.reward_threshold ?? null : null,
+            premio: programaActivo ? version?.reward_description ?? null : null,
+            unidad: version?.rule_type === 'points' ? 'puntos' : version?.rule_type === 'visits' ? 'visitas' : 'sellos',
+          }}
+        />
       )}
 
       <div className="card" style={{ marginBottom: 16 }}>
