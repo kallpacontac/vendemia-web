@@ -46,6 +46,12 @@ interface Estado {
    * pantallas globales — hoy, Retargeting.
    */
   esAdminPlataforma: boolean;
+  /**
+   * El negocio activo tiene la tabla de canchas encendida en Mi página
+   * (secciones.canchas): el panel habla de «reservas» y «canchas» y la agenda
+   * ofrece turnos y turno fijo. Ver lib/panel/vocabulario.ts.
+   */
+  canchas: boolean;
   cargando: boolean;
   /**
    * Hay una sesión guardada pero ahora mismo no hay una viva: el token caducó
@@ -101,6 +107,26 @@ export function ProveedorSesion({ children }: { children: React.ReactNode }) {
   const [esAdminPlataforma, setEsAdminPlataforma] = useState(false);
   const [cargando, setCargando] = useState(true);
   const [reconectando, setReconectando] = useState(false);
+  const [canchas, setCanchas] = useState(false);
+
+  // ¿Canchas? Se mira una vez por negocio; sin acceso a tu_pagina (un empleado), no.
+  useEffect(() => {
+    setCanchas(false);
+    if (!companyId) return;
+    let vigente = true;
+    void supabase()
+      .from('tu_pagina')
+      .select('secciones')
+      .eq('company_id', companyId)
+      .maybeSingle()
+      .then(({ data }) => {
+        const s = (data as { secciones?: { reservar?: boolean; canchas?: { activo?: boolean } } } | null)?.secciones;
+        if (vigente) setCanchas(Boolean(s?.reservar && s.canchas?.activo));
+      });
+    return () => {
+      vigente = false;
+    };
+  }, [companyId]);
 
   /**
    * La sesión de ahora, para los manejadores de eventos y el reloj de la
@@ -356,6 +382,7 @@ export function ProveedorSesion({ children }: { children: React.ReactNode }) {
       esDueno: compania?.rol === 'owner',
       rol: rolDeNegocio(compania?.rol),
       esAdminPlataforma,
+      canchas,
       cargando,
       reconectando,
       /**
@@ -431,7 +458,7 @@ export function ProveedorSesion({ children }: { children: React.ReactNode }) {
         return true;
       },
     };
-  }, [session, companias, companyId, esAdminPlataforma, cargando, reconectando, router]);
+  }, [session, companias, companyId, esAdminPlataforma, canchas, cargando, reconectando, router]);
 
   return <Ctx.Provider value={valor}>{children}</Ctx.Provider>;
 }

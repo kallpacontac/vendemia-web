@@ -26,9 +26,9 @@ import { vocabulario } from '@/lib/panel/vocabulario';
 import { getCatalogoDelEquipo } from '@/lib/supabase/queries';
 
 export default function MiCatalogo() {
-  const { companyId, compania } = useSesion();
+  const { companyId, compania, canchas } = useSesion();
   const modo = compania?.business_mode;
-  const v = vocabulario(modo);
+  const v = vocabulario(modo, { canchas });
 
   const { datos, cargando, error } = useCargar(async () => {
     if (!companyId) return null;

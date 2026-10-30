@@ -27,6 +27,7 @@ import {
   ChevronRight,
   Clock,
   Pencil,
+  ShoppingBag,
   User,
   Wallet,
   X,
@@ -35,6 +36,9 @@ import Topbar from '@/components/panel/Topbar';
 import AgendaControles from '@/components/panel/AgendaControles';
 import AvisarCliente from '@/components/panel/AvisarCliente';
 import NuevaCita from '@/components/panel/NuevaCita';
+import Consumos from '@/components/panel/Consumos';
+import TurnosFijos from '@/components/panel/TurnosFijos';
+import FaltanSeguido from '@/components/panel/FaltanSeguido';
 import Confirmar from '@/components/panel/Confirmar';
 import Paginacion, { usePaginacion } from '@/components/panel/Paginacion';
 import { useSesion } from '@/components/panel/Sesion';
@@ -78,6 +82,7 @@ import {
   getTrabajadores,
   parseSlot,
   type Cita,
+  type ItemCatalogo,
   type Trabajador,
 } from '@/lib/supabase/queries';
 import { json } from '@/lib/supabase/parse';
@@ -130,7 +135,7 @@ function pidenAlgo(pasadas: Cita[]): Cita[] {
 }
 
 export default function Agenda() {
-  const { companyId } = useSesion();
+  const { companyId, canchas } = useSesion();
   const [offset, setOffset] = useState(0);
   const [vista, setVista] = useState<'negocio' | 'cliente'>('negocio');
   /**
@@ -218,7 +223,7 @@ export default function Agenda() {
 
   const esRecurrente = datos?.empresa?.business_mode === 'recurring_appointment';
   /** «cita» en una barbería, «clase» en una academia. Ver lib/panel/vocabulario. */
-  const v = vocabulario(datos?.empresa?.business_mode);
+  const v = vocabulario(datos?.empresa?.business_mode, { canchas });
 
   /**
    * Las citas que se enseñan, ya filtradas por profesional.
@@ -342,6 +347,7 @@ export default function Agenda() {
             leads={datos?.leads ?? []}
             catalogo={datos?.catalogo ?? []}
             trabajadores={datos?.trabajadores ?? []}
+            canchas={canchas}
             alCerrar={() => setCreando(false)}
             alCambiar={recargar}
           /></div>
@@ -369,6 +375,8 @@ export default function Agenda() {
           />
         )}
 
+        {tab === 'pasadas' && <FaltanSeguido citas={datos?.citas ?? []} leads={datos?.leads ?? []} />}
+
         {tab === 'pasadas' && (
           <PorConfirmar
             v={v}
@@ -379,9 +387,13 @@ export default function Agenda() {
           />
         )}
 
+        {tab === 'proximas' && canchas && companyId && <TurnosFijos companyId={companyId} alCambiar={recargar} />}
+
         {tab === 'proximas' && (
           <Proximas
             v={v}
+            companyId={companyId}
+            catalogo={canchas ? datos?.catalogo ?? [] : []}
             citas={citasVista}
             nombrePorLead={new Map((datos?.leads ?? []).map((l) => [l.id, l.name || l.phone]))}
             pagosCitas={datos?.pagosCitas ?? new Map()}
@@ -965,6 +977,8 @@ const POR_PAGINA = 10;
  */
 function Proximas({
   v,
+  companyId,
+  catalogo,
   citas,
   nombrePorLead,
   pagosCitas,
@@ -972,6 +986,9 @@ function Proximas({
   alCambiar,
 }: {
   v: Vocabulario;
+  companyId: string | null;
+  /** Con canchas: el catálogo, para cargar consumos (gaseosas, pelota) a la reserva. Vacío = sin consumos. */
+  catalogo: ItemCatalogo[];
   citas: Cita[];
   nombrePorLead: Map<string, string>;
   /** Lo pagado de cada cita con pagos: el adelanto. Ver lib/panel/adelantos.ts. */
@@ -985,6 +1002,8 @@ function Proximas({
   const [abierto, setAbierto] = useState<string | null>(null);
   /** La cita con «Registrar pago» abierto: la seña de una cita que aún no llega. */
   const [pagando, setPagando] = useState<string | null>(null);
+  /** La reserva con «Consumos» abierto. */
+  const [consumos, setConsumos] = useState<string | null>(null);
   const [fecha, setFecha] = useState('');
   const [hora, setHora] = useState('');
   const [destino, setDestino] = useState('');
@@ -1194,6 +1213,12 @@ function Proximas({
                       <Wallet size={14} /> Registrar pago
                     </button>
                   )}
+                  {catalogo.length > 0 && companyId && (
+                    <button type="button" className="btn btn-ghost btn-sm" aria-expanded={consumos === c.id} disabled={ocupado}
+                      onClick={() => setConsumos(consumos === c.id ? null : c.id)}>
+                      <ShoppingBag size={14} /> Consumos
+                    </button>
+                  )}
                   <button className="btn btn-ghost btn-sm" disabled={ocupado} onClick={() => abrir(c)}>
                     <Pencil size={14} /> Editar
                   </button>
@@ -1217,6 +1242,10 @@ function Proximas({
                     alGuardar={alCambiar}
                   />
                 </div>
+              )}
+
+              {consumos === c.id && companyId && (
+                <Consumos companyId={companyId} citaId={c.id} catalogo={catalogo} alCambiar={alCambiar} />
               )}
 
               {abierto === c.id && (

@@ -19,6 +19,11 @@
  * 3 · NO le escribe al cliente. Esta cita no pasa por Mia, así que **si nadie
  *     abre el enlace de WhatsApp, el cliente no se entera de que tiene hora**.
  *     Por eso el aviso se queda en pantalla hasta que lo cierran.
+ *
+ * Con canchas (Mi página, modules/tu-pagina/dominio/canchas.ts) se reserva una
+ * cancha: de 1 a 4 turnos seguidos y, si se quiere, TURNO FIJO cada semana. El
+ * precio (día o noche) lo pone Postgres; las semanas que no caben se saltan y
+ * se dicen. Ver agenda_crear_cita en modules/tu-pagina/sql/0011.
  */
 import { useMemo, useState } from 'react';
 import { CalendarPlus, Check, Search, UserPlus, X } from 'lucide-react';
@@ -37,16 +42,21 @@ const TOPE_BUSQUEDA = 6;
 
 const soloDigitos = (s: string) => s.replace(/\D/g, '');
 
+/** «Repetir cada semana»: 1 = solo esta vez. */
+const SEMANAS = [1, 4, 8, 12];
+
 export default function NuevaCita({
   leads,
   catalogo,
   trabajadores,
+  canchas = false,
   alCerrar,
   alCambiar,
 }: {
   leads: Lead[];
   catalogo: ItemCatalogo[];
   trabajadores: Trabajador[];
+  canchas?: boolean;
   alCerrar: () => void;
   alCambiar: () => void;
 }) {
@@ -62,6 +72,8 @@ export default function NuevaCita({
   const [hora, setHora] = useState('');
   const [itemId, setItemId] = useState('');
   const [empId, setEmpId] = useState('');
+  const [turnos, setTurnos] = useState(1);
+  const [semanas, setSemanas] = useState(1);
   const [enviando, setEnviando] = useState(false);
   const [aviso, setAviso] = useState<{
     titulo: string;
@@ -76,9 +88,10 @@ export default function NuevaCita({
    * enseñar una opción que siempre falla.
    */
   const servicios = useMemo(
-    () => catalogo.filter((c) => c.activo && json<FranjaRecurrente[]>(c.schedule_slots, []).length === 0),
-    [catalogo],
+    () => catalogo.filter((c) => c.activo && json<FranjaRecurrente[]>(c.schedule_slots, []).length === 0 && !(canchas && c.tipo === 'producto')),
+    [catalogo, canchas],
   );
+  const turno = servicios.find((s) => s.id === itemId)?.duration_minutes || 60;
   const activos = useMemo(() => trabajadores.filter((t) => t.activo), [trabajadores]);
 
   const encontrados = useMemo(() => {
@@ -118,6 +131,7 @@ export default function NuevaCita({
         slot_start: `${fecha} ${hora}`,
         catalog_item_id: itemId,
         ...(empId ? { employee_id: empId } : {}),
+        ...(canchas ? { turnos, semanas } : {}),
       },
       undefined,
       alCambiar,
@@ -126,12 +140,15 @@ export default function NuevaCita({
     // Si no cabe, useComando ya ha enseñado el motivo del bot y no hay cita.
     if (!r) return;
 
-    const ficha = `${r.service} · ${r.slot_minutes} min · ${soles(r.precio)}`;
+    const saltadas = r.saltadas ?? [];
+    const ficha = `${r.service} · ${r.slot_minutes} min · ${soles(r.precio)}`
+      + (r.fija_id ? ` · turno fijo de ${r.creadas?.length ?? 0} semanas` : '')
+      + (saltadas.length ? `. Sin sitio (se saltaron): ${saltadas.map((s) => s.slot_start.slice(5, 10).split('-').reverse().join('/')).join(', ')}` : '');
     setAviso({
       /* Reenviar es seguro y el bot lo dice: si ese cliente ya tenía esa cita,
          devuelve la suya con `duplicada`. Anunciar «creada» ahí haría creer que
          ahora hay dos. */
-      titulo: r.duplicada ? 'Ese cliente ya tenía esta cita' : 'Cita creada',
+      titulo: r.duplicada ? 'Ese cliente ya tenía esta cita' : r.fija_id ? 'Turno fijo creado' : canchas ? 'Reserva creada' : 'Cita creada',
       mensaje: r.mensaje,
       waLink: r.wa_link,
       nota: r.duplicada
@@ -152,7 +169,7 @@ export default function NuevaCita({
     <div className="card" style={{ marginBottom: 18 }}>
       <div className="card-head">
         <h3>
-          <CalendarPlus size={16} style={{ verticalAlign: -3 }} /> Nueva cita
+          <CalendarPlus size={16} style={{ verticalAlign: -3 }} /> {canchas ? 'Nueva reserva' : 'Nueva cita'}
         </h3>
         <button type="button" className="q-icon" aria-label="Cerrar" onClick={alCerrar}>
           <X size={15} />
@@ -249,13 +266,30 @@ export default function NuevaCita({
         </div>
 
         <div>
-          <label className="field-label">Servicio</label>
-          <ComboPanel tipo="servicio" etiqueta="Servicio" value={itemId} alCambiar={setItemId}
-            opciones={[{ value:'', label:'Elige el servicio' }, ...servicios.map((s) => ({ value:s.id, label:s.name, detalle:s.price != null ? soles(s.price) : undefined }))]} />
+          <label className="field-label">{canchas ? 'Cancha' : 'Servicio'}</label>
+          <ComboPanel tipo="servicio" etiqueta={canchas ? 'Cancha' : 'Servicio'} value={itemId} alCambiar={setItemId}
+            opciones={[{ value:'', label: canchas ? 'Elige la cancha' : 'Elige el servicio' }, ...servicios.map((s) => ({ value:s.id, label:s.name, detalle:s.price != null ? soles(s.price) : undefined }))]} />
           <small className="muted" style={{ fontSize: 11.5 }}>
-            De él salen el precio y la duración: no se teclean.
+            {canchas ? 'El precio sale de la cancha y de la hora (día o noche): no se teclea.' : 'De él salen el precio y la duración: no se teclean.'}
           </small>
         </div>
+
+        {canchas && (
+          <>
+            <div>
+              <label className="field-label" htmlFor="nueva-turnos">Tiempo</label>
+              <select id="nueva-turnos" className="select" value={turnos} onChange={(e) => setTurnos(Number(e.target.value))}>
+                {[1, 2, 3, 4].map((n) => <option key={n} value={n}>{n * turno % 60 === 0 ? `${n * turno / 60} h` : `${n * turno} min`}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="field-label" htmlFor="nueva-semanas">Repetir</label>
+              <select id="nueva-semanas" className="select" value={semanas} onChange={(e) => setSemanas(Number(e.target.value))}>
+                {SEMANAS.map((n) => <option key={n} value={n}>{n === 1 ? 'Solo esta vez' : `Cada semana · ${n} semanas`}</option>)}
+              </select>
+            </div>
+          </>
+        )}
 
         {activos.length > 0 && (
           <div>

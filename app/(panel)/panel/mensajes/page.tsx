@@ -128,10 +128,10 @@ export default function MensajesPage() {
 }
 
 function Mensajes() {
-  const { companyId, compania, session } = useSesion();
+  const { companyId, compania, session, canchas } = useSesion();
   const conCitas = esAppointmentFamily(compania?.business_mode);
   /** «cita» en una barbería, «reserva»/«clase»/«alumno» en una academia. Ver lib/panel/vocabulario. */
-  const v = vocabulario(compania?.business_mode);
+  const v = vocabulario(compania?.business_mode, { canchas });
   const comando = useComando();
   const params = useSearchParams();
   const leadDeLaUrl = params.get('lead');

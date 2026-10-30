@@ -135,8 +135,8 @@ function selloDe(c: Cita, ahora: number, esProxima: boolean): { label: string; c
 
 function MisCitas({ companyId }: { companyId: string }) {
   const comando = useComando();
-  const { compania } = useSesion();
-  const v = vocabulario(compania?.business_mode);
+  const { compania, canchas } = useSesion();
+  const v = vocabulario(compania?.business_mode, { canchas });
   const palabra = v.reserva === 'pedido' ? 'reserva' : v.reserva;
   const palabras = v.reserva === 'pedido' ? 'reservas' : v.reservas;
   const params = useSearchParams();

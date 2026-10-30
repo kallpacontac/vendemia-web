@@ -263,3 +263,13 @@
 .tp-rec-hoja h4 { margin: 12px 0 2px; font-size: 12px; text-transform: uppercase; letter-spacing: .03em; color: var(--ink-soft); }
 .tp-rec-hoja p { margin: 2px 0; white-space: pre-wrap; overflow-wrap: anywhere; }
 .tp-rec-acciones { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+
+/* ── Canchas por horas (ui/Canchas.tsx) y «Avísame» (ui/Avisame.tsx) ───────── */
+.tp-panel-canchas-noche { display: grid; grid-template-columns: minmax(150px, 200px) 1fr; gap: 10px; align-items: end; }
+.tp-panel-canchas-fila { cursor: default; flex-wrap: wrap; }
+.tp-panel-canchas-precio { display: flex; align-items: center; gap: 6px; flex: none; }
+.tp-panel-canchas-precio .input { width: 96px; }
+.tp-avisame-fila { display: grid; grid-template-columns: 1fr auto; gap: 8px 12px; align-items: center; padding: 12px 14px; border-top: 1px solid var(--line); }
+.tp-avisame-fila small { display: block; color: var(--ink-soft); }
+.tp-avisame-fila .tp-rec-acciones { grid-column: 1 / -1; margin-top: 0; }
+@media (max-width: 560px) { .tp-panel-canchas-noche { grid-template-columns: 1fr; } }

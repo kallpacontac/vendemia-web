@@ -1167,3 +1167,63 @@ body:has(.tp[data-plantilla='restaurante']) { margin: 0; }
 .tp[data-plantilla='luxury'] .tp-modulo--luxury-productos .tp-tarjeta { border-color: var(--tp-line); }
 .tp[data-plantilla='luxury'] .tp-luxury-productos__controles button { color: var(--tp-ink); }
 .tp[data-plantilla='luxury'] .tp-luxury-productos__controles button:hover { background: var(--tp-tint); }
+
+/* ══════════════════════════════════════════════════════════════════════════
+   CANCHAS · la tabla de /reservar (publico/TablaCanchas.tsx)
+   Columnas = canchas, filas = horas. En el celular se desliza de lado con la
+   columna de horas fija. Verde libre, rojo suave ocupada, color del negocio
+   lo elegido.
+   ══════════════════════════════════════════════════════════════════════════ */
+.tp-canchas { --tp-libre: #e8f7ee; --tp-libre-tinta: #146c3a; --tp-ocupada: #fdeeee; --tp-ocupada-tinta: #b3473f; }
+.tp-canchas__dias { margin-bottom: 12px; }
+.tp-canchas__tipos { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 6px; margin-bottom: 8px; scrollbar-width: none; }
+.tp-canchas__leyenda { display: flex; flex-wrap: wrap; gap: 6px 16px; margin: 4px 0 12px; padding: 0; list-style: none; color: var(--tp-suave); font-size: 13px; }
+.tp-canchas__leyenda li { display: flex; align-items: center; gap: 6px; }
+.tp-canchas__leyenda i { width: 14px; height: 14px; border-radius: 4px; border: 1px solid var(--tp-borde); }
+.tp-canchas__leyenda i.libre { background: var(--tp-libre); border-color: color-mix(in srgb, var(--tp-libre-tinta) 35%, transparent); }
+.tp-canchas__leyenda i.ocupada { background: var(--tp-ocupada); border-color: color-mix(in srgb, var(--tp-ocupada-tinta) 30%, transparent); }
+.tp-canchas__leyenda i.elegida { background: var(--tp-color); border-color: var(--tp-color); }
+
+.tp-canchas__marco { overflow-x: auto; border: 1px solid var(--tp-borde); border-radius: var(--tp-radio); background: var(--tp-papel); -webkit-overflow-scrolling: touch; }
+.tp-canchas__tabla { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 14px; }
+.tp-canchas__tabla thead th {
+  position: sticky; top: 0; z-index: 1; min-width: 104px; padding: 10px 8px; text-align: center; vertical-align: bottom;
+  background: color-mix(in srgb, var(--tp-color) 10%, var(--tp-papel)); border-bottom: 1px solid var(--tp-borde);
+}
+.tp-canchas__tabla thead b { display: block; font-size: 13px; line-height: 1.25; }
+.tp-canchas__tabla thead small { display: block; margin-top: 2px; color: var(--tp-suave); font-size: 12px; font-weight: 600; }
+.tp-canchas__tabla td { padding: 4px; border-bottom: 1px solid var(--tp-borde); }
+.tp-canchas__tabla tr:last-child td, .tp-canchas__tabla tr:last-child th { border-bottom: 0; }
+.tp-canchas__hora {
+  position: sticky; left: 0; z-index: 2; width: 64px; min-width: 64px; padding: 0 8px; text-align: center;
+  background: var(--tp-papel); border-right: 1px solid var(--tp-borde); font-variant-numeric: tabular-nums; font-weight: 700;
+}
+.tp-canchas__tabla tbody .tp-canchas__hora { border-bottom: 1px solid var(--tp-borde); }
+.tp-canchas__tabla thead .tp-canchas__hora { z-index: 3; min-width: 64px; color: var(--tp-suave); font-size: 12px; }
+
+.tp-canchas__casilla {
+  display: flex; align-items: center; justify-content: center; gap: 4px; width: 100%; min-height: 44px; padding: 0 6px;
+  border-radius: 10px; border: 1px solid transparent; font: inherit; font-weight: 750; font-variant-numeric: tabular-nums; white-space: nowrap;
+}
+button.tp-canchas__casilla { cursor: pointer; }
+.tp-canchas__casilla.libre { background: var(--tp-libre); color: var(--tp-libre-tinta); border-color: color-mix(in srgb, var(--tp-libre-tinta) 22%, transparent); }
+.tp-canchas__casilla.libre.elegida { background: var(--tp-color); color: var(--tp-tinta); border-color: var(--tp-color); }
+.tp-canchas__casilla.ocupada { background: var(--tp-ocupada); color: var(--tp-ocupada-tinta); font-size: 12.5px; font-weight: 650; }
+.tp-canchas__casilla.apagada { color: var(--tp-borde); font-weight: 400; }
+.tp-canchas__casilla:focus-visible { outline: 2px solid var(--tp-color); outline-offset: 2px; }
+
+.tp-canchas__hoja { margin-top: 16px; padding: 16px; border: 1px solid var(--tp-borde); border-radius: var(--tp-radio); background: var(--tp-papel); }
+.tp-canchas__hoja-cabeza { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.tp-canchas__hoja-cabeza h2 { margin: 0; font-size: 19px; font-weight: 800; }
+.tp-canchas__hoja .tp-lead { margin: 4px 0 4px; }
+.tp-canchas__hoja .tp-reserva-resumen { margin-top: 12px; }
+.tp-canchas__hoja .tp-boton { margin-top: 12px; }
+.tp-canchas__cerrar { width: 40px; height: 40px; display: grid; place-items: center; border-radius: 50%; border: 1px solid var(--tp-borde); background: var(--tp-campo); color: inherit; cursor: pointer; }
+.tp-canchas__acepto { display: flex; gap: 10px; align-items: flex-start; margin: 4px 0 8px; font-size: 14px; color: var(--tp-suave); }
+.tp-canchas__acepto input { width: 20px; height: 20px; margin: 1px 0 0; flex: none; accent-color: var(--tp-color); }
+.tp-canchas__ok { display: flex; gap: 8px; align-items: flex-start; margin: 12px 0 0; padding: 12px 14px; border-radius: 10px; background: #e7f8ee; color: #146c3a; font-weight: 600; }
+.tp[data-diseno='agenda'] .tp-canchas, .tp[data-diseno='ambos'] .tp-canchas { max-width: none; }
+@media (max-width: 560px) {
+  .tp-canchas__tabla thead th { min-width: 92px; }
+  .tp-canchas__hora, .tp-canchas__tabla thead .tp-canchas__hora { width: 56px; min-width: 56px; }
+}

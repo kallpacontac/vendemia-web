@@ -62,6 +62,9 @@ const urlVista = (slug: string, valores: {
 };
 import { Pedidos, Reservas } from '@/modules/tu-pagina/ui/PedidosYReservas';
 import Reclamos from '@/modules/tu-pagina/ui/Reclamos';
+import Avisame from '@/modules/tu-pagina/ui/Avisame';
+import { ConfigDeCanchas } from '@/modules/tu-pagina/ui/Canchas';
+import { normalizarCanchas, type ConfigCanchas } from '@/modules/tu-pagina/dominio/canchas';
 import { proveedorCompleto, rucValido, type Proveedor } from '@/modules/tu-pagina/dominio/reclamos';
 import {
   ESTADOS,
@@ -84,7 +87,7 @@ interface Pagina {
   whatsapp: string;
   secciones: {
     catalogo?: boolean; reservar?: boolean; envios?: boolean; tipos?: TiposDePagina; apariencia?: AparienciaPagina;
-    reclamos?: boolean; proveedor?: Partial<Proveedor>;
+    reclamos?: boolean; proveedor?: Partial<Proveedor>; canchas?: ConfigCanchas;
   };
   logo_url: string | null;
   portada_url: string | null;
@@ -96,7 +99,7 @@ interface Pagina {
 
 const POR_PAGINA = 50;
 
-type Pestana = 'pedidos' | 'reservas' | 'envios' | 'reclamos' | 'pagina';
+type Pestana = 'pedidos' | 'reservas' | 'envios' | 'reclamos' | 'avisame' | 'pagina';
 
 type Es = TipoPagina;
 const ES = EXPERIENCIAS;
@@ -137,6 +140,7 @@ export default function PanelTuPagina() {
     { id: 'pagina' as const, nombre: 'La página' },
     ...(s.reclamos ? [{ id: 'reclamos' as const, nombre: 'Reclamos' }] : []),
     ...(s.catalogo && !agendaNube ? [{ id: 'pedidos' as const, nombre: 'Pedidos' }] : []),
+    ...(s.reservar && s.canchas?.activo ? [{ id: 'avisame' as const, nombre: 'Avísame' }] : []),
     ...(s.reservar && !agendaNube ? [{ id: 'reservas' as const, nombre: esRecurrente(compania?.business_mode) ? 'Cupos' : 'Reservas' }] : []),
     ...(s.envios ? [{ id: 'envios' as const, nombre: 'Envíos' }] : []),
   ];
@@ -172,6 +176,8 @@ export default function PanelTuPagina() {
               <MiPagina companyId={companyId} nombre={compania?.nombre ?? ''} pagina={pagina ?? null} agendaNube={agendaNube} alGuardar={releer} />
             ) : activa === 'pedidos' ? (
               <Pedidos companyId={companyId} nombre={pagina?.titulo || compania?.nombre || ''} />
+            ) : activa === 'avisame' ? (
+              <Avisame companyId={companyId} slug={pagina?.slug ?? ''} negocio={pagina?.titulo || compania?.nombre || ''} />
             ) : activa === 'reservas' ? (
               <Reservas companyId={companyId} nombre={pagina?.titulo || compania?.nombre || ''} />
             ) : activa === 'reclamos' ? (
@@ -205,7 +211,8 @@ function MiPagina({ companyId, nombre, pagina, agendaNube, alGuardar }: {
   const tipoSugerido = tienda || esNegocioGastronomico(nombre) ? 'tienda' : 'agenda';
   const [envios, setEnvios] = useState(pagina?.secciones?.envios ?? false);
   const [reclamos, setReclamos] = useState(pagina?.secciones?.reclamos ?? false);
-  const [funcionesAbiertas, setFuncionesAbiertas] = useState(Boolean(pagina?.secciones?.envios || pagina?.secciones?.reclamos));
+  const [canchas, setCanchas] = useState<ConfigCanchas>(pagina?.secciones?.canchas ?? { desde: '18:00' });
+  const [funcionesAbiertas, setFuncionesAbiertas] = useState(Boolean(pagina?.secciones?.envios || pagina?.secciones?.reclamos || pagina?.secciones?.canchas?.activo));
   const [proveedor, setProveedor] = useState<Proveedor>({
     razon_social: pagina?.secciones?.proveedor?.razon_social ?? '',
     ruc: pagina?.secciones?.proveedor?.ruc ?? '',
@@ -293,6 +300,7 @@ function MiPagina({ companyId, nombre, pagina, agendaNube, alGuardar }: {
             envios, catalogo, reservar, tipos: es === 'ambos' ? tipos : {},
             apariencia: aparienciaPublicada,
             reclamos,
+            canchas: normalizarCanchas({ ...canchas, activo: Boolean(canchas.activo && reservar) }),
             proveedor: { razon_social: proveedor.razon_social.trim(), ruc: proveedor.ruc.replace(/\D/g, ''), direccion: proveedor.direccion.trim() },
           },
           distritos: distritos.split(/[,\n]/).map((d) => d.trim()).filter(Boolean),
@@ -504,11 +512,16 @@ function MiPagina({ companyId, nombre, pagina, agendaNube, alGuardar }: {
 
         {/* Lo que no todos necesitan: se enciende si se quiere y solo entonces pide sus datos. */}
         <details className="tp-panel-avanzado" open={funcionesAbiertas} onToggle={(e) => setFuncionesAbiertas(e.currentTarget.open)}>
-          <summary>Agregar funciones <small>Envíos y Libro de Reclamaciones, si los necesitas</small></summary>
+          <summary>Agregar funciones <small>{reservar ? 'Canchas, envíos y Libro de Reclamaciones' : 'Envíos y Libro de Reclamaciones'}, si los necesitas</small></summary>
           <div className="tp-panel-avanzado__contenido">
         <div className="tp-panel-campo">
           <span>Apartados opcionales</span>
           <div className="tp-panel-apartados">
+            {reservar && (
+              <Apartado activo={Boolean(canchas.activo)} alCambiar={(activo) => setCanchas({ ...canchas, activo })} titulo="Canchas por horas" describe="Para canchas de fútbol, vóley o pádel: una tabla con cada cancha, sus horas libres y el precio de día y de noche.">
+                <ConfigDeCanchas companyId={companyId} valor={canchas} alCambiar={setCanchas} />
+              </Apartado>
+            )}
             <Apartado activo={envios} alCambiar={setEnvios} titulo="Agendar envíos" describe="Tus clientes te piden un recojo: dirección, distrito y fecha.">
               <label className="tp-panel-campo"><span>Distritos que atiendes <small className="muted">(vacío = cualquiera)</small></span><textarea className="input" rows={2} value={distritos} placeholder="Miraflores, Surco, San Isidro" onChange={(e) => setDistritos(e.target.value)} /></label>
             </Apartado>

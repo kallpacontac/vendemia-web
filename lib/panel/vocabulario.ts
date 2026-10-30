@@ -14,6 +14,7 @@
  *   appointment            barbería, salón, clínica   → cita · servicio · cliente
  *   recurring_appointment  academia, gimnasio         → reserva · clase · alumno
  *   ecommerce              tienda                     → pedido · producto · cliente
+ *   (con canchas encendidas en Mi página)               → reserva · cancha · cliente
  *
  * Sin modo (una compañía recién creada) se habla como a una de citas, que es lo
  * que eran todas antes de que existieran los otros dos.
@@ -103,7 +104,31 @@ const TIENDA: Vocabulario = {
   aItem: 'o',
 };
 
-export function vocabulario(modo: BusinessMode | null | undefined): Vocabulario {
+const CANCHAS: Vocabulario = {
+  reserva: 'reserva',
+  reservas: 'reservas',
+  sesion: 'reserva',
+  sesiones: 'reservas',
+  item: 'cancha',
+  items: 'canchas',
+  persona: 'cliente',
+  personas: 'clientes',
+  agenda: 'Reservas',
+  la: 'la',
+  esta: 'esta',
+  una: 'una',
+  a: 'a',
+  laItem: 'la',
+  aItem: 'a',
+};
+
+/**
+ * `canchas`: el negocio tiene la tabla de canchas encendida en Mi página
+ * (secciones.canchas, modules/tu-pagina/dominio/canchas.ts). Lo sabe la sesión
+ * (useSesion().canchas); manda sobre el modo, que un negocio de canchas tiene de citas.
+ */
+export function vocabulario(modo: BusinessMode | null | undefined, opciones?: { canchas?: boolean }): Vocabulario {
+  if (opciones?.canchas) return CANCHAS;
   if (modo === 'recurring_appointment') return ACADEMIA;
   if (modo === 'ecommerce') return TIENDA;
   return CITAS;

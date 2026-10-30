@@ -57,6 +57,10 @@ export interface DatosCrudos {
     slot_end: string | null;
     slot_minutes: number | null;
     employee_id: string | null;
+    /** Lo reservado (appointment_services.catalog_item_id), desde la 0011. Las canchas se ocupan por separado. */
+    catalog_id?: string | null;
+    /** created_at (segundos), desde la 0011. */
+    creada?: number | null;
     status: AppointmentStatus | null;
     periodo_desde: string | null;
     periodo_hasta: string | null;
@@ -205,6 +209,8 @@ export function armarEscaparate(c: DatosCrudos, como?: ComoSeOfrece | null): Esc
         inicio: a.slot_start,
         fin: a.slot_end && /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/.test(a.slot_end) ? a.slot_end : sumarMin(a.slot_start, a.slot_minutes || paso),
         empleado: a.employee_id ?? '',
+        item: a.catalog_id ?? '',
+        ...(a.status === 'pending_payment' && a.creada ? { apartadaDesde: Number(a.creada) } : {}),
       })),
     ...c.web
       .filter((r) => r.slot_end && /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/.test(r.slot_start))

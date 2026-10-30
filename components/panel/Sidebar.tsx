@@ -126,7 +126,7 @@ export default function Sidebar({
   modo?: BusinessMode | null;
 }) {
   const ruta = usePathname();
-  const { salir, compania, esAdminPlataforma, companyId } = useSesion();
+  const { salir, compania, esAdminPlataforma, companyId, canchas } = useSesion();
   // Mi página puede reservar o vender aunque el negocio sea de otro tipo: entonces
   // también le toca la Agenda o Pedidos, que es donde entra lo de la página.
   const pagina = useLoQueHaceLaPagina(soloGlobal ? null : companyId);
@@ -172,7 +172,7 @@ export default function Sidebar({
   const pintar = ({ href, icon: Icono, label: fijo }: Entrada, enHoja = false) => {
     // «Agenda» en una barbería, «Clases» en una academia. Ver lib/panel/vocabulario.
     const label =
-      href === '/panel/agenda' ? vocabulario(modo).agenda : href === RUTA_MI_AGENDA && esRecurrente(modo) ? 'Mis clases' : fijo;
+      href === '/panel/agenda' ? vocabulario(modo, { canchas }).agenda : href === RUTA_MI_AGENDA && esRecurrente(modo) ? 'Mis clases' : fijo;
     const clases = [
       'nav-item',
       esActivo(href) ? 'active' : '',

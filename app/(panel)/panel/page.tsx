@@ -57,7 +57,7 @@ function saludo() {
 }
 
 export default function Dashboard() {
-  const { companyId, compania } = useSesion();
+  const { companyId, compania, canchas } = useSesion();
   const [periodo, setPeriodo] = useState<ClavePeriodo>('semana');
   const seleccion = PERIODOS[periodo];
 
@@ -84,7 +84,7 @@ export default function Dashboard() {
 
   const hoy = isoLocal(new Date());
   const modo = compania?.business_mode ?? datos?.empresa?.business_mode;
-  const v = vocabulario(modo);
+  const v = vocabulario(modo, { canchas });
   const conCitas = esAppointmentFamily(modo);
   const serie = datos?.serie ?? [];
   const serieAnterior = datos?.serieAnterior ?? [];

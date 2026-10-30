@@ -22,6 +22,7 @@
  * más de la regla. Es deliberado y temporal: ver docs/PLAN-TU-PAGINA.md.
  */
 import type { ClaveDia, Horario } from '@/lib/supabase/types';
+import { abiertoEn, diaQueCubre, tramoDe } from '@/lib/panel/medianoche';
 
 const CLAVES: ClaveDia[] = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
 
@@ -30,6 +31,10 @@ export interface Ocupado {
   fin: string;
   /** '' = sin profesional asignado. */
   empleado: string;
+  /** Lo reservado (catalog.id), para las canchas: cada una se ocupa por separado. */
+  item?: string;
+  /** Apartada sin pagar (pending_payment): cuándo se creó, en segundos. Una cancha la suelta pasado su plazo. */
+  apartadaDesde?: number;
 }
 
 export interface DatosAgenda {
@@ -69,23 +74,13 @@ export function sumarMin(momento: string, min: number): string {
   return `${sumarDias(f, dias)} ${aHora(((total % 1440) + 1440) % 1440)}`;
 }
 
-/** El horario de un día, o null si cierra. */
-function franjaDelDia(h: Horario, clave: ClaveDia): { abre: number; cierra: number } | null {
-  const d = h[clave];
-  if (!d || d.closed || !d.open || !d.close) return null;
-  const abre = aMinutos(d.open);
-  const cierra = aMinutos(d.close);
-  return cierra > abre ? { abre, cierra } : null;
-}
+/** El horario de un día, o null si cierra. Puede cerrar pasada la medianoche (lib/panel/medianoche.ts). */
+const franjaDelDia = (h: Horario, clave: ClaveDia) => tramoDe(h[clave]);
 
 /** ¿Este profesional trabaja a esa hora? Su horario ∩ el del negocio; sin horario propio, el del negocio. */
 function enTurno(emp: { horario: Horario }, negocio: Horario, clave: ClaveDia, min: number): boolean {
-  const n = franjaDelDia(negocio, clave);
-  if (!n || min < n.abre || min >= n.cierra) return false;
-  if (Object.keys(emp.horario).length === 0) return true;
-  const p = franjaDelDia(emp.horario, clave);
-  if (!p) return false;
-  return min >= Math.max(n.abre, p.abre) && min < Math.min(n.cierra, p.cierra);
+  if (!abiertoEn(negocio, clave, min)) return false;
+  return Object.keys(emp.horario).length === 0 || abiertoEn(emp.horario, clave, min);
 }
 
 const pisa = (a: { inicio: string; fin: string }, t0: string, t1: string) => a.inicio < t1 && a.fin > t0;
@@ -104,9 +99,8 @@ function aforo(d: DatosAgenda, momento: string, paso: number, empleado: string |
   if (d.equipo.length > 0) {
     return d.equipo.filter((e) => !bloqueado(e.id) && enTurno(e, d.horario, clave, min)).length;
   }
-  const n = franjaDelDia(d.horario, clave);
-  if (!n || min < n.abre || min >= n.cierra) return 0;
-  return d.horario[clave]?.capacity ?? 1;
+  const dia = diaQueCubre(d.horario, clave, min);
+  return dia ? dia.capacity ?? 1 : 0;
 }
 
 export interface Decision {
@@ -141,6 +135,8 @@ export function decidir(d: DatosAgenda, inicio: string, duracion: number, emplea
 
 export interface HoraLibre {
   hora: string;
+  /** 'YYYY-MM-DD HH:MM'. Pasada la medianoche es del día siguiente al que se pidió. */
+  inicio: string;
   libres: number;
 }
 
@@ -154,11 +150,12 @@ export function horasLibres(d: DatosAgenda, fecha: string, duracion: number, emp
   const paso = pasoDelDia(d, fecha);
   const limite = sumarMin(ahora, 30);
   const fuera: HoraLibre[] = [];
+  // Si cierra pasada la medianoche, las horas de la madrugada salen en este día.
   for (let m = n.abre; m + duracion <= n.cierra; m += paso) {
-    const inicio = `${fecha} ${aHora(m)}`;
+    const inicio = sumarMin(`${fecha} 00:00`, m);
     if (inicio <= limite) continue;
     const r = decidir({ ...d, paso }, inicio, duracion, empleado);
-    if (r.ok) fuera.push({ hora: aHora(m), libres: r.libres });
+    if (r.ok) fuera.push({ hora: inicio.slice(11), inicio, libres: r.libres });
   }
   return fuera;
 }

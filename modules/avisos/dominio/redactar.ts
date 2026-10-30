@@ -126,6 +126,20 @@ export function redactar(eventos: EventoPendiente[]): Mensaje {
 
   switch (e.tipo) {
     case 'reserva': {
+      // Se liberó una cancha que alguien esperaba (Mi página › Avísame, tu-pagina 0011): a
+      // quién avisar está en esa pestaña. Va con las reservas para no pedir otra preferencia.
+      const libres = eventos.filter((x) => x.datos.clase === 'cancha_libre');
+      if (libres.length === n) {
+        const esperan = libres.reduce((t, x) => t + (Number(x.datos.esperan) || 0), 0);
+        return {
+          title: n === 1 ? `${prefijo}Se liberó ${String(e.datos.servicio ?? 'una cancha')}` : `${prefijo}Se liberaron ${n} canchas`,
+          body: n === 1
+            ? `${cuandoSlot(e.datos.slot)} · ${esperan === 1 ? '1 persona la esperaba' : `${esperan} personas la esperaban`}. Avísales por WhatsApp.`
+            : `${esperan} personas esperaban. Avísales por WhatsApp.`,
+          url: '/panel/tu-pagina?ver=avisame',
+          tag: `${tag}:libre`,
+        };
+      }
       // Lo que llega desde Tu página (pedidos_web / reservas_web): sin lead, con el nombre que escribió.
       const web = eventos.filter((x) => String(x.datos.clase ?? '').startsWith('web_'));
       if (web.length === n) {

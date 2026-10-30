@@ -64,7 +64,7 @@ const HORAS = Array.from({ length: 12 }, (_, i) => 9 + i);
 const COLORES = ['#FF4900', '#0E7C86', '#FBB040', '#0FA968', '#7C5CFF'];
 
 export default function Metricas() {
-  const { companyId, compania } = useSesion();
+  const { companyId, compania, canchas } = useSesion();
 
   /**
    * El periodo lo elige quien mira, y el grano por defecto lo trae el propio
@@ -127,7 +127,7 @@ export default function Metricas() {
   /** Cita puntual o grupo recurrente: los dos negocios que tienen citas que enseñar. */
   const conCitas = esAppointmentFamily(datos?.empresa?.business_mode);
   /** Cómo se llama cada cosa en este negocio. Ver lib/panel/vocabulario. */
-  const v = vocabulario(compania?.business_mode ?? datos?.empresa?.business_mode);
+  const v = vocabulario(compania?.business_mode ?? datos?.empresa?.business_mode, { canchas });
   /**
    * Las dos fechas por las que se puede agrupar, dichas como las entiende cada
    * negocio: una tienda no «reserva» ni «atiende», compra y entrega.

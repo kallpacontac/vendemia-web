@@ -10,6 +10,6 @@ import { vocabulario, type Vocabulario } from '@/lib/panel/vocabulario';
  * Ver lib/panel/vocabulario.
  */
 export function useVocabulario(): Vocabulario {
-  const { compania } = useSesion();
-  return vocabulario(compania?.business_mode);
+  const { compania, canchas } = useSesion();
+  return vocabulario(compania?.business_mode, { canchas });
 }

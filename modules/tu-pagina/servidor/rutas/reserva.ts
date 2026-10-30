@@ -5,12 +5,18 @@
  * decide el aforo con la misma regla que pintó la página (dominio/agenda.ts) y
  * Postgres, con un candado por negocio, cuenta lo ocupado y guarda. Si dos
  * personas tocan el último hueco a la vez, entra una y la otra recibe «lleno».
+ *
+ * Con la tabla de canchas encendida (dominio/canchas.ts) lo que se reserva con
+ * hora es una cancha: se ocupa por separado y admite varios turnos seguidos. El
+ * precio (día/noche) lo pone Postgres (v2_precio_cancha), con la misma regla que
+ * pinta la tabla.
  */
 import { revalidateTag } from 'next/cache';
 import { z } from 'zod';
 import { SLUG } from '@/modules/tu-pagina/dominio/config';
 import { decidir, pasoDelDia, sumarMin } from '@/modules/tu-pagina/dominio/agenda';
 import { armarEscaparate, validarCliente } from '@/modules/tu-pagina/dominio/tienda';
+import { MAX_TURNOS, canchaLibre, conCanchas, plazoDe } from '@/modules/tu-pagina/dominio/canchas';
 import { huellaIp, limitar, log, rpc, servidor } from '@/modules/tu-pagina/servidor/supabase';
 import { paginaDe } from '@/modules/tu-pagina/servidor/pagina';
 import { datosFrescos } from '@/modules/tu-pagina/servidor/escaparate';
@@ -23,6 +29,8 @@ const Cuerpo = z.object({
   inicio: z.string().regex(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/).optional(),
   grupo: z.string().max(80).optional(),
   profesional: z.string().max(80).optional(),
+  /** Canchas: cuántos turnos seguidos. */
+  turnos: z.number().int().min(1).max(MAX_TURNOS).optional(),
   nombre: z.string().max(80),
   telefono: z.string().max(20),
   beneficiario: z.string().max(80).optional(),
@@ -61,6 +69,12 @@ export async function POST(req: Request) {
       if (!g) return responder({ status: 'no_existe' }, 404);
       if (g.libres !== null && g.libres <= 0) return responder({ status: 'lleno' }, 409);
       datos = { tipo: 'grupo', slot_start: g.clave, capacidad: g.cupo, grupo: `${g.etiqueta}${g.etiqueta === g.cuando ? '' : ` (${g.cuando})`}` };
+    } else if (conCanchas(pagina.secciones)) {
+      if (!c.inicio) return responder({ status: 'datos_invalidos' }, 400);
+      if (c.inicio <= sumarMin(esc.ahora, 30)) return responder({ status: 'pasada' }, 409);
+      const minutos = item.duracion * (c.turnos ?? 1);
+      if (!canchaLibre(esc.agenda, item.id, c.inicio, minutos, plazoDe(pagina.secciones.canchas ?? {}))) return responder({ status: 'lleno' }, 409);
+      datos = { tipo: 'cancha', slot_start: c.inicio, minutos };
     } else {
       if (!c.inicio) return responder({ status: 'datos_invalidos' }, 400);
       const profesional = esc.pideProfesional && c.profesional ? c.profesional : null;
@@ -92,6 +106,8 @@ export async function POST(req: Request) {
     };
     // Con la agenda en la nube (0004) la reserva entra directo en la agenda real; si no, en reservas_web.
     let r = await rpc<{ status: string; codigo?: string }>(servidor(), 'agenda_srv_reservar', args);
+    // Las canchas necesitan la agenda en la nube: reservas_web no sabe ocuparlas por separado.
+    if (r.status === 'no_es_nube' && datos.tipo === 'cancha') return responder({ status: 'not_found' }, 404);
     if (r.status === 'no_es_nube') r = await rpc<{ status: string; codigo?: string }>(servidor(), 'reserva_srv_crear', args);
     if (r.status !== 'ok') return responder(r, r.status === 'lleno' || r.status === 'pasada' ? 409 : 400);
     revalidateTag(`tu-pagina:${c.slug.toLowerCase()}`);

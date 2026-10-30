@@ -5,6 +5,7 @@ import { SLUG } from '@/modules/tu-pagina/dominio/config';
 import type { TiposDePagina } from '@/modules/tu-pagina/dominio/tienda';
 import type { Proveedor } from '@/modules/tu-pagina/dominio/reclamos';
 import type { AparienciaPagina } from '@/modules/tu-pagina/dominio/apariencia';
+import type { ConfigCanchas } from '@/modules/tu-pagina/dominio/canchas';
 
 export interface Secciones {
   catalogo?: boolean;
@@ -16,6 +17,8 @@ export interface Secciones {
   /** Libro de Reclamaciones Virtual encendido (sql/0006). Con `proveedor` completo. */
   reclamos?: boolean;
   proveedor?: Partial<Proveedor>;
+  /** Tabla de canchas por horas y precio de noche (dominio/canchas.ts). */
+  canchas?: ConfigCanchas;
 }
 
 export interface PaginaPublica {

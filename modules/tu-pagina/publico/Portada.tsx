@@ -25,6 +25,7 @@ import { fotoDePlantilla } from '@/modules/tu-pagina/dominio/fotos';
 import { conVista, consultaVista } from '@/modules/tu-pagina/dominio/vista';
 import { FOTOS_SERVICIOS_LUXURY } from '@/modules/tu-pagina/dominio/fotos';
 import { soles } from '@/modules/tu-pagina/dominio/tienda';
+import { conCanchas } from '@/modules/tu-pagina/dominio/canchas';
 import AgendaPortada from '@/modules/tu-pagina/publico/AgendaPortada';
 
 type Props = { params: { slug: string }; searchParams?: Record<string, string | undefined> };
@@ -49,7 +50,11 @@ export default async function Portada({ params, searchParams }: Props) {
   const plantilla = plantillaValida(p.plantilla) ? p.plantilla : plantillaPorDefecto(tipo);
   const esLuxury = plantilla === 'luxury' && p.secciones.apariencia?.plantillaActiva && p.secciones.reservar;
   const conEscaparate = Boolean(p.secciones.catalogo || p.secciones.reservar);
-  const esc = conEscaparate ? await escaparateDe(p.slug, p.secciones) : null;
+  const escTodo = conEscaparate ? await escaparateDe(p.slug, p.secciones) : null;
+  // Con canchas, las canchas se reservan en la tabla de /reservar, no una a una aquí: en la
+  // portada quedan los productos y grupos, y el atajo de reservar.
+  const canchas = conCanchas(p.secciones);
+  const esc = escTodo && canchas ? { ...escTodo, items: escTodo.items.filter((i) => i.tipo !== 'cita') } : escTodo;
   const hayItems = Boolean(esc && esc.items.length > 0);
   const hayProductos = Boolean(esc?.items.some((item) => item.tipo === 'producto'));
   const catalogoLuxuryDestacado = Boolean(esLuxury && p.secciones.catalogo && p.secciones.apariencia?.catalogoLuxuryDestacado && hayProductos);
@@ -70,7 +75,7 @@ export default async function Portada({ params, searchParams }: Props) {
   const envioPrimero = !conEscaparate && Boolean(p.secciones.envios);
   // Lo que se reserva tiene su atajo arriba y su enlace propio (/reservar): en un
   // salón es lo primero que se busca, no algo a lo que se llega bajando.
-  const reservables = p.secciones.reservar ? (esc?.items ?? []).filter((i) => i.tipo !== 'producto') : [];
+  const reservables = p.secciones.reservar ? (escTodo?.items ?? []).filter((i) => i.tipo !== 'producto') : [];
   const soloGrupos = reservables.length > 0 && reservables.every((i) => i.tipo === 'grupo');
   const reservaGrande = !envioPrimero && tipo !== 'tienda' && !esLuxury;
 
@@ -95,8 +100,8 @@ export default async function Portada({ params, searchParams }: Props) {
     <a className={`tp-accion${reservaGrande ? ' tp-accion--grande' : ''}`} href={`./${p.slug}/reservar`}>
       <span className="tp-accion__icono"><CalendarDays size={22} aria-hidden="true" /></span>
       <span className="tp-accion__texto">
-        <b>{soloGrupos ? 'Separar mi cupo' : 'Reservar una cita'}</b>
-        <span>{soloGrupos ? 'Elige tu horario y separa tu lugar' : 'Elige el servicio, el día y la hora'}</span>
+        <b>{canchas ? 'Reservar una cancha' : soloGrupos ? 'Separar mi cupo' : 'Reservar una cita'}</b>
+        <span>{canchas ? 'Mira los horarios libres y los precios' : soloGrupos ? 'Elige tu horario y separa tu lugar' : 'Elige el servicio, el día y la hora'}</span>
       </span>
     </a>
   );

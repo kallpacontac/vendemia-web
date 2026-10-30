@@ -4,12 +4,17 @@
  * El enlace que va en la bio de Instagram de un salón: entra directo a sus
  * servicios y grupos, sin el carrito ni los productos. Es el mismo escaparate
  * de la portada con `solo="reservas"`; la reserva la decide el mismo servidor.
+ *
+ * Con canchas (dominio/canchas.ts), en vez del escaparate va la tabla del día:
+ * columnas = canchas, filas = horas, el precio en cada casilla.
  */
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { ChevronLeft } from 'lucide-react';
 import Marco from '@/modules/tu-pagina/publico/Marco';
 import Escaparate from '@/modules/tu-pagina/publico/Escaparate';
+import TablaCanchas from '@/modules/tu-pagina/publico/TablaCanchas';
+import { conCanchas } from '@/modules/tu-pagina/dominio/canchas';
 import { paginaDe } from '@/modules/tu-pagina/servidor/pagina';
 import { escaparateDe } from '@/modules/tu-pagina/servidor/escaparate';
 import { conVista, consultaVista } from '@/modules/tu-pagina/dominio/vista';
@@ -19,7 +24,7 @@ type Props = { params: { slug: string }; searchParams?: Record<string, string | 
 export async function generateMetadata({ params, searchParams }: Props): Promise<Metadata> {
   const guardada = await paginaDe(params.slug).catch(() => null);
   const p = guardada ? conVista(guardada, searchParams) : null;
-  return p?.secciones.reservar ? { title: `Reservar · ${p.titulo}`, ...(searchParams?.vista === '1' ? { robots: { index: false, follow: false } } : {}) } : { title: 'Vendemia', robots: { index: false } };
+  return p?.secciones.reservar ? { title: `${conCanchas(p.secciones) ? 'Reservar cancha' : 'Reservar'} · ${p.titulo}`, ...(searchParams?.vista === '1' ? { robots: { index: false, follow: false } } : {}) } : { title: 'Vendemia', robots: { index: false } };
 }
 
 export default async function PaginaReservar({ params, searchParams }: Props) {
@@ -31,6 +36,20 @@ export default async function PaginaReservar({ params, searchParams }: Props) {
   const soloGrupos = reservables.length > 0 && reservables.every((i) => i.tipo === 'grupo');
   const luxury = p.secciones.apariencia?.plantillaActiva && p.plantilla === 'luxury';
   const agendaDisenada = p.secciones.apariencia?.plantillaActiva && (p.plantilla === 'agenda' || p.plantilla === 'lista');
+
+  if (conCanchas(p.secciones)) return (
+    <Marco pagina={p} vista="agenda">
+      <div className="tp-hoja">
+        <a className="tp-volver" href={`../${p.slug}${consultaVista(searchParams)}`}>
+          <ChevronLeft size={18} aria-hidden="true" /> {p.titulo}
+        </a>
+        <h1 className="tp-h1">Reserva tu cancha</h1>
+        <p className="tp-lead">Elige el día y toca una hora libre. Para jugar más tiempo, toca también la hora siguiente de la misma cancha.</p>
+        {esc ? <TablaCanchas esc={esc} cfg={p.secciones.canchas ?? {}} slug={p.slug} whatsapp={p.whatsapp} negocio={p.titulo} />
+          : <p className="tp-vacio">Por ahora no hay canchas para reservar aquí. Escríbenos por WhatsApp.</p>}
+      </div>
+    </Marco>
+  );
 
   if (agendaDisenada) return <Marco pagina={p} vista="agenda">
     <main className="tp-agenda-reserva-pagina">

@@ -107,7 +107,7 @@ function guardar(clave: string, valor: unknown) {
 }
 
 /** Nombre y celular del cliente, recordados en este navegador. */
-function useCliente() {
+export function useCliente() {
   const [cliente, setCliente] = useState({ nombre: '', telefono: '' });
   useEffect(() => setCliente(leer(CLAVE_CLIENTE, { nombre: '', telefono: '' })), []);
   const recordar = useCallback((c: { nombre: string; telefono: string }) => guardar(CLAVE_CLIENTE, c), []);
@@ -558,7 +558,7 @@ function FichaProducto({ item, enCarrito, puedePedir, whatsapp, alAnadir, respal
   );
 }
 
-function CamposCliente({ d, errores, alCambiar, extra }: {
+export function CamposCliente({ d, errores, alCambiar, extra }: {
   d: { nombre: string; telefono: string };
   errores: ErroresCliente;
   alCambiar: (k: 'nombre' | 'telefono', v: string) => void;
@@ -608,7 +608,7 @@ function ResumenCita({ item, esc, inicio, profesional, esBarberia }: {
 }
 
 /** El envío al servidor con su idem: un doble toque no separa dos veces. */
-function useEnviar(ruta: string) {
+export function useEnviar(ruta: string) {
   const idem = useRef(nuevoIdem());
   const [enviando, setEnviando] = useState(false);
   const enviar = async (cuerpo: Record<string, unknown>) => {
@@ -645,7 +645,7 @@ function Reservar({ item, esc, slug, alTerminar, presentacion, esBarberia = fals
   );
   const horasDe = useCallback(
     (f: string) =>
-      horasLibres(esc.agenda, f, item.duracion, profesional || null, esc.ahora).filter((h) => !tomadas.has(`${f} ${h.hora}`)),
+      horasLibres(esc.agenda, f, item.duracion, profesional || null, esc.ahora).filter((h) => !tomadas.has(h.inicio)),
     [esc.agenda, esc.ahora, item.duracion, profesional, tomadas],
   );
   const [dia, setDia] = useState('');
@@ -663,7 +663,8 @@ function Reservar({ item, esc, slug, alTerminar, presentacion, esBarberia = fals
     setDia(dias.slice(pagina * 6, pagina * 6 + 6).find((f) => horasDe(f).length > 0) ?? '');
     setHora('');
   };
-  const inicio = dia && hora ? `${dia} ${hora}` : '';
+  // `hora` guarda el inicio entero: pasada la medianoche es del día siguiente.
+  const inicio = dia && hora ? hora : '';
   useEffect(() => {
     if (presentacion === 'agenda' && inicio && window.innerWidth <= 650) {
       requestAnimationFrame(() => document.getElementById('tp-agenda-datos')?.scrollIntoView({ behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' }));
@@ -715,7 +716,7 @@ function Reservar({ item, esc, slug, alTerminar, presentacion, esBarberia = fals
     <div className="tp-agenda-widget__horas">
       <span className="tp-agenda-widget__paso">3 · HORA</span>
       <h3>Hora disponible</h3>
-      {horas.length ? <div role="group" aria-label="Horas disponibles">{horas.map((h) => <button key={h.hora} type="button" aria-pressed={hora === h.hora} onClick={() => setHora(h.hora)}>{h.hora}</button>)}</div> : <p>Elige un día con horarios disponibles.</p>}
+      {horas.length ? <div role="group" aria-label="Horas disponibles">{horas.map((h) => <button key={h.inicio} type="button" aria-pressed={hora === h.inicio} onClick={() => setHora(h.inicio)}>{h.hora}</button>)}</div> : <p>Elige un día con horarios disponibles.</p>}
     </div>
     {inicio && <div className="tp-agenda-widget__datos" id="tp-agenda-datos">
       <span className="tp-agenda-widget__paso">4 · TUS DATOS</span>
@@ -761,7 +762,7 @@ function Reservar({ item, esc, slug, alTerminar, presentacion, esBarberia = fals
         {horas.length ? (
           <div className="tp-horas" role="group" aria-labelledby="tp-hora-l">
             {horas.map((h) => (
-              <button key={h.hora} type="button" className="tp-opcion" aria-pressed={hora === h.hora} onClick={() => setHora(h.hora)}>
+              <button key={h.inicio} type="button" className="tp-opcion" aria-pressed={hora === h.inicio} onClick={() => setHora(h.inicio)}>
                 {h.hora}
               </button>
             ))}

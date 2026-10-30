@@ -17,6 +17,7 @@ import type { AppointmentStatus, ClaveDia, Horario } from '@/lib/supabase/types'
 import { isoLocal } from './format';
 import { ocupaHora } from './adelantos';
 import { quienDeCita } from './ficha';
+import { abiertoEn, diaQueCubre, tramoDe } from './medianoche';
 
 const CLAVES: ClaveDia[] = [
   'sunday',
@@ -120,15 +121,11 @@ function enTurnoA(
   clave: ClaveDia,
   hora: string,
 ): boolean {
-  const c = negocio[clave];
-  if (!c || c.closed || !c.open || !c.close) return false;
+  // Cada horario puede cerrar pasada la medianoche: lib/panel/medianoche.ts.
+  const min = aMinutos(hora);
+  if (!abiertoEn(negocio, clave, min)) return false;
   // Sin horario propio: el del negocio, tal cual.
-  if (Object.keys(emp.horario).length === 0) return c.open <= hora && hora < c.close;
-  const p = emp.horario[clave];
-  if (!p || p.closed || !p.open || !p.close) return false;
-  const abre = c.open > p.open ? c.open : p.open;
-  const cierra = c.close < p.close ? c.close : p.close;
-  return cierra > abre && abre <= hora && hora < cierra;
+  return Object.keys(emp.horario).length === 0 || abiertoEn(emp.horario, clave, min);
 }
 
 const aMinutos = (hhmm: string): number => {
@@ -172,11 +169,14 @@ export function construirSemana(offset: number, e: Entrada): Semana {
   // por la mañana desaparecían de la vista.
   let abre = Infinity;
   let cierra = -Infinity;
+  /** Hasta dónde llega la madrugada de los días que cierran pasada la medianoche (0 = ninguno). */
+  let madrugada = 0;
   for (const f of dias) {
-    const d = e.horario[CLAVES[f.getDay()]];
-    if (!d || d.closed || !d.open || !d.close) continue;
-    abre = Math.min(abre, aMinutos(d.open));
-    cierra = Math.max(cierra, aMinutos(d.close));
+    const t = tramoDe(e.horario[CLAVES[f.getDay()]]);
+    if (!t) continue;
+    abre = Math.min(abre, t.abre);
+    cierra = Math.max(cierra, Math.min(t.cierra, 1440));
+    if (t.cierra > 1440) madrugada = Math.max(madrugada, t.cierra - 1440);
   }
   // Sin horario configurado, una franja razonable para que la rejilla no salga vacía.
   if (!Number.isFinite(abre) || !Number.isFinite(cierra)) {
@@ -185,22 +185,22 @@ export function construirSemana(offset: number, e: Entrada): Semana {
   }
 
   const horas: string[] = [];
+  // La madrugada va arriba (00:00…), como en el día al que pertenece por fecha.
+  for (let m = 0; m < Math.min(madrugada, abre); m += paso) horas.push(aHora(m));
   for (let m = abre; m < cierra; m += paso) horas.push(aHora(m));
 
   const totales = { reservado: 0, libre: 0, capacidad: 0 };
 
   const agenda: DiaAgenda[] = dias.map((fecha) => {
     const clave = CLAVES[fecha.getDay()];
-    const conf = e.horario[clave];
-    const abierto = Boolean(conf && !conf.closed && conf.open && conf.close);
-    const desde = abierto ? aMinutos(conf!.open!) : 0;
-    const hasta = abierto ? aMinutos(conf!.close!) : 0;
-    const sillas = conf?.capacity ?? 1;
     const iso = isoLocal(fecha);
 
     const huecos = horas.map((hora) => {
       const min = aMinutos(hora);
-      const cerrado = !abierto || min < desde || min >= hasta;
+      // El día que cubre esta hora: el propio, o el anterior si cerró pasada la medianoche.
+      const conf = diaQueCubre(e.horario, clave, min);
+      const cerrado = !conf;
+      const sillas = conf?.capacity ?? 1;
       const inicio = new Date(fecha);
       inicio.setHours(Math.floor(min / 60), min % 60, 0, 0);
       const fin = new Date(inicio.getTime() + paso * 60000);

@@ -301,6 +301,10 @@ export interface ResultadoCrearCita {
   estado: 'confirmed';
   mensaje: string;
   wa_link: string;
+  /** Canchas (modules/tu-pagina/sql/0011): el turno fijo creado y las semanas que entraron o no. */
+  fija_id?: string | null;
+  creadas?: string[];
+  saltadas?: { slot_start: string; motivo: string }[];
 }
 
 /** Lo que devuelve `marcar_cumplido`. */
