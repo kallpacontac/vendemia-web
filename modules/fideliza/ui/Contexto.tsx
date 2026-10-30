@@ -44,6 +44,8 @@ interface Estado {
 }
 
 const Ctx = createContext<Estado | null>(null);
+/** Solo para vistas previas y pruebas: pintar una pantalla con un contexto de ejemplo. */
+export const ContextoFideliza = Ctx;
 
 export function ProveedorFideliza({ children }: { children: React.ReactNode }) {
   const { companyId } = useSesion();

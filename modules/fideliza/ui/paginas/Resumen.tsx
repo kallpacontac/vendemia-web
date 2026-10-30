@@ -108,7 +108,7 @@ export default function Resumen() {
       titulo: 'Tu programa de premios',
       que: 'Cuántos sellos, puntos o visitas hacen falta y qué premio se gana. Al publicarlo, la gente ya puede crear su tarjeta.',
       hecho: vivo?.status === 'active' || vivo?.status === 'paused',
-      href: vivo ? '/panel/fideliza/programa?paso=5' : '/panel/fideliza/programa?paso=1',
+      href: '/panel/fideliza/club',
       boton: vivo ? 'Publicar' : 'Crear',
     },
     {
@@ -197,7 +197,7 @@ export default function Resumen() {
                 Activa una tarjeta de puntos: sellos por compra, puntos por gasto o visitas, con premio. Tus clientes la guardan en el móvil o en Google Wallet.
               </p>
             </div>
-            <Link className="btn btn-primary" href="/panel/fideliza/programa?paso=1">
+            <Link className="btn btn-primary" href="/panel/fideliza/club">
               Activar tarjeta de puntos
             </Link>
           </div>

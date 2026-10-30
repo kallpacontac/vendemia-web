@@ -8,6 +8,7 @@
  * operaciones anteriores siguen con la regla con la que se hicieron.
  */
 import { cloneElement, Suspense, useEffect, useMemo, useState, type ReactElement } from 'react';
+import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { Check, Plus } from 'lucide-react';
 import { useFideliza } from '@/modules/fideliza/ui/Contexto';
@@ -449,6 +450,13 @@ function ProgramaPagina() {
     `data:image/svg+xml,${encodeURIComponent(svgArteWallet(datosArteWallet(marca.bg_color, estiloVistaWallet, b.rule_type ?? 'stamps', metaVistaWallet, saldoVistaWallet)))}`;
   return (
     <>
+      {(b.rule_type ?? 'stamps') === 'stamps' && (
+        <div className="fz-fila" style={{ justifyContent: 'flex-end', marginBottom: 8 }}>
+          <Link className="btn btn-ghost btn-sm" href="/panel/fideliza/club">
+            Editar en una sola pantalla
+          </Link>
+        </div>
+      )}
       {p && (
         <div className="fz-panel-aviso fz-panel-aviso--info">
           <span style={{ flex: 1 }}>
