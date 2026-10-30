@@ -17,7 +17,7 @@
  */
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
-import { Camera, CameraOff, Gift, Plus, Search, ShoppingBag } from 'lucide-react';
+import { Camera, CameraOff, Check, Gift, MonitorSmartphone, Plus, Search, ShoppingBag, Undo2, UserRound } from 'lucide-react';
 import { useFideliza } from '@/modules/fideliza/ui/Contexto';
 import { Cargando, Qr, SinPermiso } from '@/modules/fideliza/ui/Estados';
 import { useAvisar } from '@/components/panel/Avisos';
@@ -25,6 +25,8 @@ import { useCargar } from '@/components/panel/useCargar';
 import { accion, ErrorFideliza, lecturas, mensaje, nuevaClave, sincronizarEnSegundoPlano } from '@/modules/fideliza/cliente/api';
 import { urlTarjeta } from '@/modules/fideliza/dominio/config';
 import { aCentimos, soles, unidades, type TipoRegla } from '@/modules/fideliza/dominio/formato';
+import { selloValido, trazoSello } from '@/modules/fideliza/dominio/sellos';
+import type { Estilo } from '@/modules/fideliza/dominio/estilo';
 
 interface MiembroCaja {
   id: string;
@@ -42,6 +44,7 @@ interface MiembroCaja {
 
 interface Resultado {
   status: 'created' | 'replayed';
+  transaction_id?: string;
   kind?: string;
   units?: number;
   amount_cents?: number;
@@ -74,12 +77,24 @@ export default function Caja() {
   const [camara, setCamara] = useState(false);
   const [alta, setAlta] = useState<null | { alias: string; phone: string; verificado: boolean; clave: string; creado?: { code: string; token: string | null } }>(null);
   const video = useRef<HTMLVideoElement>(null);
+  /**
+   * MODO MOSTRADOR: la pantalla de la caja pensada para el mostrador (tableta o
+   * móvil apoyado): cartilla grande, un botón «Dar sello», y después «Sello
+   * puesto · Deshacer · Otro cliente» o «¡Ganó!». Se recuerda por equipo.
+   */
+  const [mostrador, setMostrador] = useState(false);
+  const [hecho, setHecho] = useState<null | { tipo: 'registrar' | 'canjear' | 'deshacer'; r: Resultado }>(null);
 
   const { datos: sucursales } = useCargar(async () => (companyId ? lecturas.sucursales(companyId) : []), [companyId]);
   const activas = (sucursales ?? []).filter((s) => s.is_active);
 
   useEffect(() => {
     if (!companyId) return;
+    try {
+      setMostrador(localStorage.getItem(`fz:mostrador:${companyId}`) === '1');
+    } catch {
+      /* nada */
+    }
     try {
       setSucursal(localStorage.getItem(`fz:sucursal:${companyId}`) ?? '');
     } catch {
@@ -191,6 +206,7 @@ export default function Caja() {
           ? `Canjeado: ${r.description ?? 'premio'}. Le quedan ${r.member.rewards_available} premio(s).`
           : `${r.units ? `+${unidades(r.units, tipo)}` : 'Registrada, sin sumar (por debajo del mínimo)'}. Saldo: ${unidades(r.member.balance, tipo)}.${r.rewards_issued ? ` ¡Premio conseguido! (${r.rewards_issued})` : ''}`;
       setUltimo({ texto: r.status === 'replayed' ? `Ya estaba registrado: ${texto}` : texto, tono: 'ok' });
+      if (mostrador) setHecho({ tipo: p.tipo, r });
       sincronizarEnSegundoPlano(companyId!);
     } catch (e) {
       const sinRespuesta = e instanceof ErrorFideliza && (e.status === 0 || e.status >= 500);
@@ -224,12 +240,50 @@ export default function Caja() {
 
   function canjear(rewardId: string | null) {
     if (!m) return;
-    if (!window.confirm(`¿Entregar ahora el premio «${m.rewards.find((r) => r.id === rewardId)?.description ?? m.reward_description}»?`)) return;
+    if (!mostrador && !window.confirm(`¿Entregar ahora el premio «${m.rewards.find((r) => r.id === rewardId)?.description ?? m.reward_description}»?`)) return;
     void enviar({
       tipo: 'canjear',
       clave: nuevaClave(),
       datos: { companyId, memberId: m.id, rewardId, locationId: sucursal || null },
     });
+  }
+
+  function cambiarMostrador(v: boolean) {
+    setMostrador(v);
+    setHecho(null);
+    try {
+      localStorage.setItem(`fz:mostrador:${companyId}`, v ? '1' : '0');
+    } catch {
+      /* nada */
+    }
+  }
+
+  /** «Deshacer»: devuelve la operación recién hecha (queda en el historial como devolución). */
+  async function deshacer() {
+    const tx = hecho?.r.transaction_id;
+    if (!tx) return;
+    setOcupado(true);
+    try {
+      await accion('caja.devolver', { companyId, transactionId: tx, amountCents: null, reason: 'Deshecho en el mostrador', idempotencyKey: nuevaClave() });
+      const lista = await accion<MiembroCaja[]>('caja.buscar', { companyId, q: hecho!.r.member.public_code });
+      if (lista[0]) setM(lista[0]);
+      setHecho(null);
+      setUltimo({ texto: 'Deshecho: la última operación se devolvió.', tono: 'info' });
+      sincronizarEnSegundoPlano(companyId!);
+    } catch (e) {
+      avisar(mensaje(e), 'error');
+    } finally {
+      setOcupado(false);
+    }
+  }
+
+  function otroCliente() {
+    setHecho(null);
+    setM(null);
+    setQ('');
+    setImporte('');
+    setRef('');
+    if (escanerPosible) setCamara(true);
   }
 
   async function crearCliente() {
@@ -255,8 +309,82 @@ export default function Caja() {
   }
 
   const umbral = m?.threshold ?? 0;
+  const sello = selloValido((ajustes?.page_style as Partial<Estilo> | null)?.sello);
+  const nombreDe = (x: MiembroCaja) => x.alias?.trim() || x.public_code;
+  const cartilla = (x: MiembroCaja, saldo: number) =>
+    x.rule_type !== 'points' && (x.threshold ?? 0) > 0 && (x.threshold ?? 0) <= 12 ? (
+      <div className="fz-mo__sellos" role="img" aria-label={`${saldo} de ${x.threshold}`}>
+        {Array.from({ length: x.threshold! }, (_, i) => (
+          <span key={i} className={i < saldo ? 'lleno' : ''}>
+            <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" dangerouslySetInnerHTML={{ __html: trazoSello(i === x.threshold! - 1 ? 'regalo' : sello) }} />
+          </span>
+        ))}
+      </div>
+    ) : (
+      <div className="fz-mo__puntos">
+        <b>{saldo.toLocaleString('es-PE')}</b> <span>de {x.threshold ?? '—'} {x.rule_type === 'visits' ? 'visitas' : 'puntos'}</span>
+        <div className="fz-barra"><i style={{ width: `${Math.max(0, Math.min(1, saldo / Math.max(1, x.threshold ?? 1))) * 100}%` }} /></div>
+      </div>
+    );
+  const verbo = (x: MiembroCaja) => (x.rule_type === 'visits' ? 'Registrar visita' : x.rule_type === 'points' ? 'Sumar puntos' : 'Dar sello');
+
+  // ── Pantallas del mostrador ────────────────────────────────────────────
+  if (mostrador && hecho) {
+    const r = hecho.r;
+    const x = r.member;
+    const meta = x.threshold ?? 0;
+    const gano = hecho.tipo === 'registrar' && (r.rewards_issued ?? 0) > 0;
+    return (
+      <div className="fz-caja fz-mo">
+        {gano ? (
+          <div className="fz-mo__fin fz-mo__fin--premio" role="status">
+            <Gift size={44} aria-hidden="true" />
+            <h2>¡{nombreDe(x)} ganó {x.reward_description ?? 'su premio'}!</h2>
+            <p>Entrégaselo ahora o en su siguiente visita: queda guardado en su tarjeta.</p>
+            <div className="fz-col2">
+              <button className="fz-gran fz-gran--sec" disabled={ocupado} onClick={() => canjear(x.rewards[0]?.id ?? null)}>
+                Entregar ahora
+              </button>
+              <button className="fz-gran fz-gran--ghost" onClick={otroCliente}>
+                Otro cliente
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="fz-mo__fin" role="status">
+            <span className="fz-mo__ok"><Check size={34} aria-hidden="true" /></span>
+            <h2>{hecho.tipo === 'canjear' ? 'Premio entregado' : x.rule_type === 'points' ? `+${r.units ?? 0} puntos` : r.units ? 'Sello puesto' : 'Registrado, sin sumar'}</h2>
+            <p>
+              {hecho.tipo === 'canjear'
+                ? `A ${nombreDe(x)} le quedan ${x.rewards_available} premio(s).`
+                : meta
+                  ? `${nombreDe(x)} lleva ${x.balance} de ${meta}.${x.rewards_available ? ` Tiene ${x.rewards_available} premio(s) por entregar.` : ''}`
+                  : `${nombreDe(x)} lleva ${x.balance}.`}
+            </p>
+            {hecho.tipo === 'registrar' && cartilla(x, x.balance)}
+            <div className="fz-col2">
+              {hecho.tipo === 'registrar' && r.transaction_id && r.status === 'created' ? (
+                <button className="fz-gran fz-gran--ghost" disabled={ocupado} onClick={() => void deshacer()}>
+                  <Undo2 size={18} /> Deshacer
+                </button>
+              ) : <span />}
+              <button className="fz-gran fz-gran--prim" onClick={otroCliente}>
+                Otro cliente
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+
   return (
     <div className="fz-caja">
+      <div className="fz-fila" style={{ justifyContent: 'flex-end', marginBottom: 10 }}>
+        <label className="check-inline" title="Pantalla grande para el mostrador: cartilla del cliente y un botón «Dar sello».">
+          <input type="checkbox" checked={mostrador} onChange={(e) => cambiarMostrador(e.target.checked)} /> <MonitorSmartphone size={15} /> Modo mostrador
+        </label>
+      </div>
       {activas.length > 0 && (
         <div className="fz-campo">
           <label className="field-label" htmlFor="suc">
@@ -381,7 +509,48 @@ export default function Caja() {
         </div>
       )}
 
-      {m && (
+      {m && mostrador && m.status === 'active' && (
+        <div className="card fz-mo">
+          <div className="fz-mo__quien">
+            <span className="fz-mo__avatar"><UserRound size={26} aria-hidden="true" /></span>
+            <div>
+              <b>{nombreDe(m)}</b>
+              <small className="fz-mono">{m.public_code}</small>
+            </div>
+          </div>
+          {cartilla(m, m.balance)}
+          {umbral > 0 && (
+            <p className="fz-mo__falta">
+              {m.balance >= umbral ? 'Ya llegó a la meta' : <>Le falta{umbral - m.balance === 1 ? '' : 'n'} <b>{umbral - m.balance}</b> para <b>{m.reward_description}</b></>}
+            </p>
+          )}
+          {m.rewards_available > 0 && (
+            <div className="fz-mo__aviso-premio">
+              <Gift size={20} aria-hidden="true" /> <span>Tiene {m.rewards_available === 1 ? 'un premio' : `${m.rewards_available} premios`}: <b>{m.rewards[0]?.description ?? m.reward_description}</b></span>
+              <button className="btn btn-sm" disabled={ocupado || (activas.length > 0 && !sucursal)} onClick={() => canjear(m.rewards[0]?.id ?? null)}>Entregar</button>
+            </div>
+          )}
+          {m.rule_type === 'points' && (
+            <input className="input fz-input-gran" inputMode="decimal" placeholder="Importe S/ 0,00" aria-label="Importe de la compra" value={importe} onChange={(e) => setImporte(e.target.value)} style={{ marginBottom: 10 }} />
+          )}
+          {ajustes?.require_external_ref && (
+            <input className="input" maxLength={64} value={ref} onChange={(e) => setRef(e.target.value)} placeholder="N.º de comprobante" aria-label="Número de comprobante" style={{ marginBottom: 10 }} />
+          )}
+          <button className="fz-gran fz-gran--prim fz-mo__dar" disabled={ocupado || (activas.length > 0 && !sucursal)} onClick={registrar}>
+            {ocupado ? 'Un momento…' : verbo(m)}
+          </button>
+          {activas.length > 0 && !sucursal && <p className="fz-def">Elige la sucursal arriba para poder operar.</p>}
+          {pendiente && !ocupado && (
+            <div className="fz-panel-aviso fz-panel-aviso--error" role="alert" style={{ marginTop: 12 }}>
+              <span style={{ flex: 1 }}>No llegó la confirmación. Nada se ha dado por hecho.</span>
+              <button className="btn btn-primary btn-sm" onClick={() => void enviar(pendiente)}>Reintentar</button>
+            </div>
+          )}
+          <button className="btn btn-ghost btn-sm" style={{ marginTop: 10 }} onClick={otroCliente}>Otro cliente</button>
+        </div>
+      )}
+
+      {m && !(mostrador && m.status === 'active') && (
         <div className="card">
           <div className="fz-miembro">
             <div>

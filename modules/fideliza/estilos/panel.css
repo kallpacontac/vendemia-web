@@ -317,3 +317,27 @@
 .fz-segmento--info i{background:#3b82f6}.fz-segmento--ok i{background:#1f9d63}.fz-segmento--alerta i{background:#e8a33d}.fz-segmento--peligro i{background:#d93025}.fz-segmento--neutro i{background:#a3a49e}
 .fz-segmento--alerta{background:#fdf5e9}.fz-segmento--peligro{background:#fdeeee}
 @media(max-width:900px){.fz-numeros__fila{grid-template-columns:minmax(0,1fr)}}
+
+/* ── Caja · modo mostrador ── */
+.fz-mo{text-align:center}
+.fz-mo__quien{display:flex;align-items:center;gap:12px;justify-content:center;margin-bottom:14px;text-align:left}
+.fz-mo__quien b{display:block;font-size:22px}
+.fz-mo__quien small{color:var(--ink-soft,#6b6c66)}
+.fz-mo__avatar{display:grid;place-items:center;width:52px;height:52px;border-radius:50%;background:var(--brand);color:var(--on-brand)}
+.fz-mo__sellos{display:grid;grid-template-columns:repeat(auto-fit,minmax(58px,64px));justify-content:center;gap:10px;margin:6px auto 12px;max-width:420px}
+.fz-mo__sellos span{display:grid;place-items:center;aspect-ratio:1;border-radius:50%;border:2.5px dashed var(--line,#d9d9d4);color:var(--ink-soft,#9a9b95)}
+.fz-mo__sellos span.lleno{border:none;background:var(--brand);color:var(--on-brand)}
+.fz-mo__sellos svg{width:55%;height:55%}
+.fz-mo__puntos{margin:6px auto 12px;max-width:420px}
+.fz-mo__puntos b{font-size:44px}
+.fz-mo__falta{font-size:15px;margin:0 0 14px}
+.fz-mo__aviso-premio{display:flex;align-items:center;gap:10px;justify-content:center;padding:12px 14px;border-radius:14px;background:#fff4d6;color:#5a3d00;margin-bottom:12px;text-align:left}
+.fz-mo__aviso-premio span{flex:1}
+.fz-mo__dar{min-height:76px;font-size:22px}
+.fz-mo__fin{display:flex;flex-direction:column;align-items:center;gap:8px;padding:28px 18px;border-radius:24px;background:#fff;border:1px solid var(--line,#eeefeb)}
+.fz-mo__fin h2{font-size:28px;margin:6px 0 0}
+.fz-mo__fin p{margin:0 0 10px;color:var(--ink-soft,#4b4c46);font-size:15px}
+.fz-mo__fin .fz-col2{width:100%;max-width:520px}
+.fz-mo__ok{display:grid;place-items:center;width:64px;height:64px;border-radius:50%;background:#e3f6ec;color:#1f9d63}
+.fz-mo__fin--premio{background:#ffc93c;border-color:#ffc93c;color:#2b1d00}
+.fz-mo__fin--premio p{color:#4a3500}
