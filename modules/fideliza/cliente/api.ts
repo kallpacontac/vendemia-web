@@ -209,6 +209,20 @@ async function lista<T>(q: PromiseLike<{ data: unknown; error: { message: string
   return (data ?? []) as T[];
 }
 
+/**
+ * Lee por páginas de 1000 (el tope de PostgREST) hasta `max` filas. Para las
+ * gráficas de «Tus números»: un negocio pequeño tiene unos pocos miles al año.
+ */
+async function todas<T>(armar: (desde: number, hasta: number) => PromiseLike<{ data: unknown; error: { message: string } | null }>, max = 30_000): Promise<T[]> {
+  const filas: T[] = [];
+  for (let i = 0; i < max; i += 1000) {
+    const pagina = await lista<T>(armar(i, i + 999));
+    filas.push(...pagina);
+    if (pagina.length < 1000) break;
+  }
+  return filas;
+}
+
 export const lecturas = {
   rol: async (companyId: string) => {
     const { data, error } = await sb().rpc('loyalty_role', { p_company: companyId });
@@ -256,6 +270,23 @@ export const lecturas = {
         .not('batch', 'is', null)
         .order('created_at', { ascending: false })
         .limit(2000),
+    ),
+  /** Compras y visitas desde una fecha (solo quién y cuándo), para «Tus números». */
+  visitasDesde: (companyId: string, desdeIso: string) =>
+    todas<{ member_id: string; created_at: string }>((a, z) =>
+      sb()
+        .from('loyalty_transactions')
+        .select('member_id, created_at')
+        .eq('company_id', companyId)
+        .in('kind', ['purchase', 'visit'])
+        .gte('created_at', desdeIso)
+        .order('created_at')
+        .range(a, z),
+    ),
+  /** Las tarjetas vivas: id y fecha de alta. */
+  altas: (companyId: string) =>
+    todas<{ id: string; created_at: string }>((a, z) =>
+      sb().from('loyalty_members').select('id, created_at').eq('company_id', companyId).neq('status', 'deleted').order('created_at').range(a, z),
     ),
   placas: (companyId: string) =>
     lista<Placa>(sb().from('loyalty_devices').select('*').eq('company_id', companyId).order('created_at', { ascending: false })),

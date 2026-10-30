@@ -292,3 +292,28 @@
 .fz-asistente{border:2px solid var(--brand);background:var(--brand-soft);border-radius:16px;padding:14px;margin-bottom:14px}
 .fz-asistente .fz-def{margin:4px 0 10px}
 .fz-asistente .fz-video{margin-bottom:4px}
+
+/* ── Tus números (Inicio): mismo lenguaje que el resumen del Dashboard ── */
+.fz-numeros{margin:6px 0 22px}
+.fz-numeros__cab{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:10px;margin-bottom:12px}
+.fz-numeros__cab h2{font-size:20px;margin:0;color:#20211d}
+.fz-numeros__cab p{margin:2px 0 0;color:#6b6c66;font-size:13px}
+.fz-numeros__fila{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:16px}
+.fz-numeros__card{min-width:0;display:flex;flex-direction:column;padding:18px;background:#fff;border:1px solid #eeefeb;border-radius:24px;box-shadow:0 8px 28px #24251f04,0 2px 4px #24251f02;color:#20211d}
+.fz-numeros__sub{margin:2px 0 12px;color:#6b6c66;font-size:12.5px}
+.fz-numeros__nota{margin:12px 0 0;font-size:13px;color:#4b4c46}
+.fz-calor{display:grid;gap:3px;overflow-x:auto;padding-bottom:4px}
+.fz-calor__fila{display:contents}
+.fz-calor__d{font-size:11px;color:#6b6c66;align-self:center}
+.fz-calor__h{font-size:10px;color:#8a8b85;text-align:center}
+.fz-calor i{display:block;height:20px;border-radius:5px;background:#ff7046}
+.fz-segmentos{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.fz-segmento{position:relative;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px 12px;border-radius:14px;background:#f4f5f2;overflow:hidden}
+.fz-segmento div{display:flex;flex-direction:column;min-width:0}
+.fz-segmento b{font-size:13.5px}
+.fz-segmento small{font-size:11.5px;color:#6b6c66}
+.fz-segmento strong{font-size:20px}
+.fz-segmento i{position:absolute;left:0;bottom:0;height:4px;border-radius:0 4px 4px 0;background:#25261f}
+.fz-segmento--info i{background:#3b82f6}.fz-segmento--ok i{background:#1f9d63}.fz-segmento--alerta i{background:#e8a33d}.fz-segmento--peligro i{background:#d93025}.fz-segmento--neutro i{background:#a3a49e}
+.fz-segmento--alerta{background:#fdf5e9}.fz-segmento--peligro{background:#fdeeee}
+@media(max-width:900px){.fz-numeros__fila{grid-template-columns:minmax(0,1fr)}}

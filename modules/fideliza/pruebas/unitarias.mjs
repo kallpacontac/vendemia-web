@@ -467,3 +467,29 @@ test('18 · catálogo de sellos por rubro', () => {
   assert.equal(s.sugerirRubro('Kallpa'), null);
   assert.equal(s.selloValido('<script>'), 'check');
 });
+
+test('19 · tus números: segmentos, regreso y horas en Lima', () => {
+  const nm = cargar('modules/fideliza/dominio/numeros.ts');
+  const D = 86_400_000;
+  const ahora = Date.parse('2026-10-30T20:00:00Z');
+  const dias = (...d) => d.map((x) => ahora - x * D);
+  assert.equal(nm.segmentoDe([], ahora), 'sin_visitas');
+  assert.equal(nm.segmentoDe(dias(5), ahora), 'nuevos');
+  assert.equal(nm.segmentoDe(dias(45), ahora), 'no_regresaron');
+  assert.equal(nm.segmentoDe(dias(2, 9, 16, 23, 30), ahora), 'fieles'); // cada 7 días, al día
+  assert.equal(nm.segmentoDe(dias(3, 10, 17), ahora), 'regulares');
+  assert.equal(nm.segmentoDe(dias(15, 22, 29), ahora), 'atrasados'); // ritmo 7, sin venir 15
+  assert.equal(nm.segmentoDe(dias(40, 47, 54), ahora), 'dormidos');
+  // Sábado 31-oct 15:00 UTC = sábado 10:00 en Lima.
+  assert.deepEqual(nm.diaYHora('2026-10-31T15:00:00Z'), { dia: 5, hora: 10 });
+  const altas = [{ id: 'a', created_at: new Date(ahora - 70 * D).toISOString() }, { id: 'b', created_at: new Date(ahora - 70 * D).toISOString() }];
+  const visitas = [
+    { member_id: 'a', created_at: new Date(ahora - 50 * D).toISOString() },
+    { member_id: 'a', created_at: new Date(ahora - 40 * D).toISOString() },
+    { member_id: 'b', created_at: new Date(ahora - 45 * D).toISOString() },
+  ];
+  const n = nm.calcularNumeros(visitas, altas, 30, ahora);
+  assert.equal(n.regresan, 50, 'de los que vinieron por primera vez hace 30–60 días, volvió la mitad');
+  assert.equal(n.vinieron, 0);
+  assert.equal(n.semanas.length, 12);
+});

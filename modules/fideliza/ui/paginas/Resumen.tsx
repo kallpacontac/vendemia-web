@@ -13,6 +13,7 @@ import { useFideliza } from '@/modules/fideliza/ui/Contexto';
 import { Cargando, Fallo, Vacio } from '@/modules/fideliza/ui/Estados';
 import LinkPublico from '@/modules/fideliza/ui/LinkPublico';
 import PrimerosPasos, { type Paso } from '@/modules/fideliza/ui/PrimerosPasos';
+import Numeros from '@/modules/fideliza/ui/Numeros';
 import { useCargar } from '@/components/panel/useCargar';
 import { accion, lecturas, type Enlace } from '@/modules/fideliza/cliente/api';
 import { urlNegocio, urlPlaca, urlPlacaQr } from '@/modules/fideliza/dominio/config';
@@ -267,8 +268,9 @@ export default function Resumen() {
         <Vacio titulo="Las métricas son para propietario, gerente y analista">Tu usuario puede operar la caja.</Vacio>
       ) : (
         <>
+          {companyId && <Numeros companyId={companyId} />}
           <div className="fz-fila" style={{ margin: '6px 0 14px', justifyContent: 'space-between' }}>
-            <h3 style={{ fontSize: 16 }}>Últimos {dias} días</h3>
+            <h3 style={{ fontSize: 16 }}>Más cifras · últimos {dias} días</h3>
             <div className="chip-tabs">
               {[7, 30, 90].map((n) => (
                 <button key={n} className={dias === n ? 'active' : ''} onClick={() => setDias(n)}>
