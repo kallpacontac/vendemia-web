@@ -72,7 +72,7 @@ async function etiqueta(e: Envio, negocio: string, i: number, base: string): Pro
   <div class="et-pie">
     <div class="et-cont">${e.contenido ? esc(e.contenido) : ''}
       <div class="et-de"><b>De:</b> ${esc(e.remitente_nombre)} · ${esc(telefonoBonito(e.remitente_telefono))}</div></div>
-    <div class="et-qr">${await qr(`${base}/panel/tu-pagina?envio=${encodeURIComponent(e.codigo)}`)}</div>
+    <div class="et-qr">${await qr(`${base}/panel/pedidos?envio=${encodeURIComponent(e.codigo)}`)}</div>
   </div>
 </div>`;
 }

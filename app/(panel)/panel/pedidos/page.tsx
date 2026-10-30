@@ -19,8 +19,23 @@
  * ⚠️ No es una pantalla de gestión de pedidos: no se editan, no se crean y no se
  * borran. Se ven, y se afirman dos hechos sobre ellos — cobrado y entregado.
  * Todo lo demás lo escribe el bot.
+ *
+ * ── Un solo sitio para todo lo que piden (27-oct-2026) ──────────────────────
+ *
+ * Antes había tres: lo de Mia aquí, lo del carrito de la página en Mi página ›
+ * Pedidos (salvo con la agenda en la nube) y los envíos en Mi página › Envíos.
+ * Ahora todo está aquí, en pestañas que solo salen si hacen falta:
+ *
+ *   · Pedidos         tabla orders: lo que cierra Mia y, con la agenda en la
+ *                     nube, también lo de la página (entra como pedido de verdad).
+ *   · De tu página    pedidos_web: el carrito de la página sin agenda en la nube.
+ *   · Envíos          los recojos de «Agendar un envío».
+ *
+ * ?ver=pagina|envios abre esa pestaña (los avisos al celular la usan) y
+ * ?envio=CODIGO, la búsqueda del QR de la etiqueta.
  */
-import { useMemo, useState } from 'react';
+import { Suspense, useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { Package, Search, Truck, Wallet } from 'lucide-react';
 import Topbar from '@/components/panel/Topbar';
 import { useSesion } from '@/components/panel/Sesion';
@@ -33,12 +48,90 @@ import {
   selloCumplido,
   selloPagado,
 } from '@/lib/panel/confirmacion';
+import { supabase } from '@/lib/supabase/client';
 import { getLeads, getPedidos, type Pedido } from '@/lib/supabase/queries';
 import type { ResultadoMarcarPagado } from '@/lib/supabase/commands';
+import { Pedidos as PedidosDeLaPagina } from '@/modules/tu-pagina/ui/PedidosYReservas';
+import Envios from '@/modules/tu-pagina/ui/Envios';
+import '@/modules/tu-pagina/estilos/panel.css';
 
 const POR_PAGINA = 12;
 
-export default function Pedidos() {
+type Pestana = 'mia' | 'pagina' | 'envios';
+
+// useSearchParams (?ver=, ?envio=) exige un Suspense alrededor.
+export default function Page() {
+  return (
+    <Suspense>
+      <Pedidos />
+    </Suspense>
+  );
+}
+
+function Pedidos() {
+  const { companyId, compania } = useSesion();
+  const params = useSearchParams();
+  const codigoEnvio = params.get('envio');
+
+  const { datos: pagina } = useCargar(async () => {
+    if (!companyId) return null;
+    const [{ data }, { data: nube }] = await Promise.all([
+      supabase().from('tu_pagina').select('titulo, publicada, secciones').eq('company_id', companyId).maybeSingle(),
+      supabase().rpc('agenda_en_nube', { p_company: companyId }),
+    ]);
+    const s = (data?.publicada ? data.secciones : null) as { catalogo?: boolean; envios?: boolean } | null;
+    return {
+      titulo: (data?.titulo as string | undefined) ?? '',
+      // Con la agenda en la nube el carrito escribe en orders: sale en la primera pestaña.
+      vende: Boolean(s?.catalogo) && nube !== true,
+      envios: Boolean(s?.envios),
+    };
+  }, [companyId]);
+
+  const pestanas: { id: Pestana; nombre: string }[] = [
+    // Siempre: Mia también vende productos en un negocio de citas (catalog.tipo).
+    { id: 'mia', nombre: pagina?.vende ? 'Por WhatsApp' : 'Pedidos' },
+    ...(pagina?.vende ? [{ id: 'pagina' as const, nombre: 'De tu página' }] : []),
+    ...(pagina?.envios ? [{ id: 'envios' as const, nombre: 'Envíos' }] : []),
+  ];
+  const pedida: Pestana | null = codigoEnvio ? 'envios' : (params.get('ver') as Pestana | null);
+  const [pestana, setPestana] = useState<Pestana | null>(null);
+  useEffect(() => setPestana(null), [pedida]);
+  const elegida = pestana ?? pedida;
+  // Un ?envio= llega antes de saber si hay envíos: se le deja pasar, Envios dice si no los hay.
+  const activa: Pestana = elegida && (pestanas.some((p) => p.id === elegida) || (elegida === 'envios' && codigoEnvio))
+    ? elegida
+    : pestanas[0]?.id ?? 'mia';
+  const nombre = pagina?.titulo || compania?.nombre || '';
+
+  return (
+    <main className="main">
+      <div className="wrap">
+        <Topbar titulo="Pedidos" sub="Todo lo que te piden: por WhatsApp y por tu página" />
+
+        {pestanas.length > 1 && (
+          <div className="tp-panel-tabs" role="tablist" aria-label="De dónde vienen">
+            {pestanas.map((p) => (
+              <button key={p.id} role="tab" aria-selected={activa === p.id} className={activa === p.id ? 'active' : ''} onClick={() => setPestana(p.id)}>
+                {p.nombre}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {!companyId ? null : activa === 'pagina' ? (
+          <PedidosDeLaPagina companyId={companyId} nombre={nombre} />
+        ) : activa === 'envios' ? (
+          <Envios companyId={companyId} nombre={nombre} codigo={codigoEnvio} activos={pagina?.envios ?? true} />
+        ) : (
+          <PedidosDeMia />
+        )}
+      </div>
+    </main>
+  );
+}
+
+function PedidosDeMia() {
   const { companyId } = useSesion();
   const { datos, cargando, recargar } = useCargar(async () => {
     if (!companyId) return null;
@@ -74,131 +167,127 @@ export default function Pedidos() {
   const visibles = filtrados.slice((actual - 1) * POR_PAGINA, actual * POR_PAGINA);
 
   return (
-    <main className="main">
-      <div className="wrap">
-        <Topbar titulo="Pedidos" sub="Lo que Mia cerró, y qué se ha cobrado" />
-
-        <div className="mini-row">
-          <div className="mini">
-            <div className="ic" style={{ background: 'var(--brand-soft)', color: 'var(--brand-txt)' }}>
-              <Package size={20} />
-            </div>
-            <div>
-              <b>{pedidos.length}</b>
-              <small>Pedidos</small>
-            </div>
+    <>
+      <div className="mini-row">
+        <div className="mini">
+          <div className="ic" style={{ background: 'var(--brand-soft)', color: 'var(--brand-txt)' }}>
+            <Package size={20} />
           </div>
-          <div className="mini">
-            <div className="ic" style={{ background: '#FEF6E7', color: '#B26B00' }}>
-              <Wallet size={20} />
-            </div>
-            <div>
-              <b>{sinCobrar.length}</b>
-              <small>Sin cobrar</small>
-            </div>
-          </div>
-          <div className="mini">
-            <div className="ic" style={{ background: '#F3EEFF', color: '#A78BFA' }}>
-              <Wallet size={20} />
-            </div>
-            <div>
-              <b>{soles(enJuego)}</b>
-              <small>Pendiente de cobro</small>
-            </div>
+          <div>
+            <b>{pedidos.length}</b>
+            <small>Pedidos</small>
           </div>
         </div>
-
-        <div className="toolbar">
-          <div className="search">
-            <Search size={16} />
-            <input
-              placeholder="Buscar por cliente o nº de pedido…"
-              value={busqueda}
-              onChange={(e) => {
-                setBusqueda(e.target.value);
-                setPagina(1);
-              }}
-            />
+        <div className="mini">
+          <div className="ic" style={{ background: '#FEF6E7', color: '#B26B00' }}>
+            <Wallet size={20} />
           </div>
-          <label className="check-inline">
-            <input
-              type="checkbox"
-              checked={soloPendientes}
-              onChange={(e) => {
-                setSoloPendientes(e.target.checked);
-                setPagina(1);
-              }}
-            />
-            Solo sin cobrar
-          </label>
-        </div>
-
-        <div className="table-card">
-          <table className="table">
-            <thead>
-              <tr>
-                <th>Cliente</th>
-                <th>Qué pidió</th>
-                <th>Cobro</th>
-                <th>Entrega</th>
-                <th>Fecha</th>
-                <th style={{ textAlign: 'right' }}>Total</th>
-                <th style={{ textAlign: 'right' }}>Acción</th>
-              </tr>
-            </thead>
-            <tbody>
-              {cargando && (
-                <tr>
-                  <td colSpan={7} className="muted" style={{ textAlign: 'center', padding: 30 }}>
-                    Cargando…
-                  </td>
-                </tr>
-              )}
-              {!cargando && visibles.length === 0 && (
-                <tr>
-                  <td colSpan={7}>
-                    <div className="vacio">
-                      <b>Sin pedidos</b>
-                      {pedidos.length === 0
-                        ? 'Cuando Mia cierre una venta, aparecerá aquí. Un negocio de citas no crea pedidos: los suyos están en la Agenda.'
-                        : 'Con estos filtros no queda ninguno.'}
-                    </div>
-                  </td>
-                </tr>
-              )}
-              {visibles.map((p) => (
-                <FilaPedido
-                  key={p.id}
-                  pedido={p}
-                  cliente={nombrePorLead.get(p.lead_id) ?? 'Cliente'}
-                  alCambiar={recargar}
-                />
-              ))}
-            </tbody>
-          </table>
-        </div>
-
-        {paginas > 1 && (
-          <div className="pagination">
-            <button onClick={() => setPagina(actual - 1)} disabled={actual === 1}>
-              ‹
-            </button>
-            {Array.from({ length: paginas }, (_, i) => (
-              <button
-                key={i}
-                className={i + 1 === actual ? 'active' : ''}
-                onClick={() => setPagina(i + 1)}
-              >
-                {i + 1}
-              </button>
-            ))}
-            <button onClick={() => setPagina(actual + 1)} disabled={actual === paginas}>
-              ›
-            </button>
+          <div>
+            <b>{sinCobrar.length}</b>
+            <small>Sin cobrar</small>
           </div>
-        )}
+        </div>
+        <div className="mini">
+          <div className="ic" style={{ background: '#F3EEFF', color: '#A78BFA' }}>
+            <Wallet size={20} />
+          </div>
+          <div>
+            <b>{soles(enJuego)}</b>
+            <small>Pendiente de cobro</small>
+          </div>
+        </div>
       </div>
-    </main>
+
+      <div className="toolbar">
+        <div className="search">
+          <Search size={16} />
+          <input
+            placeholder="Buscar por cliente o nº de pedido…"
+            value={busqueda}
+            onChange={(e) => {
+              setBusqueda(e.target.value);
+              setPagina(1);
+            }}
+          />
+        </div>
+        <label className="check-inline">
+          <input
+            type="checkbox"
+            checked={soloPendientes}
+            onChange={(e) => {
+              setSoloPendientes(e.target.checked);
+              setPagina(1);
+            }}
+          />
+          Solo sin cobrar
+        </label>
+      </div>
+
+      <div className="table-card">
+        <table className="table">
+          <thead>
+            <tr>
+              <th>Cliente</th>
+              <th>Qué pidió</th>
+              <th>Cobro</th>
+              <th>Entrega</th>
+              <th>Fecha</th>
+              <th style={{ textAlign: 'right' }}>Total</th>
+              <th style={{ textAlign: 'right' }}>Acción</th>
+            </tr>
+          </thead>
+          <tbody>
+            {cargando && (
+              <tr>
+                <td colSpan={7} className="muted" style={{ textAlign: 'center', padding: 30 }}>
+                  Cargando…
+                </td>
+              </tr>
+            )}
+            {!cargando && visibles.length === 0 && (
+              <tr>
+                <td colSpan={7}>
+                  <div className="vacio">
+                    <b>Sin pedidos</b>
+                    {pedidos.length === 0
+                      ? 'Cuando Mia cierre una venta, aparecerá aquí. Un negocio de citas no crea pedidos: los suyos están en la Agenda.'
+                      : 'Con estos filtros no queda ninguno.'}
+                  </div>
+                </td>
+              </tr>
+            )}
+            {visibles.map((p) => (
+              <FilaPedido
+                key={p.id}
+                pedido={p}
+                cliente={nombrePorLead.get(p.lead_id) ?? 'Cliente'}
+                alCambiar={recargar}
+              />
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {paginas > 1 && (
+        <div className="pagination">
+          <button onClick={() => setPagina(actual - 1)} disabled={actual === 1}>
+            ‹
+          </button>
+          {Array.from({ length: paginas }, (_, i) => (
+            <button
+              key={i}
+              className={i + 1 === actual ? 'active' : ''}
+              onClick={() => setPagina(i + 1)}
+            >
+              {i + 1}
+            </button>
+          ))}
+          <button onClick={() => setPagina(actual + 1)} disabled={actual === paginas}>
+            ›
+          </button>
+        </div>
+      )}
+    </>
   );
 }
 

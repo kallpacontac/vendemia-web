@@ -2,12 +2,16 @@
 
 /**
  * ══════════════════════════════════════════════════════════════════════════
- * TU PÁGINA EN EL PANEL · la página del negocio y sus envíos
+ * TU PÁGINA EN EL PANEL · la página del negocio, sus reservas y reclamos
  * ══════════════════════════════════════════════════════════════════════════
  *
- * Cuando hay operaciones separadas (pedidos, reservas o envíos), se muestran
+ * Las reservas separadas (sin agenda en la nube) y los reclamos se muestran
  * como pestañas junto al editor. Si solo está el editor, no se dibuja una
  * pestaña redundante: el título de la pantalla ya explica dónde está el usuario.
+ *
+ * Los pedidos de la página y los envíos NO están aquí: van a /panel/pedidos,
+ * con los que cierra Mia (27-oct-2026: antes había tres sitios). Los enlaces
+ * viejos (?envio= de las etiquetas impresas, ?ver=pedidos|envios) se redirigen.
  *
  * Por fuera el producto se llama «Mi página» (Alvaro, 19-oct-2026; fue «Tu página» y, unas horas, «Pide»).
  * Por dentro sigue siendo tu-pagina: módulo, tablas, API y rutas.
@@ -16,9 +20,9 @@
  * Todo escribe en la nube (tablas tu_pagina / envios, RPC con la sesión del usuario):
  * no pasa por el bot y funciona igual en un negocio sin bot.
  */
-import { useEffect, useMemo, useState } from 'react';
-import { useSearchParams } from 'next/navigation';
-import { Copy, Download, ExternalLink, FileText, Printer, QrCode } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { Copy, Download, ExternalLink, FileText, QrCode } from 'lucide-react';
 import QRCode from 'qrcode';
 import Topbar from '@/components/panel/Topbar';
 import { useSesion } from '@/components/panel/Sesion';
@@ -60,23 +64,13 @@ const urlVista = (slug: string, valores: {
   });
   return `/tu-pagina/${slug}?${q.toString()}`;
 };
-import { Pedidos, Reservas } from '@/modules/tu-pagina/ui/PedidosYReservas';
+import { Reservas } from '@/modules/tu-pagina/ui/PedidosYReservas';
 import Reclamos from '@/modules/tu-pagina/ui/Reclamos';
 import Avisame from '@/modules/tu-pagina/ui/Avisame';
 import { ConfigDeCanchas } from '@/modules/tu-pagina/ui/Canchas';
 import { normalizarCanchas, type ConfigCanchas } from '@/modules/tu-pagina/dominio/canchas';
 import { proveedorCompleto, rucValido, type Proveedor } from '@/modules/tu-pagina/dominio/reclamos';
-import {
-  ESTADOS,
-  fechaCorta,
-  nombreEstado,
-  nombreFranja,
-  telefonoBonito,
-  telefonoNormal,
-  type Envio,
-  type EstadoEnvio,
-} from '@/modules/tu-pagina/dominio/envio';
-import { hojaEtiquetas, imprimir, type Formato } from '@/modules/tu-pagina/ui/etiquetas';
+import { telefonoBonito, telefonoNormal } from '@/modules/tu-pagina/dominio/envio';
 import '@/modules/tu-pagina/estilos/panel.css';
 
 interface Pagina {
@@ -97,9 +91,7 @@ interface Pagina {
   publicada: boolean;
 }
 
-const POR_PAGINA = 50;
-
-type Pestana = 'pedidos' | 'reservas' | 'envios' | 'reclamos' | 'avisame' | 'pagina';
+type Pestana = 'reservas' | 'reclamos' | 'avisame' | 'pagina';
 
 type Es = TipoPagina;
 const ES = EXPERIENCIAS;
@@ -118,7 +110,16 @@ const mensajeDe = (e: unknown) => {
 export default function PanelTuPagina() {
   const { companyId, compania } = useSesion();
   const params = useSearchParams();
+  const router = useRouter();
+  // Lo que antes vivía aquí: el QR de las etiquetas ya impresas y los avisos viejos.
   const codigoBuscado = params.get('envio');
+  const pedida = params.get('ver');
+  const mudado = codigoBuscado
+    ? `/panel/pedidos?envio=${encodeURIComponent(codigoBuscado)}`
+    : pedida === 'envios' ? '/panel/pedidos?ver=envios' : pedida === 'pedidos' ? '/panel/pedidos?ver=pagina' : null;
+  useEffect(() => {
+    if (mudado) router.replace(mudado);
+  }, [mudado, router]);
   const { datos: pagina, cargando, error, releer } = useCargar(async () => {
     if (!companyId) return null;
     const { data, error } = await supabase().from('tu_pagina').select('*').eq('company_id', companyId).maybeSingle();
@@ -126,7 +127,7 @@ export default function PanelTuPagina() {
     return (data as Pagina | null) ?? null;
   }, [companyId]);
   // Con la agenda en la nube (modules/datos/sql/0004) lo que llega por la página entra en la
-  // Agenda y en Pedidos del panel, no en pedidos_web / reservas_web: esas pestañas sobran.
+  // Agenda, no en reservas_web: esa pestaña sobra.
   const [agendaNube, setAgendaNube] = useState(false);
   useEffect(() => {
     if (!companyId) return;
@@ -139,17 +140,14 @@ export default function PanelTuPagina() {
   const pestanas = [
     { id: 'pagina' as const, nombre: 'La página' },
     ...(s.reclamos ? [{ id: 'reclamos' as const, nombre: 'Reclamos' }] : []),
-    ...(s.catalogo && !agendaNube ? [{ id: 'pedidos' as const, nombre: 'Pedidos' }] : []),
     ...(s.reservar && s.canchas?.activo ? [{ id: 'avisame' as const, nombre: 'Avísame' }] : []),
     ...(s.reservar && !agendaNube ? [{ id: 'reservas' as const, nombre: esRecurrente(compania?.business_mode) ? 'Cupos' : 'Reservas' }] : []),
-    ...(s.envios ? [{ id: 'envios' as const, nombre: 'Envíos' }] : []),
   ];
   const [pestana, setPestana] = useState<Pestana | null>(null);
-  // ?ver=reclamos: el enlace del correo que avisa de una hoja nueva.
-  const pedida = params.get('ver') as Pestana | null;
+  // ?ver=reclamos: el enlace del correo que avisa de una hoja nueva; ?ver=reservas, el del aviso.
   const activa: Pestana = pestana && pestanas.some((p) => p.id === pestana)
     ? pestana
-    : codigoBuscado ? 'envios' : pedida && pestanas.some((p) => p.id === pedida) ? pedida : pestanas[0].id;
+    : pedida && pestanas.some((p) => p.id === pedida) ? (pedida as Pestana) : pestanas[0].id;
 
   useEffect(() => {
     if (sinPagina) setPestana('pagina');
@@ -161,7 +159,7 @@ export default function PanelTuPagina() {
         <Topbar titulo="Mi página" sub="El enlace para que tus clientes te pidan, y lo que te piden" />
         {error && <p className="vacio">No se pudo cargar: {error}</p>}
         {cargando && !pagina && <p className="vacio">Cargando…</p>}
-        {!cargando && !error && companyId && (
+        {!cargando && !error && companyId && !mudado && (
           <>
             {pestanas.length > 1 && (
               <div className="tp-panel-tabs" role="tablist" aria-label="Secciones de Mi página">
@@ -174,16 +172,12 @@ export default function PanelTuPagina() {
             )}
             {activa === 'pagina' ? (
               <MiPagina companyId={companyId} nombre={compania?.nombre ?? ''} pagina={pagina ?? null} agendaNube={agendaNube} alGuardar={releer} />
-            ) : activa === 'pedidos' ? (
-              <Pedidos companyId={companyId} nombre={pagina?.titulo || compania?.nombre || ''} />
             ) : activa === 'avisame' ? (
               <Avisame companyId={companyId} slug={pagina?.slug ?? ''} negocio={pagina?.titulo || compania?.nombre || ''} />
             ) : activa === 'reservas' ? (
               <Reservas companyId={companyId} nombre={pagina?.titulo || compania?.nombre || ''} />
-            ) : activa === 'reclamos' ? (
-              <Reclamos companyId={companyId} />
             ) : (
-              <Envios companyId={companyId} pagina={pagina ?? null} nombre={pagina?.titulo || compania?.nombre || ''} codigo={codigoBuscado} alConfigurar={() => setPestana('pagina')} />
+              <Reclamos companyId={companyId} />
             )}
           </>
         )}
@@ -691,21 +685,20 @@ function CatalogoPdf({ url }: { url: string }) {
 }
 
 /**
- * Dónde ve el dueño lo que llega. Con la agenda en la nube, en la Agenda y en
- * Pedidos del panel aunque su negocio sea de otro tipo (el menú las enseña si
- * la página reserva o vende: modules/tu-pagina/ui/secciones.ts); sin ella, en
- * las pestañas de aquí arriba.
+ * Dónde ve el dueño lo que llega. Los pedidos, siempre en Pedidos del panel
+ * (aunque su negocio sea de otro tipo: el menú lo enseña si la página vende,
+ * modules/tu-pagina/ui/secciones.ts). Las reservas, con la agenda en la nube en
+ * la Agenda; sin ella, en la pestaña «Reservas» de aquí arriba.
  */
 function dondeLlega(es: Es, modo: BusinessMode | null | undefined, agendaNube: boolean) {
   const citas = es !== 'tienda';
   const pedidos = es !== 'agenda';
-  if (!agendaNube) {
-    return `Te avisan por WhatsApp y lo ves aquí, en ${citas && pedidos ? '«Reservas» y «Pedidos»' : citas ? '«Reservas»' : '«Pedidos»'}.`;
-  }
   return (
     <>
-      Te avisan por WhatsApp y entra en{' '}
-      {citas && <Link href="/panel/agenda">{esAppointmentFamily(modo) ? 'tu Agenda' : 'la Agenda'}</Link>}
+      Te avisan por WhatsApp y lo ves en{' '}
+      {citas && (agendaNube
+        ? <Link href="/panel/agenda">{esAppointmentFamily(modo) ? 'tu Agenda' : 'la Agenda'}</Link>
+        : '«Reservas», aquí arriba')}
       {citas && pedidos && ' y en '}
       {pedidos && <Link href="/panel/pedidos">Pedidos</Link>}.
     </>
@@ -778,169 +771,4 @@ const conFranjas = (raw: string | null) => {
 function sugerirSlug(v: string, escribiendo = false): string {
   const s = v.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+/, '').slice(0, 40);
   return escribiendo ? s : s.replace(/-+$/, '');
-}
-
-/* ═══════════════════════════════════════════════════════════════════════
-   ENVÍOS
-   ═══════════════════════════════════════════════════════════════════════ */
-
-const FILTROS: { id: EstadoEnvio | 'todos'; nombre: string }[] = [
-  { id: 'por_recoger', nombre: 'Por recoger' },
-  { id: 'impreso', nombre: 'Impresos' },
-  { id: 'recogido', nombre: 'En camino' },
-  { id: 'entregado', nombre: 'Entregados' },
-  { id: 'todos', nombre: 'Todos' },
-];
-
-function Envios({ companyId, pagina, nombre, codigo, alConfigurar }: {
-  companyId: string; pagina: Pagina | null; nombre: string; codigo: string | null; alConfigurar: () => void;
-}) {
-  const avisar = useAvisar();
-  const [filtro, setFiltro] = useState<EstadoEnvio | 'todos'>(codigo ? 'todos' : 'por_recoger');
-  const [limite, setLimite] = useState(POR_PAGINA);
-  const [marcados, setMarcados] = useState<Set<string>>(new Set());
-  const [ocupado, setOcupado] = useState(false);
-
-  const { datos, cargando, error, releer } = useCargar(async () => {
-    let q = supabase().from('envios').select('*').eq('company_id', companyId).order('creado_at', { ascending: false }).limit(limite + 1);
-    if (codigo) q = q.eq('codigo', codigo.toUpperCase());
-    else if (filtro !== 'todos') q = q.eq('estado', filtro);
-    const { data, error } = await q;
-    if (error) throw new Error(error.message);
-    return data as Envio[];
-  }, [companyId, filtro, limite, codigo]);
-
-  const lista = useMemo(() => (datos ?? []).slice(0, limite), [datos, limite]);
-  const hayMas = (datos?.length ?? 0) > limite;
-  const elegidos = lista.filter((e) => marcados.has(e.id));
-  useEffect(() => setMarcados(new Set()), [filtro, codigo]);
-
-  async function cambiarEstado(ids: string[], estado: EstadoEnvio) {
-    const { error } = await supabase().rpc('envios_estado', { p_company: companyId, p_ids: ids, p_estado: estado });
-    if (error) throw new Error(error.message);
-  }
-
-  async function etiquetas(formato: Formato) {
-    if (!elegidos.length) return;
-    setOcupado(true);
-    try {
-      const base = process.env.NEXT_PUBLIC_SITE_URL || window.location.origin;
-      const ok = await imprimir(() => hojaEtiquetas(elegidos, nombre, formato, base));
-      if (!ok) return avisar('El navegador bloqueó la ventana. Permite ventanas emergentes para vendemias.com.', 'error');
-      const porRecoger = elegidos.filter((e) => e.estado === 'por_recoger').map((e) => e.id);
-      if (porRecoger.length) await cambiarEstado(porRecoger, 'impreso');
-      releer();
-    } catch (e) {
-      avisar(mensajeDe(e), 'error');
-    } finally {
-      setOcupado(false);
-    }
-  }
-
-  async function marcar(estado: EstadoEnvio) {
-    setOcupado(true);
-    try {
-      await cambiarEstado(elegidos.map((e) => e.id), estado);
-      avisar(`${elegidos.length} ${elegidos.length === 1 ? 'envío' : 'envíos'}: ${nombreEstado(estado).toLowerCase()}`);
-      setMarcados(new Set());
-      releer();
-    } catch (e) {
-      avisar(mensajeDe(e), 'error');
-    } finally {
-      setOcupado(false);
-    }
-  }
-
-  if (!pagina?.publicada || !pagina.secciones?.envios) {
-    return (
-      <section className="card">
-        <p className="vacio">
-          Todavía no recibes envíos. Publica tu página con «Agendar un envío» encendido y comparte el enlace.
-        </p>
-        <button className="btn btn-primary" onClick={alConfigurar}>Configurar mi página</button>
-      </section>
-    );
-  }
-
-  const todos = lista.length > 0 && elegidos.length === lista.length;
-
-  return (
-    <section className="card table-card">
-      <div className="tp-panel-barra">
-        {codigo ? (
-          <p className="muted">Buscando el envío <b>{codigo}</b> · <a href="/panel/tu-pagina">ver todos</a></p>
-        ) : (
-          <div className="chip-tabs">
-            {FILTROS.map((f) => (
-              <button key={f.id} className={filtro === f.id ? 'active' : ''} onClick={() => { setFiltro(f.id); setLimite(POR_PAGINA); }}>
-                {f.nombre}
-              </button>
-            ))}
-          </div>
-        )}
-        {elegidos.length > 0 && (
-          <div className="tp-panel-acciones">
-            <span className="muted">{elegidos.length} elegidos</span>
-            <button className="btn btn-sm btn-primary" disabled={ocupado} onClick={() => void etiquetas('a4')}><Printer size={14} /> Etiquetas A4</button>
-            <button className="btn btn-sm" disabled={ocupado} onClick={() => void etiquetas('termica')}><Printer size={14} /> Térmica 10×15</button>
-            <select
-              className="input tp-panel-estado"
-              value=""
-              disabled={ocupado}
-              onChange={(e) => e.target.value && void marcar(e.target.value as EstadoEnvio)}
-              aria-label="Marcar como"
-            >
-              <option value="">Marcar como…</option>
-              {ESTADOS.map((s) => <option key={s.id} value={s.id}>{s.nombre}</option>)}
-            </select>
-          </div>
-        )}
-      </div>
-
-      {error && <p className="vacio">No se pudieron cargar los envíos: {error}</p>}
-      {cargando && !datos && <p className="vacio">Cargando envíos…</p>}
-      {datos && lista.length === 0 && <p className="vacio">{codigo ? 'No hay ningún envío con ese código.' : 'No hay envíos aquí.'}</p>}
-
-      {lista.length > 0 && (
-        <ul className="tp-panel-lista">
-          <li className="tp-panel-fila tp-panel-fila--cab">
-            <label>
-              <input type="checkbox" checked={todos} onChange={() => setMarcados(todos ? new Set() : new Set(lista.map((e) => e.id)))} aria-label="Elegir todos" />
-            </label>
-            <span className="muted">{lista.length} {lista.length === 1 ? 'envío' : 'envíos'}</span>
-          </li>
-          {lista.map((e) => (
-            <li key={e.id} className={`tp-panel-fila${marcados.has(e.id) ? ' tp-panel-fila--sel' : ''}`}>
-              <label>
-                <input
-                  type="checkbox"
-                  checked={marcados.has(e.id)}
-                  onChange={() => setMarcados((m) => { const n = new Set(m); if (n.has(e.id)) n.delete(e.id); else n.add(e.id); return n; })}
-                  aria-label={`Elegir ${e.codigo}`}
-                />
-              </label>
-              <div className="tp-panel-fila__cuerpo">
-                <div className="tp-panel-fila__linea">
-                  <b className="tp-panel-codigo">{e.codigo}</b>
-                  <span className={`tp-panel-pill tp-panel-pill--${e.estado}`}>{nombreEstado(e.estado)}</span>
-                </div>
-                <div>
-                  <b>{e.destinatario_nombre}</b> · {e.distrito}
-                  <span className="muted"> · {telefonoBonito(e.destinatario_telefono)}</span>
-                </div>
-                <small className="muted">
-                  {e.direccion}{e.referencia ? ` (${e.referencia})` : ''} · Recojo {fechaCorta(e.recojo_fecha)}, {nombreFranja(e.recojo_franja).toLowerCase()} ·{' '}
-                  {e.bultos} {e.bultos === 1 ? 'bulto' : 'bultos'}
-                  {e.contra_entrega ? ` · cobrar S/ ${Number(e.contra_entrega).toFixed(2)}` : ''} · de {e.remitente_nombre}
-                </small>
-              </div>
-            </li>
-          ))}
-        </ul>
-      )}
-      {hayMas && (
-        <button className="btn btn-ghost tp-panel-mas" onClick={() => setLimite((l) => l + POR_PAGINA)}>Ver más</button>
-      )}
-    </section>
-  );
 }

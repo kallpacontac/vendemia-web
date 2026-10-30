@@ -140,21 +140,45 @@ export function redactar(eventos: EventoPendiente[]): Mensaje {
           tag: `${tag}:libre`,
         };
       }
-      // Lo que llega desde Tu página (pedidos_web / reservas_web): sin lead, con el nombre que escribió.
+      // Todo pedido, de Mia o de la página, se ve en /panel/pedidos (la página, en su
+      // pestaña); las reservas de la página sin agenda en la nube, en Mi página › Reservas.
+      // Los envíos (web_envio, tu-pagina 0010) también se ven allí: cuentan como pedido.
+      const esEnvioEv = (x: EventoPendiente) => x.datos.clase === 'web_envio';
+      const esPedidoEv = (x: EventoPendiente) =>
+        x.datos.clase === 'pedido' || x.datos.clase === 'web_pedido' || esEnvioEv(x);
+      const pedidos = eventos.filter(esPedidoEv).length;
+      const envios = eventos.filter(esEnvioEv).length;
+      const esPedido = pedidos === n;
+      // Lo que llega desde Mi página (pedidos_web / reservas_web / envios): sin lead, con el nombre que escribió.
       const web = eventos.filter((x) => String(x.datos.clase ?? '').startsWith('web_'));
+      if (envios === n) {
+        if (n > 1) return { title: `${prefijo}${n} pedidos para recoger`, body: 'Ábrelos para imprimir las etiquetas.', url: '/panel/pedidos?ver=envios', tag };
+        const bultos = Number(e.datos.bultos) || 1;
+        const franja = e.datos.franja === 'manana' ? 'mañana' : e.datos.franja === 'tarde' ? 'tarde' : '';
+        return {
+          title: `${prefijo}Pedido para recoger · ${String(e.datos.codigo ?? '')}`,
+          body: [
+            typeof e.datos.nombre === 'string' ? e.datos.nombre : 'Un cliente',
+            typeof e.datos.distrito === 'string' ? e.datos.distrito : '',
+            `${bultos} ${bultos === 1 ? 'bulto' : 'bultos'}`,
+            franja && `recojo por la ${franja}`,
+          ].filter(Boolean).join(' · '),
+          url: typeof e.datos.codigo === 'string' ? `/panel/pedidos?envio=${encodeURIComponent(e.datos.codigo)}` : '/panel/pedidos?ver=envios',
+          tag,
+        };
+      }
       if (web.length === n) {
         const nombre = typeof e.datos.nombre === 'string' ? e.datos.nombre : 'Un cliente';
-        const esPedido = e.datos.clase === 'web_pedido';
         const detalle = esPedido ? soles(e.datos.total) : typeof e.datos.servicio === 'string' ? e.datos.servicio : '';
         return {
           title: n === 1 ? `${prefijo}${esPedido ? 'Pedido' : 'Reserva'} desde tu página` : `${prefijo}${n} nuevos desde tu página`,
           body: n === 1 ? `${nombre}${detalle ? ` · ${detalle}` : ''}` : 'Ábrelos para confirmarlos.',
-          url: '/panel/tu-pagina',
+          url: esPedido
+            ? envios ? '/panel/pedidos' : '/panel/pedidos?ver=pagina'
+            : pedidos === 0 ? '/panel/tu-pagina?ver=reservas' : '/panel',
           tag,
         };
       }
-      const pedidos = eventos.filter((x) => x.datos.clase === 'pedido').length;
-      const esPedido = pedidos === n;
       // Un pedido es un pedido aunque el negocio sea de citas, y al revés.
       const palabra = esPedido ? 'pedido' : v.reserva === 'pedido' ? 'reserva' : v.reserva;
       const plural = esPedido ? 'pedidos' : v.reserva === 'pedido' ? 'reservas' : v.reservas;
@@ -174,8 +198,12 @@ export function redactar(eventos: EventoPendiente[]): Mensaje {
       }
       return {
         title: `${prefijo}${n} ${plural} nuev${a}s`,
-        body: `Mia ${a === 'o' ? 'los' : 'las'} cerró mientras atendías. Ábre${a === 'o' ? 'los' : 'las'} para ver el detalle.`,
-        url: esPedido ? '/panel/pedidos' : '/panel/agenda',
+        body: web.length
+          ? `Por WhatsApp y por tu página. Ábre${a === 'o' ? 'los' : 'las'} para ver el detalle.`
+          : `Mia ${a === 'o' ? 'los' : 'las'} cerró mientras atendías. Ábre${a === 'o' ? 'los' : 'las'} para ver el detalle.`,
+        // Mezcla de pedidos y reservas, o reservas de la página con citas de Mia: no hay
+        // una sola pantalla donde estén todas.
+        url: esPedido ? '/panel/pedidos' : pedidos === 0 && !web.length ? '/panel/agenda' : '/panel',
         tag,
       };
     }

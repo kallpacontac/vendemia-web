@@ -14,15 +14,17 @@ import { supabase } from '@/lib/supabase/client';
 export interface LoQueHaceLaPagina {
   vende: boolean;
   reserva: boolean;
+  /** «Agendar un envío»: los recojos se ven en Pedidos. */
+  envios: boolean;
 }
 
-const NADA: LoQueHaceLaPagina = { vende: false, reserva: false };
+const NADA: LoQueHaceLaPagina = { vende: false, reserva: false, envios: false };
 
 export async function getLoQueHaceLaPagina(companyId: string): Promise<LoQueHaceLaPagina> {
   try {
     const { data } = await supabase().from('tu_pagina').select('publicada, secciones').eq('company_id', companyId).maybeSingle();
-    const s = (data?.publicada ? data.secciones : null) as { catalogo?: boolean; reservar?: boolean } | null;
-    return { vende: Boolean(s?.catalogo), reserva: Boolean(s?.reservar) };
+    const s = (data?.publicada ? data.secciones : null) as { catalogo?: boolean; reservar?: boolean; envios?: boolean } | null;
+    return { vende: Boolean(s?.catalogo), reserva: Boolean(s?.reservar), envios: Boolean(s?.envios) };
   } catch {
     return NADA;
   }

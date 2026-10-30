@@ -75,8 +75,8 @@ const NAV = [
   // Tarjetas de cliente, placas NFC/QR y Google Wallet. Tiene sus pestañas
   // dentro (app/(panel)/panel/fideliza/layout.tsx). En el móvil va en «Más».
   { href: '/panel/fideliza', icon: Gift, label: 'Fideliza' },
-  // La página pública del negocio (tienda.* o agenda.*, según el modo) y los envíos
-  // que llegan por ella. Vive en modules/tu-pagina.
+  // La página pública del negocio (tienda.* o agenda.*, según el modo). Lo que se
+  // pide por ella (pedidos y envíos) está en Pedidos. Vive en modules/tu-pagina.
   { href: '/panel/tu-pagina', icon: Store, label: 'Mi página' },
   { href: '/panel/metricas', icon: BarChart2, label: 'Métricas' },
   // Stock de placas sin dueño. Solo el superadmin (platform_admins); la base lo
@@ -127,8 +127,8 @@ export default function Sidebar({
 }) {
   const ruta = usePathname();
   const { salir, compania, esAdminPlataforma, companyId, canchas } = useSesion();
-  // Mi página puede reservar o vender aunque el negocio sea de otro tipo: entonces
-  // también le toca la Agenda o Pedidos, que es donde entra lo de la página.
+  // Mi página puede reservar, vender o agendar envíos aunque el negocio sea de otro
+  // tipo: entonces también le toca la Agenda o Pedidos, que es donde entra lo de la página.
   const pagina = useLoQueHaceLaPagina(soloGlobal ? null : companyId);
   const [masAbierto, setMasAbierto] = useState(false);
 
@@ -145,7 +145,7 @@ export default function Sidebar({
     // asignado): en los dos casos se enseña de más, nunca de menos.
     if (!n.sirveA || modo == null) return true;
     if (n.href === '/panel/agenda' && pagina.reserva) return true;
-    if (n.href === '/panel/pedidos' && pagina.vende) return true;
+    if (n.href === '/panel/pedidos' && (pagina.vende || pagina.envios)) return true;
     return n.sirveA(modo);
   });
 
