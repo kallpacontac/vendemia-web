@@ -7,6 +7,7 @@ import { UNIDAD, fechaHora, type TipoRegla } from '@/modules/fideliza/dominio/fo
 import { colorValido, mezcla, resolverEstilo, tintaSobre, type Estilo } from '@/modules/fideliza/dominio/estilo';
 import { urlNegocio } from '@/modules/fideliza/dominio/config';
 import { selloValido, trazoSello } from '@/modules/fideliza/dominio/sellos';
+import AvisoActivar from './AvisoActivar';
 import AvisoInstalar, { type EventoInstalar } from './AvisoInstalar';
 
 export interface DatosTarjeta {
@@ -71,6 +72,9 @@ export default function Tarjeta(props: {
   const [plataforma, setPlataforma] = useState<'ios' | 'android' | 'otra'>('otra');
   const [pushPosible, setPushPosible] = useState(false);
   const [quiereAvisos, setQuiereAvisos] = useState(false);
+  const [permisoAvisos, setPermisoAvisos] = useState<NotificationPermission>('default');
+  // Mientras se ofrece activar los avisos no sale el de instalar: uno por visita.
+  const [cederInstalar, setCederInstalar] = useState(false);
   const [alias, setAlias] = useState(props.inicial.member.alias ?? '');
   const [borrado, setBorrado] = useState(false);
   // El «Instalar» de Android llega una sola vez al cargar: se guarda para el aviso y el botón.
@@ -150,7 +154,12 @@ export default function Tarjeta(props: {
       }
     };
     const reloj = window.setInterval(() => void leer(), 12_000);
-    const alVisibilizar = () => { if (document.visibilityState === 'visible') void leer(); };
+    const alVisibilizar = () => {
+      if (document.visibilityState !== 'visible') return;
+      void leer();
+      // Puede volver de los ajustes del teléfono con el permiso cambiado.
+      if ('Notification' in window) setPermisoAvisos(Notification.permission);
+    };
     document.addEventListener('visibilitychange', alVisibilizar);
     return () => {
       window.clearInterval(reloj);
@@ -162,6 +171,7 @@ export default function Tarjeta(props: {
     const ua = navigator.userAgent;
     setPlataforma(/iPhone|iPad|iPod/i.test(ua) ? 'ios' : /Android/i.test(ua) ? 'android' : 'otra');
     setPushPosible(Boolean(props.vapid) && 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window);
+    if ('Notification' in window) setPermisoAvisos(Notification.permission);
     try {
       localStorage.setItem(`fz:card:${props.inicial.brand.slug}`, token);
     } catch {
@@ -233,22 +243,31 @@ export default function Tarjeta(props: {
     }
   }
 
-  async function activarAvisos() {
+  /** `textVersion`: qué texto aceptó, el de la casilla o el del aviso de abajo. */
+  async function activarAvisos(textVersion = 'push-v1') {
     if (!props.vapid) return;
     setOcupado('push');
     setAviso(null);
     try {
       const permiso = await Notification.requestPermission();
+      setPermisoAvisos(permiso);
       if (permiso !== 'granted') {
         setAviso('No diste permiso de notificaciones. Tu tarjeta funciona igual.');
         return;
       }
-      await pedir({ accion: 'consentimiento', token, granted: true, textVersion: 'push-v1' });
+      await pedir({ accion: 'consentimiento', token, granted: true, textVersion });
       const reg = await navigator.serviceWorker.ready;
       const sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64(props.vapid) });
       const j = sub.toJSON() as { endpoint: string; keys: { p256dh: string; auth: string } };
       await pedir({ accion: 'push', token, endpoint: j.endpoint, p256dh: j.keys.p256dh, auth: j.keys.auth });
       await actualizar();
+      // Como el aviso de prueba del panel: lo ve al momento y sabe que funciona. Solo en este teléfono.
+      await reg
+        .showNotification('¡Avisos activados!', {
+          body: `Te avisaremos cuando ganes o canjees un premio de ${d.brand.display_name}.`,
+          icon: d.brand.logo_url ?? '/wallet/logo-vendemia-1024.png',
+        })
+        .catch(() => {});
     } catch (e) {
       setAviso(e instanceof Error ? e.message : 'No se pudieron activar los avisos.');
     } finally {
@@ -303,6 +322,8 @@ export default function Tarjeta(props: {
 
   // Lo de instalar va en el aviso de abajo; la caja lo repite solo si el aviso no está a la vista.
   const conWallet = plataforma !== 'ios' && props.walletDisponible && (walletVerificada || !d.wallet?.links_issued);
+  // Sin el permiso del teléfono no llega nada, aunque la base diga que sí los quiere.
+  const avisosActivos = d.push.consent && d.push.devices > 0 && permisoAvisos === 'granted';
   const respaldoIos = plataforma === 'ios' && !enApp && !avisoVisible;
   const respaldoInstalar = plataforma !== 'ios' && !enApp && instalar !== null && !avisoVisible;
   const notaFavoritos = plataforma === 'otra' && !props.walletDisponible && !enApp;
@@ -447,7 +468,7 @@ export default function Tarjeta(props: {
             </div>
             <div className="fz-carnet__programa">{d.program?.name || 'Tu programa'}</div>
             <div className="fz-carnet__saludo">{d.member.alias ? `Hola, ${d.member.alias}` : 'Tu tarjeta'}</div>
-            <div className="fz-carnet__saldo"><b>{d.member.balance.toLocaleString('es-PE')}</b><span>{UNIDAD[tipo].varias}</span></div>
+            <div className="fz-carnet__saldo"><b>{d.member.balance.toLocaleString('es-PE')}</b><span>{d.member.balance === 1 ? UNIDAD[tipo].una : UNIDAD[tipo].varias}</span></div>
             {sellos ? (
               <div className="fz-sellos" role="img" aria-label={`${progreso} de ${umbral} sellos`}>
                 {Array.from({ length: umbral }, (_, i) => <span key={i} className={i < progreso ? 'fz-sello fz-sello--lleno' : 'fz-sello'}><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" dangerouslySetInnerHTML={{ __html: trazoSello(i === umbral - 1 ? 'regalo' : sello) }} /></span>)}
@@ -478,7 +499,7 @@ export default function Tarjeta(props: {
 
       {pushPosible && d.member.status === 'active' && (
         <section className="fz-caja fz-caja--flujo" aria-label="Avisos">
-          {d.push.consent && d.push.devices > 0 ? (
+          {avisosActivos ? (
             <>
               <p className="fz-nota">Recibes avisos de {d.brand.display_name} en este teléfono.</p>
               <button type="button" className="fz-btn" onClick={() => void quitarAvisos()} disabled={ocupado === 'push'}>
@@ -550,7 +571,20 @@ export default function Tarjeta(props: {
         </div>
       )}
 
-      {d.member.status === 'active' && (
+      {pushPosible && d.member.status === 'active' && !avisosActivos && (
+        <AvisoActivar
+          slug={d.brand.slug}
+          negocio={d.brand.display_name}
+          enApp={enApp}
+          permiso={permisoAvisos}
+          ocupado={ocupado === 'push'}
+          activar={() => activarAvisos('push-aviso-v1')}
+          alOcupar={setCederInstalar}
+          instalarVisible={avisoVisible}
+        />
+      )}
+
+      {d.member.status === 'active' && !cederInstalar && (
         <AvisoInstalar
           slug={d.brand.slug}
           plataforma={plataforma}
