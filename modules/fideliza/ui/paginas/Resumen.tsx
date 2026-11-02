@@ -6,19 +6,16 @@
  * Solo cifras que salen de loyalty_metrics(). Sin metas inventadas, sin
  * flechas de tendencia que nadie ha calculado. Si no hay datos, se dice.
  */
-import { useState } from 'react';
 import Link from 'next/link';
 import { AlertTriangle, ExternalLink } from 'lucide-react';
 import { useFideliza } from '@/modules/fideliza/ui/Contexto';
-import { Cargando, Fallo, Vacio } from '@/modules/fideliza/ui/Estados';
+import { Cargando, Cifra, Fallo } from '@/modules/fideliza/ui/Estados';
 import LinkPublico from '@/modules/fideliza/ui/LinkPublico';
 import PrimerosPasos, { type Paso } from '@/modules/fideliza/ui/PrimerosPasos';
-import Numeros from '@/modules/fideliza/ui/Numeros';
 import { useCargar } from '@/components/panel/useCargar';
 import { accion, lecturas, type Enlace } from '@/modules/fideliza/cliente/api';
 import { urlNegocio, urlPlaca, urlPlacaQr } from '@/modules/fideliza/dominio/config';
-import { fechaHora, soles, ESTADO_PLACA } from '@/modules/fideliza/dominio/formato';
-import { DEFINICIONES, pct, type Metricas } from '@/modules/fideliza/dominio/metricas';
+import type { Metricas } from '@/modules/fideliza/dominio/metricas';
 import { selloValido } from '@/modules/fideliza/dominio/sellos';
 import type { Estilo } from '@/modules/fideliza/dominio/estilo';
 
@@ -42,19 +39,8 @@ const ESTADO_PROGRAMA: Record<string, [string, string]> = {
   error: ['Con error', 'b-hot'],
 };
 
-function Cifra({ titulo, valor, def }: { titulo: string; valor: React.ReactNode; def: string }) {
-  return (
-    <div className="card">
-      <div className="kpi__label">{titulo}</div>
-      <div className="fz-num">{valor}</div>
-      <p className="fz-def">{def}</p>
-    </div>
-  );
-}
-
 export default function Resumen() {
   const { companyId, ajustes, puede, modo } = useFideliza();
-  const [dias, setDias] = useState(30);
 
   const { datos, cargando, error, releer } = useCargar(async () => {
     if (!companyId) return null;
@@ -62,7 +48,7 @@ export default function Resumen() {
       lecturas.programas(companyId),
       accion<{ servidor: boolean; wallet: boolean; push: boolean; cron: boolean }>('config.estado', {}),
       puede('metrics.read')
-        ? accion<Metricas>('metricas', { companyId, from: haceDias(dias - 1), to: hoyLima() })
+        ? accion<Metricas>('metricas', { companyId, from: haceDias(29), to: hoyLima() })
         : Promise.resolve(null),
     ]);
     const vivo = programas.find((p) => p.status === 'active' || p.status === 'paused') ?? programas[0] ?? null;
@@ -84,7 +70,7 @@ export default function Resumen() {
         ? await lecturas.contarEventos(companyId, ['device_open'], new Date(Date.now() - 30 * 86400000).toISOString())
         : null;
     return { programas, vivo, version: versiones[0] ?? null, config, m, publicada: publicada ?? null, placas, visitas, aperturas };
-  }, [companyId, dias, ajustes?.default_profile_id, modo]);
+  }, [companyId, ajustes?.default_profile_id, modo]);
 
   if (modo === 'nuevo' && puede('program.edit')) return <Bienvenida />;
   if (cargando && !datos) return <Cargando texto="Calculando el resumen…" />;
@@ -153,8 +139,6 @@ export default function Resumen() {
   if (!config.cron) alertas.push({ texto: 'Falta el secreto del cron: los reintentos automáticos y las campañas no corren solos.' });
 
   const [estado, clase] = ESTADO_PROGRAMA[vivo?.status ?? 'draft'];
-  const ops = m?.operations;
-  const ventasNetas = ops ? ops.gross_cents - ops.refund_cents : 0;
 
   if (modo === 'enlaces') {
     const pasosEnlaces: Paso[] = [
@@ -244,6 +228,11 @@ export default function Resumen() {
                 Registrar operación
               </Link>
             )}
+            {puede('metrics.read') && (
+              <Link className="btn btn-ghost btn-sm" href="/panel/fideliza/numeros">
+                Ver números
+              </Link>
+            )}
             {puede('members.create') && (
               <Link className="btn btn-ghost btn-sm" href="/panel/fideliza/clientes?nuevo=1">
                 Añadir cliente
@@ -280,83 +269,6 @@ export default function Resumen() {
         </div>
       ))}
 
-      {!m ? (
-        <Vacio titulo="Las métricas son para propietario, gerente y analista">Tu usuario puede operar la caja.</Vacio>
-      ) : (
-        <>
-          {companyId && <Numeros companyId={companyId} />}
-          <div className="fz-fila" style={{ margin: '6px 0 14px', justifyContent: 'space-between' }}>
-            <h3 style={{ fontSize: 16 }}>Más cifras · últimos {dias} días</h3>
-            <div className="chip-tabs">
-              {[7, 30, 90].map((n) => (
-                <button key={n} className={dias === n ? 'active' : ''} onClick={() => setDias(n)}>
-                  {n} días
-                </button>
-              ))}
-            </div>
-          </div>
-          {m.members.total === 0 && (
-            <Vacio titulo="Todavía no hay clientes en el programa">
-              Cuando alguien cree su tarjeta (desde la placa, el QR o la caja), las cifras aparecerán aquí.
-            </Vacio>
-          )}
-          <div className="fz-grid">
-            <Cifra titulo="Miembros" valor={m.members.total.toLocaleString('es-PE')} def={DEFINICIONES.miembros} />
-            <Cifra titulo="Nuevos en el periodo" valor={m.members.new} def={DEFINICIONES.nuevos} />
-            <Cifra titulo="Activación" valor={pct(m.members.new_activated, m.members.new)} def={DEFINICIONES.activacion} />
-            <Cifra
-              titulo="Con al menos una operación"
-              valor={m.members.with_operation}
-              def="Miembros (de siempre) con alguna compra o visita registrada."
-            />
-            <Cifra titulo="Alta desde la página" valor={pct(m.funnel.joins, m.funnel.join_views)} def={DEFINICIONES.conversion} />
-          </div>
-
-          <h3 style={{ fontSize: 15, margin: '6px 0 10px' }}>Volvieron</h3>
-          <div className="fz-grid">
-            {(['30', '60', '90'] as const).map((n) => (
-              <Cifra
-                key={n}
-                titulo={`A ${n} días`}
-                valor={pct(m.repeat[n]?.repeated ?? 0, m.repeat[n]?.cohort ?? 0)}
-                def={`${m.repeat[n]?.repeated ?? 0} de ${m.repeat[n]?.cohort ?? 0} en la cohorte madura. ${DEFINICIONES.repeticion}`}
-              />
-            ))}
-            <Cifra titulo="Recuperados" valor={m.recovered} def={DEFINICIONES.recuperados} />
-          </div>
-
-          <h3 style={{ fontSize: 15, margin: '6px 0 10px' }}>Operaciones y premios</h3>
-          <div className="fz-grid">
-            <Cifra titulo="Compras" valor={ops!.purchases} def={DEFINICIONES.frecuenciaCompra + ` Frecuencia: ${ops!.purchase_members ? (ops!.purchases / ops!.purchase_members).toFixed(1) : '—'}.`} />
-            <Cifra titulo="Visitas" valor={ops!.visits} def={DEFINICIONES.frecuenciaVisita + ` Frecuencia: ${ops!.visit_members ? (ops!.visits / ops!.visit_members).toFixed(1) : '—'}.`} />
-            <Cifra titulo="Ticket medio" valor={ops!.purchases ? soles(Math.round(ventasNetas / ops!.purchases)) : '—'} def={DEFINICIONES.ticket} />
-            <Cifra titulo="Unidades otorgadas" valor={ops!.units_granted.toLocaleString('es-PE')} def="Sellos, puntos o visitas sumados en el periodo (sin restar devoluciones)." />
-            <Cifra titulo="Premios disponibles ahora" valor={m.rewards.available_now} def="Emitidos, sin canjear y sin vencer." />
-            <Cifra titulo="Canjes" valor={m.rewards.redeemed} def={`Tasa de canje: ${pct(m.rewards.issued_redeemed, m.rewards.issued)}. ${DEFINICIONES.canje}`} />
-            <Cifra titulo="Cobertura de ventas" valor="—" def={DEFINICIONES.cobertura} />
-          </div>
-
-          <h3 style={{ fontSize: 15, margin: '6px 0 10px' }}>Google Wallet y placas</h3>
-          <div className="fz-grid">
-            <Cifra
-              titulo="Pases emitidos"
-              valor={m.wallet.passes}
-              def={`Al día: ${m.wallet.passes_by_state.synced ?? 0} · con error: ${m.wallet.passes_by_state.error ?? 0} · pendientes de actualizar: ${m.wallet.pending_updates}. Última sincronización: ${fechaHora(m.wallet.last_sync)}.`}
-            />
-            <Cifra titulo="Enlaces de guardado emitidos" valor={m.wallet.save_links_issued} def={DEFINICIONES.wallet} />
-            <Cifra
-              titulo="Placas activas"
-              valor={m.devices.by_status.active ?? 0}
-              def={Object.entries(m.devices.by_status).map(([k, v]) => `${ESTADO_PLACA[k] ?? k}: ${v}`).join(' · ') || 'Sin placas.'}
-            />
-            <Cifra
-              titulo="Aperturas de placas"
-              valor={(m.devices.opens_by_source.nfc ?? 0) + (m.devices.opens_by_source.qr ?? 0)}
-              def={`NFC/directo: ${m.devices.opens_by_source.nfc ?? 0} · QR: ${m.devices.opens_by_source.qr ?? 0} · sin destino: ${m.devices.unavailable_opens}. ${DEFINICIONES.aperturas}`}
-            />
-          </div>
-        </>
-      )}
     </>
   );
 }

@@ -36,6 +36,17 @@ export function Fallo({ texto, reintentar }: { texto: string; reintentar?: () =>
   );
 }
 
+/** Una cifra con su definición: qué mide exactamente. */
+export function Cifra({ titulo, valor, def }: { titulo: string; valor: React.ReactNode; def: string }) {
+  return (
+    <div className="card">
+      <div className="kpi__label">{titulo}</div>
+      <div className="fz-num">{valor}</div>
+      <p className="fz-def">{def}</p>
+    </div>
+  );
+}
+
 export function SinPermiso({ que }: { que: string }) {
   return (
     <div className="vacio">
