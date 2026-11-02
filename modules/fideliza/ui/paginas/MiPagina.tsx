@@ -28,6 +28,7 @@ import { useAvisar } from '@/components/panel/Avisos';
 import { useCargar } from '@/components/panel/useCargar';
 import { accion, ErrorFideliza, lecturas, mensaje } from '@/modules/fideliza/cliente/api';
 import { subirImagenMarca } from '@/modules/fideliza/cliente/imagenMarca';
+import EncuadrarFoto from '@/modules/fideliza/ui/EncuadrarFoto';
 import { FIDELIZA_URL } from '@/modules/fideliza/dominio/config';
 import {
   BOTONES,
@@ -94,6 +95,7 @@ export default function MiPagina() {
   const [menu, setMenu] = useState(false);
   const [ocupado, setOcupado] = useState(false);
   const [subiendoLogo, setSubiendoLogo] = useState(false);
+  const [porEncuadrar, setPorEncuadrar] = useState<File | null>(null);
   const [subiendoFondo, setSubiendoFondo] = useState(false);
   const [aviso, setAviso] = useState<string | null>(null);
   const [slugOcupado, setSlugOcupado] = useState<string | null>(null);
@@ -540,10 +542,21 @@ export default function MiPagina() {
                 disabled={!editable || subiendoLogo}
                 onChange={(ev) => {
                   const file = ev.target.files?.[0];
-                  if (file) void subirLogo(file);
+                  ev.target.value = '';
+                  if (file) setPorEncuadrar(file);
                 }}
               />
-              <small>Elige una foto desde tu celular o computadora. La dejamos cuadrada sin recortarla; ya no necesitas conseguir un enlace.</small>
+              {porEncuadrar && (
+                <EncuadrarFoto
+                  file={porEncuadrar}
+                  alCerrar={() => setPorEncuadrar(null)}
+                  alListo={(recortada) => {
+                    setPorEncuadrar(null);
+                    void subirLogo(recortada);
+                  }}
+                />
+              )}
+              <small>Elige una foto de al menos 320×320 px desde tu celular o computadora. Al subirla, tú decides el encuadre.</small>
             </div>
             <div className="fz-campo">
               <label className="field-label" htmlFor={idCampo('historia')}>Al tocar tu foto</label>

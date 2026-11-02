@@ -126,16 +126,14 @@ export async function POST(req: Request) {
   const folder = `${clase}/${companyId}`;
 
   /**
-   * La imagen de marca se normaliza durante la subida. `c_fit` conserva todo
-   * el logo o la foto y `c_pad` completa un lienzo cuadrado, en vez de cortar
-   * bordes como haría `c_fill`. PNG mantiene la transparencia y los 1.000 px
-   * dejan margen de sobra para Google Wallet (mínimo 660×660).
+   * La imagen de marca ya llega encuadrada del navegador (ui/EncuadrarFoto.tsx):
+   * `c_fill` solo asegura el 1:1 de 1.000 px, de sobra para Google Wallet (mínimo
+   * 660×660). Nada de rellenar con `c_pad`: esas franjas transparentes eran el
+   * borde blanco que cortaba las fotos en el círculo. Y sin forzar PNG: una foto
+   * sigue en JPEG, porque en PNG pasaría de los 2 MB que admite servidor/logo.ts.
    */
-  const transformation =
-    clase === 'brand' ? 'c_fit,h_880,w_880/c_pad,b_transparent,h_1000,w_1000' : undefined;
-  const format = clase === 'brand' ? 'png' : undefined;
+  const transformation = clase === 'brand' ? 'c_fill,h_1000,w_1000' : undefined;
   const firmados: Record<string, string | number> = { folder, timestamp };
-  if (format) firmados.format = format;
   if (transformation) firmados.transformation = transformation;
   const cadena = Object.entries(firmados)
     .sort(([a], [b]) => a.localeCompare(b))
@@ -143,5 +141,5 @@ export async function POST(req: Request) {
     .join('&');
   const signature = createHash('sha1').update(`${cadena}${SECRET}`).digest('hex');
 
-  return Response.json({ timestamp, signature, folder, format, transformation, apiKey: KEY, cloudName: CLOUD });
+  return Response.json({ timestamp, signature, folder, transformation, apiKey: KEY, cloudName: CLOUD });
 }

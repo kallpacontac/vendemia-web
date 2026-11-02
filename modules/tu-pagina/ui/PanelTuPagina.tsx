@@ -40,6 +40,7 @@ import { esHex, esUrlPublica, type AparienciaPagina } from '@/modules/tu-pagina/
 import { urlEjemploPara } from '@/modules/tu-pagina/dominio/ejemplo';
 import { FOTOS_PLANTILLA, FOTOS_SERVICIOS_LUXURY, esFotoPlantilla, fotoPlantillaPorDefecto } from '@/modules/tu-pagina/dominio/fotos';
 import { subirImagenMarca } from '@/modules/fideliza/cliente/imagenMarca';
+import EncuadrarFoto from '@/modules/fideliza/ui/EncuadrarFoto';
 
 /**
  * La página con otra plantilla o color, sin guardar: se sirve en el dominio del
@@ -231,6 +232,7 @@ function MiPagina({ companyId, nombre, pagina, agendaNube, alGuardar }: {
   const [portada, setPortada] = useState(pagina?.portada_url ?? '');
   const [apariencia, setApariencia] = useState<AparienciaPagina>(pagina?.secciones?.apariencia ?? (esNegocioGastronomico(nombre) ? { fotoPlantilla: /pizzer|pizza/i.test(nombre) ? 'pizzeria' : 'cafeteria' } : {}));
   const [subiendo, setSubiendo] = useState<'logo' | 'portada' | 'portadaLuxurySecundaria' | null>(null);
+  const [porEncuadrar, setPorEncuadrar] = useState<File | null>(null);
   const [libre, setLibre] = useState<boolean | null>(null);
   const [errorSlug, setErrorSlug] = useState(false);
   const [guardando, setGuardando] = useState(false);
@@ -396,10 +398,11 @@ function MiPagina({ companyId, nombre, pagina, agendaNube, alGuardar }: {
         <div className="tp-panel-campo"><span>Logo <small className="muted">(opcional)</small></span>
           <div className="tp-panel-imagen-acciones">
             <label className="tp-panel-subir">{subiendo === 'logo' ? 'Subiendo…' : logo ? 'Cambiar logo' : 'Subir logo'}
-              <input type="file" accept="image/*" disabled={subiendo !== null} onChange={(e) => { const file = e.target.files?.[0]; if (file) void subirImagen(file, 'logo'); e.target.value = ''; }} />
+              <input type="file" accept="image/*" disabled={subiendo !== null} onChange={(e) => { const file = e.target.files?.[0]; if (file) setPorEncuadrar(file); e.target.value = ''; }} />
             </label>
             {logo && <button type="button" className="btn btn-sm btn-ghost" disabled={subiendo !== null} onClick={() => setLogo('')}>Quitar</button>}
           </div>
+          {porEncuadrar && <EncuadrarFoto file={porEncuadrar} alCerrar={() => setPorEncuadrar(null)} alListo={(f) => { setPorEncuadrar(null); void subirImagen(f, 'logo'); }} />}
           {logo && esUrlPublica(logo) && <img className="tp-panel-imagen tp-panel-imagen--logo" src={logo} alt="Vista previa del logo" />}
           {publicada && <label className="tp-panel-enlace-imagen">O pega un enlace HTTPS<input className="input" type="url" value={logo} placeholder="https://…/mi-logo.png" onChange={(e) => setLogo(e.target.value)} /></label>}
         </div>

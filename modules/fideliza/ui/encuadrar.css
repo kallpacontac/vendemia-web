@@ -1,0 +1,10 @@
+.enc-modal{width:min(380px,100%)}
+.enc-marco{position:relative;width:100%;aspect-ratio:1;overflow:hidden;border-radius:12px;background:#fff;box-shadow:0 0 0 1px var(--line-2);cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none}
+.enc-marco:active{cursor:grabbing}
+.enc-marco:focus-visible{outline:2px solid var(--warm);outline-offset:2px}
+.enc-marco img{position:absolute;max-width:none;display:block;pointer-events:none}
+.enc-circulo{position:absolute;inset:0;border-radius:50%;box-shadow:0 0 0 9999px rgba(20,20,18,.55),inset 0 0 0 1.5px rgba(255,255,255,.9);pointer-events:none}
+.enc-zoom{display:flex;align-items:center;gap:10px;margin-top:12px;color:var(--ink-3,#6b6b66)}
+.enc-zoom input{flex:1;min-width:0;min-height:32px;accent-color:var(--warm)}
+.enc-ayuda{margin:6px 0 0}
+.enc-entera{padding:0;border:0;background:none;color:inherit;font:inherit;font-weight:700;text-decoration:underline;cursor:pointer}

@@ -2,8 +2,8 @@
 
 /**
  * Sube el logo o la foto de perfil directamente a Cloudinary. El fichero no
- * atraviesa Vercel: el servidor solo entrega una firma corta y Cloudinary lo
- * normaliza a un PNG cuadrado que sirve también para Google Wallet.
+ * atraviesa Vercel: el servidor solo entrega una firma corta. La imagen de marca
+ * llega ya encuadrada (ui/EncuadrarFoto.tsx) y sirve también para Google Wallet.
  */
 import { supabase } from '@/lib/supabase/client';
 
@@ -13,7 +13,6 @@ interface FirmaSubida {
   timestamp: number;
   signature: string;
   folder: string;
-  format?: string;
   transformation?: string;
   apiKey: string;
   cloudName: string;
@@ -47,7 +46,6 @@ export async function subirImagenMarca(file: File, companyId: string, destino: '
   datos.append('api_key', firma.apiKey);
   datos.append('timestamp', String(firma.timestamp));
   datos.append('folder', firma.folder);
-  if (firma.format) datos.append('format', firma.format);
   if (firma.transformation) datos.append('transformation', firma.transformation);
   datos.append('signature', firma.signature);
 

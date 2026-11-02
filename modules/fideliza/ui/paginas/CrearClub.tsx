@@ -26,6 +26,7 @@ import { useAvisar } from '@/components/panel/Avisos';
 import { useCargar } from '@/components/panel/useCargar';
 import { accion, ErrorFideliza, lecturas, mensaje, sincronizarEnSegundoPlano, type Version } from '@/modules/fideliza/cliente/api';
 import { subirImagenMarca } from '@/modules/fideliza/cliente/imagenMarca';
+import EncuadrarFoto from '@/modules/fideliza/ui/EncuadrarFoto';
 import { slugDe } from '@/modules/fideliza/dominio/botones';
 import { COLORES, PLANTILLAS_TARJETA, colorValido, tarjetaValida, type Estilo, type PlantillaTarjeta } from '@/modules/fideliza/dominio/estilo';
 import { RUBROS, SELLOS, sellosDe, selloValido, sugerirRubro, type Rubro, type Sello } from '@/modules/fideliza/dominio/sellos';
@@ -47,6 +48,7 @@ export default function CrearClub() {
   const avisar = useAvisar();
   const [c, setC] = useState<Club>({ negocio: '', nombre: '', logo: '', color: '#FF4900', tarjeta: 'viva', sello: 'check', sellos: 8, premio: '' });
   const [rubroVisto, setRubroVisto] = useState<Rubro | null>(null);
+  const [porEncuadrar, setPorEncuadrar] = useState<File | null>(null);
   const [vista, setVista] = useState<'web' | 'wallet'>('web');
   const [ocupado, setOcupado] = useState(false);
   const [subiendo, setSubiendo] = useState(false);
@@ -228,9 +230,10 @@ export default function CrearClub() {
                 <ImagePlus size={15} /> {subiendo ? 'Subiendo…' : c.logo ? 'Cambiar logo' : 'Subir tu logo'}
               </button>
               {c.logo && editable && <button type="button" className="btn btn-ghost btn-sm" onClick={() => setC({ ...c, logo: '' })}><Trash2 size={14} /> Quitar</button>}
-              <small className="fz-def" style={{ display: 'block' }}>PNG o JPG cuadrado. Google Wallet lo recorta en círculo.</small>
+              <small className="fz-def" style={{ display: 'block' }}>JPG o PNG de al menos 320×320 px. Al subirlo, tú decides el encuadre.</small>
             </div>
-            <input ref={archivo} type="file" accept="image/*" hidden onChange={(e) => { const f = e.target.files?.[0]; if (f) void subirLogo(f); }} />
+            <input ref={archivo} type="file" accept="image/*" hidden onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ''; if (f) setPorEncuadrar(f); }} />
+            {porEncuadrar && <EncuadrarFoto file={porEncuadrar} alCerrar={() => setPorEncuadrar(null)} alListo={(f) => { setPorEncuadrar(null); void subirLogo(f); }} />}
           </div>
         </section>
 

@@ -27,6 +27,7 @@ const botones = cargar('modules/fideliza/dominio/botones.ts');
 const pagina = cargar('modules/fideliza/dominio/paginaPublica.ts');
 const activacion = cargar('modules/fideliza/dominio/activacion.ts');
 const config = cargar('modules/fideliza/dominio/config.ts');
+const encuadre = cargar('modules/fideliza/dominio/encuadre.ts');
 
 const MIEMBRO_ID = '9f1c2d3e-4b5a-4c6d-8e7f-001122334455';
 const marca = { slug: 'barberia-centro', display_name: 'Barbería Centro', logo_url: 'https://x.com/l.png', bg_color: '#112233', support_url: null };
@@ -492,4 +493,32 @@ test('19 · tus números: segmentos, regreso y horas en Lima', () => {
   assert.equal(n.regresan, 50, 'de los que vinieron por primera vez hace 30–60 días, volvió la mitad');
   assert.equal(n.vinieron, 0);
   assert.equal(n.semanas.length, 12);
+});
+
+test('21 · encuadre de la foto: 1:1, sin franjas y con mínimo de 320 px', () => {
+  const horizontal = { ancho: 1600, alto: 900 };
+  const vertical = { ancho: 900, alto: 1600 };
+
+  assert.match(encuadre.problemaMedidas({ ancho: 319, alto: 900 }), /319×900/);
+  assert.equal(encuadre.problemaMedidas({ ancho: 320, alto: 320 }), null);
+
+  // Una foto horizontal empieza llenando el círculo: es lo que evita las franjas.
+  const h = encuadre.encuadreInicial(horizontal);
+  assert.deepEqual(h, { lado: 900, cx: 800, cy: 450 });
+  const d = encuadre.dibujoEnLienzo(horizontal, h);
+  assert.ok(d.y === 0 && Math.round(d.alto) === 1000 && d.x < 0 && d.x + d.ancho > 1000, 'el lienzo queda cubierto');
+
+  // Una vertical empieza por arriba, donde suele estar la cara.
+  assert.ok(encuadre.encuadreInicial(vertical).cy < 800);
+
+  // No se puede arrastrar más allá del borde ni alejar más que la foto entera.
+  assert.deepEqual(encuadre.limitar(horizontal, { lado: 900, cx: 0, cy: -50 }), { lado: 900, cx: 450, cy: 450 });
+  assert.deepEqual(encuadre.limitar(horizontal, { lado: 9000, cx: 0, cy: 0 }), { lado: 1600, cx: 800, cy: 450 });
+
+  // Acercar nunca baja de 320 px de foto real, ni en una imagen justa.
+  assert.equal(encuadre.limitar({ ancho: 400, alto: 400 }, { lado: 10, cx: 200, cy: 200 }).lado, 320);
+  assert.equal(encuadre.zoomDeLado({ ancho: 320, alto: 320 }, 320), 0);
+
+  // La barra de zoom y el lado se corresponden en los dos sentidos.
+  assert.ok(Math.abs(encuadre.zoomDeLado(horizontal, encuadre.ladoDeZoom(horizontal, 0.4)) - 0.4) < 1e-9);
 });
