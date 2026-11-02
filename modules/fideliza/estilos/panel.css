@@ -3,7 +3,11 @@
 .fz-tabs{display:flex;gap:6px;overflow-x:auto;margin:0 0 18px;padding-bottom:4px;scrollbar-width:none}
 .fz-tabs a{flex-shrink:0;padding:9px 15px;border-radius:var(--r-full);font:700 13px 'Plus Jakarta Sans';color:var(--ink-soft);background:#fff;border:1.5px solid var(--line)}
 .fz-tabs a.active{background:var(--brand);border-color:var(--brand);color:var(--on-brand)}
-.fz-tabs a:focus-visible,.fz-gran:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
+.fz-tabs a.fz-tabs__icono{display:grid;place-items:center;margin-left:auto;padding:9px 12px}
+.fz-tabs a:focus-visible,.fz-subtabs a:focus-visible,.fz-gran:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
+.fz-subtabs{display:flex;gap:20px;overflow-x:auto;margin:-6px 0 18px;border-bottom:1.5px solid var(--line);scrollbar-width:none}
+.fz-subtabs a{flex-shrink:0;margin-bottom:-1.5px;padding:8px 2px 10px;border-bottom:2.5px solid transparent;font:700 13.5px 'Plus Jakarta Sans';color:var(--ink-soft)}
+.fz-subtabs a.active{border-color:var(--brand);color:var(--ink)}
 .fz-panel-aviso{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:12px 14px;border-radius:14px;margin-bottom:14px;font-size:13.5px;background:#FFF8EC;border:1.5px solid #F4D9A8}
 .fz-panel-aviso--error{background:#FDEEEE;border-color:#F3C7C9}
 .fz-panel-aviso--ok{background:#ECF9F3;border-color:#BFE8D4}
@@ -97,6 +101,8 @@
   /* Píldoras más proporcionadas: menos aire, sin perder un blanco táctil cómodo. */
   .main--fideliza .fz-tabs{gap:5px;margin:0 -2px 12px;padding:0 2px 2px}
   .main--fideliza .fz-tabs a{display:flex;align-items:center;min-height:38px;padding:6px 12px;font-size:12.5px;line-height:1.15}
+  .main--fideliza .fz-subtabs{gap:16px;margin:-2px 0 12px}
+  .main--fideliza .fz-subtabs a{display:flex;align-items:center;min-height:38px;padding:6px 2px;font-size:13px}
 }
 /* Primeros pasos y «Tu link público» (Resumen y Enlaces). */
 .fz-pasos-cab{display:flex;justify-content:space-between;align-items:center;gap:12px;width:100%;background:none;border:none;cursor:pointer;text-align:left;font-family:inherit;color:var(--ink);padding:0}

@@ -28,6 +28,7 @@ const pagina = cargar('modules/fideliza/dominio/paginaPublica.ts');
 const activacion = cargar('modules/fideliza/dominio/activacion.ts');
 const config = cargar('modules/fideliza/dominio/config.ts');
 const encuadre = cargar('modules/fideliza/dominio/encuadre.ts');
+const secciones = cargar('modules/fideliza/ui/secciones.ts');
 
 const MIEMBRO_ID = '9f1c2d3e-4b5a-4c6d-8e7f-001122334455';
 const marca = { slug: 'barberia-centro', display_name: 'Barbería Centro', logo_url: 'https://x.com/l.png', bg_color: '#112233', support_url: null };
@@ -540,4 +541,33 @@ test('21 · cualquier foto llena el círculo, como en Instagram', () => {
 
 test('20 · las fechas no llevan espacios raros: servidor y navegador deben coincidir', () => {
   assert.doesNotMatch(formato.fechaHora('2026-11-02T16:30:00Z'), /[^\S ]/);
+});
+
+test('secciones: pocas arriba, ninguna página perdida y a cada quien lo suyo', () => {
+  const todo = () => true;
+  const conPermisos = (...p) => (x) => p.includes(x);
+  const nombres = (l) => l.map((s) => s.label);
+
+  const dueno = secciones.seccionesDe('fidelizacion', todo);
+  assert.deepEqual(nombres(dueno), ['Inicio', 'Caja', 'Clientes', 'Números', 'Tarjeta de puntos', 'Enlaces y QR', 'Ajustes']);
+  // Las direcciones no cambian: hay placas impresas y enlaces que llevan a ellas.
+  assert.deepEqual(dueno.flatMap((s) => s.paginas.map((p) => p.href.replace('/panel/fideliza', ''))).sort(), ['', '/ajustes', '/caja', '/campanas', '/clientes', '/enlaces', '/mi-pagina', '/numeros', '/placas', '/programa']);
+
+  assert.deepEqual(nombres(secciones.seccionesDe('nuevo', todo)), ['Inicio']);
+  const soloEnlaces = secciones.seccionesDe('enlaces', todo);
+  assert.deepEqual(nombres(soloEnlaces), ['Inicio', 'Enlaces y QR']);
+  assert.deepEqual(soloEnlaces[1].paginas.map((p) => p.label), ['Mis enlaces', 'Placas y QR']);
+
+  const cajera = secciones.seccionesDe('fidelizacion', conPermisos('program.read', 'members.read', 'members.create', 'ops.record', 'ops.redeem'));
+  assert.deepEqual(nombres(cajera), ['Inicio', 'Caja', 'Clientes']);
+  assert.deepEqual(cajera[2].paginas.map((p) => p.label), ['Mis clientes']);
+  assert.deepEqual(nombres(secciones.seccionesDe('fidelizacion', conPermisos('program.read', 'metrics.read'))), ['Inicio', 'Números']);
+
+  const abierta = (ruta) => dueno.find((s) => secciones.seccionActiva(s, ruta))?.label;
+  assert.equal(abierta('/panel/fideliza'), 'Inicio');
+  assert.equal(abierta('/panel/fideliza/clientes/abc'), 'Clientes');
+  assert.equal(abierta('/panel/fideliza/campanas'), 'Clientes');
+  assert.equal(abierta('/panel/fideliza/club'), 'Tarjeta de puntos');
+  assert.equal(abierta('/panel/fideliza/placas/abc'), 'Enlaces y QR');
+  assert.equal(abierta('/panel/fideliza/enlaces'), 'Enlaces y QR');
 });

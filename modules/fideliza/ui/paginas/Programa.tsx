@@ -734,7 +734,7 @@ function ProgramaPagina() {
               )}
               <small className="fz-def">Al pulsar «Guardar y seguir» comprobamos si el logo sirve para Google Wallet.</small>
               <p className="fz-def" style={{ marginTop: 12 }}>
-                En Google Wallet, la imagen de abajo es la cartilla del cliente: se van llenando los sellos con cada compra. Con puntos, una barra de avance (o la foto de fondo de <a href="/panel/fideliza/mi-pagina">Mi página</a>, si pusiste una).
+                En Google Wallet, la imagen de abajo es la cartilla del cliente: se van llenando los sellos con cada compra. Con puntos, una barra de avance (o la foto de fondo de <a href="/panel/fideliza/mi-pagina">Mis enlaces</a>, si pusiste una).
               </p>
             </div>
             <div>

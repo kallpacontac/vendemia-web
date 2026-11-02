@@ -204,7 +204,7 @@ export default function FichaPlaca() {
               <label className="fz-fila" style={{ gap: 8 }}>
                 <input type="radio" name="destino" checked={destino === 'perfil'} disabled={!editable} onChange={() => setDestino('perfil')} />
                 <span>
-                  <b>Otro perfil</b> · uno de tus «Perfiles de placas»
+                  <b>Otra página</b> · una de tus «Otras páginas»
                 </span>
               </label>
             )}
@@ -238,7 +238,7 @@ export default function FichaPlaca() {
           {destino === 'perfil' && (
             <div className="fz-campo">
               <select className="select" value={form.profileId} disabled={!editable} onChange={(e) => setForm({ ...form, profileId: e.target.value })}>
-                <option value="">— Elige un perfil —</option>
+                <option value="">— Elige una página —</option>
                 {datos!.perfiles
                   .filter((x) => !esDirecto(x.name))
                   .map((x) => (

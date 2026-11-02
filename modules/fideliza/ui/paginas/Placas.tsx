@@ -247,7 +247,7 @@ function Lista() {
               <tr>
                 <th>Placa</th>
                 <th>Estado</th>
-                <th>Perfil</th>
+                <th>Lleva a</th>
                 <th>Sucursal</th>
                 <th>Alta</th>
               </tr>

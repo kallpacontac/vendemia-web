@@ -73,7 +73,7 @@ export default function Enlaces() {
 
   const errores: Errores = {};
   if (borrador) {
-    if (!borrador.name.trim()) errores.nombre = 'Ponle un nombre interno al perfil (ej. «Caja», «Mesas»).';
+    if (!borrador.name.trim()) errores.nombre = 'Ponle un nombre interno a esta página (ej. «Caja», «Mesas»).';
     borrador.links.forEach((l, i) => {
       const quien = l.label.trim() ? `«${l.label.trim()}»` : `El botón ${i + 1}`;
       if (!l.label.trim()) errores[`enlace-${i}-texto`] = `El botón ${i + 1}: falta el texto que ve el cliente.`;
@@ -91,7 +91,7 @@ export default function Enlaces() {
   if (error) return <Fallo texto={error} reintentar={releer} />;
   if (!datos) return null;
   if (!ajustes)
-    return <Vacio titulo="Primero completa los datos del negocio">Ve a Programa → paso 1. La página pública necesita una dirección.</Vacio>;
+    return <Vacio titulo="Primero completa los datos del negocio">Ve a Tarjeta de puntos → paso 1. La página pública necesita una dirección.</Vacio>;
   const editable = puede('links.manage');
   const perfil = datos.perfiles.find((p) => p.id === elegido);
   const publicada = datos.publicadas.find((v) => v.id === perfil?.published_version_id);
@@ -155,7 +155,7 @@ export default function Enlaces() {
     if (!id) return;
     const vigentes = borrador!.links.filter(vigente).length;
     const enUso = placasDelPerfil.length;
-    if (vigentes === 0 && enUso && !window.confirm(`${enUso} placa(s) activa(s) usan este perfil y se quedarán sin destino. ¿Publicar igualmente?`)) return;
+    if (vigentes === 0 && enUso && !window.confirm(`${enUso} placa(s) activa(s) usan esta página y se quedarán sin destino. ¿Publicar igualmente?`)) return;
     setOcupado(true);
     try {
       const r = await accion<{ version: number; effective: number }>('perfil.publicar', { companyId, profileId: id, allowEmpty: vigentes === 0 });
@@ -182,23 +182,23 @@ export default function Enlaces() {
       />
       <div className="fz-panel-aviso fz-panel-aviso--info">
         <span>
-          <b>Cómo funciona:</b> 1) añade tus botones abajo · 2) pulsa <b>Publicar</b> · 3) copia tu link de arriba y compártelo.
+          <b>Para qué sirve:</b> páginas aparte para una placa concreta, como la carta en las mesas. La principal está en «Mis enlaces». <b>Cómo funciona:</b> 1) añade tus botones abajo · 2) pulsa <b>Publicar</b> · 3) copia tu link de arriba y compártelo.
           Hasta que publiques, tus clientes no ven los cambios.
         </span>
       </div>
       <div className="toolbar">
-        <select className="select" value={elegido ?? ''} onChange={(e) => setElegido(e.target.value)} aria-label="Perfil">
+        <select className="select" value={elegido ?? ''} onChange={(e) => setElegido(e.target.value)} aria-label="Página">
           {datos.perfiles.map((p) => (
             <option key={p.id} value={p.id}>
               {p.name}
               {ajustes.default_profile_id === p.id ? ' (página del negocio)' : ''}
             </option>
           ))}
-          {elegido === 'nuevo' && <option value="nuevo">Nuevo perfil</option>}
+          {elegido === 'nuevo' && <option value="nuevo">Nueva página</option>}
         </select>
         {editable && (
           <button className="btn btn-ghost btn-sm" onClick={() => setElegido('nuevo')}>
-            <Plus size={14} /> Nuevo perfil
+            <Plus size={14} /> Nueva página
           </button>
         )}
         <a className="btn btn-ghost btn-sm" href={urlNegocio(ajustes.slug)} target="_blank" rel="noopener noreferrer">
@@ -207,7 +207,7 @@ export default function Enlaces() {
       </div>
 
       {!datos.perfiles.length && elegido !== 'nuevo' && (
-        <Vacio titulo="Todavía no hay enlaces">Crea un perfil: es lo que abre la placa al acercar el teléfono.</Vacio>
+        <Vacio titulo="Todavía no hay enlaces">Crea una página: es lo que abre la placa al acercar el teléfono.</Vacio>
       )}
 
       {borrador && (
@@ -233,9 +233,9 @@ export default function Enlaces() {
             </label>
 
             <ul className="fz-ayudas" style={{ marginBottom: 12 }}>
-              <li><b>Nombre interno:</b> para reconocer este perfil tú (ej. «Caja», «Mesas»). El cliente no lo ve.</li>
+              <li><b>Nombre interno:</b> para reconocer esta página tú (ej. «Caja», «Mesas»). El cliente no lo ve.</li>
               <li><b>Título visible y frase:</b> lo que sale arriba de la página. Vacío = el nombre de tu negocio.</li>
-              <li><b>Página del negocio:</b> si lo marcas, este perfil es también el de tu link fideliza.vendemias.com/n/…</li>
+              <li><b>Página del negocio:</b> si lo marcas, esta página es también la de tu link fideliza.vendemias.com/n/…</li>
               <li><b>Visible:</b> desmárcalo para esconder un botón sin borrarlo. <b>Destacado:</b> va primero y en tu color. <b>Hasta:</b> el botón desaparece solo después de esa fecha (para promociones).</li>
             </ul>
             <h3 style={{ fontSize: 15, margin: '6px 0 8px' }}>Enlaces (borrador)</h3>

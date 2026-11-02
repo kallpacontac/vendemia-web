@@ -228,24 +228,9 @@ export default function Resumen() {
                 Registrar operación
               </Link>
             )}
-            {puede('metrics.read') && (
-              <Link className="btn btn-ghost btn-sm" href="/panel/fideliza/numeros">
-                Ver números
-              </Link>
-            )}
             {puede('members.create') && (
               <Link className="btn btn-ghost btn-sm" href="/panel/fideliza/clientes?nuevo=1">
                 Añadir cliente
-              </Link>
-            )}
-            {puede('program.edit') && (
-              <Link className="btn btn-ghost btn-sm" href="/panel/fideliza/programa">
-                Configurar programa
-              </Link>
-            )}
-            {puede('devices.manage') && (
-              <Link className="btn btn-ghost btn-sm" href="/panel/fideliza/placas?nueva=1">
-                Crear placa
               </Link>
             )}
             {ajustes && (
