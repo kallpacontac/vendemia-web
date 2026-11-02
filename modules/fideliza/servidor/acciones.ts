@@ -5,6 +5,7 @@ import { estadoConfiguracion } from './entorno';
 import { rpc, servidor } from './supabase';
 import { comprobarLogo } from './logo';
 import { buscarLugares } from './lugares';
+import { avisarPremio } from './avisos';
 import { drenar } from './worker';
 import { urlAyuda, urlSuelta } from '../dominio/botones';
 import { IDS_SELLO } from '../dominio/sellos';
@@ -349,8 +350,8 @@ export const ACCIONES = {
       idempotencyKey: idem,
     }),
     limite: ['caja', 60],
-    ejecutar: (d, { sb }) =>
-      rpc(sb, 'loyalty_record', {
+    ejecutar: async (d, { sb }) => {
+      const r = await rpc<{ status: string; rewards_issued?: number; member?: { reward_description?: string | null } }>(sb, 'loyalty_record', {
         p_company: d.companyId,
         p_member: d.memberId,
         p_kind: d.kind,
@@ -359,7 +360,11 @@ export const ACCIONES = {
         p_external_ref: d.externalRef || null,
         p_idempotency_key: d.idempotencyKey,
         p_source: 'caja',
-      }),
+      });
+      // Solo la primera vez: un reintento («replayed») no vuelve a avisar.
+      if (r.status === 'created' && r.rewards_issued) await avisarPremio(d.companyId, d.memberId, 'ganado', r.member?.reward_description);
+      return r;
+    },
   }),
   'caja.canjear': accion({
     esquema: z.object({
@@ -370,14 +375,17 @@ export const ACCIONES = {
       idempotencyKey: idem,
     }),
     limite: ['caja', 60],
-    ejecutar: (d, { sb }) =>
-      rpc(sb, 'loyalty_redeem', {
+    ejecutar: async (d, { sb }) => {
+      const r = await rpc<{ status: string; description?: string }>(sb, 'loyalty_redeem', {
         p_company: d.companyId,
         p_member: d.memberId,
         p_reward: d.rewardId,
         p_location: d.locationId,
         p_idempotency_key: d.idempotencyKey,
-      }),
+      });
+      if (r.status === 'created') await avisarPremio(d.companyId, d.memberId, 'canjeado', r.description);
+      return r;
+    },
   }),
   'caja.devolver': accion({
     esquema: z.object({

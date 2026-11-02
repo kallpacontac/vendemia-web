@@ -153,3 +153,33 @@
 .fz-aviso-app__ir{flex:none;display:inline-flex;align-items:center;gap:6px;padding:10px 14px;border:0;border-radius:12px;background:#fff;color:#14110F;font-size:14px;font-weight:700}
 .fz-aviso-app__x{flex:none;display:grid;place-items:center;width:30px;height:30px;padding:0;border:0;border-radius:50%;background:rgba(255,255,255,.14);color:#fff}
 @media(prefers-reduced-motion:reduce){.fz-aviso-app{animation:none}}
+
+/* ── Tienes un premio: el aura (solo sombras y fondo: no ocupa sitio ni desborda) ── */
+.fz-aura{padding:5px;border-radius:30px;background:linear-gradient(110deg,#FFC93C 30%,#FFF3C4 50%,#FFC93C 70%) 0 0/250% 100%;animation:fz-aura-late 2.2s ease-in-out infinite,fz-aura-brillo 3.5s linear infinite}
+.fz-aura .fz-carnet{border-radius:25px}
+.fz-aura .fz-carnet__saldo b{font-size:38px}
+.fz-gano{display:flex;flex-direction:column;align-items:center;gap:2px;padding:16px 14px 14px;color:#2B1D00;text-align:center}
+.fz-gano small{font-size:13px;font-weight:800;letter-spacing:.06em;text-transform:uppercase}
+.fz-gano b{display:block;font-size:25px;line-height:1.15;font-weight:800}
+.fz-gano em{display:block;margin-top:2px;font-size:12px;font-weight:600;font-style:normal;opacity:.8}
+.fz-gano p{margin:6px 0 0;font-size:14px;font-weight:600}
+.fz-gano__icono{display:grid;place-items:center;width:52px;height:52px;margin-bottom:6px;border-radius:50%;background:#2B1D00;color:#FFC93C;animation:fz-aura-salta 1.6s ease-in-out infinite}
+.fz-gano__icono svg{width:27px;height:27px}
+.fz-aura,.fz-fiesta,.fz-fiesta__caja{box-sizing:border-box}
+.fz-fiesta{position:fixed;inset:0;z-index:60;display:grid;place-items:center;padding:24px;background:rgba(20,17,15,.72);backdrop-filter:blur(4px);animation:fz-entrar .25s ease-out}
+.fz-fiesta__caja{display:flex;flex-direction:column;align-items:center;gap:6px;width:100%;max-width:360px;padding:30px 22px 22px;border-radius:28px;background:#FFC93C;color:#2B1D00;text-align:center;animation:fz-aura-late 2.2s ease-in-out infinite}
+.fz-fiesta--canjeado .fz-fiesta__caja{background:#E3F6EC;color:#0D3B26;animation-name:fz-aura-verde}
+.fz-fiesta__icono{display:grid;place-items:center;width:72px;height:72px;margin-bottom:6px;border-radius:50%;background:#2B1D00}
+.fz-fiesta__icono svg{width:38px;height:38px;color:#FFC93C}
+.fz-fiesta--canjeado .fz-fiesta__icono{background:#1F9D63}
+.fz-fiesta--canjeado .fz-fiesta__icono svg{color:#fff}
+.fz-fiesta h2{margin:0;font-size:27px;line-height:1.15}
+.fz-fiesta b{font-size:19px}
+.fz-fiesta p{margin:4px 0 12px;font-size:14.5px}
+.fz-fiesta__ok{width:100%;min-height:50px;border:0;border-radius:15px;background:#2B1D00;color:#fff;font-family:inherit;font-size:16px;font-weight:700;cursor:pointer}
+.fz-fiesta--canjeado .fz-fiesta__ok{background:#0D3B26}
+@keyframes fz-aura-late{0%,100%{box-shadow:0 0 0 2px #FFE9A8,0 0 22px 6px rgba(255,201,60,.65),0 0 54px 14px rgba(255,122,26,.3)}50%{box-shadow:0 0 0 3px #FFF3C4,0 0 34px 12px rgba(255,201,60,.95),0 0 80px 26px rgba(255,122,26,.5)}}
+@keyframes fz-aura-verde{0%,100%{box-shadow:0 0 0 2px #B8F2D2,0 0 22px 6px rgba(55,208,138,.6),0 0 54px 14px rgba(31,157,99,.3)}50%{box-shadow:0 0 0 3px #DDF9E9,0 0 34px 12px rgba(55,208,138,.9),0 0 80px 26px rgba(31,157,99,.5)}}
+@keyframes fz-aura-brillo{to{background-position:-250% 0}}
+@keyframes fz-aura-salta{50%{transform:scale(1.1)}}
+@media (prefers-reduced-motion:reduce){.fz-aura{animation:none;box-shadow:0 0 0 2px #FFE9A8,0 0 28px 8px rgba(255,201,60,.8)}.fz-fiesta__caja,.fz-gano__icono{animation:none}}

@@ -32,7 +32,9 @@ export const fechaHora = (iso: string | null | undefined) =>
         month: 'short',
         hour: '2-digit',
         minute: '2-digit',
-      })
+        // Node y los navegadores separan «a. m.» con espacios Unicode distintos: sin
+        // esto, el servidor y el móvil no coinciden y React rehace toda la página.
+      }).replace(/\s/g, ' ')
     : '—';
 
 export const fecha = (iso: string | null | undefined) =>

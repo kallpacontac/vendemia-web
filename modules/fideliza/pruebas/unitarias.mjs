@@ -537,3 +537,7 @@ test('21 · cualquier foto llena el círculo, como en Instagram', () => {
   assert.equal(encuadre.fotoEnCirculo(`${base}/c_crop,w_9/v1/brand/a/b.png`), `${base}/c_crop,w_9/v1/brand/a/b.png`);
   assert.equal(encuadre.fotoEnCirculo(null), '');
 });
+
+test('20 · las fechas no llevan espacios raros: servidor y navegador deben coincidir', () => {
+  assert.doesNotMatch(formato.fechaHora('2026-11-02T16:30:00Z'), /[^\S ]/);
+});

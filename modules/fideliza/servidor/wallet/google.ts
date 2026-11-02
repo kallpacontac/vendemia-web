@@ -108,6 +108,16 @@ export async function upsert(recurso: Recurso, id: string, cuerpo: Record<string
   return { creado: true, datos: i.datos as Record<string, unknown> };
 }
 
+/**
+ * Un mensaje en el pase que además suena como notificación en Android. Google
+ * admite 3 cada 24 h por pase: pasado eso responde con error y no se insiste.
+ */
+export async function mensajeWallet(objectId: string, encabezado: string, cuerpo: string) {
+  await llamar('POST', `loyaltyObject/${encodeURIComponent(objectId)}/addMessage`, {
+    message: { id: `fz-${Date.now()}`, header: encabezado.slice(0, 80), body: cuerpo.slice(0, 300), messageType: 'TEXT_AND_NOTIFY' },
+  });
+}
+
 /** El enlace del botón «Agregar a Google Wallet». Solo referencia el objeto (JWT corto). */
 export function enlaceGuardar(objectId: string, origen: string): string {
   const c = credenciales();

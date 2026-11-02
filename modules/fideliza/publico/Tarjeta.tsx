@@ -57,6 +57,9 @@ export default function Tarjeta(props: {
   const { token } = props;
   const [d, setD] = useState(props.inicial);
   const [leido, setLeido] = useState(props.leidoEn);
+  /** La pantalla de celebración: el premio cambió mientras la tarjeta estaba abierta. */
+  const [fiesta, setFiesta] = useState<null | { tipo: 'ganado' | 'canjeado'; premio: string }>(null);
+  const ultimo = useRef(props.inicial);
   const [enLinea, setEnLinea] = useState(true);
   const [aviso, setAviso] = useState<string | null>(null);
   const [nueva, setNueva] = useState(false);
@@ -118,6 +121,43 @@ export default function Tarjeta(props: {
     };
   }, [token, props.walletDisponible]);
 
+  /**
+   * Con la tarjeta abierta en el mostrador, lo que hace el empleado se ve solo:
+   * se relee cada 12 s (y al volver a la pestaña). Si baja el número de premios
+   * y no fue por vencimiento ni por una devolución (que devuelve las unidades),
+   * es que se canjeó; si sube, lo acaba de ganar.
+   */
+  useEffect(() => {
+    const leer = async () => {
+      if (document.visibilityState !== 'visible' || !navigator.onLine) return;
+      try {
+        const r = await pedir<DatosTarjeta>({ accion: 'ver', token });
+        if (r.status !== 'ok') return;
+        const antes = ultimo.current;
+        ultimo.current = r;
+        setD(r);
+        setLeido(new Date().toISOString());
+        if (r.rewards.length > antes.rewards.length) {
+          setFiesta({ tipo: 'ganado', premio: r.rewards[0]?.description ?? r.program?.reward ?? 'Tu premio' });
+        } else if (r.rewards.length < antes.rewards.length && r.member.balance <= antes.member.balance) {
+          const ido = antes.rewards.find((x) => !r.rewards.some((y) => y.description === x.description && y.expires_at === x.expires_at)) ?? antes.rewards[0];
+          const vencio = ido?.expires_at && new Date(ido.expires_at).getTime() <= Date.now();
+          if (!vencio) setFiesta({ tipo: 'canjeado', premio: ido?.description ?? 'Tu premio' });
+        } else return;
+        navigator.vibrate?.(200);
+      } catch {
+        /* sin respuesta: se reintenta en la siguiente vuelta */
+      }
+    };
+    const reloj = window.setInterval(() => void leer(), 12_000);
+    const alVisibilizar = () => { if (document.visibilityState === 'visible') void leer(); };
+    document.addEventListener('visibilitychange', alVisibilizar);
+    return () => {
+      window.clearInterval(reloj);
+      document.removeEventListener('visibilitychange', alVisibilizar);
+    };
+  }, [token]);
+
   useEffect(() => {
     const ua = navigator.userAgent;
     setPlataforma(/iPhone|iPad|iPod/i.test(ua) ? 'ios' : /Android/i.test(ua) ? 'android' : 'otra');
@@ -168,6 +208,7 @@ export default function Tarjeta(props: {
     try {
       const r = await pedir<DatosTarjeta>({ accion: 'ver', token });
       if (r.status === 'ok') {
+        ultimo.current = r;
         setD(r);
         setLeido(new Date().toISOString());
         setAviso(null);
@@ -377,6 +418,20 @@ export default function Tarjeta(props: {
       {walletGuardada && <div className="fz-caja fz-wallet-lista" role="status"><Check aria-hidden="true" /><span>Tu tarjeta ya está en Google Wallet.</span></div>}
 
       <section className="fz-caja fz-centro" aria-label="Tu tarjeta">
+        <div className={d.rewards.length > 0 ? 'fz-aura' : undefined}>
+        {d.rewards.length > 0 && (
+          <div className="fz-gano" role="status">
+            <span className="fz-gano__icono"><Gift aria-hidden="true" /></span>
+            <small>{d.rewards.length > 1 ? `¡Tienes ${d.rewards.length} premios!` : '¡Ganaste un premio!'}</small>
+            {d.rewards.map((r, i) => (
+              <b key={i}>
+                {r.description}
+                {r.expires_at && <em>Vence el {fechaHora(r.expires_at)}</em>}
+              </b>
+            ))}
+            <p>Muestra tu código al personal para canjearlo.</p>
+          </div>
+        )}
         <div className="fz-carnet">
           {plantilla.fondo && <>
             {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -402,28 +457,16 @@ export default function Tarjeta(props: {
                 <i style={{ width: `${(progreso / umbral) * 100}%` }} />
               </div>
             ) : null}
-            {umbral > 0 && <p className="fz-carnet__meta">{progreso} de {umbral} {UNIDAD[tipo].varias} para tu próximo premio</p>}
+            {umbral > 0 && <p className="fz-carnet__meta">{progreso} de {umbral} {UNIDAD[tipo].varias} para tu {d.rewards.length > 0 ? 'siguiente' : 'próximo'} premio</p>}
             <div className="fz-carnet__qr">
               <div className="fz-qr" aria-label="Código QR para mostrar en caja" dangerouslySetInnerHTML={{ __html: props.qrSvg }} />
               <span>{d.member.public_code}</span>
             </div>
           </div>
         </div>
-        {d.program?.reward && <div className="fz-meta-premio"><Gift aria-hidden="true" /><span>{d.member.balance >= umbral && umbral > 0 ? 'Premio alcanzado' : 'Tu próximo premio'}<b>{d.program.reward}</b></span></div>}
-        {d.rewards.length > 0 && (
-          <div className="fz-premio">
-            <b>
-              Tienes {d.rewards.length} premio{d.rewards.length > 1 ? 's' : ''} para canjear
-            </b>
-            {d.rewards.map((r, i) => (
-              <p key={i}>
-                {r.description}
-                {r.expires_at ? ` · vence el ${fechaHora(r.expires_at)}` : ''}
-              </p>
-            ))}
-          </div>
-        )}
-        <p className="fz-nota">Enséñalo en caja para acumular o canjear.</p>
+        </div>
+        {d.program?.reward && d.rewards.length === 0 && <div className="fz-meta-premio"><Gift aria-hidden="true" /><span>{d.member.balance >= umbral && umbral > 0 ? 'Premio alcanzado' : 'Tu próximo premio'}<b>{d.program.reward}</b></span></div>}
+        <p className="fz-nota">{d.rewards.length > 0 ? 'Enséñalo en caja para canjear tu premio o seguir sumando.' : 'Enséñalo en caja para acumular o canjear.'}</p>
         <p className="fz-mini">
           Leído el {fechaHora(leido)} ·{' '}
           <button type="button" className="fz-link" onClick={() => void actualizar()} disabled={ocupado === 'ver'}>
@@ -494,6 +537,18 @@ export default function Tarjeta(props: {
           Borrar mis datos y esta tarjeta
         </button>
       </details>
+
+      {fiesta && (
+        <div className={`fz-fiesta fz-fiesta--${fiesta.tipo}`} role="alertdialog" aria-modal="true" aria-labelledby="fz-fiesta-t">
+          <div className="fz-fiesta__caja">
+            <span className="fz-fiesta__icono">{fiesta.tipo === 'canjeado' ? <Check aria-hidden="true" /> : <Gift aria-hidden="true" />}</span>
+            <h2 id="fz-fiesta-t">{fiesta.tipo === 'canjeado' ? '¡Premio canjeado!' : '¡Ganaste un premio!'}</h2>
+            <b>{fiesta.premio}</b>
+            <p>{fiesta.tipo === 'canjeado' ? `Gracias por venir a ${d.brand.display_name}. ¡Disfrútalo!` : 'Muestra tu código al personal para canjearlo, ahora o en tu próxima visita.'}</p>
+            <button type="button" className="fz-fiesta__ok" onClick={() => setFiesta(null)}>{fiesta.tipo === 'canjeado' ? 'Genial' : 'Ver mi tarjeta'}</button>
+          </div>
+        </div>
+      )}
 
       {d.member.status === 'active' && (
         <AvisoInstalar
