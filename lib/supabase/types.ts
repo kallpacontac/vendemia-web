@@ -492,6 +492,8 @@ export interface EmployeeRow {
    * lib/panel/comisiones.ts.
    */
   comision_pct?: number | null;
+  /** La cara que ve el cliente al reservar. Nula o vacía = su inicial. Migración 0012 de Mi página. */
+  foto_url?: string | null;
 }
 
 /**

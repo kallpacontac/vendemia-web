@@ -219,6 +219,25 @@
 .tp-dias .tp-opcion:disabled { text-decoration: none; }
 .tp-horas { display: grid; grid-template-columns: repeat(auto-fill, minmax(76px, 1fr)); gap: 8px; }
 .tp-horas .tp-opcion { min-height: 46px; font-weight: 600; }
+
+/* Elegir empleado viendo su cara. La fila se desliza con el dedo: el equipo puede ser largo. */
+.tp-equipo { display: flex; gap: 10px; overflow-x: auto; padding: 3px; margin: 0 -3px; scroll-snap-type: x proximity; scrollbar-width: thin; }
+.tp-persona {
+  flex: none; width: 96px; display: grid; justify-items: center; align-content: start; gap: 8px; padding: 10px 6px;
+  border: 1px solid transparent; border-radius: var(--tp-radio); background: transparent; color: inherit; font: inherit;
+  cursor: pointer; scroll-snap-align: start; transition: background .18s ease, color .18s ease;
+}
+.tp-persona:hover { background: color-mix(in srgb, var(--tp-color) 8%, transparent); }
+.tp-persona:focus-visible { outline: 2px solid var(--tp-color); outline-offset: 1px; }
+.tp-persona[aria-pressed='true'] { background: var(--tp-color); color: var(--tp-tinta); }
+.tp-persona__cara {
+  width: 68px; height: 68px; display: grid; place-items: center; overflow: hidden; border-radius: 50%;
+  background: color-mix(in srgb, var(--tp-color) 14%, white); color: var(--tp-color); box-shadow: 0 0 0 2px #fff, 0 2px 8px rgba(0, 0, 0, .14);
+  font-size: 26px; font-weight: 800;
+}
+.tp-persona__cara img { width: 100%; height: 100%; display: block; object-fit: cover; }
+.tp-persona b { font-size: 12.5px; font-weight: 700; line-height: 1.25; text-align: center; overflow-wrap: anywhere; }
+@media (prefers-reduced-motion: reduce) { .tp-persona { transition: none; } }
 .tp-contador button:disabled { opacity: .4; cursor: not-allowed; }
 
 .tp-grupos { display: grid; gap: 8px; }

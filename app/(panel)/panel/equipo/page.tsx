@@ -28,7 +28,7 @@
  *     de guardar, al guardar (la lista del bot, `citas_afectadas`) y después,
  *     en cada ausencia, mientras sigan sin moverse.
  */
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import {
   AlertTriangle,
@@ -37,6 +37,7 @@ import {
   Check,
   ChevronDown,
   ChevronUp,
+  ImagePlus,
   MessageCircle,
   Percent,
   Plus,
@@ -51,6 +52,11 @@ import { useSesion } from '@/components/panel/Sesion';
 import { soloLeeLoDelDueno } from '@/lib/panel/roles';
 import { useAvisar, useComando } from '@/components/panel/Avisos';
 import { useCargar } from '@/components/panel/useCargar';
+import EncuadrarFoto from '@/modules/fideliza/ui/EncuadrarFoto';
+import { subirImagenMarca } from '@/modules/fideliza/cliente/imagenMarca';
+import { fotoEnCirculo } from '@/modules/fideliza/dominio/encuadre';
+import { demoActivo } from '@/lib/panel/demo';
+import { supabase } from '@/lib/supabase/client';
 import { diaMes, hora } from '@/lib/panel/format';
 import { hoyLima } from '@/lib/panel/inscripciones';
 import { quienDeCita } from '@/lib/panel/ficha';
@@ -301,6 +307,105 @@ export default function Equipo() {
 
 /* ═══════════════════════════════════════════════════════════════════════ */
 
+/** Su foto en un círculo, o su inicial si no tiene. */
+function Cara({ t, lado }: { t: Trabajador; lado: number }) {
+  const foto = fotoEnCirculo(t.foto_url, lado * 3);
+  return (
+    <span
+      aria-hidden="true"
+      style={{
+        width: lado,
+        height: lado,
+        flex: 'none',
+        display: 'grid',
+        placeItems: 'center',
+        borderRadius: '50%',
+        background: foto ? `center / cover no-repeat url("${foto}")` : 'var(--bg-soft)',
+        color: 'var(--ink-soft)',
+        fontSize: lado * 0.42,
+        fontWeight: 700,
+      }}
+    >
+      {foto ? null : t.name.trim().charAt(0).toUpperCase()}
+    </span>
+  );
+}
+
+/**
+ * Se guarda al momento y no con el botón Guardar: es una llamada propia
+ * (cfg_trabajador_foto, 0012 de Mi página) que no pasa por la cola del bot, y por
+ * eso vale también en un negocio que aún es suyo.
+ */
+function FotoTrabajador({ t, alCambiar }: { t: Trabajador; alCambiar: () => void }) {
+  const { companyId } = useSesion();
+  const avisar = useAvisar();
+  const selector = useRef<HTMLInputElement>(null);
+  const [porEncuadrar, setPorEncuadrar] = useState<File | null>(null);
+  const [ocupado, setOcupado] = useState(false);
+
+  async function poner(cual: () => Promise<string>, hecho: string) {
+    if (!companyId) return;
+    if (demoActivo()) {
+      avisar('Estás en modo demo: no se guarda nada. Sal del modo demo para cambiar algo de verdad.', 'espera');
+      return;
+    }
+    setOcupado(true);
+    try {
+      const url = await cual();
+      const { error } = await supabase().rpc('cfg_trabajador_foto', { p_company: companyId, p_id: t.id, p_url: url });
+      if (error) throw new Error(error.message);
+      avisar(hecho);
+      alCambiar();
+    } catch (e) {
+      avisar(e instanceof Error ? e.message : 'No se pudo guardar la foto.', 'error');
+    } finally {
+      setOcupado(false);
+    }
+  }
+
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 14 }}>
+      <Cara t={t} lado={72} />
+      <div>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+          <button type="button" className="btn btn-sm btn-ghost" disabled={ocupado} onClick={() => selector.current?.click()}>
+            <ImagePlus size={14} /> {ocupado ? 'Guardando…' : t.foto_url ? 'Cambiar foto' : 'Subir foto'}
+          </button>
+          {t.foto_url && (
+            <button type="button" className="btn btn-sm btn-ghost" disabled={ocupado} onClick={() => void poner(async () => '', 'Foto quitada')}>
+              Quitar
+            </button>
+          )}
+        </div>
+        <small className="muted" style={{ display: 'block', fontSize: 11.5, marginTop: 6 }}>
+          Es la cara que ven tus clientes al elegir con quién reservar.
+        </small>
+        <input
+          ref={selector}
+          type="file"
+          accept="image/*"
+          hidden
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            if (file) setPorEncuadrar(file);
+            e.target.value = '';
+          }}
+        />
+      </div>
+      {porEncuadrar && (
+        <EncuadrarFoto
+          file={porEncuadrar}
+          alCerrar={() => setPorEncuadrar(null)}
+          alListo={(f) => {
+            setPorEncuadrar(null);
+            void poner(() => subirImagenMarca(f, companyId ?? ''), 'Foto guardada');
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
 function Ficha({
   t,
   equipo,
@@ -424,6 +529,7 @@ function Ficha({
   return (
     <div className={`cat-item ${t.activo ? '' : 'oculto'}`}>
       <div className="cat-head" onClick={alAbrir}>
+        <Cara t={t} lado={38} />
         <div className="cat-id">
           <b>{t.name}</b>
           <small>
@@ -457,6 +563,7 @@ function Ficha({
 
       {abierta && (
         <div className="cat-body">
+          <FotoTrabajador t={t} alCambiar={alCambiar} />
           <label className="field-label">Nombre</label>
           <input className="input" value={nombre} onChange={(e) => setNombre(e.target.value)} />
           <small className="muted" style={{ fontSize: 11.5 }}>

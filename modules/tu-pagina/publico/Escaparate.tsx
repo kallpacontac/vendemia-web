@@ -23,6 +23,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Check, ChevronLeft, ChevronRight, Clock, MessageCircle, Minus, Plus, Search, ShoppingBag, Trash2, Users, X } from 'lucide-react';
 import { cap, vocabulario } from '@/lib/panel/vocabulario';
+import { fotoEnCirculo } from '@/modules/fideliza/dominio/encuadre';
 import type { Disposicion } from '@/modules/tu-pagina/dominio/plantillas';
 import type { AparienciaPagina } from '@/modules/tu-pagina/dominio/apariencia';
 import { fotoProductoRestaurante, fotoServicioLuxury } from '@/modules/tu-pagina/dominio/fotos';
@@ -607,6 +608,35 @@ function ResumenCita({ item, esc, inicio, profesional, esBarberia }: {
   );
 }
 
+/** Elegir viendo la cara. Quien no tiene foto sale con su inicial, en el mismo círculo. */
+function ElegirProfesional({ equipo, valor, alElegir, esBarberia }: {
+  equipo: Datos['agenda']['equipo'];
+  valor: string;
+  alElegir: (id: string) => void;
+  esBarberia: boolean;
+}) {
+  return (
+    <div className="tp-campo">
+      <label id="tp-pro-l">{esBarberia ? 'Elige a tu barbero' : 'Elige a tu profesional'}</label>
+      <div className="tp-equipo" role="group" aria-labelledby="tp-pro-l">
+        <button type="button" className="tp-persona" aria-pressed={!valor} onClick={() => alElegir('')}>
+          <span className="tp-persona__cara" aria-hidden="true"><Users size={26} /></span>
+          <b>{esBarberia ? 'Cualquiera' : 'El primero libre'}</b>
+        </button>
+        {equipo.map((e) => (
+          <button key={e.id} type="button" className="tp-persona" aria-pressed={valor === e.id} onClick={() => alElegir(e.id)}>
+            <span className="tp-persona__cara" aria-hidden="true">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              {e.foto ? <img src={fotoEnCirculo(e.foto, 192)} alt="" loading="lazy" draggable={false} /> : e.nombre.trim().charAt(0).toUpperCase()}
+            </span>
+            <b>{e.nombre}</b>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 /** El envío al servidor con su idem: un doble toque no separa dos veces. */
 export function useEnviar(ruta: string) {
   const idem = useRef(nuevoIdem());
@@ -707,8 +737,8 @@ function Reservar({ item, esc, slug, alTerminar, presentacion, esBarberia = fals
 
   if (presentacion === 'agenda') return <>
     <div className="tp-agenda-widget__calendario">
-      <span className="tp-agenda-widget__paso">{esBarberia && esc.pideProfesional ? '2 · BARBERO Y DÍA' : '2 · DÍA'}</span>
-      {esc.pideProfesional && <div className="tp-campo"><label htmlFor="tp-agenda-profesional">{esBarberia ? 'Barbero' : 'Profesional'}</label><select id="tp-agenda-profesional" value={profesional} onChange={(e) => setProfesional(e.target.value)}><option value="">{esBarberia ? 'Cualquiera' : 'El primero libre'}</option>{esc.agenda.equipo.map((e) => <option key={e.id} value={e.id}>{e.nombre}</option>)}</select></div>}
+      <span className="tp-agenda-widget__paso">{esc.pideProfesional ? `2 · ${esBarberia ? 'BARBERO' : 'PROFESIONAL'} Y DÍA` : '2 · DÍA'}</span>
+      {esc.pideProfesional && <ElegirProfesional equipo={esc.agenda.equipo} valor={profesional} alElegir={setProfesional} esBarberia={esBarberia} />}
       <div className="tp-agenda-widget__cabecera"><h3>Elige un día</h3><div><button type="button" aria-label="Días anteriores" disabled={paginaDias === 0} onClick={() => moverDias(paginaDias - 1)}><ChevronLeft size={18} aria-hidden="true" /></button><button type="button" aria-label="Días siguientes" disabled={(paginaDias + 1) * 6 >= dias.length} onClick={() => moverDias(paginaDias + 1)}><ChevronRight size={18} aria-hidden="true" /></button></div></div>
       <div className="tp-agenda-widget__dias" role="group" aria-label="Días disponibles">{diasVisibles.map((f) => { const libres = horasDe(f).length; return <button key={f} type="button" disabled={!libres} aria-pressed={dia === f} onClick={() => { setDia(f); setHora(''); }}><small>{ETIQUETA_DIA(f, esc.hoy)}</small><b>{fechaCorta(f).split(' ').slice(1).join(' ')}</b></button>; })}</div>
       <p>{dia ? `Seleccionado: ${fechaCorta(dia)}` : 'Selecciona un día para ver horarios'}</p>
@@ -732,15 +762,7 @@ function Reservar({ item, esc, slug, alTerminar, presentacion, esBarberia = fals
 
   return (
     <Detalle item={item}>
-      {esc.pideProfesional && (
-        <div className="tp-campo">
-          <label htmlFor="tp-pro">{esBarberia ? 'Barbero' : 'Profesional'}</label>
-          <select id="tp-pro" value={profesional} onChange={(e) => setProfesional(e.target.value)}>
-            <option value="">{esBarberia ? 'Cualquiera' : 'El primero libre'}</option>
-            {esc.agenda.equipo.map((e) => <option key={e.id} value={e.id}>{e.nombre}</option>)}
-          </select>
-        </div>
-      )}
+      {esc.pideProfesional && <ElegirProfesional equipo={esc.agenda.equipo} valor={profesional} alElegir={setProfesional} esBarberia={esBarberia} />}
       <div className="tp-campo">
         {presentacion === 'inline' && <span className="tp-luxury-reserva-real__paso">02 / DÍA</span>}
         <label id="tp-dia-l">{presentacion === 'inline' ? 'Elige un día' : 'Día'}</label>

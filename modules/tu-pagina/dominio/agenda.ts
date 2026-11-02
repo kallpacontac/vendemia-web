@@ -41,7 +41,7 @@ export interface DatosAgenda {
   horario: Horario;
   /** El paso de la rejilla del negocio (companies.slot_minutes). */
   paso: number;
-  equipo: { id: string; nombre: string; horario: Horario }[];
+  equipo: { id: string; nombre: string; horario: Horario; foto?: string }[];
   bloqueos: { empleado: string; inicio: string; fin: string }[];
   ocupados: Ocupado[];
 }
