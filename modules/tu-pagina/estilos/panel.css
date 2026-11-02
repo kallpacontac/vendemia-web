@@ -114,6 +114,10 @@
 .tp-panel-plantilla__dibujo--restaurante i:nth-child(2) { background-image: url('/assets/negocios-ejemplo/cafe-3.webp'); }
 .tp-panel-plantilla__dibujo--restaurante i:nth-child(3) { background-image: url('/assets/negocios-ejemplo/cafe-2.webp'); }
 .tp-panel-plantilla__dibujo--restaurante i:nth-child(4) { background-image: url('/assets/negocios-ejemplo/cafe-0.webp'); }
+.tp-panel-plantilla__dibujo--canchas { grid-template-columns: repeat(3, 1fr); grid-template-rows: 60% 1fr; gap: 4px; background: #f1f6f1; }
+.tp-panel-plantilla__dibujo--canchas i { border-radius: 5px; background: #e5f1e6; }
+.tp-panel-plantilla__dibujo--canchas i:first-child { grid-column: 1 / -1; background: linear-gradient(90deg, #102d1cbb, transparent), url('/assets/canchas-ejemplo/portada.webp') center / cover; }
+.tp-panel-plantilla__dibujo--canchas i:not(:first-child) { border: 1px solid #c9ddca; }
 .tp-panel-esquema--luxury { grid-template-rows: 58% 1fr; grid-template-columns: repeat(3, 1fr); background: #f4f1ec; }
 .tp-panel-esquema--luxury i:first-child { grid-column: 1 / -1; background: url('/assets/luxury-ejemplo/portada.webp') center / cover; }
 .tp-panel-esquema--luxury i:nth-child(n + 2) { display: block; background: #d8d0c6; }

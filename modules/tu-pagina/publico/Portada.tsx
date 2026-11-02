@@ -27,6 +27,7 @@ import { FOTOS_SERVICIOS_LUXURY } from '@/modules/tu-pagina/dominio/fotos';
 import { soles } from '@/modules/tu-pagina/dominio/tienda';
 import { conCanchas } from '@/modules/tu-pagina/dominio/canchas';
 import AgendaPortada from '@/modules/tu-pagina/publico/AgendaPortada';
+import CanchasPortada from '@/modules/tu-pagina/publico/CanchasPortada';
 
 type Props = { params: { slug: string }; searchParams?: Record<string, string | undefined> };
 
@@ -133,6 +134,12 @@ export default async function Portada({ params, searchParams }: Props) {
       nombreNegocio={p.titulo}
       apariencia={p.secciones.apariencia}
     />
+  );
+
+  if (canchas && plantilla === 'canchas' && p.secciones.apariencia?.plantillaActiva) return (
+    <Marco pagina={p} portada>
+      <CanchasPortada pagina={p} esc={escTodo}>{catalogo}</CanchasPortada>
+    </Marco>
   );
 
   return (

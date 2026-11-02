@@ -6,12 +6,15 @@
  * lo ve en Mi página → «Avísame»; él le escribe por WhatsApp si se libera.
  * Aquí no se manda nada a nadie.
  */
+import { revalidateTag } from 'next/cache';
 import { z } from 'zod';
 import { SLUG } from '@/modules/tu-pagina/dominio/config';
-import { validarCliente } from '@/modules/tu-pagina/dominio/tienda';
-import { conCanchas } from '@/modules/tu-pagina/dominio/canchas';
+import { sumarDias } from '@/modules/tu-pagina/dominio/agenda';
+import { armarEscaparate, validarCliente } from '@/modules/tu-pagina/dominio/tienda';
+import { canchasDe, conCanchas, estadoCasilla, filasDelDia, plazoDe } from '@/modules/tu-pagina/dominio/canchas';
 import { huellaIp, limitar, log, rpc, servidor } from '@/modules/tu-pagina/servidor/supabase';
 import { paginaDe } from '@/modules/tu-pagina/servidor/pagina';
+import { datosFrescos } from '@/modules/tu-pagina/servidor/escaparate';
 
 const Cuerpo = z.object({
   slug: z.string().regex(SLUG),
@@ -42,7 +45,22 @@ export async function POST(req: Request) {
   try {
     if (!(await limitar(`ip:${huellaIp(req)}:tu-pagina-avisame`, 20, 3600))) return responder({ status: 'demasiados' }, 429);
     const pagina = await paginaDe(c.slug);
-    if (!conCanchas(pagina?.secciones)) return responder({ status: 'not_found' }, 404);
+    if (!pagina || !conCanchas(pagina.secciones)) return responder({ status: 'not_found' }, 404);
+    const crudos = await datosFrescos(c.slug);
+    if (!crudos) return responder({ status: 'not_found' }, 404);
+    const esc = armarEscaparate(crudos, pagina.secciones);
+    const item = canchasDe(esc).find((cancha) => cancha.id === c.item);
+    if (!item) return responder({ status: 'no_existe' }, 404);
+    const fecha = c.inicio.slice(0, 10);
+    if (![fecha, sumarDias(fecha, -1)].some((dia) => filasDelDia(esc.agenda, dia).includes(c.inicio))) {
+      return responder({ status: 'datos_invalidos' }, 400);
+    }
+    const estado = estadoCasilla(esc.agenda, item, c.inicio, esc.ahora, plazoDe(pagina.secciones.canchas ?? {}));
+    if (estado === 'libre') {
+      revalidateTag(`tu-pagina:${c.slug.toLowerCase()}`);
+      return responder({ status: 'libre' }, 409);
+    }
+    if (estado !== 'ocupada') return responder({ status: 'pasada' }, 409);
     const r = await rpc<{ status: string }>(servidor(), 'avisame_srv_crear', {
       p_slug: c.slug,
       p_datos: { catalog_id: c.item, slot_start: c.inicio, nombre: c.nombre.trim(), telefono: c.telefono },

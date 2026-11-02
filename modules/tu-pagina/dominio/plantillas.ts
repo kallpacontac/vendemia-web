@@ -4,10 +4,12 @@ import type { BusinessMode } from '@/lib/supabase/types';
 
 export type TipoPagina = 'agenda' | 'tienda' | 'ambos';
 export type Disposicion = 'cuadricula' | 'filas' | 'carta';
-export type PlantillaGuardada = 'agenda' | 'vitrina' | 'lista' | 'carta' | 'clases' | 'envios' | 'impulso' | 'luxury' | 'restaurante';
+export type PlantillaGuardada = 'agenda' | 'vitrina' | 'lista' | 'carta' | 'clases' | 'envios' | 'impulso' | 'luxury' | 'restaurante' | 'canchas';
 
 const LUXURY: { id: PlantillaGuardada; nombre: string; describe: string } =
   { id: 'luxury', nombre: 'Luxury', describe: 'Fotografía editorial y servicios para salones y barberías.' };
+const CANCHAS: { id: PlantillaGuardada; nombre: string; describe: string } =
+  { id: 'canchas', nombre: 'Fútbol / canchas', describe: 'Modalidades, días y horarios listos para reservar.' };
 
 export const PLANTILLAS: { id: PlantillaGuardada; nombre: string; describe: string }[] = [
   { id: 'vitrina', nombre: 'Minimalista', describe: 'Fotos grandes y tarjetas limpias.' },
@@ -22,14 +24,15 @@ export const PLANTILLAS: { id: PlantillaGuardada; nombre: string; describe: stri
 export const PLANTILLAS_AGENDA: { id: PlantillaGuardada; nombre: string; describe: string }[] = [
   { id: 'agenda', nombre: 'Agenda clara', describe: 'Tarjetas blancas, espacio y reservas fáciles de encontrar.' },
   { id: 'lista', nombre: 'Agenda editorial', describe: 'Servicios en lista y una presentación más fotográfica.' },
+  CANCHAS,
   LUXURY,
 ];
 
-export const PLANTILLAS_AMBOS: { id: PlantillaGuardada; nombre: string; describe: string }[] = [...PLANTILLAS, LUXURY];
+export const PLANTILLAS_AMBOS: { id: PlantillaGuardada; nombre: string; describe: string }[] = [...PLANTILLAS, CANCHAS, LUXURY];
 
 export const plantillaValida = (valor: unknown): valor is PlantillaGuardada =>
   valor === 'vitrina' || valor === 'lista' || valor === 'carta' ||
-  valor === 'agenda' || valor === 'clases' || valor === 'envios' || valor === 'impulso' || valor === 'luxury' || valor === 'restaurante';
+  valor === 'agenda' || valor === 'clases' || valor === 'envios' || valor === 'impulso' || valor === 'luxury' || valor === 'restaurante' || valor === 'canchas';
 
 export const EXPERIENCIAS: { id: TipoPagina; nombre: string; describe: string }[] = [
   { id: 'agenda', nombre: 'Agenda', describe: 'Reservas claras, con servicios, día y hora.' },
@@ -53,6 +56,7 @@ export const esNegocioGastronomico = (nombre: string): boolean =>
 
 export const plantillaSugerida = (tipo: TipoPagina, nombre: string): PlantillaGuardada => {
   if (tipo !== 'agenda' && esNegocioGastronomico(nombre)) return 'restaurante';
+  if (tipo !== 'tienda' && /cancha|f[uú]tbol|fulbito|deporplaza/i.test(nombre)) return 'canchas';
   if (tipo !== 'tienda' && /barber|peluquer|sal[oó]n|estil|cabello|spa|beauty/i.test(nombre)) return 'luxury';
   return plantillaPorDefecto(tipo);
 };

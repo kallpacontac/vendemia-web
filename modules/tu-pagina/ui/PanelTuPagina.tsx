@@ -239,6 +239,12 @@ function MiPagina({ companyId, nombre, pagina, agendaNube, alGuardar }: {
   const [guardando, setGuardando] = useState(false);
 
   useEffect(() => {
+    if (plantilla !== 'canchas') return;
+    setCanchas((actual) => actual.activo ? actual : { ...actual, activo: true });
+    setFuncionesAbiertas(true);
+  }, [plantilla]);
+
+  useEffect(() => {
     if (slug === pagina?.slug) {
       setErrorSlug(false);
       setLibre(true);
@@ -297,7 +303,7 @@ function MiPagina({ companyId, nombre, pagina, agendaNube, alGuardar }: {
             envios, catalogo, reservar, tipos: es === 'ambos' ? tipos : {},
             apariencia: aparienciaPublicada,
             reclamos,
-            canchas: normalizarCanchas({ ...canchas, activo: Boolean(canchas.activo && reservar) }),
+            canchas: normalizarCanchas({ ...canchas, activo: Boolean(reservar && (canchas.activo || plantilla === 'canchas')) }),
             proveedor: { razon_social: proveedor.razon_social.trim(), ruc: proveedor.ruc.replace(/\D/g, ''), direccion: proveedor.direccion.trim() },
           },
           distritos: distritos.split(/[,\n]/).map((d) => d.trim()).filter(Boolean),
@@ -353,7 +359,8 @@ function MiPagina({ companyId, nombre, pagina, agendaNube, alGuardar }: {
             setTitulo(nombreNuevo);
             if (tipoNuevo !== es) setEs(tipoNuevo);
             if (!pagina?.publicada && !slugManual) setSlug(sugerirSlug(nombreNuevo));
-            if (!plantillaManual) setPlantilla(plantillaSugerida(tipoNuevo, nombreNuevo));
+            if (tipoNuevo === 'tienda' && plantilla === 'canchas') { setPlantilla(plantillaSugerida('tienda', nombreNuevo)); setPlantillaManual(false); }
+            else if (!plantillaManual) setPlantilla(plantillaSugerida(tipoNuevo, nombreNuevo));
             if (!pagina && !colorManual) setColor(esNegocioGastronomico(nombreNuevo) ? '#B9662F' : /barber|peluquer|sal[oó]n|estil|cabello|spa|beauty/i.test(nombreNuevo) ? '#D0AB75' : tienda ? '#111111' : '#006BFF');
           }} />
         </label>
@@ -384,6 +391,12 @@ function MiPagina({ companyId, nombre, pagina, agendaNube, alGuardar }: {
                     if (opcion.id === 'restaurante' && plantilla !== 'restaurante') {
                       setApariencia((actual) => ({ ...actual, fotoPlantilla: /pizzer|pizza/i.test(titulo) ? 'pizzeria' : 'cafeteria' }));
                       if (!pagina?.publicada && !colorManual) setColor('#B9662F');
+                    }
+                    if (opcion.id === 'canchas' && plantilla !== 'canchas') {
+                      setCanchas((actual) => ({ ...actual, activo: true }));
+                      setFuncionesAbiertas(true);
+                      setApariencia((actual) => ({ ...actual, fotoPlantilla: 'canchas' }));
+                      if (!pagina?.publicada && !colorManual) setColor('#183D2B');
                     }
                     setPlantilla(opcion.id);
                     setPlantillaManual(true);
@@ -427,7 +440,7 @@ function MiPagina({ companyId, nombre, pagina, agendaNube, alGuardar }: {
           <span>¿Qué harán tus clientes en tu página?</span>
           <div className="tp-panel-es" role="radiogroup" aria-label="Tu página es">
             {ES.map((o) => (
-              <button key={o.id} type="button" role="radio" aria-checked={es === o.id} className={es === o.id ? 'activa' : ''} onClick={() => { setTipoManual(true); setEs(o.id); if (!plantillaManual) setPlantilla(plantillaSugerida(o.id, titulo)); }}>
+              <button key={o.id} type="button" role="radio" aria-checked={es === o.id} className={es === o.id ? 'activa' : ''} onClick={() => { setTipoManual(true); setEs(o.id); if (o.id === 'tienda' && plantilla === 'canchas') { setPlantilla(plantillaSugerida('tienda', titulo)); setPlantillaManual(false); } else if (!plantillaManual) setPlantilla(plantillaSugerida(o.id, titulo)); }}>
                 <span className={`tp-panel-es__mini tp-panel-es__mini--${o.id}`} aria-hidden="true"><i /><i /><i /></span>
                 <b>{o.nombre}</b>
                 <small>{o.id === 'agenda' && esRecurrente(modo) ? 'Separan cupos y eligen horario.' : o.describe}</small>
@@ -516,7 +529,7 @@ function MiPagina({ companyId, nombre, pagina, agendaNube, alGuardar }: {
           <span>Apartados opcionales</span>
           <div className="tp-panel-apartados">
             {reservar && (
-              <Apartado activo={Boolean(canchas.activo)} alCambiar={(activo) => setCanchas({ ...canchas, activo })} titulo="Canchas por horas" describe="Para canchas de fútbol, vóley o pádel: una tabla con cada cancha, sus horas libres y el precio de día y de noche.">
+              <Apartado activo={Boolean(canchas.activo || plantilla === 'canchas')} bloqueado={plantilla === 'canchas'} alCambiar={(activo) => setCanchas({ ...canchas, activo })} titulo="Canchas por horas" describe="Modalidades y horarios por cancha, con precios de día y de noche. Se activa al elegir la plantilla Fútbol / canchas.">
                 <ConfigDeCanchas companyId={companyId} valor={canchas} alCambiar={setCanchas} />
               </Apartado>
             )}
@@ -571,7 +584,7 @@ function MiPagina({ companyId, nombre, pagina, agendaNube, alGuardar }: {
 /** Sin foto propia, la portada lleva la de un ejemplo; al subir la suya, esta deja de salir. */
 function FotosPlantilla({ tipo, plantilla, elegida, alElegir }: { tipo: TipoPagina; plantilla: PlantillaGuardada; elegida?: string; alElegir: (id: string) => void }) {
   const actual = plantilla === 'luxury' && elegida === 'ninguna' ? fotoPlantillaPorDefecto(tipo, plantilla) : esFotoPlantilla(elegida) ? elegida : fotoPlantillaPorDefecto(tipo, plantilla);
-  const categorias = plantilla === 'luxury' ? ['barberia'] : plantilla === 'restaurante' ? ['cafeteria', 'pizzeria'] : tipo === 'agenda' ? ['clinica', 'barberia'] : tipo === 'tienda' ? ['cafeteria', 'pizzeria', 'clinica'] : ['clinica', 'barberia', 'cafeteria', 'pizzeria'];
+  const categorias = plantilla === 'luxury' ? ['barberia'] : plantilla === 'canchas' ? ['canchas'] : plantilla === 'restaurante' ? ['cafeteria', 'pizzeria'] : tipo === 'agenda' ? ['clinica', 'barberia'] : tipo === 'tienda' ? ['cafeteria', 'pizzeria', 'clinica'] : ['clinica', 'barberia', 'cafeteria', 'pizzeria'];
   return (
     <div className="tp-panel-fotos">
       <small className="muted">Mientras no subas la tuya, tu portada usa una foto de la plantilla:</small>
@@ -608,9 +621,9 @@ function VistaBorrador({ plantilla, tipo, titulo, frase, logo, portada, color, f
         <div className="tp-panel-borrador__portada" style={imagen ? { backgroundImage: `linear-gradient(90deg, #111b, #1112), url("${imagen}")` } : undefined}>
           <strong>{titulo.trim() || 'Tu negocio'}</strong>
           {frase.trim() && <p>{frase.trim()}</p>}
-          <span>{tipo === 'tienda' ? 'Ver catálogo' : 'Agendar una cita'} →</span>
+          <span>{tipo === 'tienda' ? 'Ver catálogo' : plantilla === 'canchas' ? 'Reservar cancha' : 'Agendar una cita'} →</span>
         </div>
-        <div className="tp-panel-borrador__contenido"><b>{tipo === 'tienda' ? 'Tu catálogo' : 'Tus servicios'}</b><small>Los productos y servicios de tu negocio aparecerán aquí al publicar.</small></div>
+        <div className="tp-panel-borrador__contenido"><b>{tipo === 'tienda' ? 'Tu catálogo' : plantilla === 'canchas' ? 'Canchas y horarios' : 'Tus servicios'}</b><small>{plantilla === 'canchas' ? 'Las modalidades y canchas de tu catálogo aparecerán aquí al publicar.' : 'Los productos y servicios de tu negocio aparecerán aquí al publicar.'}</small></div>
       </div>
       <small className="muted">Vista rápida con tu nombre, frase, logo, portada y color. Puedes reemplazar las fotos de la plantilla cuando quieras.</small>
     </section>
@@ -653,13 +666,13 @@ function Compartir({ slug, envios, reservar, conCatalogo }: { slug: string; envi
 }
 
 /** Un apartado opcional de la página: una casilla y, encendido, sus campos. */
-function Apartado({ activo, alCambiar, titulo, describe, children }: {
-  activo: boolean; alCambiar: (v: boolean) => void; titulo: string; describe: string; children: React.ReactNode;
+function Apartado({ activo, bloqueado = false, alCambiar, titulo, describe, children }: {
+  activo: boolean; bloqueado?: boolean; alCambiar: (v: boolean) => void; titulo: string; describe: string; children: React.ReactNode;
 }) {
   return (
     <div className={`tp-panel-apartado${activo ? ' activo' : ''}`}>
       <label className="tp-panel-check">
-        <input type="checkbox" checked={activo} onChange={(e) => alCambiar(e.target.checked)} />
+        <input type="checkbox" checked={activo} disabled={bloqueado} onChange={(e) => alCambiar(e.target.checked)} />
         <span><b>{titulo}</b><small className="muted">{describe}</small></span>
       </label>
       {activo && <div className="tp-panel-apartado__campos">{children}</div>}

@@ -17,6 +17,9 @@ export function conVista(p: PaginaPublica, q?: ParametrosVista): PaginaPublica {
     plantilla: plantillaValida(q.plantilla) ? q.plantilla : p.plantilla,
     secciones: {
       ...p.secciones, catalogo: tipo !== 'agenda', reservar: tipo !== 'tienda',
+      canchas: q.plantilla === 'canchas' && tipo !== 'tienda'
+        ? { ...p.secciones.canchas, activo: true }
+        : p.secciones.canchas,
       apariencia: {
         ...anterior,
         plantillaActiva: q.pa === '1',

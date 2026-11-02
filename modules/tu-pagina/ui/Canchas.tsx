@@ -46,7 +46,7 @@ export function ConfigDeCanchas({ companyId, valor, alCambiar }: { companyId: st
   return (
     <>
       <small className="muted">
-        Tus clientes ven una tabla del día con cada cancha en una columna, las horas en filas y el precio en cada casilla.
+        Tus clientes eligen modalidad, día y una hora por cancha. Verán el precio de cada turno sin deslizar una tabla.
         Cada cancha es un servicio de tu <Link href="/panel/catalogo">Catálogo</Link> con su precio de día y su duración (por ejemplo, «Cancha 1», 60 min, S/ 135).
         Pon el tipo («Fútbol 7», «Vóley») en la familia para que puedan filtrar.
       </small>

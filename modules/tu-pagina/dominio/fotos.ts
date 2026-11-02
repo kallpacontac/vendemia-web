@@ -9,7 +9,7 @@
 import type { AparienciaPagina } from './apariencia';
 import type { PlantillaGuardada, TipoPagina } from './plantillas';
 
-export type FotoPlantilla = 'clinica' | 'cafeteria' | 'barberia' | 'pizzeria';
+export type FotoPlantilla = 'clinica' | 'cafeteria' | 'barberia' | 'pizzeria' | 'canchas';
 
 export const FOTOS_SERVICIOS_LUXURY = {
   corte: '/assets/luxury-ejemplo/corte.webp',
@@ -30,6 +30,7 @@ export const FOTOS_PLANTILLA: { id: FotoPlantilla; nombre: string; url: string }
   { id: 'cafeteria', nombre: 'Cafetería', url: '/assets/negocios-ejemplo/cafeteria-hero.webp' },
   { id: 'barberia', nombre: 'Barbería', url: '/assets/luxury-ejemplo/portada.webp' },
   { id: 'pizzeria', nombre: 'Gastronomía', url: '/assets/restaurante-ejemplo/portada.webp' },
+  { id: 'canchas', nombre: 'Fútbol', url: '/assets/canchas-ejemplo/portada.webp' },
 ];
 
 /** `ninguna` = el dueño prefiere solo el color de portada. */
@@ -38,7 +39,7 @@ export const esFotoPlantilla = (v: unknown): v is FotoPlantilla | 'ninguna' =>
 
 /** La del ejemplo que enseña cada diseño (dominio/ejemplo.ts → urlEjemploPara). */
 export const fotoPlantillaPorDefecto = (tipo: TipoPagina, plantilla?: PlantillaGuardada): FotoPlantilla =>
-  plantilla === 'luxury' ? 'barberia' : plantilla === 'restaurante' ? 'cafeteria' : tipo === 'tienda' ? 'cafeteria' : 'clinica';
+  plantilla === 'luxury' ? 'barberia' : plantilla === 'restaurante' ? 'cafeteria' : plantilla === 'canchas' ? 'canchas' : tipo === 'tienda' ? 'cafeteria' : 'clinica';
 
 export function fotoProductoRestaurante(nombre: string, familia: string): string {
   const clave = `${nombre} ${familia}`.toLocaleLowerCase('es');

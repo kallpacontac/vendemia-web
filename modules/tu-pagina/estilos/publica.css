@@ -1246,3 +1246,132 @@ button.tp-canchas__casilla { cursor: pointer; }
   .tp-canchas__tabla thead th { min-width: 92px; }
   .tp-canchas__hora, .tp-canchas__tabla thead .tp-canchas__hora { width: 56px; min-width: 56px; }
 }
+
+/* Reserva de fútbol: modalidad, fecha y horarios visibles sin tabla lateral. */
+.tp:has(.tp-canchas-pagina) { background: #f3f5f2; color: #172821; }
+.tp-canchas-pagina { max-width: 1120px; min-height: calc(100dvh - 80px); margin: 0 auto; padding: 18px 20px 42px; }
+.tp-canchas-pagina__hero { position: relative; overflow: hidden; padding: 20px 30px 28px; border-radius: 22px; background: #14271f; color: #fff; }
+.tp-canchas-pagina__hero::after { content: ''; position: absolute; width: 260px; height: 260px; right: 5%; top: -105px; border: 1px solid #ffffff24; border-radius: 50%; box-shadow: 0 0 0 48px #ffffff09, 0 0 0 98px #ffffff06; pointer-events: none; }
+.tp-canchas-pagina__volver { position: relative; z-index: 1; display: inline-flex; align-items: center; gap: 4px; margin-bottom: 22px; color: #d2dfd7 !important; text-decoration: none; font-size: 13px; font-weight: 700; }
+.tp-canchas-pagina__etiqueta { position: relative; z-index: 1; display: block; color: #a7d7a8; font-size: 10px; font-weight: 850; letter-spacing: .14em; }
+.tp-canchas-pagina__hero h1 { position: relative; z-index: 1; max-width: 680px; margin: 7px 0 3px; font-size: clamp(26px, 4vw, 43px); line-height: 1.08; letter-spacing: -.04em; }
+.tp-canchas-pagina__hero p { position: relative; z-index: 1; margin: 0; color: #d5e2d9; font-size: 14px; }
+.tp-canchas { display: grid; gap: 14px; margin-top: 16px; }
+.tp-canchas__paso { min-width: 0; padding: 19px 22px 21px; border: 1px solid #e2e8e1; border-radius: 18px; background: #fff; box-shadow: 0 8px 30px #1c38200a; }
+.tp-canchas__paso-titulo { display: flex; align-items: center; gap: 11px; margin-bottom: 14px; }
+.tp-canchas__paso-titulo > span { width: 26px; height: 26px; display: grid; place-items: center; flex: none; border-radius: 7px; background: #e8f2e9; color: #21633c; font-size: 11px; font-weight: 850; }
+.tp-canchas__paso-titulo h2 { flex: 1; margin: 0; color: #172821; font-size: 18px; letter-spacing: -.025em; }
+.tp-canchas__tipos { display: flex; flex-wrap: wrap; gap: 8px; margin: 0; padding: 0; overflow: visible; }
+.tp-canchas__tipo { min-height: 44px; padding: 8px 18px; border: 1px solid #dbe4db; border-radius: 11px; background: #f7f9f6; color: #2d4235; font: inherit; font-size: 14px; font-weight: 750; cursor: pointer; }
+.tp-canchas__tipo[aria-pressed='true'] { border-color: #172821; background: #172821; color: #fff; }
+.tp-canchas__flechas { display: flex; gap: 5px; }
+.tp-canchas__flechas button { width: 34px; height: 34px; display: grid; place-items: center; border: 1px solid #dce5dc; border-radius: 9px; background: #fff; color: #213b2b; cursor: pointer; }
+.tp-canchas__flechas button:disabled { opacity: .35; cursor: default; }
+.tp-canchas__dias { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 8px; margin: 0; overflow: visible; }
+.tp-canchas__dias button { min-width: 0; min-height: 74px; display: grid; justify-items: center; align-content: center; gap: 0; padding: 6px 2px; border: 1px solid #e0e7df; border-radius: 11px; background: #f8faf7; color: #23382b; font: inherit; cursor: pointer; text-transform: capitalize; }
+.tp-canchas__dias small { font-size: 11px; font-weight: 700; }
+.tp-canchas__dias b { font-size: 21px; line-height: 1.1; }
+.tp-canchas__dias span { color: #698071; font-size: 11px; }
+.tp-canchas__dias button[aria-pressed='true'] { border-color: #172821; background: #172821; color: #fff; }
+.tp-canchas__dias button[aria-pressed='true'] span { color: #cde2d0; }
+.tp-canchas__ayuda { margin: -4px 0 14px; color: #647468; font-size: 13px; }
+.tp-canchas__lista { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.tp-canchas__cancha { min-width: 0; padding: 16px; border: 1px solid #e1e9e1; border-radius: 15px; background: #fcfdfb; }
+.tp-canchas__cancha-cabeza { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 13px; }
+.tp-canchas__cancha-cabeza small { color: #51815a; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .07em; }
+.tp-canchas__cancha-cabeza h3 { margin: 2px 0 0; font-size: 16px; letter-spacing: -.02em; }
+.tp-canchas__disponibles { flex: none; color: #286f3d; font-size: 11px; font-weight: 750; }
+.tp-canchas__horarios { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 7px; }
+.tp-canchas__horario { min-width: 0; min-height: 53px; display: grid; align-content: center; justify-items: center; padding: 5px 2px; border: 1px solid #d9e8dc; border-radius: 9px; background: #f0f8f0; color: #1c5130; font: inherit; cursor: pointer; }
+.tp-canchas__horario b { font-size: 13px; font-variant-numeric: tabular-nums; }
+.tp-canchas__horario small { display: inline-flex; align-items: center; gap: 2px; font-size: 10px; }
+.tp-canchas__horario[aria-pressed='true'] { border-color: #172821; background: #172821; color: #fff; }
+.tp-canchas__horario--ocupado { border-color: #e9e7e4; background: #f4f3f1; color: #8b827c; }
+.tp-canchas__horario--ocupado:hover { background: #ede9e5; }
+.tp-canchas__sin-horas { grid-column: 1 / -1; margin: 0; padding: 12px; color: #7b857c; font-size: 13px; }
+.tp-canchas__ayuda--pie { display: flex; align-items: center; gap: 6px; margin: 13px 0 0; text-transform: none; }
+.tp-canchas__velo { position: fixed; z-index: 100; inset: 0; display: flex; justify-content: flex-end; background: #0d2119a8; }
+.tp-canchas__velo .tp-canchas__hoja { width: min(100%, 460px); height: 100dvh; overflow-y: auto; margin: 0; padding: 26px 24px 34px; border: 0; border-radius: 20px 0 0 20px; background: #fff; color: #172821; box-shadow: -20px 0 45px #07150b33; }
+.tp-canchas__velo .tp-canchas__hoja-cabeza { margin-bottom: 6px; }
+.tp-canchas__velo .tp-canchas__hoja-cabeza h2 { font-size: 23px; letter-spacing: -.03em; }
+.tp-canchas__velo .tp-reserva-resumen { border-color: #dfe8df; background: #f6faf5; }
+.tp-canchas__aviso-intro { margin: 9px 0 16px; padding: 12px 14px; border-radius: 10px; background: #f1f7f0; color: #35523d; font-size: 13px; }
+.tp-canchas__duracion { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 16px 0 0; }
+.tp-canchas__duracion > div:first-child { display: grid; gap: 2px; }
+.tp-canchas__duracion b { font-size: 14px; }
+.tp-canchas__duracion small { color: #687b6c; font-size: 12px; }
+.tp-canchas__duracion-botones { display: flex; gap: 7px; }
+.tp-canchas__duracion-botones button { width: 38px; height: 38px; display: grid; place-items: center; border: 1px solid #d6e1d6; border-radius: 9px; background: #f5faf4; color: #21452e; cursor: pointer; }
+.tp-canchas__duracion-botones button:disabled { opacity: .35; cursor: default; }
+.tp-canchas__extras { margin: 18px 0; padding: 16px 0; border-top: 1px solid #e7ebe6; border-bottom: 1px solid #e7ebe6; }
+.tp-canchas__extras h3 { margin: 0; font-size: 15px; }
+.tp-canchas__extras h3 small { margin-left: 5px; color: #7a897e; font-size: 12px; font-weight: 500; }
+.tp-canchas__extras p { margin: 4px 0 10px; color: #65766a; font-size: 12px; }
+.tp-canchas__extras > div { display: flex; flex-wrap: wrap; gap: 7px; }
+.tp-canchas__extras button { min-height: 38px; display: inline-flex; align-items: center; gap: 4px; padding: 6px 10px; border: 1px solid #dce6dc; border-radius: 9px; background: #f7faf6; color: #26412f; font: inherit; font-size: 12px; cursor: pointer; }
+.tp-canchas__extras button[aria-pressed='true'] { border-color: #1c5d36; background: #e6f4e9; color: #164a2b; font-weight: 800; }
+.tp-canchas-pagina button:focus-visible, .tp-canchas-pagina a:focus-visible { outline: 3px solid var(--tp-color); outline-offset: 2px; }
+@media (max-width: 760px) {
+  .tp-canchas-pagina { padding: 0 0 30px; }
+  .tp-canchas-pagina__hero { border-radius: 0 0 20px 20px; padding: 15px 20px 23px; }
+  .tp-canchas-pagina__volver { margin-bottom: 15px; }
+  .tp-canchas { gap: 10px; margin: 10px 12px 0; }
+  .tp-canchas__paso { padding: 15px; border-radius: 15px; }
+  .tp-canchas__paso-titulo { margin-bottom: 11px; }
+  .tp-canchas__tipos { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+  .tp-canchas__tipo { min-width: 0; padding-inline: 4px; font-size: 12px; }
+  .tp-canchas__tipo:last-child { display: none; }
+  .tp-canchas__dias { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 3px; scrollbar-width: none; }
+  .tp-canchas__dias button { flex: 0 0 57px; min-height: 67px; }
+  .tp-canchas__lista { grid-template-columns: 1fr; }
+  .tp-canchas__horarios { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .tp-canchas__velo { align-items: flex-end; }
+  .tp-canchas__velo .tp-canchas__hoja { width: 100%; height: auto; max-height: min(92dvh, 850px); padding: 22px 20px calc(24px + env(safe-area-inset-bottom)); border-radius: 20px 20px 0 0; }
+}
+@media (max-width: 380px) { .tp-canchas__horarios { grid-template-columns: repeat(3, minmax(0, 1fr)); } .tp-canchas__tipo { padding-inline: 12px; } }
+
+/* Plantilla Fútbol / canchas: foto protagonista, reserva inmediatamente debajo. */
+.tp:has(.tp-futbol) { background: #e8f0ed; color: #15291e; }
+.tp-futbol { max-width: 1240px; margin: 22px auto 0; padding: 0 18px 24px; }
+.tp-futbol__nav { min-height: 68px; display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 12px 22px; border-radius: 18px 18px 0 0; background: #fff; }
+.tp-futbol__marca { display: inline-flex; align-items: center; gap: 10px; color: #162b1e; text-decoration: none; font-size: 18px; letter-spacing: -.03em; }
+.tp-futbol__marca span { width: 34px; height: 34px; display: grid; place-items: center; border-radius: 10px; background: #e7f3e9; font-size: 19px; }
+.tp-futbol__nav nav { display: flex; align-items: center; gap: 22px; }
+.tp-futbol__nav nav a { color: #33483b; text-decoration: none; font-size: 13px; font-weight: 750; }
+.tp-futbol__nav .tp-futbol__nav-cta { min-height: 38px; display: inline-flex; align-items: center; gap: 8px; padding: 0 15px; border-radius: 999px; background: #14291d; color: #fff; }
+.tp-futbol__hero { position: relative; min-height: 310px; display: flex; align-items: center; overflow: hidden; padding: 32px clamp(24px, 6vw, 78px); border: 16px solid #fff; border-top: 0; border-radius: 0 0 28px 28px; background-color: #163b28; background-position: center; background-size: cover; color: #fff; }
+.tp-futbol__hero-texto { position: relative; z-index: 1; max-width: 520px; }
+.tp-futbol__hero-texto > span, .tp-futbol__reserva-cabeza > div > span { color: #b9e0bd; font-size: 11px; font-weight: 850; letter-spacing: .14em; }
+.tp-futbol__hero h1 { margin: 9px 0 11px; font-size: clamp(34px, 5vw, 58px); line-height: 1.02; letter-spacing: -.055em; text-wrap: balance; }
+.tp-futbol__hero p { max-width: 430px; margin: 0 0 19px; color: #e7f2e8; font-size: 15px; line-height: 1.5; }
+.tp-futbol__hero-texto a { min-height: 43px; display: inline-flex; align-items: center; gap: 9px; padding: 9px 16px; border-radius: 999px; background: #fff; color: #173524; text-decoration: none; font-size: 13px; font-weight: 850; }
+.tp-futbol__modalidades { position: absolute; right: 26px; bottom: 24px; display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; max-width: 45%; }
+.tp-futbol__modalidades span { padding: 5px 10px; border: 1px solid #ffffff80; border-radius: 999px; background: #0e2819aa; color: #fff; font-size: 11px; font-weight: 750; }
+.tp-futbol__reserva { scroll-margin-top: 10px; margin: 16px 16px 0; padding: 24px; border-radius: 22px; background: #fff; }
+.tp-futbol__reserva-cabeza { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.tp-futbol__reserva-cabeza > div > span { color: #548b60; }
+.tp-futbol__reserva-cabeza h2 { margin: 4px 0 3px; font-size: clamp(24px, 3vw, 35px); line-height: 1.1; letter-spacing: -.045em; }
+.tp-futbol__reserva-cabeza p { margin: 0; color: #6a786e; font-size: 13px; }
+.tp-futbol__rapido { display: inline-flex; align-items: center; gap: 6px; flex: none; color: #357345; font-size: 12px; font-weight: 700; }
+.tp-futbol .tp-canchas { gap: 12px; margin: 17px 0 0; grid-template-columns: minmax(0, 1fr); }
+.tp-futbol .tp-canchas__paso { box-shadow: none; background: #fbfdfb; }
+.tp-futbol__demo { margin: 16px 2px 0; color: #66766a; font-size: 12px; }
+.tp-futbol__pie { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px; margin: 15px 22px 0; color: #435c4b; font-size: 13px; }
+.tp-futbol__pie span, .tp-futbol__pie a { display: inline-flex; align-items: center; gap: 6px; }
+.tp-futbol__pie a { text-decoration: none; font-weight: 750; }
+.tp-futbol a:focus-visible, .tp-futbol button:focus-visible { outline: 3px solid var(--tp-color); outline-offset: 2px; }
+@media (max-width: 760px) {
+  .tp-futbol { margin: 0; padding: 0 0 22px; }
+  .tp-futbol__nav { min-height: 60px; padding: 10px 16px; border-radius: 0; }
+  .tp-futbol__nav nav > a:first-child { display: none; }
+  .tp-futbol__nav .tp-futbol__nav-cta { padding-inline: 12px; }
+  .tp-futbol__hero { min-height: 205px; padding: 20px 22px; border: 0; border-radius: 0 0 20px 20px; background-position: 58% center; }
+  .tp-futbol__hero h1 { max-width: 440px; margin-block: 5px 7px; font-size: clamp(28px, 7vw, 35px); }
+  .tp-futbol__hero p { max-width: 340px; margin-bottom: 10px; font-size: 12px; }
+  .tp-futbol__modalidades { display: none; }
+  .tp-futbol__reserva { margin: 10px 10px 0; padding: 16px 12px; border-radius: 16px; }
+  .tp-futbol__reserva-cabeza p { display: none; }
+  .tp-futbol__rapido { display: none; }
+  .tp-futbol .tp-canchas { margin-top: 12px; }
+  .tp-futbol__pie { margin-inline: 20px; }
+}

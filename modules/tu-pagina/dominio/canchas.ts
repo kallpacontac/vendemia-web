@@ -154,12 +154,13 @@ export function normalizarCanchas(c: ConfigCanchas): ConfigCanchas {
 }
 
 /** El WhatsApp que el cliente manda al terminar: sin bot, es lo único que lee el dueño. */
-export function mensajeCancha(codigo: string, r: { cancha: string; inicio: string; minutos: number; precio: number | null; nombre: string }): string {
+export function mensajeCancha(codigo: string, r: { cancha: string; inicio: string; minutos: number; precio: number | null; nombre: string; extras?: string[] }): string {
   return [
     `Hola, reservé una cancha en tu página (${codigo}):`,
     `• ${r.cancha}`,
     `• ${fechaCorta(r.inicio.slice(0, 10))}, de ${r.inicio.slice(11, 16)} a ${sumarMin(r.inicio, r.minutos).slice(11, 16)}`,
     ...(r.precio !== null ? [`• ${soles(r.precio)}`] : []),
     `A nombre de: ${r.nombre.trim()}`,
+    ...(r.extras?.length ? [`También quisiera pedir: ${r.extras.join(', ')} (sujeto a disponibilidad y precio).`] : []),
   ].join('\n');
 }

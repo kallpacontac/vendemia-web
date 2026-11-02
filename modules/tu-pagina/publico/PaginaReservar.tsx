@@ -5,8 +5,8 @@
  * servicios y grupos, sin el carrito ni los productos. Es el mismo escaparate
  * de la portada con `solo="reservas"`; la reserva la decide el mismo servidor.
  *
- * Con canchas (dominio/canchas.ts), en vez del escaparate va la tabla del día:
- * columnas = canchas, filas = horas, el precio en cada casilla.
+ * Con canchas (dominio/canchas.ts), en vez del escaparate va el selector de
+ * modalidad, día y horarios por cancha, con el precio de cada turno.
  */
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
@@ -39,12 +39,13 @@ export default async function PaginaReservar({ params, searchParams }: Props) {
 
   if (conCanchas(p.secciones)) return (
     <Marco pagina={p} vista="agenda">
-      <div className="tp-hoja">
-        <a className="tp-volver" href={`../${p.slug}${consultaVista(searchParams)}`}>
-          <ChevronLeft size={18} aria-hidden="true" /> {p.titulo}
-        </a>
-        <h1 className="tp-h1">Reserva tu cancha</h1>
-        <p className="tp-lead">Elige el día y toca una hora libre. Para jugar más tiempo, toca también la hora siguiente de la misma cancha.</p>
+      <div className="tp-canchas-pagina">
+        <header className="tp-canchas-pagina__hero">
+          <a className="tp-canchas-pagina__volver" href={`../${p.slug}${consultaVista(searchParams)}`}><ChevronLeft size={18} aria-hidden="true" /> {p.titulo}</a>
+          <span className="tp-canchas-pagina__etiqueta">RESERVA EN LÍNEA · FÚTBOL</span>
+          <h1>Tu cancha, lista para jugar.</h1>
+          <p>Elige modalidad, día y hora. Reserva en unos toques.</p>
+        </header>
         {esc ? <TablaCanchas esc={esc} cfg={p.secciones.canchas ?? {}} slug={p.slug} whatsapp={p.whatsapp} negocio={p.titulo} />
           : <p className="tp-vacio">Por ahora no hay canchas para reservar aquí. Escríbenos por WhatsApp.</p>}
       </div>
