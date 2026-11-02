@@ -8,6 +8,7 @@
  * sin tener que explicarlo con palabras. Los números son de ejemplo (3 de N)
  * y lo dice.
  */
+import { fotoEnCirculo } from '@/modules/fideliza/dominio/encuadre';
 import { UNIDAD, fraseRegla, soles, type TipoRegla } from '@/modules/fideliza/dominio/formato';
 import { colorValido, resolverEstilo, tintaSobre, type Estilo } from '@/modules/fideliza/dominio/estilo';
 import { selloValido, trazoSello } from '@/modules/fideliza/dominio/sellos';
@@ -49,7 +50,7 @@ export default function VistaTarjeta({ d, foco }: { d: DatosVista; foco: string 
           <span className={z('logo')}>
             {d.logo ? (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={d.logo} alt="" />
+              <img src={fotoEnCirculo(d.logo)} alt="" />
             ) : (
               <span className="fz-movil__logo">{(d.negocio || '?').slice(0, 1).toUpperCase()}</span>
             )}

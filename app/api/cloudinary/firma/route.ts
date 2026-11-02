@@ -60,8 +60,9 @@ export async function POST(req: Request) {
 
   let companyId: unknown;
   let destino: unknown;
+  let aJpg: unknown;
   try {
-    ({ companyId, destino } = await req.json());
+    ({ companyId, destino, aJpg } = await req.json());
   } catch {
     return Response.json({ error: 'Cuerpo inválido' }, { status: 400 });
   }
@@ -127,13 +128,17 @@ export async function POST(req: Request) {
 
   /**
    * La imagen de marca ya llega encuadrada del navegador (ui/EncuadrarFoto.tsx):
-   * `c_fill` solo asegura el 1:1 de 1.000 px, de sobra para Google Wallet (mínimo
-   * 660×660). Nada de rellenar con `c_pad`: esas franjas transparentes eran el
-   * borde blanco que cortaba las fotos en el círculo. Y sin forzar PNG: una foto
-   * sigue en JPEG, porque en PNG pasaría de los 2 MB que admite servidor/logo.ts.
+   * `c_fill` asegura el 1:1 de 1.000 px, de sobra para Google Wallet (mínimo
+   * 660×660), y `g_auto` deja dentro lo importante de lo que el navegador no supo
+   * abrir. Nada de rellenar con `c_pad`: esas franjas transparentes eran el borde
+   * blanco que cortaba las fotos en el círculo. Y sin forzar PNG: una foto sigue
+   * en JPEG, porque en PNG pasaría de los 2 MB que admite servidor/logo.ts. `aJpg`
+   * es para ese HEIC, que ni el navegador ni Wallet entienden.
    */
-  const transformation = clase === 'brand' ? 'c_fill,h_1000,w_1000' : undefined;
+  const transformation = clase === 'brand' ? 'c_fill,g_auto,h_1000,w_1000' : undefined;
+  const format = clase === 'brand' && aJpg === true ? 'jpg' : undefined;
   const firmados: Record<string, string | number> = { folder, timestamp };
+  if (format) firmados.format = format;
   if (transformation) firmados.transformation = transformation;
   const cadena = Object.entries(firmados)
     .sort(([a], [b]) => a.localeCompare(b))
@@ -141,5 +146,5 @@ export async function POST(req: Request) {
     .join('&');
   const signature = createHash('sha1').update(`${cadena}${SECRET}`).digest('hex');
 
-  return Response.json({ timestamp, signature, folder, transformation, apiKey: KEY, cloudName: CLOUD });
+  return Response.json({ timestamp, signature, folder, format, transformation, apiKey: KEY, cloudName: CLOUD });
 }

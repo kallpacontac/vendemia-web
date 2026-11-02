@@ -13,6 +13,7 @@
  * · El saldo va en loyaltyPoints; los premios en secondaryLoyaltyPoints. No se
  *   usa «rewards tier» para fingir saldos: los niveles no existen en el MVP.
  */
+import { fotoEnCirculo } from './encuadre';
 import { createHash } from 'crypto';
 import { UNIDAD, type TipoRegla } from './formato';
 import { colorValido, resolverEstilo, type Estilo } from './estilo';
@@ -49,7 +50,7 @@ export function cuerpoClase(
   opciones: { urlNegocio: string; logoVendemia: string; demo: boolean; urlArte?: string },
 ): Record<string, unknown> {
   const demo = opciones.demo;
-  const logo = !demo && d.logo_valido && d.brand.logo_url ? d.brand.logo_url : opciones.logoVendemia;
+  const logo = !demo && d.logo_valido && d.brand.logo_url ? fotoEnCirculo(d.brand.logo_url, 660, 'png') : opciones.logoVendemia;
   const nombreEmisor = demo ? 'Vendemia' : d.brand.display_name;
   const programa = demo ? 'Vendemia Fideliza' : d.program_name;
   const estilo = resolverEstilo(d.brand.style);

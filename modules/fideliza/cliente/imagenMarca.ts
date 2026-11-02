@@ -13,6 +13,7 @@ interface FirmaSubida {
   timestamp: number;
   signature: string;
   folder: string;
+  format?: string;
   transformation?: string;
   apiKey: string;
   cloudName: string;
@@ -34,7 +35,7 @@ export async function subirImagenMarca(file: File, companyId: string, destino: '
   const firma = await fetch('/api/cloudinary/firma', {
     method: 'POST',
     headers: { 'content-type': 'application/json', authorization: `Bearer ${sesion.access_token}` },
-    body: JSON.stringify({ companyId, destino }),
+    body: JSON.stringify({ companyId, destino, aJpg: !/^image\/(jpeg|png)$/.test(file.type) }),
   }).then(async (r) => {
     const j = await r.json();
     if (!r.ok) throw new Error(j.error ?? 'No se pudo preparar la subida');
@@ -46,6 +47,7 @@ export async function subirImagenMarca(file: File, companyId: string, destino: '
   datos.append('api_key', firma.apiKey);
   datos.append('timestamp', String(firma.timestamp));
   datos.append('folder', firma.folder);
+  if (firma.format) datos.append('format', firma.format);
   if (firma.transformation) datos.append('transformation', firma.transformation);
   datos.append('signature', firma.signature);
 

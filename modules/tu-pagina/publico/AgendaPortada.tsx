@@ -1,3 +1,4 @@
+import { fotoEnCirculo } from '@/modules/fideliza/dominio/encuadre';
 import { ArrowRight, CalendarDays, Clock3, ShieldCheck } from 'lucide-react';
 import type { PaginaPublica } from '@/modules/tu-pagina/servidor/pagina';
 import { fotoDePlantilla, FOTOS_PLANTILLA } from '@/modules/tu-pagina/dominio/fotos';
@@ -24,7 +25,7 @@ export default function AgendaPortada({ pagina, editorial, reservarHref }: { pag
   return <>
     <header className="tp-agenda-nav">
       <a className="tp-agenda-brand" href={`./${pagina.slug}`} aria-label={`Inicio de ${pagina.titulo}`}>
-        <span className="tp-agenda-brand__logo" style={pagina.logo_url ? { backgroundImage: `url("${pagina.logo_url}")` } : undefined}>{pagina.logo_url ? null : inicial}</span>
+        <span className="tp-agenda-brand__logo" style={pagina.logo_url ? { backgroundImage: `url("${fotoEnCirculo(pagina.logo_url)}")` } : undefined}>{pagina.logo_url ? null : inicial}</span>
         <span><strong>{pagina.titulo}</strong><small>{barberia ? 'Barbería y salón' : 'Agenda de servicios'}</small></span>
       </a>
       <nav aria-label="Navegación principal">

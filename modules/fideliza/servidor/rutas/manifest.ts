@@ -2,6 +2,7 @@
  * El manifest de la PWA, acotado a /m/. start_url es la tarjeta de esta
  * persona: «Añadir a pantalla de inicio» abre SU tarjeta, no una genérica.
  */
+import { fotoEnCirculo } from '@/modules/fideliza/dominio/encuadre';
 import { rpc, servidor } from '@/modules/fideliza/servidor/supabase';
 
 
@@ -19,7 +20,7 @@ export async function GET(_req: Request, { params }: { params: { token: string }
     if (d.status === 'ok' && d.brand) {
       nombre = d.brand.display_name;
       color = d.brand.bg_color;
-      if (d.brand.logo_url) icono = d.brand.logo_url;
+      if (d.brand.logo_url) icono = fotoEnCirculo(d.brand.logo_url, 512, 'png');
     }
   } catch {
     /* manifest genérico: la tarjeta sigue funcionando */

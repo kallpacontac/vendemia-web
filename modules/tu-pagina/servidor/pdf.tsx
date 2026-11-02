@@ -1,3 +1,4 @@
+import { fotoEnCirculo } from '@/modules/fideliza/dominio/encuadre';
 import 'server-only';
 /**
  * ══════════════════════════════════════════════════════════════════════════
@@ -54,8 +55,8 @@ function urlFoto(url: string): string | null {
   }
 }
 
-async function bajarFoto(url: string): Promise<{ data: Buffer; format: 'jpg' | 'png' } | null> {
-  const u = urlFoto(url);
+async function bajarFoto(url: string, yaLista = false): Promise<{ data: Buffer; format: 'jpg' | 'png' } | null> {
+  const u = yaLista ? url : urlFoto(url);
   if (!u) return null;
   try {
     const r = await fetch(u, { signal: AbortSignal.timeout(ESPERA_FOTO_MS) });
@@ -98,7 +99,7 @@ export async function catalogoPdf(p: PaginaPublica, esc: Escaparate, mayor: Map<
   const [fotos, qr, logo] = await Promise.all([
     bajarFotos(items),
     QRCode.toDataURL(urlPagina, { width: 360, margin: 1, errorCorrectionLevel: 'M' }),
-    p.logo_url ? bajarFoto(p.logo_url) : Promise.resolve(null),
+    p.logo_url ? bajarFoto(fotoEnCirculo(p.logo_url, 324, 'png'), true) : Promise.resolve(null),
   ]);
 
   // Por secciones, en el orden en que aparecen; lo que no tiene sección, al final.

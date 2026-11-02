@@ -101,7 +101,7 @@ export default function Resumen() {
     },
     {
       titulo: 'Tu marca: color y logo',
-      que: 'Para que la tarjeta y tu página se vean con tus colores. El logo, en PNG cuadrado.',
+      que: 'Para que la tarjeta y tu página se vean con tus colores. Sirve cualquier foto o logo.',
       hecho: Boolean(ajustes?.logo_url && ajustes.logo_checked?.ok),
       opcional: true,
       href: '/panel/fideliza/programa?paso=4',

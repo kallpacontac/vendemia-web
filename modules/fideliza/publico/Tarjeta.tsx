@@ -1,5 +1,6 @@
 'use client';
 
+import { fotoEnCirculo } from '@/modules/fideliza/dominio/encuadre';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ArrowLeft, Check, Gift, Sparkles } from 'lucide-react';
 import { UNIDAD, fechaHora, type TipoRegla } from '@/modules/fideliza/dominio/formato';
@@ -297,7 +298,7 @@ export default function Tarjeta(props: {
         <div className="fz-cab__marca">
           {d.brand.logo_url ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img className="fz-logo" src={d.brand.logo_url} alt="" width={48} height={48} />
+            <img className="fz-logo" src={fotoEnCirculo(d.brand.logo_url)} alt="" width={48} height={48} />
           ) : <span className="fz-logo fz-logo--letra" aria-hidden="true">{d.brand.display_name.slice(0, 1).toUpperCase()}</span>}
           <div><h1>{d.brand.display_name}</h1><p>{d.brand.tagline || 'Tu programa de fidelidad'}</p></div>
         </div>
@@ -384,7 +385,7 @@ export default function Tarjeta(props: {
           <div className="fz-carnet__contenido">
             <div className="fz-carnet__arriba">
               <span className="fz-carnet__marca">
-                {d.brand.logo_url ? <img src={d.brand.logo_url} alt="" /> : <i aria-hidden="true">{d.brand.display_name.slice(0, 1).toUpperCase()}</i>}
+                {d.brand.logo_url ? <img src={fotoEnCirculo(d.brand.logo_url)} alt="" /> : <i aria-hidden="true">{d.brand.display_name.slice(0, 1).toUpperCase()}</i>}
                 <b>{d.brand.display_name}</b>
               </span>
               <span>FIDELIDAD</span>

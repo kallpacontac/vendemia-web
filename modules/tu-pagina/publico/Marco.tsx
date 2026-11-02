@@ -2,6 +2,7 @@
  * El envoltorio común de toda «Tu página»: el color del negocio y
  * el pie. Componente de servidor, sin JavaScript.
  */
+import { fotoEnCirculo } from '@/modules/fideliza/dominio/encuadre';
 import { ArrowRight, BookOpen } from 'lucide-react';
 import { colorValido, tintaSobre } from '@/modules/fideliza/dominio/estilo';
 import type { PaginaPublica } from '@/modules/tu-pagina/servidor/pagina';
@@ -81,7 +82,7 @@ export function Cabecera({ pagina, fotoDestacada, servicioDestacado, catalogoDis
       titulo={pagina.titulo}
       frase={pagina.frase}
       etiqueta={a.tituloBanner}
-      logo={pagina.logo_url || undefined}
+      logo={fotoEnCirculo(pagina.logo_url) || undefined}
       portada={fotoPortada || undefined}
       portadaSecundaria={a.portadaLuxurySecundaria}
       servicio={servicioDestacado}
@@ -104,7 +105,7 @@ export function Cabecera({ pagina, fotoDestacada, servicioDestacado, catalogoDis
         <header className={`tp-cabeza${banner ? '' : ' tp-cabeza--sin-banner'}`}>
           <div
             className="tp-logo"
-            style={pagina.logo_url ? { backgroundImage: `url("${pagina.logo_url}")` } : undefined}
+            style={pagina.logo_url ? { backgroundImage: `url("${fotoEnCirculo(pagina.logo_url)}")` } : undefined}
             aria-hidden="true"
           >
             {pagina.logo_url ? null : inicial}

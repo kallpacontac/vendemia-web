@@ -556,7 +556,7 @@ export default function MiPagina() {
                   }}
                 />
               )}
-              <small>Elige una foto de al menos 320×320 px desde tu celular o computadora. Al subirla, tú decides el encuadre.</small>
+              <small>Elige cualquier foto desde tu celular o computadora. La adaptamos al círculo y puedes moverla.</small>
             </div>
             <div className="fz-campo">
               <label className="field-label" htmlFor={idCampo('historia')}>Al tocar tu foto</label>

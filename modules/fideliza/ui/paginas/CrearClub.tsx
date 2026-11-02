@@ -15,6 +15,7 @@
  * Por dentro usa las mismas acciones que el asistente (ajustes.guardar,
  * estilo.guardar, programa.guardar, programa.publicar): no hay otra lógica.
  */
+import { fotoEnCirculo } from '@/modules/fideliza/dominio/encuadre';
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { ImagePlus, Minus, Plus, Settings2, Trash2 } from 'lucide-react';
@@ -223,14 +224,14 @@ export default function CrearClub() {
           <div className="fz-club__logo">
             <span className="fz-club__logo-vista" style={{ background: c.logo ? '#fff' : c.color }}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              {c.logo ? <img src={c.logo} alt="" /> : (c.negocio || ajustes?.display_name || '?').slice(0, 1).toUpperCase()}
+              {c.logo ? <img src={fotoEnCirculo(c.logo)} alt="" /> : (c.negocio || ajustes?.display_name || '?').slice(0, 1).toUpperCase()}
             </span>
             <div>
               <button type="button" className="btn btn-ghost btn-sm" disabled={!editable || subiendo} onClick={() => archivo.current?.click()}>
                 <ImagePlus size={15} /> {subiendo ? 'Subiendo…' : c.logo ? 'Cambiar logo' : 'Subir tu logo'}
               </button>
               {c.logo && editable && <button type="button" className="btn btn-ghost btn-sm" onClick={() => setC({ ...c, logo: '' })}><Trash2 size={14} /> Quitar</button>}
-              <small className="fz-def" style={{ display: 'block' }}>JPG o PNG de al menos 320×320 px. Al subirlo, tú decides el encuadre.</small>
+              <small className="fz-def" style={{ display: 'block' }}>Cualquier foto o logo. Lo adaptamos al círculo y puedes moverlo.</small>
             </div>
             <input ref={archivo} type="file" accept="image/*" hidden onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ''; if (f) setPorEncuadrar(f); }} />
             {porEncuadrar && <EncuadrarFoto file={porEncuadrar} alCerrar={() => setPorEncuadrar(null)} alListo={(f) => { setPorEncuadrar(null); void subirLogo(f); }} />}
@@ -342,7 +343,7 @@ export default function CrearClub() {
             <div className="fz-club__wallet-cab">
               <span className="fz-club__wallet-logo">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                {c.logo ? <img src={c.logo} alt="" /> : (c.negocio || ajustes?.display_name || '?').slice(0, 1).toUpperCase()}
+                {c.logo ? <img src={fotoEnCirculo(c.logo)} alt="" /> : (c.negocio || ajustes?.display_name || '?').slice(0, 1).toUpperCase()}
               </span>
               <b>{ajustes?.display_name || c.negocio || 'Tu negocio'}</b>
             </div>

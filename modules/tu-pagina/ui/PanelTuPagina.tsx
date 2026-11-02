@@ -20,6 +20,7 @@
  * Todo escribe en la nube (tablas tu_pagina / envios, RPC con la sesión del usuario):
  * no pasa por el bot y funciona igual en un negocio sin bot.
  */
+import { fotoEnCirculo } from '@/modules/fideliza/dominio/encuadre';
 import { useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Copy, Download, ExternalLink, FileText, QrCode } from 'lucide-react';
@@ -403,7 +404,7 @@ function MiPagina({ companyId, nombre, pagina, agendaNube, alGuardar }: {
             {logo && <button type="button" className="btn btn-sm btn-ghost" disabled={subiendo !== null} onClick={() => setLogo('')}>Quitar</button>}
           </div>
           {porEncuadrar && <EncuadrarFoto file={porEncuadrar} alCerrar={() => setPorEncuadrar(null)} alListo={(f) => { setPorEncuadrar(null); void subirImagen(f, 'logo'); }} />}
-          {logo && esUrlPublica(logo) && <img className="tp-panel-imagen tp-panel-imagen--logo" src={logo} alt="Vista previa del logo" />}
+          {logo && esUrlPublica(logo) && <img className="tp-panel-imagen tp-panel-imagen--logo" src={fotoEnCirculo(logo)} alt="Vista previa del logo" />}
           {publicada && <label className="tp-panel-enlace-imagen">O pega un enlace HTTPS<input className="input" type="url" value={logo} placeholder="https://…/mi-logo.png" onChange={(e) => setLogo(e.target.value)} /></label>}
         </div>
         </div>

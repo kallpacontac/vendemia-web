@@ -5,13 +5,10 @@
  * ENCUADRAR LA FOTO · el paso antes de subir la foto de perfil o el logo
  * ══════════════════════════════════════════════════════════════════════════
  *
- * Igual que en Instagram o Facebook: la foto se mueve y se acerca debajo de un
- * círculo, y lo que se ve dentro es lo que sale en la página. El recorte se hace
- * aquí, en el navegador, y a Cloudinary ya llega el cuadrado.
- *
- * Una foto empieza llenando el círculo. Un logo con transparencia empieza entero,
- * porque cortarle las letras es peor que dejarle aire alrededor; «Ver entera» da
- * lo mismo a un logo horizontal con fondo blanco.
+ * Igual que en Instagram: cualquier imagen vale y siempre llena el círculo. Se
+ * puede mover y acercar, nunca alejar hasta dejar huecos. El recorte se hace aquí,
+ * en el navegador, y a Cloudinary ya llega el cuadrado. Lo que el navegador no
+ * sabe abrir (HEIC en Chrome, sobre todo) sube tal cual y lo adapta Cloudinary.
  */
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
@@ -21,10 +18,7 @@ import {
   dibujoEnLienzo,
   encuadreInicial,
   ladoDeZoom,
-  ladoEntera,
-  ladoLlenar,
   limitar,
-  problemaMedidas,
   zoomDeLado,
   type Encuadre,
   type Medidas,
@@ -54,7 +48,7 @@ function recortar(foto: Foto, e: Encuadre): Promise<File> {
   c.width = c.height = LADO_SALIDA;
   const ctx = c.getContext('2d');
   if (!ctx) return Promise.reject(new Error('Tu navegador no pudo preparar la imagen.'));
-  const conAlfa = foto.conAlfa || e.lado > ladoLlenar(foto);
+  const conAlfa = foto.conAlfa;
   if (!conAlfa) {
     ctx.fillStyle = '#fff';
     ctx.fillRect(0, 0, LADO_SALIDA, LADO_SALIDA);
@@ -83,7 +77,6 @@ export default function EncuadrarFoto({
 }) {
   const [foto, setFoto] = useState<Foto | null>(null);
   const [encuadre, setEncuadre] = useState<Encuadre | null>(null);
-  const [problema, setProblema] = useState<string | null>(null);
   const [ocupado, setOcupado] = useState(false);
   const marco = useRef<HTMLDivElement>(null);
   const dedos = useRef(new Map<number, { x: number; y: number }>());
@@ -95,21 +88,18 @@ export default function EncuadrarFoto({
     img.onload = () => {
       if (!vigente) return;
       const medidas = { ancho: img.naturalWidth, alto: img.naturalHeight };
-      const mal = problemaMedidas(medidas);
-      if (mal) return setProblema(mal);
-      const conAlfa = tieneTransparencia(img, file.type);
-      setFoto({ ...medidas, img, conAlfa });
-      setEncuadre(encuadreInicial(medidas, conAlfa));
+      setFoto({ ...medidas, img, conAlfa: tieneTransparencia(img, file.type) });
+      setEncuadre(encuadreInicial(medidas));
     };
-    // HEIC en Chrome, sobre todo: el navegador no sabe abrirla y no hay qué encuadrar.
     img.onerror = () => {
-      if (vigente) setProblema('No pudimos abrir esta imagen. Prueba con una JPG o PNG.');
+      if (vigente) alListo(file);
     };
     img.src = url;
     return () => {
       vigente = false;
       URL.revokeObjectURL(url);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [file]);
 
   useEffect(() => {
@@ -165,14 +155,10 @@ export default function EncuadrarFoto({
     setOcupado(true);
     try {
       alListo(await recortar(foto, encuadre));
-    } catch (e) {
-      setProblema(e instanceof Error ? e.message : 'Tu navegador no pudo preparar la imagen.');
-      setOcupado(false);
+    } catch {
+      alListo(file);
     }
   }
-
-  const noCuadrada = foto && foto.ancho !== foto.alto;
-  const conHuecos = foto && encuadre && encuadre.lado > ladoLlenar(foto);
 
   return createPortal(
     <div
@@ -185,86 +171,66 @@ export default function EncuadrarFoto({
       <div className="modal enc-modal" role="dialog" aria-modal="true" aria-label="Encuadra tu foto">
         <div className="modal__cab"><b>Encuadra tu foto</b></div>
         <div className="modal__cuerpo">
-          {problema ? (
-            <p role="alert">{problema}</p>
-          ) : (
-            <>
-              <div
-                ref={marco}
-                className="enc-marco"
-                role="group"
-                tabIndex={0}
-                aria-label="Foto a encuadrar. Muévela con las flechas."
-                onKeyDown={flecha}
-                onPointerDown={(e) => {
-                  e.currentTarget.setPointerCapture(e.pointerId);
-                  dedos.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+          <div
+            ref={marco}
+            className="enc-marco"
+            role="group"
+            tabIndex={0}
+            aria-label="Foto a encuadrar. Muévela con las flechas."
+            onKeyDown={flecha}
+            onPointerDown={(e) => {
+              e.currentTarget.setPointerCapture(e.pointerId);
+              dedos.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+            }}
+            onPointerMove={mover}
+            onPointerUp={(e) => dedos.current.delete(e.pointerId)}
+            onPointerCancel={(e) => dedos.current.delete(e.pointerId)}
+          >
+            {foto && encuadre && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={foto.img.src}
+                alt=""
+                draggable={false}
+                style={{
+                  width: `${(foto.ancho / encuadre.lado) * 100}%`,
+                  height: `${(foto.alto / encuadre.lado) * 100}%`,
+                  left: `${((encuadre.lado / 2 - encuadre.cx) / encuadre.lado) * 100}%`,
+                  top: `${((encuadre.lado / 2 - encuadre.cy) / encuadre.lado) * 100}%`,
                 }}
-                onPointerMove={mover}
-                onPointerUp={(e) => dedos.current.delete(e.pointerId)}
-                onPointerCancel={(e) => dedos.current.delete(e.pointerId)}
-              >
-                {foto && encuadre && (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={foto.img.src}
-                    alt=""
-                    draggable={false}
-                    style={{
-                      width: `${(foto.ancho / encuadre.lado) * 100}%`,
-                      height: `${(foto.alto / encuadre.lado) * 100}%`,
-                      left: `${((encuadre.lado / 2 - encuadre.cx) / encuadre.lado) * 100}%`,
-                      top: `${((encuadre.lado / 2 - encuadre.cy) / encuadre.lado) * 100}%`,
-                    }}
-                  />
-                )}
-                <i className="enc-circulo" aria-hidden="true" />
-              </div>
-              <div className="enc-zoom">
-                <ZoomOut size={16} aria-hidden="true" />
-                <input
-                  type="range"
-                  aria-label="Acercar o alejar"
-                  min={0}
-                  max={1}
-                  step={0.005}
-                  disabled={!foto}
-                  value={foto && encuadre ? zoomDeLado(foto, encuadre.lado) : 0}
-                  onChange={(e) => {
-                    if (!foto) return;
-                    const lado = ladoDeZoom(foto, Number(e.target.value));
-                    setEncuadre((a) => a && limitar(foto, { ...a, lado }));
-                  }}
-                />
-                <ZoomIn size={16} aria-hidden="true" />
-              </div>
-              <p className="muted enc-ayuda">
-                Arrastra para mover y acerca con la barra. Lo que queda dentro del círculo es lo que verán tus clientes.
-                {noCuadrada && (
-                  <>
-                    {' '}
-                    <button
-                      type="button"
-                      className="enc-entera"
-                      onClick={() => foto && setEncuadre((a) => a && limitar(foto, { ...a, lado: conHuecos ? ladoLlenar(foto) : ladoEntera(foto) }))}
-                    >
-                      {conHuecos ? 'Llenar el círculo' : 'Ver entera'}
-                    </button>
-                  </>
-                )}
-              </p>
-            </>
-          )}
+              />
+            )}
+            <i className="enc-circulo" aria-hidden="true" />
+          </div>
+          <div className="enc-zoom">
+            <ZoomOut size={16} aria-hidden="true" />
+            <input
+              type="range"
+              aria-label="Acercar o alejar"
+              min={0}
+              max={1}
+              step={0.005}
+              disabled={!foto}
+              value={foto && encuadre ? zoomDeLado(foto, encuadre.lado) : 0}
+              onChange={(e) => {
+                if (!foto) return;
+                const lado = ladoDeZoom(foto, Number(e.target.value));
+                setEncuadre((a) => a && limitar(foto, { ...a, lado }));
+              }}
+            />
+            <ZoomIn size={16} aria-hidden="true" />
+          </div>
+          <p className="muted enc-ayuda">
+            Arrastra para mover y acerca con la barra. Lo que queda dentro del círculo es lo que verán tus clientes.
+          </p>
         </div>
         <div className="modal__pie">
           <button type="button" className="btn btn-ghost" onClick={alCerrar} disabled={ocupado}>
-            {problema ? 'Cerrar' : 'Cancelar'}
+            Cancelar
           </button>
-          {!problema && (
-            <button type="button" className="btn btn-primary" onClick={() => void usar()} disabled={!foto || ocupado}>
-              {ocupado ? 'Preparando…' : 'Usar esta foto'}
-            </button>
-          )}
+          <button type="button" className="btn btn-primary" onClick={() => void usar()} disabled={!foto || ocupado}>
+            {ocupado ? 'Preparando…' : 'Usar esta foto'}
+          </button>
         </div>
       </div>
     </div>,

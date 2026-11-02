@@ -3,6 +3,7 @@
  * la página del negocio, la regla del club y la marca. Lo que el cliente ve
  * junto a la caja: «Escanéalo con tu cámara».
  */
+import { fotoEnCirculo } from '@/modules/fideliza/dominio/encuadre';
 import QRCode from 'qrcode';
 import { colorValido, mezcla, tintaSobre } from '@/modules/fideliza/dominio/estilo';
 import { trazoSello, type Sello } from '@/modules/fideliza/dominio/sellos';
@@ -27,7 +28,7 @@ export async function htmlCartel(d: DatosCartel): Promise<string> {
   const tinta = tintaSobre(color);
   const suave = mezcla(color, '#FFFFFF', 0.86);
   const qr = await QRCode.toString(d.url, { type: 'svg', margin: 0, errorCorrectionLevel: 'M', color: { dark: '#14110F', light: '#FFFFFF' } });
-  const logo = https(d.logo);
+  const logo = fotoEnCirculo(https(d.logo), 640);
   const icono = (s: Sello, lleno: boolean) =>
     `<span class="s${lleno ? ' s--l' : ''}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${trazoSello(s)}</svg></span>`;
   const n = Math.min(Math.max(d.meta ?? 6, 3), 10);

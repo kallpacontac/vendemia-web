@@ -1,3 +1,4 @@
+import { fotoEnCirculo } from '@/modules/fideliza/dominio/encuadre';
 import 'server-only';
 import { randomUUID } from 'crypto';
 import { FaltaConfiguracion } from './entorno';
@@ -117,7 +118,7 @@ async function procesarPush(t: Trabajo): Promise<Resultado> {
   const r = await enviarPush(p.subscriptions ?? [], {
     title: p.title,
     body: p.body,
-    icon: p.brand?.logo_url ?? undefined,
+    icon: p.brand?.logo_url ? fotoEnCirculo(p.brand.logo_url, 192, 'png') : undefined,
     campaign_id: p.campaign_id,
   });
   await rpc(sb, 'loyalty_srv_push_result', {

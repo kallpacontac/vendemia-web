@@ -12,6 +12,7 @@
  * media con datos móviles. Todo texto pasa por esc(); los colores llegan
  * validados (#RRGGBB) y las imágenes solo si son https.
  */
+import { fotoEnCirculo } from './encuadre';
 import { icono } from './iconos';
 import { colorValido, esOscuro, mezcla, resolverEstilo, tintaSobre, type Estilo } from './estilo';
 
@@ -66,7 +67,8 @@ export function imagenPagina(url: string | null | undefined, uso: 'avatar' | 'fo
     const marca = '/image/upload/';
     const i = u.pathname.indexOf(marca);
     if (u.hostname !== 'res.cloudinary.com' || i < 0) return segura;
-    const transformacion = uso === 'avatar' ? 'c_limit,h_384,w_384/f_auto,q_auto:good' : 'c_limit,w_1200/f_auto,q_auto:good';
+    if (uso === 'avatar') return fotoEnCirculo(segura);
+    const transformacion = 'c_limit,w_1200/f_auto,q_auto:good';
     u.pathname = `${u.pathname.slice(0, i + marca.length)}${transformacion}/${u.pathname.slice(i + marca.length)}`;
     return u.toString();
   } catch {

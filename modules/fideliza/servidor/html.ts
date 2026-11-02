@@ -1,3 +1,4 @@
+import { fotoEnCirculo } from '@/modules/fideliza/dominio/encuadre';
 import 'server-only';
 import { NO_CACHE } from './http';
 import { htmlPagina, type BotonPagina } from '../dominio/paginaPublica';
@@ -91,7 +92,7 @@ input[type=text]{width:100%;min-height:50px;border:1.5px solid #DEDED9;border-ra
 @media(max-width:420px){.cab--vendemia{padding-top:16px}.logo--horizontal{height:72px}.placa-pendiente{padding:20px 16px}.placa-pendiente h2{font-size:23px}}
 </style></head><body>
 <header class="cab${esVendemia ? ' cab--vendemia' : ''}">
-${o.marca?.logo_url ? `<img class="logo${esVendemia ? ' logo--horizontal' : ''}" src="${esc(o.marca.logo_url)}" alt="${esVendemia ? 'Vendemia' : ''}" width="${esVendemia ? '260' : '88'}" height="${esVendemia ? '84' : '88'}">` : ''}
+${o.marca?.logo_url ? `<img class="logo${esVendemia ? ' logo--horizontal' : ''}" src="${esc(esVendemia ? o.marca.logo_url : fotoEnCirculo(o.marca.logo_url))}" alt="${esVendemia ? 'Vendemia' : ''}" width="${esVendemia ? '260' : '88'}" height="${esVendemia ? '84' : '88'}">` : ''}
 <h1>${esc(o.marca?.display_name ?? 'Vendemia Fideliza')}</h1>
 ${o.marca?.tagline ? `<p class="lema">${esc(o.marca.tagline)}</p>` : ''}
 </header>

@@ -373,7 +373,7 @@ test('20 · las imágenes de plantillas usan variantes pequeñas y precargadas',
   const original = 'https://res.cloudinary.com/demo/image/upload/v123/brand/negocio/logo.png';
   assert.equal(
     pagina.imagenPagina(original, 'avatar'),
-    'https://res.cloudinary.com/demo/image/upload/c_limit,h_384,w_384/f_auto,q_auto:good/v123/brand/negocio/logo.png',
+    'https://res.cloudinary.com/demo/image/upload/e_trim/c_fill,g_auto,h_384,w_384/f_auto,q_auto:good/v123/brand/negocio/logo.png',
   );
   assert.equal(
     pagina.imagenPagina(original, 'fondo'),
@@ -495,14 +495,11 @@ test('19 · tus números: segmentos, regreso y horas en Lima', () => {
   assert.equal(n.semanas.length, 12);
 });
 
-test('21 · encuadre de la foto: 1:1, sin franjas y con mínimo de 320 px', () => {
+test('21 · cualquier foto llena el círculo, como en Instagram', () => {
   const horizontal = { ancho: 1600, alto: 900 };
   const vertical = { ancho: 900, alto: 1600 };
 
-  assert.match(encuadre.problemaMedidas({ ancho: 319, alto: 900 }), /319×900/);
-  assert.equal(encuadre.problemaMedidas({ ancho: 320, alto: 320 }), null);
-
-  // Una foto horizontal empieza llenando el círculo: es lo que evita las franjas.
+  // Empieza llenando el círculo: es lo que evita las franjas.
   const h = encuadre.encuadreInicial(horizontal);
   assert.deepEqual(h, { lado: 900, cx: 800, cy: 450 });
   const d = encuadre.dibujoEnLienzo(horizontal, h);
@@ -511,14 +508,32 @@ test('21 · encuadre de la foto: 1:1, sin franjas y con mínimo de 320 px', () =
   // Una vertical empieza por arriba, donde suele estar la cara.
   assert.ok(encuadre.encuadreInicial(vertical).cy < 800);
 
-  // No se puede arrastrar más allá del borde ni alejar más que la foto entera.
+  // Ni arrastrar más allá del borde ni alejar hasta dejar huecos.
   assert.deepEqual(encuadre.limitar(horizontal, { lado: 900, cx: 0, cy: -50 }), { lado: 900, cx: 450, cy: 450 });
-  assert.deepEqual(encuadre.limitar(horizontal, { lado: 9000, cx: 0, cy: 0 }), { lado: 1600, cx: 800, cy: 450 });
+  assert.deepEqual(encuadre.limitar(horizontal, { lado: 9000, cx: 0, cy: 0 }), { lado: 900, cx: 450, cy: 450 });
 
-  // Acercar nunca baja de 320 px de foto real, ni en una imagen justa.
+  // También una imagen diminuta: no se rechaza, y no se puede acercar más.
+  const chica = { ancho: 200, alto: 150 };
+  assert.deepEqual(encuadre.encuadreInicial(chica), { lado: 150, cx: 100, cy: 75 });
+  assert.equal(encuadre.zoomDeLado(chica, 150), 0);
   assert.equal(encuadre.limitar({ ancho: 400, alto: 400 }, { lado: 10, cx: 200, cy: 200 }).lado, 320);
-  assert.equal(encuadre.zoomDeLado({ ancho: 320, alto: 320 }, 320), 0);
 
   // La barra de zoom y el lado se corresponden en los dos sentidos.
   assert.ok(Math.abs(encuadre.zoomDeLado(horizontal, encuadre.ladoDeZoom(horizontal, 0.4)) - 0.4) < 1e-9);
+
+  const base = 'https://res.cloudinary.com/demo/image/upload';
+  // Las ya subidas con franjas se adaptan sin volver a subirlas.
+  assert.equal(
+    encuadre.fotoEnCirculo(`${base}/v1793414990/brand/fundexa/foto.png`),
+    `${base}/e_trim/c_fill,g_auto,h_384,w_384/f_auto,q_auto:good/v1793414990/brand/fundexa/foto.png`,
+  );
+  // Las de después no tienen franjas: no se les recorta el margen.
+  assert.equal(
+    encuadre.fotoEnCirculo(`${base}/v1793700000/brand/fundexa/logo.png`, 660, 'png'),
+    `${base}/c_fill,g_auto,h_660,w_660/f_png/v1793700000/brand/fundexa/logo.png`,
+  );
+  // Otros sitios y direcciones con transformación, tal cual.
+  assert.equal(encuadre.fotoEnCirculo('https://x.com/l.png'), 'https://x.com/l.png');
+  assert.equal(encuadre.fotoEnCirculo(`${base}/c_crop,w_9/v1/brand/a/b.png`), `${base}/c_crop,w_9/v1/brand/a/b.png`);
+  assert.equal(encuadre.fotoEnCirculo(null), '');
 });

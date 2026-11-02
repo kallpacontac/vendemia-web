@@ -7,6 +7,7 @@
  * Publicar crea una versión nueva con vigencia desde ese momento; las
  * operaciones anteriores siguen con la regla con la que se hicieron.
  */
+import { fotoEnCirculo } from '@/modules/fideliza/dominio/encuadre';
 import { cloneElement, Suspense, useEffect, useMemo, useState, type ReactElement } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
@@ -742,7 +743,7 @@ function ProgramaPagina() {
                 <div className="fz-prev-wallet__cab">
                   {marca.logo_url ? (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img className="fz-prev__logo" src={marca.logo_url} alt="" />
+                    <img className="fz-prev__logo" src={fotoEnCirculo(marca.logo_url)} alt="" />
                   ) : (
                     <div className="fz-prev__logo fz-prev-wallet__inicial">{(negocio.display_name || 'T').slice(0, 1).toUpperCase()}</div>
                   )}
