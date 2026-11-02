@@ -115,6 +115,8 @@ export default function AvisoActivar(props: {
     const dias = DESCANSOS[Math.min(m.veces, DESCANSOS.length - 1)];
     escribir(slug, { ...m, veces: m.veces + 1, hasta: Date.now() + dias * DIA });
     setVisible(false);
+    // Uno a la vez, no uno por visita: si está bloqueado, instalar puede ser lo único que le quede.
+    alOcupar(false);
   };
 
   async function activar() {

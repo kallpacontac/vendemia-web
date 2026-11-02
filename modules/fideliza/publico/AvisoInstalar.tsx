@@ -16,7 +16,8 @@
  * Mesura como el panel: sale a los 2,5 s, «Ahora no» lo esconde 7 días y
  * tras dos «Ahora no» (la ×) no vuelve; instalada, nunca. En iPhone sí vuelve cada
  * 7 días: sin instalar no hay avisos, y sin esto AvisoActivar nunca llegaría a salir.
- * La memoria es por negocio: cada tarjeta es su propia app.
+ * Lo recordado sobrevive a desinstalar: si Chrome vuelve a ofrecerla es que ya no está
+ * instalada, y `hecho` no cuenta. La memoria es por negocio: cada tarjeta es su propia app.
  *
  * Para probarlo (scripts/fideliza-aviso-instalar.mjs):
  *   · `?app=1`                      → olvida lo recordado y lo evalúa ya.
@@ -56,7 +57,8 @@ function escribir(slug: string, m: Memoria) {
     /* ventana privada: solo dura esta visita */
   }
 }
-const permitido = (m: Memoria, sinTope: boolean) => !m.hecho && (sinTope || m.veces < 2) && Date.now() >= m.hasta;
+const permitido = (m: Memoria, sinTope: boolean, ofrecida: boolean) =>
+  (!m.hecho || ofrecida) && (sinTope || m.veces < 2) && Date.now() >= m.hasta;
 
 /** `?app=` → variante forzada, o 'evaluar' para olvidar lo recordado. */
 function leerForzado(valor: string | null): Variante | 'evaluar' | null {
@@ -110,7 +112,7 @@ export default function AvisoInstalar(props: {
       return () => clearTimeout(reloj);
     }
     if (forzado === 'evaluar') escribir(slug, { veces: 0, hasta: 0 });
-    if (!permitido(leer(slug), plataforma === 'ios' && props.conAvisos)) return;
+    if (!permitido(leer(slug), plataforma === 'ios' && props.conAvisos, instalar !== null)) return;
     const reloj = setTimeout(() => setVariante(elegir()), forzado ? 600 : 2500);
     return () => clearTimeout(reloj);
     // `instalar` llega tarde (el evento de Chrome): se vuelve a evaluar entonces.
