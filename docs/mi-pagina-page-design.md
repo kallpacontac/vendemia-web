@@ -10,10 +10,13 @@ Referencia visual consultada: https://qcarta.com/ (2 de noviembre de 2026).
 4. Bloques escaneables: soluciones, tres pasos, capacidades, galería de ejemplos, preguntas y cierre.
 5. Ejemplos presentados en marcos de celular, cada uno con acceso directo a su página completa.
 6. Tipografía negra grande, superficies claras, acentos de color, tarjetas redondeadas y mucho espacio entre secciones.
+7. Titulares Poppins ExtraBold con tracking cerrado. Las secciones entran con opacidad y desplazamiento vertical; el teléfono flota lentamente, las manchas y órbitas se mueven a otro ritmo, y los controles responden al toque.
+8. El logotipo es una pieza compacta de alto contraste sobre una silueta oscura.
 
 ## Adaptación a Vendemia
 
-- La ruta `/mi-pagina` usa esta secuencia con la identidad verde de Mi página y navegación propia.
+- La ruta `/mi-pagina` usa esta secuencia con la paleta de Vendemia: negro, crema y naranja. El texto usa Plus Jakarta Sans y el sello de marca usa Outfit y el isotipo original de Mia.
+- La última línea del titular cambia entre «que atiende», «que vende» y «que agenda». El teléfono, las capas y las tarjetas usan movimientos de distintas velocidades; `prefers-reduced-motion` los desactiva.
 - La demo de portada es ilustrativa y local: no envía pedidos ni guarda información.
 - La galería muestra únicamente ejemplos del proyecto: La Baguette, Grano de Barrio, Atelier Norte, Zona Gol y Sonrisa Norte.
 - Los CTA llevan al panel de Mi página. La landing principal enlaza la nueva página y muestra dos ejemplos propios.

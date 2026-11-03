@@ -1,7 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ArrowRight, CalendarDays, Check, ChevronDown, Clock3, Menu, Plus, ShoppingBag, Smartphone, X } from 'lucide-react';
+import Mark from '@/components/Mark';
+import Wordmark from '@/components/landing/Wordmark';
 
 const ejemplos = [
   { nombre: 'La Baguette', rubro: 'Panadería · carta visual', imagen: '/assets/negocios-ejemplo/cafe-3.webp', href: '/ejemplos/la-baguette', tono: 'pan' },
@@ -31,14 +33,35 @@ const preguntas = [
 ] as const;
 
 export default function MiPaginaLanding() {
+  const raiz = useRef<HTMLDivElement>(null);
   const [menuAbierto, setMenuAbierto] = useState(false);
   const [cantidad, setCantidad] = useState(0);
   const [categoria, setCategoria] = useState<'Favoritos' | 'Bebidas'>('Favoritos');
   const [aviso, setAviso] = useState(false);
+  const [palabra, setPalabra] = useState(0);
+  const palabras = ['que atiende', 'que vende', 'que agenda'] as const;
 
-  return <div className="mp">
+  useEffect(() => {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const intervalo = window.setInterval(() => setPalabra((actual) => (actual + 1) % palabras.length), 6400);
+    const contenedor = raiz.current;
+    const elementos = contenedor?.querySelectorAll<HTMLElement>('.mp-reveal');
+    if (!contenedor || !elementos?.length || !('IntersectionObserver' in window)) return () => window.clearInterval(intervalo);
+    contenedor.classList.add('mp-motion');
+    const observador = new IntersectionObserver((entradas) => {
+      entradas.forEach((entrada) => {
+        if (!entrada.isIntersecting) return;
+        entrada.target.classList.add('mp-visible');
+        observador.unobserve(entrada.target);
+      });
+    }, { threshold: 0.12, rootMargin: '0px 0px -30px 0px' });
+    elementos.forEach((elemento) => observador.observe(elemento));
+    return () => { window.clearInterval(intervalo); observador.disconnect(); };
+  }, []);
+
+  return <div className="mp" ref={raiz}>
     <header className="mp-nav">
-      <a className="mp-marca" href="/" aria-label="Vendemia, ir al inicio"><span className="mp-marca__icono">V</span><span>vendemia<span className="mp-marca__punto">.</span></span></a>
+      <a className="mp-marca" href="/" aria-label="Vendemia, ir al inicio"><Mark size={27} variant="avatar" priority /><Wordmark /></a>
       <nav className={menuAbierto ? 'mp-nav__enlaces abierto' : 'mp-nav__enlaces'} aria-label="Mi página">
         <a href="#soluciones" onClick={() => setMenuAbierto(false)}>Qué puedes crear</a>
         <a href="#como-funciona" onClick={() => setMenuAbierto(false)}>Cómo funciona</a>
@@ -53,12 +76,15 @@ export default function MiPaginaLanding() {
       <section className="mp-hero" aria-labelledby="mp-titulo">
         <div className="mp-hero__texto">
           <span className="mp-etiqueta"><span /> MI PÁGINA · VENDEMIA</span>
-          <h1 id="mp-titulo">Tu negocio,<br />en una página<br /><em>que sí atiende.</em></h1>
+          <h1 id="mp-titulo">Tu negocio,<br />en una página<br /><em className="mp-palabra"><span key={palabra}>{palabras[palabra]}.</span></em></h1>
           <p>Muestra tus productos o servicios, recibe pedidos y facilita las reservas desde un solo enlace. Configúrala a tu manera y compártela con tus clientes.</p>
           <div className="mp-hero__acciones"><a className="mp-boton" href="/panel/tu-pagina">Crear mi página <ArrowRight size={19} /></a><a className="mp-boton mp-boton--borde" href="#ejemplos">Explorar ejemplos</a></div>
           <div className="mp-hero__nota"><Check size={16} /> Tus clientes la abren desde el celular, sin instalar nada.</div>
         </div>
         <div className="mp-hero__visual" aria-label="Vista interactiva de una página de ejemplo">
+          <span className="mp-hero__orbita" aria-hidden="true" />
+          <span className="mp-hero__mancha mp-hero__mancha--uno" aria-hidden="true" />
+          <span className="mp-hero__mancha mp-hero__mancha--dos" aria-hidden="true" />
           <span className="mp-flotante mp-flotante--uno"><Check size={15} /> Tu catálogo, tus fotos</span>
           <div className="mp-telefono">
             <div className="mp-telefono__barra"><span /><i /></div>
@@ -73,19 +99,19 @@ export default function MiPaginaLanding() {
 
       <div className="mp-cinta" aria-label="Tipos de negocio"><span>UNA PÁGINA PARA TU FORMA DE TRABAJAR</span><div><span>Catálogo</span><i /> <span>Reservas</span><i /> <span>Pedidos</span><i /> <span>Canchas</span></div></div>
 
-      <section className="mp-seccion" id="soluciones"><div className="mp-seccion__cabecera"><div><span className="mp-sobre">TU PÁGINA, A TU MEDIDA</span><h2>Elige lo que necesita<br />tu negocio hoy.</h2></div><p>Los diseños comparten una idea: que tu cliente entienda qué ofreces y pueda actuar en pocos toques.</p></div><div className="mp-soluciones"><a href="/ejemplos/la-baguette" className="mp-solucion mp-solucion--tienda"><span>01 / VENDE</span><ShoppingBag size={32} /><h3>Una tienda para tus productos</h3><p>Fotos, categorías, precios y carrito en un recorrido simple.</p><b>Ver ejemplo <ArrowRight size={18} /></b></a><a href="/ejemplos/clinica-dental?diseno=clara" className="mp-solucion mp-solucion--agenda"><span>02 / AGENDA</span><CalendarDays size={32} /><h3>Una agenda para tus servicios</h3><p>Servicios y horarios fáciles de encontrar desde el primer vistazo.</p><b>Ver ejemplo <ArrowRight size={18} /></b></a><a href="/ejemplos/canchas" className="mp-solucion mp-solucion--canchas"><span>03 / RESERVA</span><Clock3 size={32} /><h3>Una cancha lista para reservar</h3><p>Modalidad, día y hora visibles, con extras opcionales.</p><b>Ver ejemplo <ArrowRight size={18} /></b></a></div></section>
+      <section className="mp-seccion" id="soluciones"><div className="mp-seccion__cabecera mp-reveal"><div><span className="mp-sobre">TU PÁGINA, A TU MEDIDA</span><h2>Elige lo que necesita<br />tu negocio hoy.</h2></div><p>Los diseños comparten una idea: que tu cliente entienda qué ofreces y pueda actuar en pocos toques.</p></div><div className="mp-soluciones"><a href="/ejemplos/la-baguette" className="mp-solucion mp-solucion--tienda mp-reveal"><span>01 / VENDE</span><ShoppingBag size={32} /><h3>Una tienda para tus productos</h3><p>Fotos, categorías, precios y carrito en un recorrido simple.</p><b>Ver ejemplo <ArrowRight size={18} /></b></a><a href="/ejemplos/clinica-dental?diseno=clara" className="mp-solucion mp-solucion--agenda mp-reveal"><span>02 / AGENDA</span><CalendarDays size={32} /><h3>Una agenda para tus servicios</h3><p>Servicios y horarios fáciles de encontrar desde el primer vistazo.</p><b>Ver ejemplo <ArrowRight size={18} /></b></a><a href="/ejemplos/canchas" className="mp-solucion mp-solucion--canchas mp-reveal"><span>03 / RESERVA</span><Clock3 size={32} /><h3>Una cancha lista para reservar</h3><p>Modalidad, día y hora visibles, con extras opcionales.</p><b>Ver ejemplo <ArrowRight size={18} /></b></a></div></section>
 
-      <section className="mp-pasos" id="como-funciona"><div className="mp-seccion__cabecera"><div><span className="mp-sobre">ASÍ DE SIMPLE</span><h2>Lista en tres pasos.</h2></div><p>Empieza con una plantilla, agrega el contenido de tu negocio y comparte tu página.</p></div><div className="mp-pasos__grid">{pasos.map((paso) => <div key={paso.numero}><span>{paso.numero}</span><h3>{paso.titulo}</h3><p>{paso.texto}</p></div>)}</div></section>
+      <section className="mp-pasos" id="como-funciona"><div className="mp-seccion__cabecera mp-reveal"><div><span className="mp-sobre">ASÍ DE SIMPLE</span><h2>Lista en tres pasos.</h2></div><p>Empieza con una plantilla, agrega el contenido de tu negocio y comparte tu página.</p></div><div className="mp-pasos__grid">{pasos.map((paso) => <div className="mp-reveal" key={paso.numero}><span>{paso.numero}</span><h3>{paso.titulo}</h3><p>{paso.texto}</p></div>)}</div></section>
 
-      <section className="mp-seccion mp-funciones" aria-labelledby="mp-funciones-titulo"><div className="mp-seccion__cabecera"><div><span className="mp-sobre">LO IMPORTANTE, A MANO</span><h2 id="mp-funciones-titulo">Diseñada para que<br />puedan elegirte.</h2></div><p>Una experiencia clara para tus clientes y contenido que puedes gestionar desde tu panel.</p></div><div className="mp-funciones__grid">{funciones.map(({ icono: Icono, titulo, texto }) => <div key={titulo}><span><Icono size={24} /></span><h3>{titulo}</h3><p>{texto}</p></div>)}</div></section>
+      <section className="mp-seccion mp-funciones" aria-labelledby="mp-funciones-titulo"><div className="mp-seccion__cabecera mp-reveal"><div><span className="mp-sobre">LO IMPORTANTE, A MANO</span><h2 id="mp-funciones-titulo">Diseñada para que<br />puedan elegirte.</h2></div><p>Una experiencia clara para tus clientes y contenido que puedes gestionar desde tu panel.</p></div><div className="mp-funciones__grid">{funciones.map(({ icono: Icono, titulo, texto }) => <div className="mp-reveal" key={titulo}><span><Icono size={24} /></span><h3>{titulo}</h3><p>{texto}</p></div>)}</div></section>
 
-      <section className="mp-ejemplos" id="ejemplos"><div className="mp-seccion__cabecera"><div><span className="mp-sobre">HECHOS CON VENDEMIA</span><h2>Explora nuestras<br />páginas de ejemplo.</h2></div><p>Abre cada demo y prueba el recorrido como lo haría un cliente. Los nombres, productos y precios son ilustrativos.</p></div><div className="mp-ejemplos__grid">{ejemplos.map((ejemplo) => <a key={ejemplo.nombre} href={ejemplo.href} className={`mp-ejemplo mp-ejemplo--${ejemplo.tono}`}><div className="mp-ejemplo__marco"><div className="mp-ejemplo__pantalla"><div className="mp-ejemplo__foto" style={{ backgroundImage: `url('${ejemplo.imagen}')` }} /><div className="mp-ejemplo__texto"><span>PÁGINA DE EJEMPLO</span><strong>{ejemplo.nombre}</strong><small>{ejemplo.rubro}</small></div></div></div><div className="mp-ejemplo__pie"><span><b>{ejemplo.nombre}</b><small>{ejemplo.rubro}</small></span><span className="mp-ejemplo__flecha" aria-label="Abrir ejemplo"><ArrowRight size={20} /></span></div></a>)}</div></section>
+      <section className="mp-ejemplos" id="ejemplos"><div className="mp-seccion__cabecera mp-reveal"><div><span className="mp-sobre">HECHOS CON VENDEMIA</span><h2>Explora nuestras<br />páginas de ejemplo.</h2></div><p>Abre cada demo y prueba el recorrido como lo haría un cliente. Los nombres, productos y precios son ilustrativos.</p></div><div className="mp-ejemplos__grid">{ejemplos.map((ejemplo) => <a key={ejemplo.nombre} href={ejemplo.href} className={`mp-ejemplo mp-ejemplo--${ejemplo.tono} mp-reveal`}><div className="mp-ejemplo__marco"><div className="mp-ejemplo__pantalla"><div className="mp-ejemplo__foto" style={{ backgroundImage: `url('${ejemplo.imagen}')` }} /><div className="mp-ejemplo__texto"><span>PÁGINA DE EJEMPLO</span><strong>{ejemplo.nombre}</strong><small>{ejemplo.rubro}</small></div></div></div><div className="mp-ejemplo__pie"><span><b>{ejemplo.nombre}</b><small>{ejemplo.rubro}</small></span><span className="mp-ejemplo__flecha" aria-label="Abrir ejemplo"><ArrowRight size={20} /></span></div></a>)}</div></section>
 
       <section className="mp-preguntas" id="preguntas"><div><span className="mp-sobre">PREGUNTAS FRECUENTES</span><h2>Lo que necesitas saber.</h2><p>Explora las demos antes de crear tu propia página.</p></div><div className="mp-preguntas__lista">{preguntas.map(({ pregunta, respuesta }) => <details key={pregunta}><summary>{pregunta}<ChevronDown size={20} /></summary><p>{respuesta}</p></details>)}</div></section>
 
       <section className="mp-cierre"><span className="mp-sobre">TU NEGOCIO MERECE SU PROPIO ESPACIO</span><h2>Haz que encontrarte<br />sea el primer paso.</h2><p>Prepara tu página con tu nombre, tus fotos y lo que ofreces.</p><a className="mp-boton mp-boton--claro" href="/panel/tu-pagina">Crear mi página <ArrowRight size={19} /></a></section>
     </main>
-    <footer className="mp-footer"><a className="mp-marca" href="/">vendemia<span className="mp-marca__punto">.</span></a><span>Mi página · una herramienta de Vendemia</span><a href="/">Volver a Vendemia <ArrowRight size={15} /></a></footer>
+    <footer className="mp-footer"><a className="mp-marca" href="/" aria-label="Vendemia, ir al inicio"><Mark size={25} variant="avatar" /><Wordmark /></a><span>Mi página · una herramienta de Vendemia</span><a href="/">Volver a Vendemia <ArrowRight size={15} /></a></footer>
     {aviso && <div className="mp-aviso" role="status"><Check size={18} /><span>Esta vista es una muestra. Abre nuestros ejemplos para probar la página completa.</span><button type="button" aria-label="Cerrar aviso" onClick={() => setAviso(false)}><X size={18} /></button></div>}
   </div>;
 }
