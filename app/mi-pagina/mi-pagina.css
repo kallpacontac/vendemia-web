@@ -9,8 +9,7 @@ body:has(.mp){margin:0}.mp{--mp-ink:#0a0a0a;--mp-muted:#5c5c5c;--mp-line:#eaeae6
 @media(max-width:800px){.mp-nav{height:65px}.mp-nav__enlaces{display:none;position:absolute;top:65px;left:0;right:0;padding:22px 24px;background:#fff;box-shadow:0 15px 25px #0002;flex-direction:column;align-items:flex-start;gap:17px}.mp-nav__enlaces.abierto{display:flex}.mp-nav__acciones{margin-left:auto}.mp-nav__acciones .mp-boton{display:none}.mp-nav__menu{display:grid;place-items:center}.mp-hero{grid-template-columns:1fr;padding-top:55px;gap:40px}.mp-hero__visual{min-height:490px}.mp-cinta{flex-direction:column;align-items:flex-start;gap:12px}.mp-soluciones,.mp-pasos__grid{grid-template-columns:1fr}.mp-solucion{min-height:280px}.mp-preguntas{grid-template-columns:1fr;gap:35px}.mp-seccion,.mp-pasos,.mp-ejemplos,.mp-preguntas{padding-top:75px;padding-bottom:75px}.mp-seccion__cabecera{align-items:start;flex-direction:column;gap:18px}}
 @media(max-width:560px){.mp-nav{padding:0 18px}.mp-marca{font-size:21px}.mp-hero{padding:44px 18px 55px}.mp-hero h1{font-size:clamp(48px,12vw,68px)}.mp-hero__texto>p{font-size:16px}.mp-hero__acciones .mp-boton{flex:1}.mp-hero__visual{border-radius:28px;padding-left:10px;padding-right:10px}.mp-flotante--uno{left:1%;top:21%}.mp-flotante--dos{right:0;bottom:19%}.mp-cinta>div{flex-wrap:wrap;gap:10px;font-size:14px}.mp-seccion,.mp-pasos,.mp-ejemplos,.mp-preguntas{padding-left:18px;padding-right:18px}.mp-seccion h2,.mp-pasos h2,.mp-ejemplos h2,.mp-preguntas h2,.mp-cierre h2{font-size:42px}.mp-funciones__grid{grid-template-columns:1fr}.mp-ejemplos__grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.mp-ejemplo__marco{height:250px;padding-top:15px}.mp-ejemplo__pantalla{width:145px;height:290px}.mp-ejemplo__foto{height:140px}.mp-ejemplo__pie b{font-size:13px}.mp-ejemplo__pie small{font-size:10px}.mp-ejemplo__flecha{height:30px;width:30px}.mp-footer{flex-direction:column;align-items:flex-start}.mp-aviso{left:15px;right:15px;bottom:15px}}
 
-/* Letras de pincel grueso como la referencia, solo tipografía: sin placa,
-   silueta de fondo ni mascota. El acento final conserva el naranja Vendemia. */
+/* Logotipo de Mi página: caligrafía blanca en tinta oscura y punto naranja. */
 .mp .mp-marca{display:inline-flex;align-items:center;padding:0;background:none;color:#0a0a0a;box-shadow:none;transform:rotate(-2deg);transition:transform .25s}
 .mp .mp-marca:hover{transform:rotate(0) translateY(-2px)}
 .mp .mp-marca .vendemia-wordmark{font-family:'Lobster','Brush Script MT',cursive;font-size:36px;font-weight:400;letter-spacing:-.035em;line-height:1.1;color:#0a0a0a;text-shadow:1px 2px 0 #ffb067}
@@ -59,3 +58,74 @@ body:has(.mp){margin:0}.mp{--mp-ink:#0a0a0a;--mp-muted:#5c5c5c;--mp-line:#eaeae6
 @keyframes mp-mancha-dos{0%,100%{transform:translate(0,0)}50%{transform:translate(30px,-22px)}}
 @media(prefers-reduced-motion:reduce){.mp-hero__texto,.mp-hero__visual,.mp-palabra>span,.mp-telefono,.mp-flotante,.mp-hero__orbita,.mp-hero__mancha{animation:none!important}.mp-motion .mp-reveal{opacity:1;transform:none;transition:none}.mp .mp-boton,.mp .mp-marca,.mp-ejemplo__pantalla,.mp .mp-telefono__producto>button{transition:none}}
 @media(max-width:560px){.mp .mp-marca .vendemia-wordmark{font-size:32px}.mp-hero__orbita{width:300px;height:300px}.mp-ejemplo__pantalla{height:350px}}
+
+/* Portada basada en el ritmo de la referencia, con identidad Vendemia. */
+.mp-nav{height:92px;padding-inline:max(3vw,24px)}
+.mp .mp-marca{padding:6px 17px 9px 15px;background:#050505;border-radius:29% 23% 27% 20%/29% 35% 24% 28%;box-shadow:3px 4px 0 #050505;transform:rotate(-3deg)}
+.mp .mp-marca:hover{transform:rotate(0) translateY(-2px)}
+.mp-logo{font-family:'Lobster','Brush Script MT',cursive;font-size:31px;font-weight:400;line-height:1;letter-spacing:-.045em;color:#fff;white-space:nowrap}
+.mp-logo__i{position:relative}
+.mp-logo__i::after{content:'';position:absolute;width:.15em;height:.15em;left:.18em;top:.04em;background:#ff6a1f;border-radius:50%;box-shadow:0 0 0 1px #050505}
+.mp-logo__punto{color:#ff6a1f}
+.mp-footer .mp-marca{background:#fff;box-shadow:3px 4px 0 #fff}
+.mp-footer .mp-logo{color:#050505}
+.mp-footer .mp-logo__i::after{box-shadow:0 0 0 1px #fff}
+.mp-hero{max-width:1700px;min-height:735px;padding:90px max(3vw,24px) 80px;grid-template-columns:minmax(0,1.05fr) minmax(520px,.95fr);gap:2.5vw}
+.mp-etiqueta{padding:10px 16px;border-radius:999px;background:#f0f0ef;color:#171717;letter-spacing:0;font-size:14px;font-weight:700}
+.mp-etiqueta span{background:#20c968;flex:none}
+.mp-hero h1{font-size:clamp(54px,4.75vw,80px);max-width:800px;margin:30px 0 24px;font-weight:900;letter-spacing:-.045em;word-spacing:.12em;line-height:1.02}
+.mp-escritura{display:inline-flex;align-items:baseline;position:relative;min-width:6.35ch;margin-left:.12em;white-space:nowrap;vertical-align:baseline}
+.mp-escritura>span{display:inline-block}
+.mp-escritura i{display:inline-block;width:5px;height:.79em;align-self:center;margin-left:4px;border-radius:2px;background:#ff6a1f;animation:mp-cursor .8s steps(1,end) infinite}
+.mp-hero__texto>p{font-size:clamp(18px,1.45vw,23px);line-height:1.55;max-width:680px;color:#54545a}
+.mp-hero__acciones{margin-top:40px}
+.mp-hero__visual{min-height:650px;border-radius:0;background:transparent;overflow:visible;padding:22px 56px 30px}
+.mp-hero__visual::before{content:'';position:absolute;inset:6% 9% 4%;border-radius:50%;background:radial-gradient(circle,#ffdcc9 0,transparent 62%);filter:blur(27px);opacity:.8;pointer-events:none}
+.mp-telefono{width:346px;border-width:12px;border-radius:52px;box-shadow:0 29px 65px #0a0a0a30;transform:none}
+.mp-telefono__barra{height:26px;position:relative}
+.mp-telefono__barra span{position:absolute;top:-1px;width:116px;height:19px;border-radius:0 0 15px 15px;background:#0a0a0a}
+.mp-telefono__portada{height:153px;padding:19px 23px 18px;background:linear-gradient(115deg,#ff5e12,#ff8844);justify-content:center}
+.mp-telefono__portada span{font-size:11px;letter-spacing:0;font-weight:800;opacity:.85}
+.mp-telefono__portada strong{font-size:26px;margin-top:10px;letter-spacing:-.04em}
+.mp-telefono__portada small{display:flex;align-items:center;gap:6px;font-size:11px;margin-top:4px}
+.mp-telefono__portada small i{display:block;width:8px;height:8px;border-radius:50%;background:#baff6c}
+.mp-telefono__contenido{padding:17px 17px 10px}
+.mp-telefono__categorias{margin-bottom:13px;gap:7px}
+.mp-telefono__categorias button{font-size:12px;font-weight:800;padding:7px 14px;border:0;background:#f1f1f1}
+.mp-telefono__categorias button.activo{background:#0a0a0a;border-color:#0a0a0a;color:#fff}
+.mp .mp-telefono__categorias button.activo{color:#fff}
+.mp-telefono__producto{min-height:82px;gap:10px;padding:9px;border:1px solid #e8e8e8;border-radius:16px;margin-bottom:9px}
+.mp-telefono__foto{width:54px;height:55px}
+.mp-telefono__foto--tres{background-image:url('/assets/negocios-ejemplo/cafe-2.webp')}
+.mp-telefono__producto b{font-size:12px}
+.mp-telefono__producto small{font-size:10px}
+.mp-telefono__producto strong{font-size:12px;color:#0a0a0a}
+.mp-telefono__producto>button{width:29px;height:29px}
+.mp-telefono__pie{margin:0 17px 17px;padding:10px 12px;border-radius:13px;font-size:11px}
+.mp-telefono__pie button{font-size:11px;padding:8px 12px}
+.mp-flotante{gap:9px;padding:11px 15px;font-size:13px;border-radius:19px;white-space:nowrap;box-shadow:0 12px 24px #0000001a}
+.mp-flotante--promo{left:-2%;top:25%;display:flex;flex-direction:column;align-items:flex-start;gap:1px;padding:14px 18px}
+.mp-flotante--promo small{font-size:12px;color:#5c5c5c;font-weight:600}
+.mp-flotante--promo b{color:#c63c00;font-size:15px}
+.mp-flotante--sinapp{right:-1%;top:15%;background:#080808;color:#fff;border-radius:999px}
+.mp-flotante--sinapp svg{color:#ff6a1f}
+.mp-flotante--ubicacion{right:-5%;top:57%;border-radius:999px}
+.mp-flotante--ubicacion svg{color:#20b977}
+.mp-flotante--pedido{left:-1%;bottom:17%;border-radius:999px}
+.mp-hero__visual>p{margin-top:15px}
+.mp-cinta{min-height:96px;padding:19px max(3vw,24px);gap:24px;flex-wrap:wrap}
+.mp-cinta>span{font-size:11px;white-space:nowrap}
+.mp-cinta .mp-cinta__rubros{display:flex;align-items:center;gap:16px;font-size:17px;white-space:nowrap}
+.mp-cinta .mp-cinta__banderas{display:flex;align-items:center;gap:8px;white-space:nowrap}
+.mp-cinta__banderas span{font-size:22px;line-height:1}
+.mp-telefono{animation:mp-flotar-vertical 6s ease-in-out infinite}
+.mp-flotante--promo{animation:mp-chip 5s ease-in-out infinite}
+.mp-flotante--sinapp{animation:mp-chip 5s -1s ease-in-out infinite}
+.mp-flotante--ubicacion{animation:mp-chip 5s -2s ease-in-out infinite}
+.mp-flotante--pedido{animation:mp-chip 5s -3s ease-in-out infinite}
+@keyframes mp-cursor{50%{opacity:0}}
+@keyframes mp-flotar-vertical{50%{transform:translateY(-10px)}}
+@media(max-width:1250px){.mp-hero{grid-template-columns:minmax(0,1fr) minmax(440px,.8fr);gap:10px}.mp-hero h1{font-size:clamp(50px,4.6vw,66px)}.mp-hero__visual{padding-inline:35px}.mp-telefono{width:320px}.mp-flotante--ubicacion{right:-2%}.mp-cinta{justify-content:center}.mp-cinta>span{width:100%;text-align:center}}
+@media(max-width:900px){.mp-nav{height:70px}.mp-nav__enlaces{top:70px}.mp-hero{grid-template-columns:1fr;padding-top:55px;gap:35px}.mp-hero h1{font-size:clamp(54px,7.5vw,76px)}.mp-hero__visual{min-height:630px}.mp-cinta{justify-content:flex-start}.mp-cinta>span{text-align:left}}
+@media(max-width:560px){.mp-nav{height:66px}.mp-nav__enlaces{top:66px}.mp .mp-marca{padding:6px 12px 8px}.mp-logo{font-size:26px}.mp-hero{padding:45px 18px 50px}.mp-etiqueta{font-size:11px;padding:8px 11px}.mp-hero h1{font-size:clamp(40px,10.2vw,56px);letter-spacing:-.04em;margin:25px 0 19px}.mp-escritura{min-width:5.95ch}.mp-escritura i{width:3px;margin-left:2px}.mp-hero__texto>p{font-size:16px}.mp-hero__visual{min-height:555px;padding:25px 0 20px}.mp-telefono{width:min(79vw,315px);border-width:10px}.mp-telefono__portada{height:130px}.mp-telefono__producto{min-height:73px}.mp-flotante{font-size:10px;padding:8px 9px}.mp-flotante--promo{display:none}.mp-flotante--sinapp{right:-2%;top:13%}.mp-flotante--ubicacion{right:-3%;top:58%}.mp-flotante--pedido{left:-2%;bottom:14%}.mp-cinta{gap:14px;padding:22px 18px}.mp-cinta .mp-cinta__rubros{gap:9px;font-size:13px;flex-wrap:wrap}.mp-cinta .mp-cinta__banderas{gap:7px;flex-wrap:wrap}.mp-cinta__banderas span{font-size:21px}}
+@media(prefers-reduced-motion:reduce){.mp-escritura i,.mp-telefono,.mp-flotante{animation:none!important}}
