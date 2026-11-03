@@ -347,3 +347,23 @@ body:has(.mp){margin:0}.mp{--mp-ink:#0a0a0a;--mp-muted:#5c5c5c;--mp-line:#eaeae6
 .mp-nav__acciones .mp-boton--chico:hover{background:#ff904e}
 @media(max-width:1100px){.mp-nav__enlaces{gap:0}.mp-nav__enlaces>a,.mp-nav__soluciones>summary{padding-inline:8px}.mp-nav__volver{display:none}}
 @media(max-width:800px){.mp-nav{height:66px}.mp-nav__enlaces{top:66px;gap:4px;align-items:stretch}.mp-nav__enlaces>a,.mp-nav__soluciones>summary{display:flex;width:100%;padding:9px 12px}.mp-nav__desplegable{position:static;width:100%;margin:5px 0 8px;box-shadow:none}.mp-nav__acciones .mp-boton--chico{display:none}}
+
+/* Superficies de marca saturadas con texto blanco, sin negro sobre naranja. */
+.mp{--mp-accent-strong:#c63c00}
+.mp .mp-boton,.mp-nav__acciones .mp-boton--chico{background:var(--mp-accent-strong);color:#fff!important}
+.mp .mp-boton:hover,.mp-nav__acciones .mp-boton--chico:hover{background:#a83100}
+.mp .mp-boton--borde{background:transparent;color:#0a0a0a!important}
+.mp .mp-boton--borde:hover{background:#fff0e8}
+.mp .mp-boton--claro{background:#fff0e8;color:#1a0a00!important}
+.mp .mp-boton--claro:hover{background:#fff}
+.mp-flotante__sello{background:var(--mp-accent-strong);color:#fff}
+.mp-telefono__producto>button{background:var(--mp-accent-strong);color:#fff}
+.mp-solucion--principal .mp-solucion__icono{background:var(--mp-accent-strong);color:#fff}
+.mp .mp-solucion--destacada{background:var(--mp-accent-strong);color:#fff}
+.mp-solucion--destacada h3,.mp-solucion--destacada p,.mp-solucion--destacada b{color:#fff}
+.mp-solucion--destacada .mp-solucion__icono{background:#fff;color:var(--mp-accent-strong)}
+.mp-plan--destacado{background:var(--mp-accent-strong);color:#fff;box-shadow:0 15px 26px #c63c0030}
+.mp-plan--destacado h3,.mp-plan--destacado p,.mp-plan--destacado .mp-plan__precio del,.mp-plan--destacado .mp-plan__despues{color:#fff}
+.mp-plan--destacado li svg{color:#fff}
+.mp-plan--destacado .mp-plan__boton{color:var(--mp-accent-strong)!important}
+.mp-planes__periodos small{background:var(--mp-accent-strong);color:#fff}
