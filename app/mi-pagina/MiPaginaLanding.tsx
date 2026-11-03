@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
-import { ArrowRight, CalendarDays, Check, ChevronDown, Clock3, MapPin, Menu, Plus, ShoppingBag, Smartphone, X } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Bell, CalendarDays, Camera, Check, ChevronDown, Clock3, LayoutGrid, Link2, MapPin, Menu, Palette, Plus, ShoppingBag, Smartphone, Tags, X } from 'lucide-react';
 import { siWhatsapp } from 'simple-icons';
 
 const palabras = ['local', 'carta', 'sitio'] as const;
@@ -23,11 +23,11 @@ function MiPaginaLogo() {
 }
 
 const ejemplos = [
-  { nombre: 'La Baguette', rubro: 'Panadería · carta visual', imagen: '/assets/negocios-ejemplo/cafe-3.webp', href: '/ejemplos/la-baguette', tono: 'pan' },
-  { nombre: 'Grano de Barrio', rubro: 'Cafetería · tienda', imagen: '/assets/negocios-ejemplo/cafeteria-hero.webp', href: '/ejemplos/cafeteria', tono: 'cafe' },
-  { nombre: 'Atelier Norte', rubro: 'Barbería · servicios y agenda', imagen: '/assets/luxury-ejemplo/portada.webp', href: '/ejemplos/barberia', tono: 'barberia' },
-  { nombre: 'Zona Gol', rubro: 'Canchas · reserva por hora', imagen: '/assets/canchas-ejemplo/portada.webp', href: '/ejemplos/canchas', tono: 'cancha' },
-  { nombre: 'Sonrisa Norte', rubro: 'Clínica · citas', imagen: '/assets/negocios-ejemplo/clinica-hero.webp', href: '/ejemplos/clinica-dental?diseno=clara', tono: 'clinica' },
+  { nombre: 'La Baguette', rubro: 'Panadería · carta visual', imagen: '/assets/mi-pagina/previews/la-baguette.webp', alto: 1712, href: '/ejemplos/la-baguette', tono: 'pan' },
+  { nombre: 'Grano de Barrio', rubro: 'Cafetería · tienda', imagen: '/assets/mi-pagina/previews/cafeteria.webp', alto: 2118, href: '/ejemplos/cafeteria', tono: 'cafe' },
+  { nombre: 'Atelier Norte', rubro: 'Barbería · servicios y agenda', imagen: '/assets/mi-pagina/previews/barberia.webp', alto: 2577, href: '/ejemplos/barberia', tono: 'barberia' },
+  { nombre: 'Zona Gol', rubro: 'Canchas · reserva por hora', imagen: '/assets/mi-pagina/previews/canchas.webp', alto: 1403, href: '/ejemplos/canchas', tono: 'cancha' },
+  { nombre: 'Sonrisa Norte', rubro: 'Clínica · citas', imagen: '/assets/mi-pagina/previews/clinica.webp', alto: 3805, href: '/ejemplos/clinica-dental?diseno=clara', tono: 'clinica' },
 ] as const;
 
 const pasos = [
@@ -37,10 +37,18 @@ const pasos = [
 ] as const;
 
 const funciones = [
-  { icono: ShoppingBag, titulo: 'Pedidos con carrito', texto: 'Productos, cantidades y un resumen claro antes de enviar el pedido.' },
-  { icono: CalendarDays, titulo: 'Reservas visibles', texto: 'Servicios, fechas y horarios disponibles en un flujo fácil de seguir.' },
-  { icono: Smartphone, titulo: 'Hecha para el celular', texto: 'Una portada rápida de entender y botones cómodos para tocar.' },
-  { icono: Clock3, titulo: 'Canchas por hora', texto: 'Modalidades, horarios y lista de espera para los turnos ocupados.' },
+  { icono: Camera, titulo: 'Fotos de tus productos', texto: 'Muestra lo que vendes con imágenes y detalles claros.' },
+  { icono: Tags, titulo: 'Precios editables', texto: 'Actualiza precios y descripciones desde tu panel.' },
+  { icono: LayoutGrid, titulo: 'Categorías para explorar', texto: 'Organiza productos y servicios para encontrarlos rápido.' },
+  { icono: ShoppingBag, titulo: 'Pedidos con carrito', texto: 'Tus clientes revisan cantidades y el total antes de pedir.' },
+  { icono: CalendarDays, titulo: 'Reservas en pocos pasos', texto: 'Eligen servicio, fecha y horario desde el celular.' },
+  { icono: Clock3, titulo: 'Canchas por hora', texto: 'Ven modalidades y turnos disponibles de inmediato.' },
+  { icono: Bell, titulo: 'Aviso si se libera un turno', texto: 'Pueden dejar sus datos cuando un horario está ocupado.' },
+  { icono: Plus, titulo: 'Complementos opcionales', texto: 'Suma extras a una reserva, como bebidas o snacks.' },
+  { icono: MapPin, titulo: 'Tu ubicación a mano', texto: 'Indica dónde te encuentran y cómo llegar.' },
+  { icono: Palette, titulo: 'Tu identidad visual', texto: 'Personaliza portada, colores y fotos de tu negocio.' },
+  { icono: Link2, titulo: 'Un enlace para compartir', texto: 'Lleva a tus clientes directo a tu página.' },
+  { icono: Smartphone, titulo: 'Pensada para móviles', texto: 'Contenido y botones cómodos de usar en pantalla pequeña.' },
 ] as const;
 
 const preguntas = [
@@ -51,6 +59,7 @@ const preguntas = [
 
 export default function MiPaginaLanding() {
   const raiz = useRef<HTMLDivElement>(null);
+  const carrusel = useRef<HTMLDivElement>(null);
   const [menuAbierto, setMenuAbierto] = useState(false);
   const [cantidad, setCantidad] = useState(0);
   const [total, setTotal] = useState(0);
@@ -169,9 +178,9 @@ export default function MiPaginaLanding() {
 
       <section className="mp-pasos" id="como-funciona"><div className="mp-pasos__layout"><div className="mp-pasos__intro mp-reveal"><h2>Lista en tres pasos</h2><p>Sin instalar programas ni contratar a un programador.</p><a href="/panel/tu-pagina">Crear mi página <ArrowRight size={18} /></a></div><ol className="mp-pasos__lista">{pasos.map((paso) => <li className="mp-reveal" key={paso.numero}><span className="mp-pasos__numero">{Number(paso.numero)}</span><div><h3>{paso.titulo}</h3><p>{paso.texto}</p></div></li>)}</ol></div></section>
 
-      <section className="mp-seccion mp-funciones" aria-labelledby="mp-funciones-titulo"><div className="mp-seccion__cabecera mp-reveal"><div><span className="mp-sobre">LO IMPORTANTE, A MANO</span><h2 id="mp-funciones-titulo">Diseñada para que<br />puedan elegirte.</h2></div><p>Una experiencia clara para tus clientes y contenido que puedes gestionar desde tu panel.</p></div><div className="mp-funciones__grid">{funciones.map(({ icono: Icono, titulo, texto }) => <div className="mp-reveal" key={titulo}><span><Icono size={24} /></span><h3>{titulo}</h3><p>{texto}</p></div>)}</div></section>
+      <section className="mp-seccion mp-funciones" aria-labelledby="mp-funciones-titulo"><div className="mp-funciones__intro mp-reveal"><span className="mp-sobre">LO IMPORTANTE, A MANO</span><h2 id="mp-funciones-titulo">Todo lo que tu página<br />puede hacer</h2><p>Una experiencia clara para tus clientes y contenido que puedes gestionar desde tu panel.</p></div><div className="mp-funciones__grid">{funciones.map(({ icono: Icono, titulo, texto }) => <div className="mp-funcion mp-reveal" key={titulo}><span className="mp-funcion__icono"><Icono size={24} /></span><div><h3>{titulo}</h3><p>{texto}</p></div></div>)}</div></section>
 
-      <section className="mp-ejemplos" id="ejemplos"><div className="mp-seccion__cabecera mp-reveal"><div><span className="mp-sobre">HECHOS CON VENDEMIA</span><h2>Explora nuestras<br />páginas de ejemplo.</h2></div><p>Abre cada demo y prueba el recorrido como lo haría un cliente. Los nombres, productos y precios son ilustrativos.</p></div><div className="mp-ejemplos__grid">{ejemplos.map((ejemplo) => <a key={ejemplo.nombre} href={ejemplo.href} className={`mp-ejemplo mp-ejemplo--${ejemplo.tono} mp-reveal`}><div className="mp-ejemplo__marco"><div className="mp-ejemplo__pantalla"><div className="mp-ejemplo__foto" style={{ backgroundImage: `url('${ejemplo.imagen}')` }} /><div className="mp-ejemplo__texto"><span>PÁGINA DE EJEMPLO</span><strong>{ejemplo.nombre}</strong><small>{ejemplo.rubro}</small></div></div></div><div className="mp-ejemplo__pie"><span><b>{ejemplo.nombre}</b><small>{ejemplo.rubro}</small></span><span className="mp-ejemplo__flecha" aria-label="Abrir ejemplo"><ArrowRight size={20} /></span></div></a>)}</div></section>
+      <section className="mp-ejemplos" id="ejemplos"><div className="mp-ejemplos__intro mp-reveal"><div><span className="mp-sobre">HECHOS CON VENDEMIA</span><h2>Páginas de ejemplo<br />en acción</h2><p>Pasa el cursor por un celular para recorrer la página. Ábrela para probar el flujo completo; nombres y precios son ilustrativos.</p></div><div className="mp-ejemplos__controles"><button type="button" aria-label="Ver ejemplos anteriores" onClick={() => carrusel.current?.scrollBy({ left: -360, behavior: 'smooth' })}><ArrowLeft size={21} /></button><button type="button" aria-label="Ver más ejemplos" onClick={() => carrusel.current?.scrollBy({ left: 360, behavior: 'smooth' })}><ArrowRight size={21} /></button></div></div><div className="mp-ejemplos__grid" ref={carrusel}>{ejemplos.map((ejemplo) => <a key={ejemplo.nombre} href={ejemplo.href} className={`mp-ejemplo mp-ejemplo--${ejemplo.tono} mp-reveal`}><div className="mp-ejemplo__marco"><div className="mp-ejemplo__telefono"><span className="mp-ejemplo__surco" aria-hidden="true" /><div className="mp-ejemplo__pantalla"><Image src={ejemplo.imagen} alt={`Vista previa de ${ejemplo.nombre}`} width={390} height={ejemplo.alto} unoptimized /></div></div></div><div className="mp-ejemplo__pie"><span><b>{ejemplo.nombre}</b><small>{ejemplo.rubro}</small></span><span className="mp-ejemplo__flecha" aria-hidden="true"><ArrowRight size={20} /></span></div></a>)}</div></section>
 
       <section className="mp-preguntas" id="preguntas"><div><span className="mp-sobre">PREGUNTAS FRECUENTES</span><h2>Lo que necesitas saber.</h2><p>Explora las demos antes de crear tu propia página.</p></div><div className="mp-preguntas__lista">{preguntas.map(({ pregunta, respuesta }) => <details key={pregunta}><summary>{pregunta}<ChevronDown size={20} /></summary><p>{respuesta}</p></details>)}</div></section>
 

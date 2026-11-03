@@ -26,6 +26,9 @@ La sección de soluciones usa una tarjeta de unos 654 × 602 px y dos tarjetas d
 - Las tres soluciones conservan los ejemplos propios de catálogo, agenda y canchas dentro de la composición asimétrica de la referencia. Los pasos se presentan como tres tarjetas numeradas con una línea de continuidad.
 - La demo de portada es ilustrativa y local: no envía pedidos ni guarda información.
 - La galería muestra únicamente ejemplos del proyecto: La Baguette, Grano de Barrio, Atelier Norte, Zona Gol y Sonrisa Norte.
+- En la referencia, las vistas de cartas dentro de los celulares se desplazan verticalmente con una transición de 8 segundos al pasar el cursor. La galería de Vendemia usa capturas completas de sus cinco demos, con tres teléfonos visibles en escritorio, desplazamiento horizontal para ver los demás y acceso a cada demo. Los teléfonos flotan despacio y el marco se amplía e inclina ligeramente en hover.
+- Las tarjetas de los tres pasos y las capacidades tienen una respuesta leve de escala e inclinación. Las capacidades se muestran como una cuadrícula de icono, título y texto, con entradas escalonadas al aparecer. El amarillo detrás del texto en la captura de referencia corresponde a la selección del navegador: en Vendemia solo aparece mientras el visitante selecciona texto mediante `::selection`, nunca como estado permanente.
+- Los movimientos respetan `prefers-reduced-motion`; el recorrido automático dentro de cada teléfono se desactiva en ese modo.
 - Los CTA llevan al panel de Mi página. La landing principal enlaza la nueva página y muestra dos ejemplos propios.
 - Las afirmaciones se limitan a capacidades presentes en el producto; no se copiaron precios, testimonios ni datos comerciales de la referencia.
 
