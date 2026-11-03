@@ -192,7 +192,7 @@ export const CTA = {
  */
 export const NAV_LINKS = [
   { label: 'Cómo funciona', href: '#bento-a', hasChevron: false },
-  { label: 'Comparativa', href: '#related', hasChevron: false },
+  { label: 'Mi página', href: '/mi-pagina', hasChevron: false },
   { label: 'Precios', href: '#pricing', hasChevron: false },
   { label: 'FAQ', href: '#faq', hasChevron: false },
 ] as const;
@@ -1348,7 +1348,7 @@ export const FOOTER = {
       title: 'Producto',
       links: [
         { label: 'Cómo funciona', href: '#bento-a' },
-        { label: 'Comparativa', href: '#related' },
+        { label: 'Mi página', href: '/mi-pagina' },
         { label: 'Precios', href: '#pricing' },
         { label: 'Casos de uso', href: '#use-cases' },
       ],

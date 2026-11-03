@@ -8,6 +8,7 @@ import Benefit from '@/components/sections/Benefit';
 import BentoA from '@/components/sections/BentoA';
 import ChatDemo from './InteractiveChatDemo';
 import UseCases from './UseCasesDemo';
+import MiPaginaTeaser from './MiPaginaTeaser';
 import Pricing from './PricingDemo';
 import Faq from '@/components/sections/Faq';
 import FinalCta from '@/components/sections/FinalCta';
@@ -140,6 +141,7 @@ export default function LandingPage({ startPath = '/empezar' }: { startPath?: st
         */}
         <ChatDemo />
         <UseCases />
+        <MiPaginaTeaser />
         <Pricing startPath={startPath} />
         <Faq />
         <FinalCta />

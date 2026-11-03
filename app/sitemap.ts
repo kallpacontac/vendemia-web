@@ -6,9 +6,8 @@ import { RUBROS } from '@/lib/rubros';
 /**
  * /sitemap.xml — el mapa que se le entrega a Google Search Console.
  *
- * Hoy tiene UNA entrada, y no es un olvido: la landing es una sola página. Las
- * secciones son anclas (#pricing, #faq), no rutas, y un sitemap lleno de
- * fragmentos de la misma URL no aporta nada — Google los ignora.
+ * Las secciones son anclas (#pricing, #faq), no rutas. Mi página sí tiene
+ * una ruta comercial propia y aparece como entrada independiente.
  *
  * El panel no va aquí a propósito: son pantallas privadas detrás de sesión.
  * Listarlas sería publicar el índice de lo que hay que atacar, y además Google
@@ -38,7 +37,7 @@ const SITIO = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://vendemias.com';
  * Sube esta fecha cuando cambies la landing de verdad (secciones, copy, oferta),
  * no cuando toques el panel o un estilo.
  */
-const LANDING_ACTUALIZADA = '2026-09-06';
+const LANDING_ACTUALIZADA = '2026-11-02';
 
 /**
  * Las paginas legales SI van al sitemap, aunque no sean comerciales.
@@ -93,6 +92,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
       lastModified: LANDING_ACTUALIZADA,
       changeFrequency: 'weekly',
       priority: 1,
+    },
+    {
+      url: `${SITIO}/mi-pagina`,
+      lastModified: LANDING_ACTUALIZADA,
+      changeFrequency: 'monthly',
+      priority: 0.8,
     },
     ...GUIAS.map((ruta) => ({
       url: `${SITIO}${ruta}`,
