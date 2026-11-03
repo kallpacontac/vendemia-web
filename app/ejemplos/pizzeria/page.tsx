@@ -13,7 +13,7 @@ const producto = (id: string, nombre: string, descripcion: string, precio: numbe
 });
 
 const pagina: PaginaPublica = {
-  slug: 'la-baguette', version: 1, titulo: 'La Baguette', frase: 'Pan recién horneado, café y algo rico para cada pausa.', whatsapp: '', plantilla: 'restaurante', color: '#B9662F', logo_url: '/assets/restaurante-ejemplo/la-baguette-logo.svg', portada_url: null, distritos: [],
+  slug: 'la-baguette', version: 1, titulo: 'La Baguette', frase: 'Pan recién horneado, café y algo rico para cada pausa.', whatsapp: '', plantilla: 'restaurante', color: '#B9662F', logo_url: '/assets/restaurante-ejemplo/la-baguette-abuela.png', portada_url: null, distritos: [],
   secciones: { catalogo: true, reservar: false, apariencia: { plantillaActiva: true, tituloBanner: 'El sabor de lo recién hecho', promocionTexto: 'Combo de la semana: café + croissant', mostrarWhatsapp: true, pedirMetodoPago: true, pedirNotaPedido: true, pedirUbicacion: true } },
 };
 

@@ -1004,7 +1004,9 @@ body:has(.tp[data-plantilla='restaurante']) { margin: 0; }
 .tp-ejemplo-restaurante a { font-weight: 800; white-space: nowrap; }
 .tp[data-plantilla='restaurante'] { --tp-fondo: #fff; --tp-papel: #fff; --tp-texto: #201b18; --tp-suave: #706962; --tp-borde: #eae7e3; --tp-campo: #faf9f7; --tp-radio: 16px; }
 .tp[data-plantilla='restaurante'] .tp-hoja { max-width: 1320px; padding-inline: clamp(16px, 4vw, 44px); }
-.tp[data-plantilla='restaurante'] .tp-cabeza { min-height: 94px; margin: 0; padding: 16px 0; display: grid; grid-template-columns: 58px 1fr; column-gap: 12px; align-items: center; text-align: left; }
+.tp[data-plantilla='restaurante'] .tp-hoja:has(> .tp-cabeza) { padding-bottom: 0; }
+.tp[data-plantilla='restaurante'] .tp-cabeza { min-height: 82px; margin: 0; padding: 12px 0; display: grid; grid-template-columns: 58px 1fr; column-gap: 12px; align-items: center; text-align: left; }
+.tp[data-plantilla='restaurante'] .tp-promocion-visual { margin-top: 8px; }
 .tp[data-plantilla='restaurante'] .tp-logo { width: 54px; height: 54px; margin: 0; grid-row: span 2; border: 0; border-radius: 50%; box-shadow: none; background-color: var(--tp-color); color: var(--tp-tinta); font-size: 22px; }
 .tp[data-plantilla='restaurante'] .tp-titulo { align-self: end; font-size: 22px; font-weight: 850; }
 .tp[data-plantilla='restaurante'] .tp-frase { grid-column: 2; align-self: start; font-size: 13px; }
