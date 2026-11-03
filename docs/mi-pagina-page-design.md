@@ -15,7 +15,7 @@ Referencia visual consultada: https://qcarta.com/ (2 de noviembre de 2026).
 
 ## Adaptación a Vendemia
 
-- La ruta `/mi-pagina` usa esta secuencia con la paleta de Vendemia: negro, crema y naranja. El texto usa Plus Jakarta Sans. El wordmark dice «Vendemia» con letras blancas de pincel sobre una silueta negra y un detalle naranja sobre la «i»; no lleva mascota.
+- La ruta `/mi-pagina` usa esta secuencia con la paleta de Vendemia: negro, crema y naranja. El texto usa Plus Jakarta Sans. El wordmark dice «Vendemia» con lettering blanco, contorno negro grueso y extrusión negra que sigue cada letra; el punto de la «i» es naranja. No lleva cápsula de fondo ni mascota.
 - El titular reserva un espacio fijo para «página», «tienda» y «agenda» y las escribe con un cursor naranja, sin desplazar el resto de la frase. El teléfono, los avisos flotantes y las capas usan movimientos de distintas velocidades; `prefers-reduced-motion` los desactiva.
 - La maqueta del teléfono crece en la portada, muestra una cabecera naranja, categorías, tres productos y un resumen de pedido. La franja negra incluye una lista de banderas latinoamericanas como detalle visual.
 - La demo de portada es ilustrativa y local: no envía pedidos ni guarda información.

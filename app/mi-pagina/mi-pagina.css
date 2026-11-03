@@ -9,12 +9,7 @@ body:has(.mp){margin:0}.mp{--mp-ink:#0a0a0a;--mp-muted:#5c5c5c;--mp-line:#eaeae6
 @media(max-width:800px){.mp-nav{height:65px}.mp-nav__enlaces{display:none;position:absolute;top:65px;left:0;right:0;padding:22px 24px;background:#fff;box-shadow:0 15px 25px #0002;flex-direction:column;align-items:flex-start;gap:17px}.mp-nav__enlaces.abierto{display:flex}.mp-nav__acciones{margin-left:auto}.mp-nav__acciones .mp-boton{display:none}.mp-nav__menu{display:grid;place-items:center}.mp-hero{grid-template-columns:1fr;padding-top:55px;gap:40px}.mp-hero__visual{min-height:490px}.mp-cinta{flex-direction:column;align-items:flex-start;gap:12px}.mp-soluciones,.mp-pasos__grid{grid-template-columns:1fr}.mp-solucion{min-height:280px}.mp-preguntas{grid-template-columns:1fr;gap:35px}.mp-seccion,.mp-pasos,.mp-ejemplos,.mp-preguntas{padding-top:75px;padding-bottom:75px}.mp-seccion__cabecera{align-items:start;flex-direction:column;gap:18px}}
 @media(max-width:560px){.mp-nav{padding:0 18px}.mp-marca{font-size:21px}.mp-hero{padding:44px 18px 55px}.mp-hero h1{font-size:clamp(48px,12vw,68px)}.mp-hero__texto>p{font-size:16px}.mp-hero__acciones .mp-boton{flex:1}.mp-hero__visual{border-radius:28px;padding-left:10px;padding-right:10px}.mp-flotante--uno{left:1%;top:21%}.mp-flotante--dos{right:0;bottom:19%}.mp-cinta>div{flex-wrap:wrap;gap:10px;font-size:14px}.mp-seccion,.mp-pasos,.mp-ejemplos,.mp-preguntas{padding-left:18px;padding-right:18px}.mp-seccion h2,.mp-pasos h2,.mp-ejemplos h2,.mp-preguntas h2,.mp-cierre h2{font-size:42px}.mp-funciones__grid{grid-template-columns:1fr}.mp-ejemplos__grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.mp-ejemplo__marco{height:250px;padding-top:15px}.mp-ejemplo__pantalla{width:145px;height:290px}.mp-ejemplo__foto{height:140px}.mp-ejemplo__pie b{font-size:13px}.mp-ejemplo__pie small{font-size:10px}.mp-ejemplo__flecha{height:30px;width:30px}.mp-footer{flex-direction:column;align-items:flex-start}.mp-aviso{left:15px;right:15px;bottom:15px}}
 
-/* Logotipo de Mi página: caligrafía blanca en tinta oscura y punto naranja. */
-.mp .mp-marca{display:inline-flex;align-items:center;padding:0;background:none;color:#0a0a0a;box-shadow:none;transform:rotate(-2deg);transition:transform .25s}
-.mp .mp-marca:hover{transform:rotate(0) translateY(-2px)}
-.mp .mp-marca .vendemia-wordmark{font-family:'Lobster','Brush Script MT',cursive;font-size:36px;font-weight:400;letter-spacing:-.035em;line-height:1.1;color:#0a0a0a;text-shadow:1px 2px 0 #ffb067}
-.mp .mp-marca .vendemia-wordmark__period{color:#ff4900;text-shadow:none}
-.mp-footer .mp-marca .vendemia-wordmark{color:#fff;text-shadow:1px 2px 0 #ff4900}
+/* El lettering conserva su contorno y extrusión sin una figura de fondo. */
 
 /* Los botones siguen el contraste de la landing: naranja y tinta oscura. */
 .mp .mp-boton{background:#ff6a1f;color:#1a0a00!important}
@@ -57,19 +52,15 @@ body:has(.mp){margin:0}.mp{--mp-ink:#0a0a0a;--mp-muted:#5c5c5c;--mp-line:#eaeae6
 @keyframes mp-mancha-uno{0%,100%{transform:translate(0,0)}50%{transform:translate(-25px,28px)}}
 @keyframes mp-mancha-dos{0%,100%{transform:translate(0,0)}50%{transform:translate(30px,-22px)}}
 @media(prefers-reduced-motion:reduce){.mp-hero__texto,.mp-hero__visual,.mp-palabra>span,.mp-telefono,.mp-flotante,.mp-hero__orbita,.mp-hero__mancha{animation:none!important}.mp-motion .mp-reveal{opacity:1;transform:none;transition:none}.mp .mp-boton,.mp .mp-marca,.mp-ejemplo__pantalla,.mp .mp-telefono__producto>button{transition:none}}
-@media(max-width:560px){.mp .mp-marca .vendemia-wordmark{font-size:32px}.mp-hero__orbita{width:300px;height:300px}.mp-ejemplo__pantalla{height:350px}}
+@media(max-width:560px){.mp-hero__orbita{width:300px;height:300px}.mp-ejemplo__pantalla{height:350px}}
 
 /* Portada basada en el ritmo de la referencia, con identidad Vendemia. */
 .mp-nav{height:92px;padding-inline:max(3vw,24px)}
-.mp .mp-marca{padding:6px 17px 9px 15px;background:#050505;border-radius:29% 23% 27% 20%/29% 35% 24% 28%;box-shadow:3px 4px 0 #050505;transform:rotate(-3deg)}
+.mp .mp-marca{display:inline-flex;align-items:center;padding:2px 5px 11px 1px;background:none;box-shadow:none;transform:rotate(-4deg);transition:transform .25s}
 .mp .mp-marca:hover{transform:rotate(0) translateY(-2px)}
-.mp-logo{font-family:'Lobster','Brush Script MT',cursive;font-size:31px;font-weight:400;line-height:1;letter-spacing:-.045em;color:#fff;white-space:nowrap}
+.mp-logo{display:inline-block;font-family:'Lobster','Brush Script MT',cursive;font-size:38px;font-weight:400;line-height:1.15;letter-spacing:-.055em;color:#fff;white-space:nowrap;-webkit-text-stroke:4px #050505;paint-order:stroke fill;filter:drop-shadow(1px 1px 0 #050505) drop-shadow(2px 2px 0 #050505) drop-shadow(2px 2px 0 #050505) drop-shadow(2px 2px 0 #050505)}
 .mp-logo__i{position:relative}
-.mp-logo__i::after{content:'';position:absolute;width:.15em;height:.15em;left:.18em;top:.04em;background:#ff6a1f;border-radius:50%;box-shadow:0 0 0 1px #050505}
-.mp-logo__punto{color:#ff6a1f}
-.mp-footer .mp-marca{background:#fff;box-shadow:3px 4px 0 #fff}
-.mp-footer .mp-logo{color:#050505}
-.mp-footer .mp-logo__i::after{box-shadow:0 0 0 1px #fff}
+.mp-logo__i::after{content:'';position:absolute;width:.17em;height:.17em;left:.16em;top:.035em;background:#ff6a1f;border:1.5px solid #050505;border-radius:35% 50% 45% 35%;transform:rotate(15deg)}
 .mp-hero{max-width:1700px;min-height:735px;padding:90px max(3vw,24px) 80px;grid-template-columns:minmax(0,1.05fr) minmax(520px,.95fr);gap:2.5vw}
 .mp-etiqueta{padding:10px 16px;border-radius:999px;background:#f0f0ef;color:#171717;letter-spacing:0;font-size:14px;font-weight:700}
 .mp-etiqueta span{background:#20c968;flex:none}
@@ -127,5 +118,5 @@ body:has(.mp){margin:0}.mp{--mp-ink:#0a0a0a;--mp-muted:#5c5c5c;--mp-line:#eaeae6
 @keyframes mp-flotar-vertical{50%{transform:translateY(-10px)}}
 @media(max-width:1250px){.mp-hero{grid-template-columns:minmax(0,1fr) minmax(440px,.8fr);gap:10px}.mp-hero h1{font-size:clamp(50px,4.6vw,66px)}.mp-hero__visual{padding-inline:35px}.mp-telefono{width:320px}.mp-flotante--ubicacion{right:-2%}.mp-cinta{justify-content:center}.mp-cinta>span{width:100%;text-align:center}}
 @media(max-width:900px){.mp-nav{height:70px}.mp-nav__enlaces{top:70px}.mp-hero{grid-template-columns:1fr;padding-top:55px;gap:35px}.mp-hero h1{font-size:clamp(54px,7.5vw,76px)}.mp-hero__visual{min-height:630px}.mp-cinta{justify-content:flex-start}.mp-cinta>span{text-align:left}}
-@media(max-width:560px){.mp-nav{height:66px}.mp-nav__enlaces{top:66px}.mp .mp-marca{padding:6px 12px 8px}.mp-logo{font-size:26px}.mp-hero{padding:45px 18px 50px}.mp-etiqueta{font-size:11px;padding:8px 11px}.mp-hero h1{font-size:clamp(40px,10.2vw,56px);letter-spacing:-.04em;margin:25px 0 19px}.mp-escritura{min-width:5.95ch}.mp-escritura i{width:3px;margin-left:2px}.mp-hero__texto>p{font-size:16px}.mp-hero__visual{min-height:555px;padding:25px 0 20px}.mp-telefono{width:min(79vw,315px);border-width:10px}.mp-telefono__portada{height:130px}.mp-telefono__producto{min-height:73px}.mp-flotante{font-size:10px;padding:8px 9px}.mp-flotante--promo{display:none}.mp-flotante--sinapp{right:-2%;top:13%}.mp-flotante--ubicacion{right:-3%;top:58%}.mp-flotante--pedido{left:-2%;bottom:14%}.mp-cinta{gap:14px;padding:22px 18px}.mp-cinta .mp-cinta__rubros{gap:9px;font-size:13px;flex-wrap:wrap}.mp-cinta .mp-cinta__banderas{gap:7px;flex-wrap:wrap}.mp-cinta__banderas span{font-size:21px}}
+@media(max-width:560px){.mp-nav{height:66px}.mp-nav__enlaces{top:66px}.mp .mp-marca{padding:2px 5px 10px 1px}.mp-logo{font-size:32px;-webkit-text-stroke-width:3.5px}.mp-hero{padding:45px 18px 50px}.mp-etiqueta{font-size:11px;padding:8px 11px}.mp-hero h1{font-size:clamp(40px,10.2vw,56px);letter-spacing:-.04em;margin:25px 0 19px}.mp-escritura{min-width:5.95ch}.mp-escritura i{width:3px;margin-left:2px}.mp-hero__texto>p{font-size:16px}.mp-hero__visual{min-height:555px;padding:25px 0 20px}.mp-telefono{width:min(79vw,315px);border-width:10px}.mp-telefono__portada{height:130px}.mp-telefono__producto{min-height:73px}.mp-flotante{font-size:10px;padding:8px 9px}.mp-flotante--promo{display:none}.mp-flotante--sinapp{right:-2%;top:13%}.mp-flotante--ubicacion{right:-3%;top:58%}.mp-flotante--pedido{left:-2%;bottom:14%}.mp-cinta{gap:14px;padding:22px 18px}.mp-cinta .mp-cinta__rubros{gap:9px;font-size:13px;flex-wrap:wrap}.mp-cinta .mp-cinta__banderas{gap:7px;flex-wrap:wrap}.mp-cinta__banderas span{font-size:21px}}
 @media(prefers-reduced-motion:reduce){.mp-escritura i,.mp-telefono,.mp-flotante{animation:none!important}}

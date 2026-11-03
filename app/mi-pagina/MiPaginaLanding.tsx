@@ -13,7 +13,7 @@ const banderas = [
 ] as const;
 
 function MiPaginaLogo() {
-  return <span className="mp-logo">Vendem<span className="mp-logo__i">i</span>a<span className="mp-logo__punto">.</span></span>;
+  return <span className="mp-logo">Vendem<span className="mp-logo__i">i</span>a</span>;
 }
 
 const ejemplos = [
