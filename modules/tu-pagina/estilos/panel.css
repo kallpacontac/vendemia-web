@@ -108,6 +108,12 @@
 .tp-panel-plantilla__dibujo--luxury i:nth-child(2) { background-image: url('/assets/luxury-ejemplo/corte.webp'); }
 .tp-panel-plantilla__dibujo--luxury i:nth-child(3) { background-image: url('/assets/luxury-ejemplo/barba.webp'); }
 .tp-panel-plantilla__dibujo--luxury i:nth-child(4) { background-image: url('/assets/luxury-ejemplo/peinado.webp'); }
+.tp-panel-aviso-mesa { margin: 0; padding: 10px 12px; border-radius: 10px; background: var(--bg-input); font-size: 13px; line-height: 1.4; }
+.tp-panel-aviso-mesa a { font-weight: 700; text-decoration: underline; }
+.tp-panel-plantilla__dibujo--mesa { grid-template-columns: 1fr 1fr; grid-template-rows: 34% 1fr 1fr; gap: 4px; background: #f6f1e7; }
+.tp-panel-plantilla__dibujo--mesa i { border-radius: 4px; background: #fffdf8; box-shadow: inset 0 0 0 1px #e4dccd; }
+.tp-panel-plantilla__dibujo--mesa i:first-child { grid-column: 1 / -1; background: var(--c); box-shadow: none; }
+.tp-panel-plantilla__dibujo--mesa i:last-child { grid-column: 1 / -1; }
 .tp-panel-plantilla__dibujo--restaurante { grid-template-columns: repeat(3, 1fr); grid-template-rows: 55% 1fr; gap: 4px; background: #fff; }
 .tp-panel-plantilla__dibujo--restaurante i { border-radius: 4px; background-position: center; background-size: cover; }
 .tp-panel-plantilla__dibujo--restaurante i:first-child { grid-column: 1 / -1; background-image: url('/assets/negocios-ejemplo/cafeteria-hero.webp'); }

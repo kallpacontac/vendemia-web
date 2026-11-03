@@ -29,6 +29,7 @@ import { conCanchas } from '@/modules/tu-pagina/dominio/canchas';
 import AgendaPortada from '@/modules/tu-pagina/publico/AgendaPortada';
 import CanchasPortada from '@/modules/tu-pagina/publico/CanchasPortada';
 import EstadoHorario from '@/modules/tu-pagina/publico/EstadoHorario';
+import { CartaSoloVer } from '@/modules/tu-pagina/publico/CartaMesa';
 
 type Props = { params: { slug: string }; searchParams?: Record<string, string | undefined> };
 
@@ -142,6 +143,25 @@ export default async function Portada({ params, searchParams }: Props) {
   if (canchas && plantilla === 'canchas' && p.secciones.apariencia?.plantillaActiva) return (
     <Marco pagina={p} portada>
       <CanchasPortada pagina={p} esc={escTodo}>{estadoHorario}{catalogo}</CanchasPortada>
+    </Marco>
+  );
+
+  // Atención en mesa: desde aquí la carta es para mirar. Pedir y llamar al mozo son de quien
+  // escanea el QR de su mesa (/<negocio>/mesa/<token>).
+  if (plantilla === 'mesa' && p.secciones.apariencia?.plantillaActiva && p.secciones.catalogo) return (
+    <Marco pagina={p} portada>
+      <Cabecera pagina={p} fotoDestacada={fotoDestacada} servicioDestacado={servicioDestacado} catalogoDisponible={hayProductos} />
+      <div className="tp-hoja">
+        {estadoHorario}
+        {reservar && <div className="tp-acciones">{reservar}</div>}
+        {hayProductos && <CartaSoloVer items={esc!.items.filter((i) => i.tipo === 'producto')} ajustes={p.secciones.carta ?? {}} />}
+        {p.secciones.apariencia?.mostrarWhatsapp !== false && <nav className="tp-acciones" aria-label="Contacto">
+          <a className="tp-accion" href={urlWhatsApp(p.whatsapp, `Hola ${p.titulo}`)} rel="noopener">
+            <span className="tp-accion__icono"><MessageCircle size={22} aria-hidden="true" /></span>
+            <span className="tp-accion__texto"><b>Escríbenos por WhatsApp</b><span>Te respondemos ahí</span></span>
+          </a>
+        </nav>}
+      </div>
     </Marco>
   );
 

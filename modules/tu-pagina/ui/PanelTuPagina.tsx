@@ -389,7 +389,7 @@ function MiPagina({ companyId, nombre, pagina, agendaNube, alGuardar }: {
                       setApariencia((actual) => ({ ...actual, fotoPlantilla: 'barberia' }));
                       if (!pagina?.publicada && !colorManual) setColor('#D0AB75');
                     }
-                    if (opcion.id === 'restaurante' && plantilla !== 'restaurante') {
+                    if ((opcion.id === 'restaurante' || opcion.id === 'mesa') && plantilla !== opcion.id) {
                       setApariencia((actual) => ({ ...actual, fotoPlantilla: /pizzer|pizza/i.test(titulo) ? 'pizzeria' : 'cafeteria' }));
                       if (!pagina?.publicada && !colorManual) setColor('#B9662F');
                     }
@@ -410,6 +410,7 @@ function MiPagina({ companyId, nombre, pagina, agendaNube, alGuardar }: {
               ))}
             </div>
           </div>
+        {plantilla === 'mesa' && <p className="tp-panel-aviso-mesa">Tras publicar, crea tus mesas e imprime sus QR en <a href="/panel/mesas">Mesas</a>. Tu sistema de comandas no cambia: lo que piden le llega al mozo como un aviso.</p>}
         <div className="tp-panel-campo"><span>Logo <small className="muted">(opcional)</small></span>
           <div className="tp-panel-imagen-acciones">
             <label className="tp-panel-subir">{subiendo === 'logo' ? 'Subiendo…' : logo ? 'Cambiar logo' : 'Subir logo'}
@@ -586,7 +587,7 @@ function MiPagina({ companyId, nombre, pagina, agendaNube, alGuardar }: {
 /** Sin foto propia, la portada lleva la de un ejemplo; al subir la suya, esta deja de salir. */
 function FotosPlantilla({ tipo, plantilla, elegida, alElegir }: { tipo: TipoPagina; plantilla: PlantillaGuardada; elegida?: string; alElegir: (id: string) => void }) {
   const actual = plantilla === 'luxury' && elegida === 'ninguna' ? fotoPlantillaPorDefecto(tipo, plantilla) : esFotoPlantilla(elegida) ? elegida : fotoPlantillaPorDefecto(tipo, plantilla);
-  const categorias = plantilla === 'luxury' ? ['barberia'] : plantilla === 'canchas' ? ['canchas'] : plantilla === 'restaurante' ? ['cafeteria', 'pizzeria'] : tipo === 'agenda' ? ['clinica', 'barberia'] : tipo === 'tienda' ? ['cafeteria', 'pizzeria', 'clinica'] : ['clinica', 'barberia', 'cafeteria', 'pizzeria'];
+  const categorias = plantilla === 'luxury' ? ['barberia'] : plantilla === 'canchas' ? ['canchas'] : plantilla === 'restaurante' || plantilla === 'mesa' ? ['cafeteria', 'pizzeria'] : tipo === 'agenda' ? ['clinica', 'barberia'] : tipo === 'tienda' ? ['cafeteria', 'pizzeria', 'clinica'] : ['clinica', 'barberia', 'cafeteria', 'pizzeria'];
   return (
     <div className="tp-panel-fotos">
       <small className="muted">Mientras no subas la tuya, tu portada usa una foto de la plantilla:</small>

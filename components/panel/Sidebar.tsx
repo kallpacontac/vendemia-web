@@ -22,6 +22,7 @@ import {
   Receipt,
   Send,
   Factory,
+  ConciergeBell,
   Settings,
   Sparkles,
   Store,
@@ -68,6 +69,8 @@ const NAV = [
   // persona. Mismo criterio que ya aplicaba equipo/page.tsx:235.
   { href: '/panel/equipo', icon: UserCog, label: 'Equipo', sirveA: esCita },
   { href: '/panel/comisiones', icon: Percent, label: 'Comisiones', sirveA: esCita },
+  // Lo que piden desde el QR de las mesas: solo con la plantilla «Atención en mesa».
+  { href: '/panel/mesas', icon: ConciergeBell, label: 'Mesas', sirveA: () => false },
   // Pedidos es del negocio que vende productos: una barbería no crea pedidos.
   { href: '/panel/pedidos', icon: Receipt, label: 'Pedidos', sirveA: esEcommerce },
   { href: '/panel/caja', icon: Wallet, label: 'Caja' },
@@ -101,7 +104,7 @@ const NAV = [
  * La tercera es Agenda o, en una tienda (que no tiene agenda), Pedidos.
  */
 // En una academia, Alumnos va antes que Caja: es lo que se mira a diario.
-const FIJAS_MOVIL = ['/panel', RUTA_MI_AGENDA, RUTA_MI_COMISION, '/panel/mensajes', '/panel/agenda', '/panel/pedidos', '/panel/alumnos', '/panel/caja'];
+const FIJAS_MOVIL = ['/panel', '/panel/mesas', RUTA_MI_AGENDA, RUTA_MI_COMISION, '/panel/mensajes', '/panel/agenda', '/panel/pedidos', '/panel/alumnos', '/panel/caja'];
 const MAX_FIJAS_MOVIL = 4;
 
 type Entrada = (typeof NAV)[number];
@@ -143,6 +146,7 @@ export default function Sidebar({
     if (!rutaPermitida(n.href, rolDeNegocio(compania?.rol))) return false;
     // modo == null cubre undefined (primer render) Y null (compañía sin modo
     // asignado): en los dos casos se enseña de más, nunca de menos.
+    if (n.href === '/panel/mesas') return pagina.mesas;
     if (!n.sirveA || modo == null) return true;
     if (n.href === '/panel/agenda' && pagina.reserva) return true;
     if (n.href === '/panel/pedidos' && (pagina.vende || pagina.envios)) return true;
@@ -164,7 +168,7 @@ export default function Sidebar({
 
   const rutaOperacion = esEcommerce(modo) ? '/panel/pedidos' : '/panel/agenda';
   const rail = nav.filter((n) =>
-    ['/panel', RUTA_MI_AGENDA, RUTA_MI_COMISION, RUTA_MI_CATALOGO, '/panel/asistente', '/panel/mensajes', rutaOperacion, '/panel/leads', '/panel/caja', '/panel/configuracion'].includes(n.href),
+    ['/panel', '/panel/mesas', RUTA_MI_AGENDA, RUTA_MI_COMISION, RUTA_MI_CATALOGO, '/panel/asistente', '/panel/mensajes', rutaOperacion, '/panel/leads', '/panel/caja', '/panel/configuracion'].includes(n.href),
   );
   const railExtra = nav.filter((n) => !rail.some((r) => r.href === n.href));
   const railExtraActiva = railExtra.some((n) => esActivo(n.href));

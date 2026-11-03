@@ -39,7 +39,7 @@ export const esFotoPlantilla = (v: unknown): v is FotoPlantilla | 'ninguna' =>
 
 /** La del ejemplo que enseña cada diseño (dominio/ejemplo.ts → urlEjemploPara). */
 export const fotoPlantillaPorDefecto = (tipo: TipoPagina, plantilla?: PlantillaGuardada): FotoPlantilla =>
-  plantilla === 'luxury' ? 'barberia' : plantilla === 'restaurante' ? 'cafeteria' : plantilla === 'canchas' ? 'canchas' : tipo === 'tienda' ? 'cafeteria' : 'clinica';
+  plantilla === 'luxury' ? 'barberia' : plantilla === 'restaurante' || plantilla === 'mesa' ? 'cafeteria' : plantilla === 'canchas' ? 'canchas' : tipo === 'tienda' ? 'cafeteria' : 'clinica';
 
 export function fotoProductoRestaurante(nombre: string, familia: string): string {
   const clave = `${nombre} ${familia}`.toLocaleLowerCase('es');

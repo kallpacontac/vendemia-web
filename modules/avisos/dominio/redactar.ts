@@ -122,6 +122,24 @@ export function redactar(eventos: EventoPendiente[]): Mensaje {
   const quien = e.cliente || 'Un cliente';
   const prefijo = e.negocio ? `${e.negocio} · ` : '';
   const tag = `${e.company_id}:${e.tipo}`;
+
+  // Lo que piden desde el QR de una mesa (tu-pagina 0015): sin importes ni teléfonos, porque
+  // le llega también al equipo. Va a /panel/mesas y un llamado nuevo de esa mesa reemplaza al anterior.
+  if (e.datos.clase === 'web_mesa') {
+    const url = '/panel/mesas';
+    if (n > 1) return { title: `${prefijo}${n} llamados de mesas`, body: 'Ábrelos para ver qué necesita cada una.', url, tag: `${e.company_id}:mesa` };
+    const mesa = `${typeof e.datos.salon === 'string' && e.datos.salon ? `${e.datos.salon} · ` : ''}Mesa ${String(e.datos.mesa ?? '')}`;
+    const detalle = typeof e.datos.detalle === 'string' ? e.datos.detalle : '';
+    const que: Record<string, string> = {
+      mozo: 'Llama al mozo', cuenta: 'Pide la cuenta', pedido: 'Quiere pedir: ya eligieron', requerimiento: detalle || 'Necesita algo', sugerencia: 'Dejó una sugerencia',
+    };
+    return {
+      title: `${prefijo}${mesa}`,
+      body: `${que[String(e.datos.que)] ?? 'Necesita atención'}${Number(e.datos.repeticion) > 0 ? ' (insiste)' : ''}`,
+      url,
+      tag: `${e.company_id}:mesa:${String(e.datos.salon ?? '')}:${String(e.datos.mesa ?? '')}`,
+    };
+  }
   const lead = typeof e.datos.lead_id === 'string' ? e.datos.lead_id : '';
 
   switch (e.tipo) {
@@ -429,7 +447,8 @@ export function planificar(eventos: EventoPendiente[], resumenes: Resumen[]): En
   const grupos = new Map<string, { destino: Destino; eventos: EventoPendiente[] }>();
   for (const e of eventos) {
     for (const d of e.destinos) {
-      const clave = `${d.id}|${e.company_id}|${e.tipo}`;
+      // Una mesa llamando no se mezcla con las reservas o la agenda del mismo tipo de aviso.
+      const clave = `${d.id}|${e.company_id}|${e.datos.clase === 'web_mesa' ? 'mesa' : e.tipo}`;
       const g = grupos.get(clave) ?? { destino: d, eventos: [] };
       g.eventos.push(e);
       grupos.set(clave, g);

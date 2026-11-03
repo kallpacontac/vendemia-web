@@ -20,8 +20,11 @@ import { activarAvisos, enviarPrueba, soportaAvisos, suscripcionActual } from '@
 
 type Estado = 'cargando' | 'activos' | 'apagados' | 'denegado' | 'ios-instalar' | 'no-soporta';
 
-/** `academia`: los grupos no tienen hora por persona; lo que avisa es un alumno nuevo. */
-export default function AvisosDelEquipo({ companyId, academia = false }: { companyId: string; academia?: boolean }) {
+/**
+ * `academia`: los grupos no tienen hora por persona; lo que avisa es un alumno nuevo.
+ * `mesas`: en /panel/mesas, lo que piden desde el QR de las mesas (tu-pagina 0015).
+ */
+export default function AvisosDelEquipo({ companyId, academia = false, mesas = false }: { companyId: string; academia?: boolean; mesas?: boolean }) {
   const avisar = useAvisar();
   const [estado, setEstado] = useState<Estado>('cargando');
   const [endpoint, setEndpoint] = useState<string | null>(null);
@@ -79,7 +82,7 @@ export default function AvisosDelEquipo({ companyId, academia = false }: { compa
         <span className="badge-pill b-new">
           <BellRing size={12} aria-hidden /> Avisos activados
         </span>
-        {academia ? 'Cuando entre un alumno nuevo.' : 'Citas nuevas, cambios y 15 min antes de cada una.'}
+        {mesas ? 'Cuando una mesa te necesite.' : academia ? 'Cuando entre un alumno nuevo.' : 'Citas nuevas, cambios y 15 min antes de cada una.'}
         <button type="button" className="mag-avisos__link" onClick={() => void probar()}>
           Probar
         </button>
@@ -93,7 +96,7 @@ export default function AvisosDelEquipo({ companyId, academia = false }: { compa
         {estado === 'denegado' ? <BellOff size={18} /> : <Bell size={18} />}
       </span>
       <div className="mag-avisos__txt">
-        <b>{academia ? 'Entérate de tus alumnos nuevos' : 'Recibe tus citas en el celular'}</b>
+        <b>{mesas ? 'Recibe los llamados de las mesas' : academia ? 'Entérate de tus alumnos nuevos' : 'Recibe tus citas en el celular'}</b>
         {estado === 'ios-instalar' ? (
           <small>
             En iPhone, primero instala el panel: en Safari toca <Share size={12} aria-label="Compartir" /> <b>Compartir</b> ›{' '}
@@ -103,7 +106,9 @@ export default function AvisosDelEquipo({ companyId, academia = false }: { compa
           <small>Los avisos están bloqueados. Permítelos en los ajustes del navegador o del celular y vuelve aquí.</small>
         ) : (
           <small>
-            {academia
+            {mesas
+              ? 'Un aviso al celular cuando llamen al mozo, pidan la cuenta o quieran pedir.'
+              : academia
               ? 'Un aviso al celular cuando alguien se inscriba en un grupo.'
               : 'Cuando te asignen una cita, si se mueve o se cancela, y 15 min antes de cada una.'}
           </small>

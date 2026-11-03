@@ -4,7 +4,7 @@ import type { BusinessMode } from '@/lib/supabase/types';
 
 export type TipoPagina = 'agenda' | 'tienda' | 'ambos';
 export type Disposicion = 'cuadricula' | 'filas' | 'carta';
-export type PlantillaGuardada = 'agenda' | 'vitrina' | 'lista' | 'carta' | 'clases' | 'envios' | 'impulso' | 'luxury' | 'restaurante' | 'canchas';
+export type PlantillaGuardada = 'agenda' | 'vitrina' | 'lista' | 'carta' | 'clases' | 'envios' | 'impulso' | 'luxury' | 'restaurante' | 'canchas' | 'mesa';
 
 const LUXURY: { id: PlantillaGuardada; nombre: string; describe: string } =
   { id: 'luxury', nombre: 'Luxury', describe: 'Fotografía editorial y servicios para salones y barberías.' };
@@ -18,6 +18,7 @@ export const PLANTILLAS: { id: PlantillaGuardada; nombre: string; describe: stri
   { id: 'agenda', nombre: 'Nocturna', describe: 'Fondo oscuro y acentos luminosos.' },
   { id: 'impulso', nombre: 'Impulso', describe: 'Tienda deportiva con portada editorial y productos protagonistas.' },
   { id: 'restaurante', nombre: 'Carta visual', describe: 'Portada, categorías con fotos y platos listos para pedir.' },
+  { id: 'mesa', nombre: 'Atención en mesa', describe: 'QR por mesa: carta, llamar al mozo y pedir la cuenta, sin cambiar tu sistema de comandas.' },
 ];
 
 /** Diseños para negocios que atienden con cita. */
@@ -32,7 +33,7 @@ export const PLANTILLAS_AMBOS: { id: PlantillaGuardada; nombre: string; describe
 
 export const plantillaValida = (valor: unknown): valor is PlantillaGuardada =>
   valor === 'vitrina' || valor === 'lista' || valor === 'carta' ||
-  valor === 'agenda' || valor === 'clases' || valor === 'envios' || valor === 'impulso' || valor === 'luxury' || valor === 'restaurante' || valor === 'canchas';
+  valor === 'agenda' || valor === 'clases' || valor === 'envios' || valor === 'impulso' || valor === 'luxury' || valor === 'restaurante' || valor === 'canchas' || valor === 'mesa';
 
 export const EXPERIENCIAS: { id: TipoPagina; nombre: string; describe: string }[] = [
   { id: 'agenda', nombre: 'Agenda', describe: 'Reservas claras, con servicios, día y hora.' },
@@ -67,4 +68,4 @@ export const pedidoGastronomicoDe = (plantilla: PlantillaGuardada, tipo: TipoPag
 
 export const disposicionDe = (plantilla: PlantillaGuardada, tipo: TipoPagina): Disposicion =>
   plantilla === 'carta' ? 'carta' : plantilla === 'lista' || plantilla === 'agenda' || plantilla === 'clases'
-    ? 'filas' : plantilla === 'vitrina' || plantilla === 'impulso' || plantilla === 'luxury' || plantilla === 'restaurante' ? 'cuadricula' : tipo === 'agenda' ? 'filas' : 'cuadricula';
+    ? 'filas' : plantilla === 'vitrina' || plantilla === 'impulso' || plantilla === 'luxury' || plantilla === 'restaurante' || plantilla === 'mesa' ? 'cuadricula' : tipo === 'agenda' ? 'filas' : 'cuadricula';

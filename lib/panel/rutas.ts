@@ -72,6 +72,8 @@ const PANTALLAS: [string, (rol: RolNegocio | null) => boolean][] = [
   // Las fichas del equipo, sus horarios y ausencias: quien lleva la agenda.
   ['/panel/equipo', con('agenda.todo')],
   ['/panel/comisiones', con('comisiones.ver')],
+  // Todo el equipo atiende mesas; las pestañas de gestión las impone Postgres.
+  ['/panel/mesas', () => true],
   ['/panel/pedidos', con('caja.ver')],
   ['/panel/caja', con('caja.ver')],
   // El empleado puede VER el catálogo (`catalogo.ver`), pero esta pantalla es la

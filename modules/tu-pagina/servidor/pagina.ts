@@ -6,6 +6,7 @@ import type { TiposDePagina } from '@/modules/tu-pagina/dominio/tienda';
 import type { Proveedor } from '@/modules/tu-pagina/dominio/reclamos';
 import type { AparienciaPagina } from '@/modules/tu-pagina/dominio/apariencia';
 import type { ConfigCanchas } from '@/modules/tu-pagina/dominio/canchas';
+import type { AjustesCarta } from '@/modules/tu-pagina/dominio/mesa';
 
 export interface Secciones {
   catalogo?: boolean;
@@ -19,6 +20,8 @@ export interface Secciones {
   proveedor?: Partial<Proveedor>;
   /** Tabla de canchas por horas y precio de noche (dominio/canchas.ts). */
   canchas?: ConfigCanchas;
+  /** Favoritos, precio de antes, horario y nombre en inglés de cada plato (dominio/mesa.ts). */
+  carta?: AjustesCarta;
 }
 
 export interface PaginaPublica {

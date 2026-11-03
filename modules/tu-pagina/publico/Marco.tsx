@@ -51,7 +51,8 @@ export default function Marco({ pagina, children, vista, portada }: { pagina: Pa
     ? (plantillaValida(pagina.plantilla) ? pagina.plantilla : plantillaPorDefecto(tipo))
     : undefined;
   return (
-    <div className="tp" data-diseno={tipo} data-plantilla={plantilla} data-portada={portada ? 'si' : 'no'} style={estiloDe(pagina)}>
+    // «Atención en mesa» se viste como «Carta visual»: lo suyo es lo que hace, no el aspecto de la portada.
+    <div className="tp" data-diseno={tipo} data-plantilla={plantilla === 'mesa' ? 'restaurante' : plantilla} data-portada={portada ? 'si' : 'no'} style={estiloDe(pagina)}>
       <AnimacionesPlantilla />
       {children}
       {/* El Libro de Reclamaciones va en el pie de TODA la página, también la de inicio (sql/0006). */}
@@ -114,12 +115,12 @@ export function Cabecera({ pagina, fotoDestacada, servicioDestacado, catalogoDis
           {pagina.frase && <p className="tp-frase">{pagina.frase}</p>}
         </header>
       </div>
-      {heroCatalogo && <section className={`tp-hero tp-hoja${plantilla === 'restaurante' ? ' tp-hero--restaurante' : ''}`} aria-label={`Bienvenidos a ${pagina.titulo}`}>
+      {heroCatalogo && <section className={`tp-hero tp-hoja${plantilla === 'restaurante' || plantilla === 'mesa' ? ' tp-hero--restaurante' : ''}`} aria-label={`Bienvenidos a ${pagina.titulo}`}>
         <div className="tp-hero__contenido">
-          <span className="tp-hero__etiqueta">{plantilla === 'restaurante' ? 'CARTA DIGITAL · RECIÉN HECHO' : pagina.titulo}</span>
+          <span className="tp-hero__etiqueta">{plantilla === 'restaurante' || plantilla === 'mesa' ? 'CARTA DIGITAL · RECIÉN HECHO' : pagina.titulo}</span>
           <h2>{a.tituloBanner || pagina.frase || `Descubre ${pagina.titulo}`}</h2>
-          <p>{a.tituloBanner && pagina.frase ? pagina.frase : plantilla === 'restaurante' ? 'Recién hecho, listo para ti.' : 'Explora nuestro catálogo y encuentra algo para ti.'}</p>
-          <a href="#catalogo">{plantilla === 'restaurante' ? 'Ver la carta' : 'Explorar catálogo'} <ArrowRight size={17} aria-hidden="true" /></a>
+          <p>{a.tituloBanner && pagina.frase ? pagina.frase : plantilla === 'restaurante' || plantilla === 'mesa' ? 'Recién hecho, listo para ti.' : 'Explora nuestro catálogo y encuentra algo para ti.'}</p>
+          <a href="#catalogo">{plantilla === 'restaurante' || plantilla === 'mesa' ? 'Ver la carta' : 'Explorar catálogo'} <ArrowRight size={17} aria-hidden="true" /></a>
         </div>
         <div className="tp-hero__arte" style={fotoHero ? { backgroundImage: `url("${fotoHero}")` } : undefined} aria-hidden="true" />
       </section>}
