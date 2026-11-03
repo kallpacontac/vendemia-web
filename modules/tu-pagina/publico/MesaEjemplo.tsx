@@ -119,10 +119,11 @@ export default function MesaEjemplo() {
 
   return (
     <div className="tm-ejemplo">
+      <div className="tm-ejemplo__guia"><b>Prueba la atención en mesa</b><span>Abre la carta, llama al mozo o pide la cuenta. Cada acción aparece en el panel de atención.</span><a href="#panel-mozo">Ver lo que recibe el personal ↓</a></div>
       <div className="tm-ejemplo__mesa">
         <AtencionEnMesa
           negocio="Casa Brasa"
-          logo={null}
+          logo="/assets/restaurante-ejemplo/casa-brasa-logo.svg"
           whatsapp=""
           token="ejemplo-de-mesa"
           mesa={MESA}
@@ -133,7 +134,7 @@ export default function MesaEjemplo() {
           avisoDemo="Ejemplo: no se avisa a nadie. Prueba los botones y mira lo que le llega al mozo."
         />
       </div>
-      <aside className="tm-ejemplo__mozo" aria-label="Lo que ve el mozo">
+      <aside className="tm-ejemplo__mozo" id="panel-mozo" aria-label="Lo que ve el mozo">
         <h2>Lo que ve el mozo</h2>
         <p>En su celular y en el panel. Él sigue comandando en el sistema que el restaurante ya usa.</p>
         {pendientes.length === 0 && <p className="tm-ejemplo__vacio">Ninguna mesa está esperando.</p>}

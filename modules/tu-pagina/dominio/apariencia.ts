@@ -8,6 +8,8 @@ export interface AparienciaPagina {
   colorBanner?: string;
   tituloBanner?: string;
   mostrarBanner?: boolean;
+  /** Oferta breve visible en la parte superior de todas las plantillas. */
+  promocionTexto?: string;
   mostrarWhatsapp?: boolean;
   /** «Abierto ahora» / «Cerrado» según el horario del negocio. Sale salvo que el dueño lo apague. */
   mostrarHorario?: boolean;

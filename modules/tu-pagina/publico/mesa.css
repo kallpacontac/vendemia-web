@@ -130,6 +130,11 @@
 .tm-solo-ver__cabeza { display: flex; justify-content: flex-end; margin-bottom: 8px; }
 
 .tm-ejemplo { background: #f6f1e7; }
+.tm-ejemplo__guia { grid-column: 1 / -1; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 16px; padding: 13px max(16px, calc((100vw - 1220px)/2)); background: #fff4df; color: #3b2417; font-size: 13px; }
+.tm-ejemplo__guia b { font-size: 14px; }
+.tm-ejemplo__guia span { flex: 1 1 220px; }
+.tm-ejemplo__guia a { color: #8a3d1e; font-weight: 800; }
+@media (max-width: 540px) { .tm-ejemplo__guia { display: grid; gap: 5px; } .tm-ejemplo__guia a { min-height: 36px; display: inline-flex; align-items: center; } }
 .tm-ejemplo__mozo { background: #17140f; color: #f4efe5; padding: 22px 16px 34px; }
 .tm-ejemplo__mozo h2 { margin: 0 0 4px; font-size: 20px; }
 .tm-ejemplo__mozo > p { margin: 0 0 14px; font-size: 13.5px; line-height: 1.4; color: #c5bcab; }

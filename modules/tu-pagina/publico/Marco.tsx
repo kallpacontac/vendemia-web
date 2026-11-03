@@ -11,6 +11,7 @@ import { colorO } from '@/modules/tu-pagina/dominio/apariencia';
 import { fotoDePlantilla } from '@/modules/tu-pagina/dominio/fotos';
 import LuxuryPortada from '@/modules/tu-pagina/publico/LuxuryPortada';
 import AnimacionesPlantilla from '@/modules/tu-pagina/publico/AnimacionesPlantilla';
+import BotonWhatsApp from '@/modules/tu-pagina/publico/BotonWhatsApp';
 import '@/modules/tu-pagina/estilos/publica.css';
 
 export function estiloDe(p: Pick<PaginaPublica, 'color' | 'secciones'>): React.CSSProperties {
@@ -50,11 +51,14 @@ export default function Marco({ pagina, children, vista, portada }: { pagina: Pa
   const plantilla = pagina.secciones.apariencia?.plantillaActiva
     ? (plantillaValida(pagina.plantilla) ? pagina.plantilla : plantillaPorDefecto(tipo))
     : undefined;
+  const promocion = pagina.secciones.apariencia?.promocionTexto?.trim();
   return (
     // «Atención en mesa» se viste como «Carta visual»: lo suyo es lo que hace, no el aspecto de la portada.
     <div className="tp" data-diseno={tipo} data-plantilla={plantilla === 'mesa' ? 'restaurante' : plantilla} data-portada={portada ? 'si' : 'no'} style={estiloDe(pagina)}>
       <AnimacionesPlantilla />
+      {promocion && !(plantilla === 'restaurante' && portada) && <div className="tp-promocion" role="note"><span>OFERTA ESPECIAL</span><strong>{promocion}</strong></div>}
       {children}
+      {pagina.secciones.apariencia?.mostrarWhatsapp !== false && <BotonWhatsApp negocio={pagina.titulo} numero={pagina.whatsapp} />}
       {/* El Libro de Reclamaciones va en el pie de TODA la página, también la de inicio (sql/0006). */}
       {pagina.secciones.reclamos && pagina.secciones.proveedor?.ruc && (
         <p className="tp-pie tp-no-imprimir">
@@ -93,8 +97,9 @@ export function Cabecera({ pagina, fotoDestacada, servicioDestacado, catalogoDis
       catalogoProductosDisponible={catalogoProductosDisponible}
     />;
   }
-  const heroCatalogo = catalogoDisponible && tipo === 'tienda' && a.plantillaActiva && a.mostrarBanner !== false;
-  const banner = !heroCatalogo && a.mostrarBanner !== false && (!a.plantillaActiva || Boolean(fotoPortada || a.tituloBanner));
+  const promoRestaurante = plantilla === 'restaurante' && a.plantillaActiva && a.mostrarBanner !== false && a.promocionTexto?.trim();
+  const heroCatalogo = catalogoDisponible && tipo === 'tienda' && a.plantillaActiva && a.mostrarBanner !== false && !promoRestaurante;
+  const banner = !heroCatalogo && !promoRestaurante && a.mostrarBanner !== false && (!a.plantillaActiva || Boolean(fotoPortada || a.tituloBanner));
   // Una foto de plantilla elegida a propósito manda sobre la del primer producto; la sugerida, no.
   const fotoHero = pagina.portada_url || (a.fotoPlantilla ? deLaPlantilla : fotoDestacada || deLaPlantilla);
   return (
@@ -115,6 +120,9 @@ export function Cabecera({ pagina, fotoDestacada, servicioDestacado, catalogoDis
           {pagina.frase && <p className="tp-frase">{pagina.frase}</p>}
         </header>
       </div>
+      {promoRestaurante && <section className="tp-promocion-visual" style={fotoHero ? { backgroundImage: `linear-gradient(90deg, rgba(35,16,10,.92), rgba(35,16,10,.14)), url("${fotoHero}")` } : undefined} aria-label="Promoción destacada">
+        <div><span>OFERTA ESPECIAL · {pagina.titulo}</span><h2>{promoRestaurante}</h2><p>Descubre la carta y elige lo que más se te antoja.</p>{catalogoDisponible && <a href="#catalogo">Ver la carta <ArrowRight size={17} aria-hidden="true" /></a>}</div>
+      </section>}
       {heroCatalogo && <section className={`tp-hero tp-hoja${plantilla === 'restaurante' || plantilla === 'mesa' ? ' tp-hero--restaurante' : ''}`} aria-label={`Bienvenidos a ${pagina.titulo}`}>
         <div className="tp-hero__contenido">
           <span className="tp-hero__etiqueta">{plantilla === 'restaurante' || plantilla === 'mesa' ? 'CARTA DIGITAL · RECIÉN HECHO' : pagina.titulo}</span>

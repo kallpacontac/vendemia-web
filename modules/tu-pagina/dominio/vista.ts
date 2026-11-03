@@ -28,6 +28,7 @@ export function conVista(p: PaginaPublica, q?: ParametrosVista): PaginaPublica {
         fondoTienda: esHex(q.ft) ? q.ft : anterior.fondoTienda,
         colorBanner: esHex(q.cb) ? q.cb : anterior.colorBanner,
         mostrarBanner: q.mb === '0' ? false : q.mb === '1' ? true : anterior.mostrarBanner,
+        promocionTexto: q.promo === undefined ? anterior.promocionTexto : q.promo.slice(0, 100),
         mostrarWhatsapp: q.mw === '0' ? false : q.mw === '1' ? true : anterior.mostrarWhatsapp,
         mostrarHorario: q.mh === '0' ? false : q.mh === '1' ? true : anterior.mostrarHorario,
         catalogoLuxuryDestacado: q.lcd === '0' ? false : q.lcd === '1' ? true : anterior.catalogoLuxuryDestacado,
@@ -46,7 +47,7 @@ export function conVista(p: PaginaPublica, q?: ParametrosVista): PaginaPublica {
 /** Conserva solo los parámetros necesarios al abrir la reserva de una vista previa. */
 export function consultaVista(q?: ParametrosVista): string {
   if (q?.vista !== '1') return '';
-  const claves = ['vista', 'tipo', 'plantilla', 'pa', 'color', 'ct', 'fa', 'ft', 'cb', 'mb', 'mw', 'mh', 'lcd', 'vs', 'lm', 'mpi', 'pmp', 'pnp', 'pup', 'fp', 'sp'];
+  const claves = ['vista', 'tipo', 'plantilla', 'pa', 'color', 'ct', 'fa', 'ft', 'cb', 'mb', 'promo', 'mw', 'mh', 'lcd', 'vs', 'lm', 'mpi', 'pmp', 'pnp', 'pup', 'fp', 'sp'];
   const parametros = new URLSearchParams();
   for (const clave of claves) if (q[clave] !== undefined) parametros.set(clave, q[clave]);
   return `?${parametros.toString()}`;

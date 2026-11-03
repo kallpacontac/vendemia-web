@@ -14,7 +14,7 @@ const producto = (id: string, nombre: string, descripcion: string, precio: numbe
 
 const pagina: PaginaPublica = {
   slug: 'la-baguette', version: 1, titulo: 'La Baguette', frase: 'Pan recién horneado, café y algo rico para cada pausa.', whatsapp: '', plantilla: 'restaurante', color: '#B9662F', logo_url: '/assets/restaurante-ejemplo/la-baguette-logo.svg', portada_url: null, distritos: [],
-  secciones: { catalogo: true, reservar: false, apariencia: { plantillaActiva: true, fotoPlantilla: 'cafeteria', tituloBanner: 'El sabor de lo recién hecho', mostrarWhatsapp: false, pedirMetodoPago: true, pedirNotaPedido: true, pedirUbicacion: true } },
+  secciones: { catalogo: true, reservar: false, apariencia: { plantillaActiva: true, tituloBanner: 'El sabor de lo recién hecho', promocionTexto: 'Combo de la semana: café + croissant', mostrarWhatsapp: true, pedirMetodoPago: true, pedirNotaPedido: true, pedirUbicacion: true } },
 };
 
 const esc: Datos = {
@@ -35,7 +35,7 @@ export default function EjemploLaBaguette() {
   return <Marco pagina={pagina} portada>
     <div className="tp-ejemplo-restaurante"><span>La Baguette es un negocio de ejemplo. Los pedidos son una simulación.</span><a href="/panel/tu-pagina">Crear mi página →</a></div>
     <EjemplosNav actual="restaurante" />
-    <Cabecera pagina={pagina} catalogoDisponible fotoDestacada="/assets/negocios-ejemplo/cafeteria-hero.webp" />
+    <Cabecera pagina={pagina} catalogoDisponible fotoDestacada="/assets/negocios-ejemplo/cafe-2.webp" />
     <main className="tp-hoja">
       <Escaparate esc={esc} slug={pagina.slug} whatsapp="" puedePedir puedeReservar={false} disposicion="cuadricula" plantillaRestaurante pedidoGastronomico nombreNegocio={pagina.titulo} apariencia={pagina.secciones.apariencia} demoPedido />
     </main>
