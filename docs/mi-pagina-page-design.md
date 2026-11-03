@@ -1,6 +1,6 @@
 # Mi página: lectura de la referencia y adaptación
 
-Referencia visual consultada: https://qcarta.com/ (2 de noviembre de 2026).
+Referencia visual consultada: https://qcarta.com/ (3 de noviembre de 2026).
 
 ## Patrón de página identificado
 
@@ -13,11 +13,13 @@ Referencia visual consultada: https://qcarta.com/ (2 de noviembre de 2026).
 7. Titulares Poppins ExtraBold con tracking cerrado. Las secciones entran con opacidad y desplazamiento vertical; el teléfono flota lentamente, las manchas y órbitas se mueven a otro ritmo, y los controles responden al toque.
 8. El logotipo es una pieza compacta de alto contraste sobre una silueta oscura.
 
+En una ventana CSS de 1530 px, la portada de referencia usa un contenedor de 1152 px con 24 px de espacio interior, dos columnas de unos 549 y 499 px separadas por 56 px, un título Poppins 800 de 68 px con interlineado de 69,36 px y un teléfono de 320 × 624 px. Las banderas son imágenes de 60 × 40 px en una fila que avanza horizontalmente, con 36 px entre ellas.
+
 ## Adaptación a Vendemia
 
-- La ruta `/mi-pagina` usa esta secuencia con la paleta de Vendemia: negro, crema y naranja. El texto usa Plus Jakarta Sans. El wordmark dice «Vendemia» con lettering blanco, contorno negro grueso y extrusión negra que sigue cada letra; el punto de la «i» es naranja. No lleva cápsula de fondo ni mascota.
-- El titular reserva un espacio fijo para «página», «tienda» y «agenda» y las escribe con un cursor naranja, sin desplazar el resto de la frase. El teléfono, los avisos flotantes y las capas usan movimientos de distintas velocidades; `prefers-reduced-motion` los desactiva.
-- La maqueta del teléfono crece en la portada, muestra una cabecera naranja, categorías, tres productos y un resumen de pedido. La franja negra incluye una lista de banderas latinoamericanas como detalle visual.
+- La ruta `/mi-pagina` usa esta secuencia con la paleta de Vendemia: negro, crema y naranja. El texto de la portada usa Poppins. El wordmark dice «Vendemia» con lettering blanco, contorno negro grueso y extrusión negra que sigue cada letra; la «i» no tiene punto blanco y lleva un solo punto naranja. No lleva cápsula de fondo ni mascota.
+- El titular reserva un espacio fijo para «local», «carta» y «sitio» y las escribe con un cursor naranja, sin desplazar «digital» a otra línea. El teléfono, los avisos flotantes y las capas usan movimientos de distintas velocidades; `prefers-reduced-motion` los desactiva.
+- El teléfono de muestra mide 320 × 624 px en escritorio. La cabecera naranja llega hasta el marco superior y un surco negro queda centrado. La franja negra muestra los tipos de negocio; una sección blanca aparte presenta imágenes de 17 banderas en movimiento horizontal. Las imágenes se guardan localmente en `public/assets/mi-pagina/banderas/` para que no dependan de emoji ni de una conexión externa en producción.
 - La demo de portada es ilustrativa y local: no envía pedidos ni guarda información.
 - La galería muestra únicamente ejemplos del proyecto: La Baguette, Grano de Barrio, Atelier Norte, Zona Gol y Sonrisa Norte.
 - Los CTA llevan al panel de Mi página. La landing principal enlaza la nueva página y muestra dos ejemplos propios.

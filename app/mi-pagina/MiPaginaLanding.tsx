@@ -1,19 +1,24 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import Image from 'next/image';
 import { ArrowRight, CalendarDays, Check, ChevronDown, Clock3, MapPin, Menu, Plus, ShoppingBag, Smartphone, X } from 'lucide-react';
 
-const palabras = ['página', 'tienda', 'agenda'] as const;
+const palabras = ['local', 'carta', 'sitio'] as const;
 const banderas = [
-  { pais: 'Perú', emoji: '🇵🇪' }, { pais: 'México', emoji: '🇲🇽' },
-  { pais: 'Colombia', emoji: '🇨🇴' }, { pais: 'Chile', emoji: '🇨🇱' },
-  { pais: 'Argentina', emoji: '🇦🇷' }, { pais: 'Ecuador', emoji: '🇪🇨' },
-  { pais: 'Bolivia', emoji: '🇧🇴' }, { pais: 'Uruguay', emoji: '🇺🇾' },
-  { pais: 'Paraguay', emoji: '🇵🇾' }, { pais: 'Brasil', emoji: '🇧🇷' },
+  { pais: 'Perú', codigo: 'pe' }, { pais: 'México', codigo: 'mx' },
+  { pais: 'Colombia', codigo: 'co' }, { pais: 'Chile', codigo: 'cl' },
+  { pais: 'Argentina', codigo: 'ar' }, { pais: 'Ecuador', codigo: 'ec' },
+  { pais: 'Bolivia', codigo: 'bo' }, { pais: 'Paraguay', codigo: 'py' },
+  { pais: 'Uruguay', codigo: 'uy' }, { pais: 'Brasil', codigo: 'br' },
+  { pais: 'Panamá', codigo: 'pa' }, { pais: 'Guatemala', codigo: 'gt' },
+  { pais: 'El Salvador', codigo: 'sv' }, { pais: 'Honduras', codigo: 'hn' },
+  { pais: 'República Dominicana', codigo: 'do' }, { pais: 'Puerto Rico', codigo: 'pr' },
+  { pais: 'España', codigo: 'es' },
 ] as const;
 
 function MiPaginaLogo() {
-  return <span className="mp-logo">Vendem<span className="mp-logo__i">i</span>a</span>;
+  return <span className="mp-logo">Vendem<span className="mp-logo__i">ı</span>a</span>;
 }
 
 const ejemplos = [
@@ -102,7 +107,7 @@ export default function MiPaginaLanding() {
       <section className="mp-hero" aria-labelledby="mp-titulo">
         <div className="mp-hero__texto">
           <span className="mp-etiqueta"><span /> Tu negocio en un enlace, sin instalar apps</span>
-          <h1 id="mp-titulo" aria-label="Tu página digital para recibir pedidos y reservas">Tu <span className="mp-escritura" aria-hidden="true"><span>{tecleado}</span><i /></span> digital<br />para recibir pedidos<br />y reservas.</h1>
+          <h1 id="mp-titulo" aria-label="Tu página digital para recibir pedidos y reservas">Tu <span className="mp-escritura" aria-hidden="true"><span>{tecleado}</span><i /></span> digital<br /><span className="mp-hero__resto">para recibir pedidos<br />y reservas.</span></h1>
           <p>Tus clientes ven lo que ofreces, eligen sus productos o un horario y te contactan desde la misma página. Tú cambias fotos, precios y disponibilidad cuando quieras.</p>
           <div className="mp-hero__acciones"><a className="mp-boton" href="/panel/tu-pagina">Crear mi página <ArrowRight size={19} /></a><a className="mp-boton mp-boton--borde" href="#ejemplos">Explorar ejemplos</a></div>
           <div className="mp-hero__nota"><Check size={16} /> Tus clientes la abren desde el celular, sin instalar nada.</div>
@@ -125,7 +130,9 @@ export default function MiPaginaLanding() {
         </div>
       </section>
 
-      <div className="mp-cinta" aria-label="Tipos de negocio y países de Latinoamérica"><span>UNA PÁGINA PARA TU FORMA DE TRABAJAR</span><div className="mp-cinta__rubros"><span>Catálogo</span><i /> <span>Reservas</span><i /> <span>Pedidos</span><i /> <span>Canchas</span></div><div className="mp-cinta__banderas" aria-label="Banderas latinoamericanas">{banderas.map(({ pais, emoji }) => <span key={pais} title={pais} aria-label={pais}>{emoji}</span>)}</div></div>
+      <section className="mp-banderas" aria-labelledby="mp-banderas-titulo"><h2 id="mp-banderas-titulo">PENSADA PARA NEGOCIOS DE LATINOAMÉRICA Y ESPAÑA</h2><div className="mp-banderas__ventana"><div className="mp-banderas__pista">{[0, 1].map((repeticion) => <ul key={repeticion} aria-hidden={repeticion === 1}>{banderas.map(({ pais, codigo }) => <li key={codigo}><Image src={`/assets/mi-pagina/banderas/${codigo}.png`} alt={repeticion === 0 ? pais : ''} width={60} height={40} loading="eager" unoptimized /></li>)}</ul>)}</div></div></section>
+
+      <div className="mp-cinta" aria-label="Tipos de negocio"><span>UNA PÁGINA PARA TU FORMA DE TRABAJAR</span><div className="mp-cinta__rubros"><span>Catálogo</span><i /> <span>Reservas</span><i /> <span>Pedidos</span><i /> <span>Canchas</span></div></div>
 
       <section className="mp-seccion" id="soluciones"><div className="mp-seccion__cabecera mp-reveal"><div><span className="mp-sobre">TU PÁGINA, A TU MEDIDA</span><h2>Elige lo que necesita<br />tu negocio hoy.</h2></div><p>Los diseños comparten una idea: que tu cliente entienda qué ofreces y pueda actuar en pocos toques.</p></div><div className="mp-soluciones"><a href="/ejemplos/la-baguette" className="mp-solucion mp-solucion--tienda mp-reveal"><span>01 / VENDE</span><ShoppingBag size={32} /><h3>Una tienda para tus productos</h3><p>Fotos, categorías, precios y carrito en un recorrido simple.</p><b>Ver ejemplo <ArrowRight size={18} /></b></a><a href="/ejemplos/clinica-dental?diseno=clara" className="mp-solucion mp-solucion--agenda mp-reveal"><span>02 / AGENDA</span><CalendarDays size={32} /><h3>Una agenda para tus servicios</h3><p>Servicios y horarios fáciles de encontrar desde el primer vistazo.</p><b>Ver ejemplo <ArrowRight size={18} /></b></a><a href="/ejemplos/canchas" className="mp-solucion mp-solucion--canchas mp-reveal"><span>03 / RESERVA</span><Clock3 size={32} /><h3>Una cancha lista para reservar</h3><p>Modalidad, día y hora visibles, con extras opcionales.</p><b>Ver ejemplo <ArrowRight size={18} /></b></a></div></section>
 
