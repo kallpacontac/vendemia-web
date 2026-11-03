@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { ArrowRight, CalendarDays, Check, ChevronDown, Clock3, Menu, Plus, ShoppingBag, Smartphone, X } from 'lucide-react';
-import Mark from '@/components/Mark';
 import Wordmark from '@/components/landing/Wordmark';
 
 const ejemplos = [
@@ -61,7 +60,7 @@ export default function MiPaginaLanding() {
 
   return <div className="mp" ref={raiz}>
     <header className="mp-nav">
-      <a className="mp-marca" href="/" aria-label="Vendemia, ir al inicio"><Mark size={27} variant="avatar" priority /><Wordmark /></a>
+      <a className="mp-marca" href="/" aria-label="Vendemia, ir al inicio"><Wordmark /></a>
       <nav className={menuAbierto ? 'mp-nav__enlaces abierto' : 'mp-nav__enlaces'} aria-label="Mi página">
         <a href="#soluciones" onClick={() => setMenuAbierto(false)}>Qué puedes crear</a>
         <a href="#como-funciona" onClick={() => setMenuAbierto(false)}>Cómo funciona</a>
@@ -111,7 +110,7 @@ export default function MiPaginaLanding() {
 
       <section className="mp-cierre"><span className="mp-sobre">TU NEGOCIO MERECE SU PROPIO ESPACIO</span><h2>Haz que encontrarte<br />sea el primer paso.</h2><p>Prepara tu página con tu nombre, tus fotos y lo que ofreces.</p><a className="mp-boton mp-boton--claro" href="/panel/tu-pagina">Crear mi página <ArrowRight size={19} /></a></section>
     </main>
-    <footer className="mp-footer"><a className="mp-marca" href="/" aria-label="Vendemia, ir al inicio"><Mark size={25} variant="avatar" /><Wordmark /></a><span>Mi página · una herramienta de Vendemia</span><a href="/">Volver a Vendemia <ArrowRight size={15} /></a></footer>
+    <footer className="mp-footer"><a className="mp-marca" href="/" aria-label="Vendemia, ir al inicio"><Wordmark /></a><span>Mi página · una herramienta de Vendemia</span><a href="/">Volver a Vendemia <ArrowRight size={15} /></a></footer>
     {aviso && <div className="mp-aviso" role="status"><Check size={18} /><span>Esta vista es una muestra. Abre nuestros ejemplos para probar la página completa.</span><button type="button" aria-label="Cerrar aviso" onClick={() => setAviso(false)}><X size={18} /></button></div>}
   </div>;
 }

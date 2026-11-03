@@ -10,7 +10,7 @@ export const metadata: Metadata = {
 
 export default function Page() {
   return <>
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@700&display=swap" />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lobster&display=swap" />
     <MiPaginaLanding />
   </>;
 }

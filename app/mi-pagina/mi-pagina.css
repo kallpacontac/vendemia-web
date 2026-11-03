@@ -9,13 +9,13 @@ body:has(.mp){margin:0}.mp{--mp-ink:#0a0a0a;--mp-muted:#5c5c5c;--mp-line:#eaeae6
 @media(max-width:800px){.mp-nav{height:65px}.mp-nav__enlaces{display:none;position:absolute;top:65px;left:0;right:0;padding:22px 24px;background:#fff;box-shadow:0 15px 25px #0002;flex-direction:column;align-items:flex-start;gap:17px}.mp-nav__enlaces.abierto{display:flex}.mp-nav__acciones{margin-left:auto}.mp-nav__acciones .mp-boton{display:none}.mp-nav__menu{display:grid;place-items:center}.mp-hero{grid-template-columns:1fr;padding-top:55px;gap:40px}.mp-hero__visual{min-height:490px}.mp-cinta{flex-direction:column;align-items:flex-start;gap:12px}.mp-soluciones,.mp-pasos__grid{grid-template-columns:1fr}.mp-solucion{min-height:280px}.mp-preguntas{grid-template-columns:1fr;gap:35px}.mp-seccion,.mp-pasos,.mp-ejemplos,.mp-preguntas{padding-top:75px;padding-bottom:75px}.mp-seccion__cabecera{align-items:start;flex-direction:column;gap:18px}}
 @media(max-width:560px){.mp-nav{padding:0 18px}.mp-marca{font-size:21px}.mp-hero{padding:44px 18px 55px}.mp-hero h1{font-size:clamp(48px,12vw,68px)}.mp-hero__texto>p{font-size:16px}.mp-hero__acciones .mp-boton{flex:1}.mp-hero__visual{border-radius:28px;padding-left:10px;padding-right:10px}.mp-flotante--uno{left:1%;top:21%}.mp-flotante--dos{right:0;bottom:19%}.mp-cinta>div{flex-wrap:wrap;gap:10px;font-size:14px}.mp-seccion,.mp-pasos,.mp-ejemplos,.mp-preguntas{padding-left:18px;padding-right:18px}.mp-seccion h2,.mp-pasos h2,.mp-ejemplos h2,.mp-preguntas h2,.mp-cierre h2{font-size:42px}.mp-funciones__grid{grid-template-columns:1fr}.mp-ejemplos__grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.mp-ejemplo__marco{height:250px;padding-top:15px}.mp-ejemplo__pantalla{width:145px;height:290px}.mp-ejemplo__foto{height:140px}.mp-ejemplo__pie b{font-size:13px}.mp-ejemplo__pie small{font-size:10px}.mp-ejemplo__flecha{height:30px;width:30px}.mp-footer{flex-direction:column;align-items:flex-start}.mp-aviso{left:15px;right:15px;bottom:15px}}
 
-/* La marca conserva a Mia y Outfit. La silueta compacta toma el gesto de
-   la referencia sin usar su logotipo ni su combinación de colores. */
-.mp .mp-marca{gap:5px;padding:7px 13px 7px 8px;background:#0a0a0a;color:#fff;border-radius:18px 14px 19px 15px / 15px 19px 16px 18px;box-shadow:3px 3px 0 #ff4900;transform:rotate(-2deg);transition:transform .25s,box-shadow .25s}
-.mp .mp-marca:hover{transform:rotate(0) translateY(-2px);box-shadow:4px 5px 0 #ff4900}
-.mp .mp-marca .vendemia-wordmark{font-size:20px;font-weight:700;letter-spacing:-.04em;line-height:1;color:#fff}
-.mp .mp-marca .vendemia-wordmark__period{color:#ff6a1f}
-.mp-footer .mp-marca{box-shadow:3px 3px 0 #ff6a1f}
+/* Letras de pincel grueso como la referencia, solo tipografía: sin placa,
+   silueta de fondo ni mascota. El acento final conserva el naranja Vendemia. */
+.mp .mp-marca{display:inline-flex;align-items:center;padding:0;background:none;color:#0a0a0a;box-shadow:none;transform:rotate(-2deg);transition:transform .25s}
+.mp .mp-marca:hover{transform:rotate(0) translateY(-2px)}
+.mp .mp-marca .vendemia-wordmark{font-family:'Lobster','Brush Script MT',cursive;font-size:36px;font-weight:400;letter-spacing:-.035em;line-height:1.1;color:#0a0a0a;text-shadow:1px 2px 0 #ffb067}
+.mp .mp-marca .vendemia-wordmark__period{color:#ff4900;text-shadow:none}
+.mp-footer .mp-marca .vendemia-wordmark{color:#fff;text-shadow:1px 2px 0 #ff4900}
 
 /* Los botones siguen el contraste de la landing: naranja y tinta oscura. */
 .mp .mp-boton{background:#ff6a1f;color:#1a0a00!important}
@@ -58,4 +58,4 @@ body:has(.mp){margin:0}.mp{--mp-ink:#0a0a0a;--mp-muted:#5c5c5c;--mp-line:#eaeae6
 @keyframes mp-mancha-uno{0%,100%{transform:translate(0,0)}50%{transform:translate(-25px,28px)}}
 @keyframes mp-mancha-dos{0%,100%{transform:translate(0,0)}50%{transform:translate(30px,-22px)}}
 @media(prefers-reduced-motion:reduce){.mp-hero__texto,.mp-hero__visual,.mp-palabra>span,.mp-telefono,.mp-flotante,.mp-hero__orbita,.mp-hero__mancha{animation:none!important}.mp-motion .mp-reveal{opacity:1;transform:none;transition:none}.mp .mp-boton,.mp .mp-marca,.mp-ejemplo__pantalla,.mp .mp-telefono__producto>button{transition:none}}
-@media(max-width:560px){.mp .mp-marca .vendemia-wordmark{font-size:18px}.mp-hero__orbita{width:300px;height:300px}.mp-ejemplo__pantalla{height:350px}}
+@media(max-width:560px){.mp .mp-marca .vendemia-wordmark{font-size:32px}.mp-hero__orbita{width:300px;height:300px}.mp-ejemplo__pantalla{height:350px}}
