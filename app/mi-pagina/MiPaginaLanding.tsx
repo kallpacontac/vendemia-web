@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
-import { ArrowLeft, ArrowRight, Bell, CalendarDays, Camera, Check, ChevronDown, Clock3, LayoutGrid, Link2, MapPin, Menu, Palette, Plus, ShoppingBag, Smartphone, Tags, X } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Bell, CalendarDays, Camera, Check, ChevronDown, Clock3, Gift, LayoutGrid, Link2, MapPin, Menu, Monitor, Palette, Plus, ShoppingBag, Smartphone, Tags, X } from 'lucide-react';
 import { siWhatsapp } from 'simple-icons';
 
 const palabras = ['local', 'carta', 'sitio'] as const;
@@ -127,12 +127,14 @@ export default function MiPaginaLanding() {
     <header className="mp-nav">
       <a className="mp-marca" href="/" aria-label="Vendemia, ir al inicio"><MiPaginaLogo /></a>
       <nav className={menuAbierto ? 'mp-nav__enlaces abierto' : 'mp-nav__enlaces'} aria-label="Mi página">
-        <a href="#soluciones" onClick={() => setMenuAbierto(false)}>Qué puedes crear</a>
+        <details className="mp-nav__soluciones"><summary>Soluciones <ChevronDown size={15} /></summary><div className="mp-nav__desplegable" onClick={(evento) => { if ((evento.target as Element).closest('a')) (evento.currentTarget.parentElement as HTMLDetailsElement).open = false; }}><a href="#soluciones" onClick={() => setMenuAbierto(false)}><span><ShoppingBag size={19} /></span><span><b>Cartas interactivas</b><small>Carta con carrito y pedidos por WhatsApp</small></span></a><a href="#ejemplos" onClick={() => setMenuAbierto(false)}><span><Palette size={19} /></span><span><b>Cartas con diseño</b><small>Tu carta con identidad, enlace y QR</small></span></a><a href="/panel/fideliza" onClick={() => setMenuAbierto(false)}><span><Gift size={19} /></span><span><b>Sistema de fidelización</b><small>Puntos, sellos y premios para tus clientes</small></span></a><a href="/contacto" onClick={() => setMenuAbierto(false)}><span><Monitor size={19} /></span><span><b>Páginas web a medida</b><small>Un sitio diseñado para tu negocio</small></span></a></div></details>
+        <a href="#planes" onClick={() => setMenuAbierto(false)}>Planes</a>
+        <a href="#ejemplos" onClick={() => setMenuAbierto(false)}>Rubros</a>
         <a href="#como-funciona" onClick={() => setMenuAbierto(false)}>Cómo funciona</a>
-        <a href="#ejemplos" onClick={() => setMenuAbierto(false)}>Ejemplos</a>
         <a href="#preguntas" onClick={() => setMenuAbierto(false)}>Preguntas</a>
+        <a href="/contacto" onClick={() => setMenuAbierto(false)}>Contacto</a>
       </nav>
-      <div className="mp-nav__acciones"><a className="mp-nav__volver" href="/">Conoce Vendemia</a><a className="mp-boton mp-boton--chico" href="/panel/tu-pagina">Crear mi página <ArrowRight size={16} /></a></div>
+      <div className="mp-nav__acciones"><a className="mp-nav__volver" href="/login">Ya soy cliente</a><a className="mp-boton mp-boton--chico" href="#planes">Ver planes</a></div>
       <button className="mp-nav__menu" type="button" aria-label={menuAbierto ? 'Cerrar menú' : 'Abrir menú'} aria-expanded={menuAbierto} onClick={() => setMenuAbierto(!menuAbierto)}>{menuAbierto ? <X size={24} /> : <Menu size={24} />}</button>
     </header>
 

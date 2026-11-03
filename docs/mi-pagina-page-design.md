@@ -15,6 +15,8 @@ Referencia visual consultada: https://qcarta.com/ (3 de noviembre de 2026).
 
 En una ventana CSS de 1530 px, la portada de referencia usa un contenedor de 1152 px con 24 px de espacio interior, dos columnas de unos 549 y 499 px separadas por 56 px, un título Poppins 800 de 68 px con interlineado de 69,36 px y un teléfono de 320 × 624 px. Las banderas son imágenes de 60 × 40 px en una fila que avanza horizontalmente, con 36 px entre ellas.
 
+En `/planes`, la barra superior mide unos 68–69 px de alto. Sus enlaces usan Poppins de 14 px y peso 500, con 8 px de relleno vertical y 12 px horizontal; el acceso de cliente usa peso 600. El botón principal mide unos 41 px de alto. El menú «Soluciones» abre una tarjeta flotante de 360 px con iconos sobre cuadrados negros y descripciones breves. Vendemia conserva esas proporciones y usa naranja en los acentos y el botón principal.
+
 La sección de soluciones usa una tarjeta de unos 654 × 602 px y dos tarjetas de unos 430 × 293 px apiladas con 20 px de separación. La sección de tres pasos divide 1104 px en columnas de 440 y 616 px, con 48 px entre ellas; cada paso ocupa al menos 125 px.
 
 ## Adaptación a Vendemia
