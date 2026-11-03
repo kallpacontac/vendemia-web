@@ -357,7 +357,8 @@ body:has(.mp){margin:0}.mp{--mp-ink:#0a0a0a;--mp-muted:#5c5c5c;--mp-line:#eaeae6
 .mp .mp-boton--claro{background:#fff0e8;color:#1a0a00!important}
 .mp .mp-boton--claro:hover{background:#fff}
 .mp-flotante__sello{background:var(--mp-accent-strong);color:#fff}
-.mp-telefono__producto>button{background:var(--mp-accent-strong);color:#fff}
+.mp .mp-telefono__producto>button{background:var(--mp-accent-strong);color:#fff}
+.mp .mp-telefono__producto>button:hover{background:#a83100;color:#fff}
 .mp-solucion--principal .mp-solucion__icono{background:var(--mp-accent-strong);color:#fff}
 .mp .mp-solucion--destacada{background:var(--mp-accent-strong);color:#fff}
 .mp-solucion--destacada h3,.mp-solucion--destacada p,.mp-solucion--destacada b{color:#fff}
@@ -368,9 +369,9 @@ body:has(.mp){margin:0}.mp{--mp-ink:#0a0a0a;--mp-muted:#5c5c5c;--mp-line:#eaeae6
 .mp-plan--destacado .mp-plan__boton{color:var(--mp-accent-strong)!important}
 .mp-planes__periodos small{background:var(--mp-accent-strong);color:#fff}
 
-/* CTA de prueba: negro suave y naranja cálido sobre la paleta Vendemia. */
-.mp .mp-boton,.mp-nav__acciones .mp-boton--chico{background:#111;color:#ff9f50!important}
-.mp .mp-boton:hover,.mp-nav__acciones .mp-boton--chico:hover{background:#252525;color:#ffc498!important}
+/* CTA de prueba: negro suave y naranja vivo de la paleta Vendemia. */
+.mp .mp-boton,.mp-nav__acciones .mp-boton--chico{background:#111;color:#ff6a1f!important}
+.mp .mp-boton:hover,.mp-nav__acciones .mp-boton--chico:hover{background:#252525;color:#ff8b3d!important}
 .mp .mp-boton--borde{background:transparent;color:#0a0a0a!important}
 .mp .mp-boton--borde:hover{background:#fff0e8;color:#0a0a0a!important}
 .mp .mp-boton--claro{background:#fff0e8;color:#1a0a00!important}
