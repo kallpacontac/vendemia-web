@@ -28,6 +28,7 @@ import { soles } from '@/modules/tu-pagina/dominio/tienda';
 import { conCanchas } from '@/modules/tu-pagina/dominio/canchas';
 import AgendaPortada from '@/modules/tu-pagina/publico/AgendaPortada';
 import CanchasPortada from '@/modules/tu-pagina/publico/CanchasPortada';
+import EstadoHorario from '@/modules/tu-pagina/publico/EstadoHorario';
 
 type Props = { params: { slug: string }; searchParams?: Record<string, string | undefined> };
 
@@ -74,6 +75,7 @@ export default async function Portada({ params, searchParams }: Props) {
     return <CatalogoEjemplo plantilla={ejemplo} incrustado reclamosHref={p.secciones.reclamos && p.secciones.proveedor?.ruc ? `./${p.slug}/reclamaciones` : undefined} />;
   }
   const envioPrimero = !conEscaparate && Boolean(p.secciones.envios);
+  const estadoHorario = escTodo && p.secciones.apariencia?.mostrarHorario !== false && <EstadoHorario horario={escTodo.agenda.horario} />;
   // Lo que se reserva tiene su atajo arriba y su enlace propio (/reservar): en un
   // salón es lo primero que se busca, no algo a lo que se llega bajando.
   const reservables = p.secciones.reservar ? (escTodo?.items ?? []).filter((i) => i.tipo !== 'producto') : [];
@@ -88,6 +90,7 @@ export default async function Portada({ params, searchParams }: Props) {
     return <Marco pagina={p} portada>
       <AgendaPortada pagina={p} editorial={plantilla === 'lista'} reservarHref={reservarHref} />
       <main className="tp-agenda-contenido">
+        {estadoHorario}
         {esc && hayItems && <section className="tp-agenda-servicios" aria-label="Servicios disponibles">
           <div className="tp-agenda-seccion-titulo"><span>QUÉ OFRECEMOS</span><h2>Servicios para ti</h2><p>Conoce los detalles y elige el que necesitas.</p></div>
           <Escaparate esc={esc} slug={p.slug} whatsapp={p.whatsapp} puedePedir={false} puedeReservar disposicion="cuadricula" agendaEstilo={plantilla} agendaNombre={p.titulo} />
@@ -138,7 +141,7 @@ export default async function Portada({ params, searchParams }: Props) {
 
   if (canchas && plantilla === 'canchas' && p.secciones.apariencia?.plantillaActiva) return (
     <Marco pagina={p} portada>
-      <CanchasPortada pagina={p} esc={escTodo}>{catalogo}</CanchasPortada>
+      <CanchasPortada pagina={p} esc={escTodo}>{estadoHorario}{catalogo}</CanchasPortada>
     </Marco>
   );
 
@@ -146,6 +149,7 @@ export default async function Portada({ params, searchParams }: Props) {
     <Marco pagina={p} portada>
       <Cabecera pagina={p} fotoDestacada={fotoDestacada} servicioDestacado={servicioDestacado} catalogoDisponible={hayItems} catalogoProductosDisponible={catalogoLuxuryDestacado} />
       <div className="tp-hoja">
+        {estadoHorario}
         {/* Enlaces relativos a propósito: valen igual en tienda o agenda (host/<negocio>) y en /tu-pagina/<negocio>. */}
         {envioPrimero && <div className="tp-acciones">{envio}</div>}
         {esLuxury && catalogo}

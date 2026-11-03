@@ -53,6 +53,7 @@ import { getLeads, getPedidos, type Pedido } from '@/lib/supabase/queries';
 import type { ResultadoMarcarPagado } from '@/lib/supabase/commands';
 import { Pedidos as PedidosDeLaPagina } from '@/modules/tu-pagina/ui/PedidosYReservas';
 import Envios from '@/modules/tu-pagina/ui/Envios';
+import DetallesPedido from '@/modules/tu-pagina/ui/DetallesPedido';
 import '@/modules/tu-pagina/estilos/panel.css';
 
 const POR_PAGINA = 12;
@@ -352,13 +353,11 @@ function FilaPedido({
       <td data-label="Cliente">
         <b>{cliente}</b>
       </td>
-      <td
-        data-label="Qué pidió"
-        className="muted"
-        style={{ maxWidth: 240, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
-        title={articulos}
-      >
-        {articulos || '—'}
+      <td data-label="Qué pidió" className="muted" style={{ maxWidth: 280 }}>
+        <div>
+          <div className="tp-panel-articulos" title={articulos}>{articulos || '—'}</div>
+          <DetallesPedido direccion={pedido.delivery_address} nota={pedido.nota} ubicacion={pedido.ubicacion} pagaraCon={pedido.pagara_con} />
+        </div>
       </td>
       <td data-label="Cobro">
         <span

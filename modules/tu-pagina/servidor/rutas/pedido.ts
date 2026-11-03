@@ -13,7 +13,7 @@
 import { revalidateTag } from 'next/cache';
 import { z } from 'zod';
 import { SLUG } from '@/modules/tu-pagina/dominio/config';
-import { armarEscaparate, validarCliente } from '@/modules/tu-pagina/dominio/tienda';
+import { METODOS_PAGO, armarEscaparate, esEnlaceMaps, validarCliente } from '@/modules/tu-pagina/dominio/tienda';
 import { huellaIp, limitar, log, rpc, servidor } from '@/modules/tu-pagina/servidor/supabase';
 import { paginaDe } from '@/modules/tu-pagina/servidor/pagina';
 import { datosFrescos } from '@/modules/tu-pagina/servidor/escaparate';
@@ -27,6 +27,10 @@ const Cuerpo = z.object({
   entrega: z.enum(['recojo', 'delivery']),
   direccion: z.string().max(200),
   referencia: z.string().max(200),
+  // Opcionales: una página abierta antes de subir esto no los manda.
+  nota: z.string().max(300).optional(),
+  ubicacion: z.string().max(300).optional(),
+  pagaraCon: z.enum(METODOS_PAGO).optional(),
   lineas: z
     .array(z.object({ item: z.string().min(1).max(80), opcion: z.string().max(80), cantidad: z.number().int().min(1).max(99) }))
     .min(1)
@@ -47,6 +51,8 @@ export async function POST(req: Request) {
   }
   const errores = validarCliente({ nombre: c.nombre, telefono: c.telefono, direccion: c.direccion, conDelivery: c.entrega === 'delivery' });
   if (Object.keys(errores).length) return responder({ status: 'datos_invalidos', errores }, 400);
+  const ubicacion = c.entrega === 'delivery' ? (c.ubicacion ?? '').trim() : '';
+  if (ubicacion && !esEnlaceMaps(ubicacion)) return responder({ status: 'datos_invalidos' }, 400);
 
   try {
     const ip = huellaIp(req);
@@ -69,6 +75,9 @@ export async function POST(req: Request) {
         entrega: c.entrega,
         direccion: c.entrega === 'delivery' ? c.direccion.trim() : '',
         referencia: c.entrega === 'delivery' ? c.referencia.trim() : '',
+        nota: (c.nota ?? '').trim(),
+        ubicacion,
+        pagara_con: c.pagaraCon ?? '',
         lineas: c.lineas.map((l) => ({ catalog_id: l.item, variante_id: l.opcion, cantidad: l.cantidad })),
       },
     };

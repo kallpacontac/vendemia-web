@@ -1375,3 +1375,12 @@ button.tp-canchas__casilla { cursor: pointer; }
   .tp-futbol .tp-canchas { margin-top: 12px; }
   .tp-futbol__pie { margin-inline: 20px; }
 }
+
+/* «Abierto ahora · cierra a las 20:00» (publico/EstadoHorario.tsx). */
+.tp-estado-horario {
+  display: flex; width: fit-content; align-items: center; gap: 8px; margin: 16px 0 0; padding: 7px 12px;
+  background: var(--tp-papel); border: 1px solid var(--tp-borde); border-radius: 999px;
+  color: var(--tp-texto); font-size: 13px; font-weight: 600;
+}
+.tp-estado-horario i { flex: none; width: 8px; height: 8px; border-radius: 50%; background: #9a948c; }
+.tp-estado-horario--abierto i { background: #18a558; }

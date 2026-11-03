@@ -317,6 +317,13 @@ export function validarCliente(d: DatosCliente & { direccion?: string; conDelive
 
 /* ── Los mensajes de WhatsApp ────────────────────────────────────────────── */
 
+/** Lo que se le ofrece al cliente en «¿Cómo pagarás?». */
+export const METODOS_PAGO = ['Yape', 'Plin', 'Efectivo', 'Tarjeta', 'Transferencia'] as const;
+
+/** Un enlace de Google Maps de verdad: el dominio se comprueba entero porque el panel lo abre con un clic. */
+export const esEnlaceMaps = (url: string): boolean =>
+  /^https:\/\/(?:(?:www\.)?google\.(?:com?\.)?[a-z]{2,3}\/maps|maps\.google\.(?:com?\.)?[a-z]{2,3}|goo\.gl\/maps|maps\.app\.goo\.gl)(?:[/?]|$)/i.test(url);
+
 export interface LineaPedido {
   nombre: string;
   opcion: string;

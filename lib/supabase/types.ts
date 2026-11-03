@@ -457,6 +457,10 @@ export interface OrderRow {
   delivery_address: string | null;
   delivery_option: string | null;
   delivery_time: string | null;
+  /** Lo que dejó el cliente al pedir desde Mi página (tu-pagina/sql/0014). pagara_con es lo que dijo, no cómo se cobró. */
+  nota?: string | null;
+  ubicacion?: string | null;
+  pagara_con?: string | null;
   created_at: number | null;
   created_ts: string | null;
   /**

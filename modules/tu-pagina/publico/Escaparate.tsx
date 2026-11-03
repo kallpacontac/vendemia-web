@@ -30,6 +30,8 @@ import { fotoProductoRestaurante, fotoServicioLuxury } from '@/modules/tu-pagina
 import { abreEl, horasLibres, sumarDias, sumarMin } from '@/modules/tu-pagina/dominio/agenda';
 import { fechaCorta, urlWhatsApp } from '@/modules/tu-pagina/dominio/envio';
 import {
+  METODOS_PAGO,
+  esEnlaceMaps,
   mensajePedido,
   mensajeReserva,
   soles,
@@ -963,7 +965,7 @@ function Carrito({ lineas, porId, esc, slug, alCambiar, alTerminar, nombreNegoci
     setFallo('');
     if (Object.keys(e).length) return;
     if (pideMetodoPago && !metodoPago) { setFallo('Elige cómo pagarás para completar el pedido.'); return; }
-    if (entrega === 'delivery' && pideUbicacion && ubicacion.trim() && !/^https:\/\/(?:www\.)?(?:maps\.google\.[^/\s]+|google\.[^/\s]+\/maps|goo\.gl\/maps|maps\.app\.goo\.gl)\//i.test(ubicacion.trim())) {
+    if (entrega === 'delivery' && pideUbicacion && ubicacion.trim() && !esEnlaceMaps(ubicacion.trim())) {
       setFallo('Pega un enlace válido de Google Maps o deja la ubicación vacía.'); return;
     }
     if (demoPedido) {
@@ -977,6 +979,9 @@ function Carrito({ lineas, porId, esc, slug, alCambiar, alTerminar, nombreNegoci
       entrega,
       direccion,
       referencia,
+      nota: pideNota ? nota : '',
+      ubicacion: entrega === 'delivery' && pideUbicacion ? ubicacion.trim() : '',
+      ...(pideMetodoPago && metodoPago ? { pagaraCon: metodoPago } : {}),
       lineas: lineas.map((l) => ({ item: l.item, opcion: l.opcion, cantidad: l.cantidad })),
       web: '',
     });
@@ -1046,10 +1051,10 @@ function Carrito({ lineas, porId, esc, slug, alCambiar, alTerminar, nombreNegoci
 
       {(pideMetodoPago || pideNota || (pideUbicacion && entrega === 'delivery')) && <section className="tp-bloque">
         <h2>Detalles para el negocio</h2>
-        {pideMetodoPago && <div className="tp-campo"><label htmlFor="tp-pago">¿Cómo pagarás?</label><select id="tp-pago" value={metodoPago} onChange={(e) => { setMetodoPago(e.target.value); setFallo(''); }}><option value="">Elige una opción</option><option>Yape</option><option>Plin</option><option>Efectivo</option><option>Tarjeta</option><option>Transferencia</option></select></div>}
+        {pideMetodoPago && <div className="tp-campo"><label htmlFor="tp-pago">¿Cómo pagarás?</label><select id="tp-pago" value={metodoPago} onChange={(e) => { setMetodoPago(e.target.value); setFallo(''); }}><option value="">Elige una opción</option>{METODOS_PAGO.map((m) => <option key={m}>{m}</option>)}</select></div>}
         {pideUbicacion && entrega === 'delivery' && <div className="tp-campo"><label htmlFor="tp-ubicacion">Enlace de Google Maps <small>(opcional)</small></label><input id="tp-ubicacion" type="url" value={ubicacion} maxLength={300} placeholder="https://maps.google.com/?q=…" onChange={(e) => setUbicacion(e.target.value)} /></div>}
         {pideNota && <div className="tp-campo"><label htmlFor="tp-nota-pedido">Nota para el pedido <small>(opcional)</small></label><textarea id="tp-nota-pedido" value={nota} maxLength={300} placeholder="Ej. Sin cebolla" onChange={(e) => setNota(e.target.value)} /></div>}
-        <p className="tp-nota" style={{ textAlign: 'left' }}>Estos detalles se incluyen al enviar el aviso por WhatsApp.</p>
+        <p className="tp-nota" style={{ textAlign: 'left' }}>Estos detalles quedan guardados con tu pedido.</p>
       </section>}
 
       <CamposCliente d={cliente} errores={errores} alCambiar={(k, val) => { setCliente((c) => ({ ...c, [k]: val })); setErrores((e) => ({ ...e, [k]: undefined })); }} />

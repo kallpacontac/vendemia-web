@@ -277,3 +277,12 @@
 .tp-avisame-fila small { display: block; color: var(--ink-soft); }
 .tp-avisame-fila .tp-rec-acciones { grid-column: 1 / -1; margin-top: 0; }
 @media (max-width: 560px) { .tp-panel-canchas-noche { grid-template-columns: 1fr; } }
+
+/* Lo que dejó el cliente al pedir: dirección, ubicación, método de pago y nota. */
+.tp-panel-articulos { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+@media (max-width: 720px) { .tp-panel-articulos { white-space: normal; } }
+.tp-panel-detalles { display: grid; gap: 3px; margin-top: 5px; font-size: 12.5px; white-space: normal; text-align: left; }
+.tp-panel-detalles > * { display: flex; align-items: flex-start; gap: 5px; overflow-wrap: anywhere; }
+.tp-panel-detalles svg { flex: none; margin-top: 2px; }
+.tp-panel-detalles a { color: var(--brand-txt); font-weight: 600; }
+.tp-panel-detalles__nota { color: var(--ink); font-weight: 600; }

@@ -165,5 +165,22 @@ export const pasoDelDia = (d: Pick<DatosAgenda, 'horario' | 'paso'>, fecha: stri
   (d.horario[CLAVES[diaSemana(fecha)]]?.slot_minutes ?? d.paso) || 30;
 
 /** ¿Abre ese día? Para no ofrecer días cerrados. */
+export type EstadoDelHorario =
+  | { abierto: true; cierra: string }
+  | { abierto: false; abre: string; enDias: number; diaSemana: number };
+
+/** ¿Está abierto en ese minuto? Si no, cuándo vuelve a abrir. null = el horario no tiene ningún día abierto. */
+export function estadoDelHorario(h: Horario, fecha: string, minuto: number): EstadoDelHorario | null {
+  const cubre = diaQueCubre(h, CLAVES[diaSemana(fecha)], minuto);
+  if (cubre?.close) return { abierto: true, cierra: cubre.close };
+  // Hasta 7 días: con un solo día abierto a la semana, el próximo puede ser el mismo día de la semana que viene.
+  for (let enDias = 0; enDias <= 7; enDias++) {
+    const dia = diaSemana(sumarDias(fecha, enDias));
+    const tramo = franjaDelDia(h, CLAVES[dia]);
+    if (tramo && (enDias > 0 || minuto < tramo.abre)) return { abierto: false, abre: aHora(tramo.abre), enDias, diaSemana: dia };
+  }
+  return null;
+}
+
 export const abreEl = (d: Pick<DatosAgenda, 'horario'>, fecha: string) =>
   franjaDelDia(d.horario, CLAVES[diaSemana(fecha)]) !== null;

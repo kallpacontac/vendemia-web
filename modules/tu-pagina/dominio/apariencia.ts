@@ -9,6 +9,8 @@ export interface AparienciaPagina {
   tituloBanner?: string;
   mostrarBanner?: boolean;
   mostrarWhatsapp?: boolean;
+  /** «Abierto ahora» / «Cerrado» según el horario del negocio. Sale salvo que el dueño lo apague. */
+  mostrarHorario?: boolean;
   /** Luxury: presenta los productos en un carrusel y muestra el acceso desde la portada. */
   catalogoLuxuryDestacado?: boolean;
   /** El dueño decide cómo se presentan los servicios Luxury a sus clientes. */

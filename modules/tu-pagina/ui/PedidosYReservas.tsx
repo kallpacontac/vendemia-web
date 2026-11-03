@@ -16,6 +16,7 @@ import { useCargar } from '@/components/panel/useCargar';
 import { supabase } from '@/lib/supabase/client';
 import { telefonoBonito, urlWhatsApp } from '@/modules/tu-pagina/dominio/envio';
 import { cuandoCita, soles, type LineaPedido } from '@/modules/tu-pagina/dominio/tienda';
+import DetallesPedido from '@/modules/tu-pagina/ui/DetallesPedido';
 
 const POR_PAGINA = 50;
 
@@ -32,6 +33,9 @@ interface PedidoWeb {
   entrega: 'recojo' | 'delivery';
   direccion: string;
   referencia: string;
+  nota: string;
+  ubicacion?: string;
+  pagara_con?: string;
   estado: EstadoPedido;
   creado_at: string;
 }
@@ -152,6 +156,7 @@ export function Pedidos({ companyId, nombre }: { companyId: string; nombre: stri
                   <small className="muted">
                     {p.entrega === 'delivery' ? `Delivery: ${p.direccion}${p.referencia ? ` (${p.referencia})` : ''}` : 'Recojo en tienda'}
                   </small>
+                  <DetallesPedido nota={p.nota} ubicacion={p.ubicacion} pagaraCon={p.pagara_con} />
                   <div className="tp-panel-fila__linea" style={{ flexWrap: 'wrap', marginTop: 4 }}>
                     <a className="btn btn-sm btn-ghost" href={urlWhatsApp(p.telefono, msj)} target="_blank" rel="noopener"><MessageCircle size={14} /> WhatsApp</a>
                     <Acciones
