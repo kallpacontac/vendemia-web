@@ -132,7 +132,7 @@ export default function MiPaginaLanding() {
           <span className="mp-flotante mp-flotante--sinapp"><span className="mp-flotante__sello"><Check size={15} /></span> Sin instalar apps</span>
           <div className="mp-telefono">
             <div className="mp-telefono__barra"><span /></div>
-            <div className="mp-telefono__portada"><span>grano-de-barrio.vendemia.com</span><strong>Grano de Barrio</strong><small><i /> Abierto ahora · Pedidos y recojo</small></div>
+            <div className="mp-telefono__portada"><span>turestaurante.vendemia.com</span><strong>Tu Restaurante</strong><small><i /> Abierto ahora · Pedidos y recojo</small></div>
             <div className="mp-telefono__contenido">
               <div className="mp-telefono__categorias"><button type="button" className={categoria === 'Favoritos' ? 'activo' : ''} onClick={() => setCategoria('Favoritos')}>Favoritos</button><button type="button" className={categoria === 'Bebidas' ? 'activo' : ''} onClick={() => setCategoria('Bebidas')}>Bebidas</button></div>
               <div className="mp-telefono__producto"><span className="mp-telefono__foto" /><div><b>{categoria === 'Bebidas' ? 'Cappuccino' : 'Café de la casa'}</b><small>{categoria === 'Bebidas' ? 'Espresso y leche cremosa' : 'Tostado fresco cada mañana'}</small><strong>S/ {categoria === 'Bebidas' ? '14' : '12'}.00</strong></div><button type="button" aria-label="Agregar producto de ejemplo" onClick={() => agregarProducto(categoria === 'Bebidas' ? 14 : 12)}><Plus size={16} /></button></div>
@@ -142,7 +142,7 @@ export default function MiPaginaLanding() {
             <div className="mp-telefono__pie"><span><b>{cantidad} {cantidad === 1 ? 'producto' : 'productos'}</b><strong>S/ {total.toFixed(2)}</strong></span><button type="button" onClick={() => setAviso(true)} disabled={cantidad === 0}><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d={siWhatsapp.path} /></svg> Enviar pedido</button></div>
           </div>
           <span className="mp-flotante mp-flotante--ubicacion"><MapPin size={15} /> Elige entrega o recojo</span>
-          <a className="mp-qr" href="/ejemplos/cafeteria" aria-label="Abrir el ejemplo de cafetería del código QR"><Image src="/assets/mi-pagina/qr-cafeteria.svg" alt="Código QR del ejemplo Grano de Barrio" width={132} height={132} unoptimized /></a>
+          <a className="mp-qr" href="/ejemplos/cafeteria" aria-label="Abrir el ejemplo de cafetería del código QR"><Image src="/assets/mi-pagina/qr-cafeteria.svg" alt="Código QR del ejemplo de cafetería" width={132} height={132} unoptimized /></a>
           <p>Prueba la vista: elige una categoría y agrega un producto.</p>
         </div>
       </section>
