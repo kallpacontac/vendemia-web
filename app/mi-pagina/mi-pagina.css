@@ -367,3 +367,49 @@ body:has(.mp){margin:0}.mp{--mp-ink:#0a0a0a;--mp-muted:#5c5c5c;--mp-line:#eaeae6
 .mp-plan--destacado li svg{color:#fff}
 .mp-plan--destacado .mp-plan__boton{color:var(--mp-accent-strong)!important}
 .mp-planes__periodos small{background:var(--mp-accent-strong);color:#fff}
+
+/* CTA de prueba: negro suave y naranja cálido sobre la paleta Vendemia. */
+.mp .mp-boton,.mp-nav__acciones .mp-boton--chico{background:#111;color:#ff9f50!important}
+.mp .mp-boton:hover,.mp-nav__acciones .mp-boton--chico:hover{background:#252525;color:#ffc498!important}
+.mp .mp-boton--borde{background:transparent;color:#0a0a0a!important}
+.mp .mp-boton--borde:hover{background:#fff0e8;color:#0a0a0a!important}
+.mp .mp-boton--claro{background:#fff0e8;color:#1a0a00!important}
+.mp .mp-boton--claro:hover{background:#fff;color:#1a0a00!important}
+.mp-nav__enlaces>a.mp-nav__activo{color:var(--mp-accent-strong)}
+
+/* Página independiente de planes. */
+.mp-planes-pagina{background:#fff}
+.mp-planes__miga{max-width:1152px;margin:0 auto;padding:25px 24px 0;display:flex;align-items:center;gap:10px;font-size:13px}
+.mp-planes__miga a{color:#5d5d64}
+.mp-planes__miga a:hover{color:var(--mp-accent-strong)}
+.mp-planes-pagina .mp-planes{padding-top:55px}
+.mp-planes-pagina .mp-planes__intro h1{font-size:clamp(40px,4.2vw,60px);font-weight:800;line-height:1.04;letter-spacing:-.05em;margin:0 auto 22px}
+.mp-plan h2{font-size:25px;font-weight:800;letter-spacing:-.04em;margin:0 0 9px}
+.mp-plan__precio:not(:has(del)){margin-top:27px}
+.mp-comparacion{max-width:1152px;margin:0 auto;padding:35px 24px 90px}
+.mp-comparacion__intro h2,.mp-planes__preguntas h2{font-size:clamp(34px,3.5vw,48px);font-weight:800;letter-spacing:-.045em}
+.mp-comparacion__intro p{margin-top:10px;color:#5a5a60;font-size:17px}
+.mp-comparacion__desborde{margin-top:30px;overflow-x:auto;border:1px solid #e7e7e7;border-radius:20px}
+.mp-comparacion table{width:100%;min-width:720px;border-collapse:collapse;text-align:left;font-size:14px}
+.mp-comparacion caption{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}
+.mp-comparacion th,.mp-comparacion td{padding:15px 18px;border-bottom:1px solid #ececec}
+.mp-comparacion thead{background:#111;color:#fff}
+.mp-comparacion thead th:nth-child(3){color:#ffad73}
+.mp-comparacion tbody tr:nth-child(even){background:#faf9f7}
+.mp-comparacion tbody tr:last-child th,.mp-comparacion tbody tr:last-child td{border-bottom:0}
+.mp-comparacion tbody th{font-weight:600}
+.mp-planes__otras{max-width:1104px;margin:0 auto 105px;display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.mp-planes__otras a{min-height:155px;padding:27px;border:1px solid #e5e5e5;border-radius:22px;background:#f4f4f4;display:flex;flex-direction:column;justify-content:space-between;transition:transform .25s}
+.mp-planes__otras a:last-child{background:#fff0e7;border-color:#ffd2b8}
+.mp-planes__otras a:hover{transform:translateY(-4px)}
+.mp-planes__otras span{font-size:23px;font-weight:800;letter-spacing:-.04em}
+.mp-planes__otras b{display:flex;align-items:center;gap:8px;font-size:14px;color:var(--mp-accent-strong)}
+.mp-planes__preguntas{max-width:1152px;margin:0 auto;padding:0 24px 105px;display:grid;grid-template-columns:1fr 1.25fr;gap:55px}
+.mp-planes__preguntas>div{border-top:1px solid #e7e7e7}
+.mp-planes__preguntas details{border-bottom:1px solid #e7e7e7;padding:20px 0}
+.mp-planes__preguntas summary{list-style:none;display:flex;align-items:center;justify-content:space-between;gap:15px;font-size:16px;font-weight:700;cursor:pointer}
+.mp-planes__preguntas summary::-webkit-details-marker{display:none}
+.mp-planes__preguntas details[open] summary svg{transform:rotate(180deg)}
+.mp-planes__preguntas details p{margin-top:12px;color:#5a5a60;font-size:14px;line-height:1.6}
+@media(max-width:800px){.mp-planes__otras{margin-inline:24px}.mp-planes__preguntas{grid-template-columns:1fr;gap:24px}}
+@media(max-width:560px){.mp-planes-pagina .mp-planes{padding-top:45px}.mp-planes__miga{padding-inline:18px}.mp-planes__otras{grid-template-columns:1fr;margin:0 18px 75px}.mp-comparacion{padding:25px 18px 75px}.mp-planes__preguntas{padding:0 18px 75px}}

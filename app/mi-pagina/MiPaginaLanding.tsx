@@ -2,8 +2,9 @@
 
 import { useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
-import { ArrowLeft, ArrowRight, Bell, CalendarDays, Camera, Check, ChevronDown, Clock3, Gift, LayoutGrid, Link2, MapPin, Menu, Monitor, Palette, Plus, ShoppingBag, Smartphone, Tags, X } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Bell, CalendarDays, Camera, Check, ChevronDown, Clock3, LayoutGrid, Link2, MapPin, Palette, Plus, ShoppingBag, Smartphone, Tags, X } from 'lucide-react';
 import { siWhatsapp } from 'simple-icons';
+import MiPaginaHeader, { MiPaginaLogo } from './MiPaginaHeader';
 
 const palabras = ['local', 'carta', 'sitio'] as const;
 const banderas = [
@@ -17,10 +18,6 @@ const banderas = [
   { pais: 'República Dominicana', codigo: 'do' }, { pais: 'Puerto Rico', codigo: 'pr' },
   { pais: 'España', codigo: 'es' },
 ] as const;
-
-function MiPaginaLogo() {
-  return <span className="mp-logo">Vendem<span className="mp-logo__i">ı</span>a</span>;
-}
 
 const ejemplos = [
   { nombre: 'La Baguette', rubro: 'Panadería · carta visual', imagen: '/assets/mi-pagina/previews/la-baguette.webp', alto: 1712, href: '/ejemplos/la-baguette', tono: 'pan' },
@@ -51,12 +48,6 @@ const funciones = [
   { icono: Smartphone, titulo: 'Pensada para móviles', texto: 'Contenido y botones cómodos de usar en pantalla pequeña.' },
 ] as const;
 
-const opcionesPagina = [
-  { nombre: 'Básico', detalle: 'Tu carta con carrito y pedidos directos a tu WhatsApp. Ideal para empezar.', mensual: 29.9, anual: 24.9, puntos: ['Productos en la carta (hasta 45)', 'Carrito y pedidos por WhatsApp', 'Enlace propio y código QR', 'Portadas (hasta 1)', 'Varias sedes y recojo en tienda', 'Moneda configurable (PEN / USD)'] },
-  { nombre: 'Interactivo', detalle: 'Más productos, variantes, popup e historial de pedidos para negocios que crecen.', mensual: 59.9, anual: 49.9, puntos: ['Productos en la carta (hasta 70)', 'Carrito y pedidos por WhatsApp', 'Enlace propio y código QR', 'Portadas (hasta 2)', 'Popups y avisos (hasta 1)', 'Opciones por producto (variantes y adicionales)', 'Historial de pedidos', 'Varias sedes y recojo en tienda', 'Moneda configurable (PEN / USD)', 'Buzón de sugerencias', 'Carta en varios idiomas', 'Imprimir tickets (ticketera)'] },
-  { nombre: 'Pro', detalle: 'Todo ilimitado, con captación de clientes, libro de reclamos y analítica de visitas.', mensual: 69.9, anual: 57.9, puntos: ['Productos en la carta (ilimitados)', 'Carrito y pedidos por WhatsApp', 'Enlace propio y código QR', 'Portadas (ilimitadas)', 'Popups y avisos (ilimitados)', 'Opciones por producto (variantes y adicionales)', 'Historial de pedidos', 'Varias sedes y recojo en tienda', 'Moneda configurable (PEN / USD)', 'Buzón de sugerencias', 'Carta en varios idiomas', 'Libro de reclamos en tu carta', 'Captación de clientes (registro y exportación)', 'Reporte y analítica de visitas', 'Imprimir tickets (ticketera)'] },
-] as const;
-
 const preguntas = [
   { pregunta: '¿Puedo cambiar las fotos y los colores?', respuesta: 'Sí. Desde Mi página puedes cambiar el nombre, la portada, el color y el contenido del negocio. Los ejemplos muestran cómo se ve cada diseño con datos de muestra.' },
   { pregunta: '¿La página sirve para reservar y vender?', respuesta: 'Sí. Puedes usarla como agenda, tienda o una combinación de ambas, según la forma en que atiende tu negocio.' },
@@ -66,14 +57,12 @@ const preguntas = [
 export default function MiPaginaLanding() {
   const raiz = useRef<HTMLDivElement>(null);
   const carrusel = useRef<HTMLDivElement>(null);
-  const [menuAbierto, setMenuAbierto] = useState(false);
   const [cantidad, setCantidad] = useState(0);
   const [total, setTotal] = useState(0);
   const [segundosPromo, setSegundosPromo] = useState(6948);
   const [categoria, setCategoria] = useState<'Favoritos' | 'Bebidas'>('Favoritos');
   const [aviso, setAviso] = useState(false);
   const [tecleado, setTecleado] = useState<string>(palabras[0]);
-  const [periodo, setPeriodo] = useState<'mensual' | 'trimestral' | 'anual'>('anual');
 
   const agregarProducto = (precio: number) => {
     setCantidad((actual) => actual + 1);
@@ -124,19 +113,7 @@ export default function MiPaginaLanding() {
   }, []);
 
   return <div className="mp" ref={raiz}>
-    <header className="mp-nav">
-      <a className="mp-marca" href="/" aria-label="Vendemia, ir al inicio"><MiPaginaLogo /></a>
-      <nav className={menuAbierto ? 'mp-nav__enlaces abierto' : 'mp-nav__enlaces'} aria-label="Mi página">
-        <details className="mp-nav__soluciones"><summary>Soluciones <ChevronDown size={15} /></summary><div className="mp-nav__desplegable" onClick={(evento) => { if ((evento.target as Element).closest('a')) (evento.currentTarget.parentElement as HTMLDetailsElement).open = false; }}><a href="#soluciones" onClick={() => setMenuAbierto(false)}><span><ShoppingBag size={19} /></span><span><b>Cartas interactivas</b><small>Carta con carrito y pedidos por WhatsApp</small></span></a><a href="#ejemplos" onClick={() => setMenuAbierto(false)}><span><Palette size={19} /></span><span><b>Cartas con diseño</b><small>Tu carta con identidad, enlace y QR</small></span></a><a href="/panel/fideliza" onClick={() => setMenuAbierto(false)}><span><Gift size={19} /></span><span><b>Sistema de fidelización</b><small>Puntos, sellos y premios para tus clientes</small></span></a><a href="/contacto" onClick={() => setMenuAbierto(false)}><span><Monitor size={19} /></span><span><b>Páginas web a medida</b><small>Un sitio diseñado para tu negocio</small></span></a></div></details>
-        <a href="#planes" onClick={() => setMenuAbierto(false)}>Planes</a>
-        <a href="#ejemplos" onClick={() => setMenuAbierto(false)}>Rubros</a>
-        <a href="#como-funciona" onClick={() => setMenuAbierto(false)}>Cómo funciona</a>
-        <a href="#preguntas" onClick={() => setMenuAbierto(false)}>Preguntas</a>
-        <a href="/contacto" onClick={() => setMenuAbierto(false)}>Contacto</a>
-      </nav>
-      <div className="mp-nav__acciones"><a className="mp-nav__volver" href="/login">Ya soy cliente</a><a className="mp-boton mp-boton--chico" href="#planes">Ver planes</a></div>
-      <button className="mp-nav__menu" type="button" aria-label={menuAbierto ? 'Cerrar menú' : 'Abrir menú'} aria-expanded={menuAbierto} onClick={() => setMenuAbierto(!menuAbierto)}>{menuAbierto ? <X size={24} /> : <Menu size={24} />}</button>
-    </header>
+    <MiPaginaHeader />
 
     <main>
       <section className="mp-hero" aria-labelledby="mp-titulo">
@@ -190,8 +167,6 @@ export default function MiPaginaLanding() {
       <section className="mp-seccion mp-funciones" aria-labelledby="mp-funciones-titulo"><div className="mp-funciones__intro mp-reveal"><span className="mp-sobre">LO IMPORTANTE, A MANO</span><h2 id="mp-funciones-titulo">Todo lo que tu página<br />puede hacer</h2><p>Una experiencia clara para tus clientes y contenido que puedes gestionar desde tu panel.</p></div><div className="mp-funciones__grid">{funciones.map(({ icono: Icono, titulo, texto }) => <div className="mp-funcion mp-reveal" key={titulo}><span className="mp-funcion__icono"><Icono size={24} /></span><div><h3>{titulo}</h3><p>{texto}</p></div></div>)}</div></section>
 
       <section className="mp-ejemplos" id="ejemplos"><div className="mp-ejemplos__intro mp-reveal"><div><span className="mp-sobre">HECHOS CON VENDEMIA</span><h2>Páginas de ejemplo<br />en acción</h2><p>Pasa el cursor por un celular para recorrer la página. Ábrela para probar el flujo completo; nombres y precios son ilustrativos.</p></div><div className="mp-ejemplos__controles"><button type="button" aria-label="Ver ejemplos anteriores" onClick={() => carrusel.current?.scrollBy({ left: -360, behavior: 'smooth' })}><ArrowLeft size={21} /></button><button type="button" aria-label="Ver más ejemplos" onClick={() => carrusel.current?.scrollBy({ left: 360, behavior: 'smooth' })}><ArrowRight size={21} /></button></div></div><div className="mp-ejemplos__grid" ref={carrusel}>{ejemplos.map((ejemplo) => <a key={ejemplo.nombre} href={ejemplo.href} className={`mp-ejemplo mp-ejemplo--${ejemplo.tono} mp-reveal`}><div className="mp-ejemplo__marco"><div className="mp-ejemplo__telefono"><span className="mp-ejemplo__surco" aria-hidden="true" /><div className="mp-ejemplo__pantalla"><Image src={ejemplo.imagen} alt={`Vista previa de ${ejemplo.nombre}`} width={390} height={ejemplo.alto} unoptimized /></div></div></div><div className="mp-ejemplo__pie"><span><b>{ejemplo.nombre}</b><small>{ejemplo.rubro}</small></span><span className="mp-ejemplo__flecha" aria-hidden="true"><ArrowRight size={20} /></span></div></a>)}</div></section>
-
-      <section className="mp-planes" id="planes" aria-labelledby="mp-planes-titulo"><div className="mp-planes__intro mp-reveal"><h2 id="mp-planes-titulo">Planes de carta digital<br />interactiva</h2><p>Todos incluyen carrito, pedidos por WhatsApp sin comisiones, enlace propio y código QR. Empieza con 7 días gratis, sin tarjeta.</p><div className="mp-planes__periodos" role="group" aria-label="Periodo de pago">{(['mensual', 'trimestral', 'anual'] as const).map((valor) => <button type="button" key={valor} aria-pressed={periodo === valor} onClick={() => setPeriodo(valor)}>{valor === 'mensual' ? 'Mensual' : valor === 'trimestral' ? 'Trimestral' : 'Anual'}{valor === 'trimestral' && <small>−10%</small>}{valor === 'anual' && <small>Gratis 2 meses</small>}</button>)}</div><span className="mp-planes__moneda">Precios en soles. El pago se realiza desde tu panel.</span></div><div className="mp-planes__grid">{opcionesPagina.map((opcion, indice) => { const precio = periodo === 'anual' ? opcion.anual : periodo === 'trimestral' ? Math.round(opcion.mensual * .9 * 100) / 100 : opcion.mensual; const cobro = periodo === 'anual' ? opcion.anual * 12 : periodo === 'trimestral' ? precio * 3 : precio; return <article className={`mp-plan mp-plan--${indice === 1 ? 'destacado' : 'claro'} mp-reveal`} key={opcion.nombre}>{indice === 1 && <span className="mp-plan__sello">El más elegido</span>}<h3>{opcion.nombre}</h3><p>{opcion.detalle}</p><div className="mp-plan__precio"><del>S/ {opcion.mensual.toFixed(2)} al mes</del><strong>S/ {precio.toFixed(2)}</strong><span>al mes</span></div><span className="mp-plan__cobro">{periodo === 'mensual' ? 'Pago mensual' : `Pagas S/ ${cobro.toFixed(2)} cada ${periodo === 'anual' ? 'año' : 'trimestre'}. IGV incluido.`}</span><a className="mp-plan__boton" href="/panel/tu-pagina">Probar 7 días gratis</a><small className="mp-plan__despues">Al terminar la prueba eliges cómo continuar.</small><div className="mp-plan__separador" aria-hidden="true"><i /><span /><i /></div><ul>{opcion.puntos.map((punto) => <li key={punto}><Check size={16} />{punto}</li>)}</ul></article>; })}</div><div className="mp-planes__nota"><span><b>Pago desde tu panel.</b> Elige el plan y el periodo que necesitas.</span><span><b>7 días gratis, sin tarjeta.</b> Durante la prueba no se cobra nada.</span><span><b>Tu carta a tu manera.</b> Cambia productos, precios y contenido desde tu panel.</span></div></section>
 
       <section className="mp-preguntas" id="preguntas"><div><span className="mp-sobre">PREGUNTAS FRECUENTES</span><h2>Lo que necesitas saber.</h2><p>Explora las demos antes de crear tu propia página.</p></div><div className="mp-preguntas__lista">{preguntas.map(({ pregunta, respuesta }) => <details key={pregunta}><summary>{pregunta}<ChevronDown size={20} /></summary><p>{respuesta}</p></details>)}</div></section>
 

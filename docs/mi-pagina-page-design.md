@@ -33,6 +33,7 @@ La sección de soluciones usa una tarjeta de unos 654 × 602 px y dos tarjetas d
 - Los movimientos respetan `prefers-reduced-motion`; el recorrido automático dentro de cada teléfono se desactiva en ese modo.
 - Los CTA llevan al panel de Mi página. La landing principal enlaza la nueva página y muestra dos ejemplos propios.
 - Los planes Básico, Interactivo y Pro, con sus tarifas y listas de funciones, se incorporaron después por solicitud explícita del propietario tomando la referencia como base. Las demos y testimonios de Qcarta no se usan en Vendemia.
-- Los botones y superficies destacadas de Qcarta funcionan por contraste entre un color de marca muy saturado y texto blanco. Vendemia mantiene el naranja, usando su tono profundo `#c63c00` con blanco en botones y tarjetas principales; el naranja claro queda para detalles decorativos.
+- Los botones y superficies destacadas de Qcarta funcionan por contraste entre un color de marca muy saturado y texto blanco. Vendemia mantiene la tarjeta principal en naranja profundo `#c63c00` con texto blanco; el naranja claro queda para detalles decorativos.
+- Los planes viven ahora en `/mi-pagina/planes`, con miga de navegación, selector de periodo, tres tarjetas, comparación de funciones y preguntas. La landing enlaza esa subpágina. Como segunda variante de contraste, los CTA principales usan negro suave `#111` con texto naranja cálido `#ff9f50`; la tarjeta Interactivo conserva naranja profundo con texto blanco.
 
 Los archivos principales son `app/mi-pagina/MiPaginaLanding.tsx`, `app/mi-pagina/mi-pagina.css` y `components/landing/MiPaginaTeaser.tsx`.
