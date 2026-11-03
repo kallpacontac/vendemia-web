@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
 import { ArrowRight, CalendarDays, Check, ChevronDown, Clock3, MapPin, Menu, Plus, ShoppingBag, Smartphone, X } from 'lucide-react';
+import { siWhatsapp } from 'simple-icons';
 
 const palabras = ['local', 'carta', 'sitio'] as const;
 const banderas = [
@@ -52,9 +53,25 @@ export default function MiPaginaLanding() {
   const raiz = useRef<HTMLDivElement>(null);
   const [menuAbierto, setMenuAbierto] = useState(false);
   const [cantidad, setCantidad] = useState(0);
+  const [total, setTotal] = useState(0);
+  const [segundosPromo, setSegundosPromo] = useState(6948);
   const [categoria, setCategoria] = useState<'Favoritos' | 'Bebidas'>('Favoritos');
   const [aviso, setAviso] = useState(false);
   const [tecleado, setTecleado] = useState<string>(palabras[0]);
+
+  const agregarProducto = (precio: number) => {
+    setCantidad((actual) => actual + 1);
+    setTotal((actual) => actual + precio);
+  };
+
+  const relojPromo = [Math.floor(segundosPromo / 3600), Math.floor((segundosPromo % 3600) / 60), segundosPromo % 60]
+    .map((valor) => String(valor).padStart(2, '0')).join(':');
+
+  useEffect(() => {
+    const fin = Date.now() + 6948 * 1000;
+    const intervalo = window.setInterval(() => setSegundosPromo(Math.max(0, Math.ceil((fin - Date.now()) / 1000))), 1000);
+    return () => window.clearInterval(intervalo);
+  }, []);
 
   useEffect(() => {
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
@@ -116,16 +133,21 @@ export default function MiPaginaLanding() {
           <span className="mp-hero__orbita" aria-hidden="true" />
           <span className="mp-hero__mancha mp-hero__mancha--uno" aria-hidden="true" />
           <span className="mp-hero__mancha mp-hero__mancha--dos" aria-hidden="true" />
-          <span className="mp-flotante mp-flotante--promo"><small>Todo en una página</small><b>Lista para compartir</b></span>
-          <span className="mp-flotante mp-flotante--sinapp"><Check size={15} /> Sin instalar apps</span>
+          <span className="mp-flotante mp-flotante--promo"><small>Promo del ejemplo termina en</small><b>{relojPromo}</b></span>
+          <span className="mp-flotante mp-flotante--sinapp"><span className="mp-flotante__sello"><Check size={15} /></span> Sin instalar apps</span>
           <div className="mp-telefono">
             <div className="mp-telefono__barra"><span /></div>
             <div className="mp-telefono__portada"><span>grano-de-barrio.vendemia.com</span><strong>Grano de Barrio</strong><small><i /> Abierto ahora · Pedidos y recojo</small></div>
-            <div className="mp-telefono__contenido"><div className="mp-telefono__categorias"><button type="button" className={categoria === 'Favoritos' ? 'activo' : ''} onClick={() => setCategoria('Favoritos')}>Favoritos</button><button type="button" className={categoria === 'Bebidas' ? 'activo' : ''} onClick={() => setCategoria('Bebidas')}>Bebidas</button></div><div className="mp-telefono__producto"><span className="mp-telefono__foto" /><div><b>{categoria === 'Bebidas' ? 'Cappuccino' : 'Café de la casa'}</b><small>{categoria === 'Bebidas' ? 'Espresso y leche cremosa' : 'Tostado fresco cada mañana'}</small><strong>S/ {categoria === 'Bebidas' ? '14' : '12'}.00</strong></div><button type="button" aria-label="Agregar producto de ejemplo" onClick={() => setCantidad(cantidad + 1)}><Plus size={16} /></button></div><div className="mp-telefono__producto"><span className="mp-telefono__foto mp-telefono__foto--dos" /><div><b>Croissant de mantequilla</b><small>Horneado hoy</small><strong>S/ 9.00</strong></div><button type="button" aria-label="Agregar croissant de ejemplo" onClick={() => setCantidad(cantidad + 1)}><Plus size={16} /></button></div><div className="mp-telefono__producto"><span className="mp-telefono__foto mp-telefono__foto--tres" /><div><b>Queque de naranja</b><small>Porción del día</small><strong>S/ 8.00</strong></div><button type="button" aria-label="Agregar queque de ejemplo" onClick={() => setCantidad(cantidad + 1)}><Plus size={16} /></button></div></div>
-            <div className="mp-telefono__pie"><span><b>{cantidad}</b> {cantidad === 1 ? 'producto' : 'productos'}</span><button type="button" onClick={() => setAviso(true)} disabled={cantidad === 0}>Ver pedido <ArrowRight size={15} /></button></div>
+            <div className="mp-telefono__contenido">
+              <div className="mp-telefono__categorias"><button type="button" className={categoria === 'Favoritos' ? 'activo' : ''} onClick={() => setCategoria('Favoritos')}>Favoritos</button><button type="button" className={categoria === 'Bebidas' ? 'activo' : ''} onClick={() => setCategoria('Bebidas')}>Bebidas</button></div>
+              <div className="mp-telefono__producto"><span className="mp-telefono__foto" /><div><b>{categoria === 'Bebidas' ? 'Cappuccino' : 'Café de la casa'}</b><small>{categoria === 'Bebidas' ? 'Espresso y leche cremosa' : 'Tostado fresco cada mañana'}</small><strong>S/ {categoria === 'Bebidas' ? '14' : '12'}.00</strong></div><button type="button" aria-label="Agregar producto de ejemplo" onClick={() => agregarProducto(categoria === 'Bebidas' ? 14 : 12)}><Plus size={16} /></button></div>
+              <div className="mp-telefono__producto"><span className="mp-telefono__foto mp-telefono__foto--dos" /><div><b>Croissant de mantequilla</b><small>Horneado hoy</small><strong>S/ 9.00</strong></div><button type="button" aria-label="Agregar croissant de ejemplo" onClick={() => agregarProducto(9)}><Plus size={16} /></button></div>
+              <div className="mp-telefono__producto"><span className="mp-telefono__foto mp-telefono__foto--tres" /><div><b>Queque de naranja</b><small>Porción del día</small><strong>S/ 8.00</strong></div><button type="button" aria-label="Agregar queque de ejemplo" onClick={() => agregarProducto(8)}><Plus size={16} /></button></div>
+            </div>
+            <div className="mp-telefono__pie"><span><b>{cantidad} {cantidad === 1 ? 'producto' : 'productos'}</b><strong>S/ {total.toFixed(2)}</strong></span><button type="button" onClick={() => setAviso(true)} disabled={cantidad === 0}><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d={siWhatsapp.path} /></svg> Enviar pedido</button></div>
           </div>
           <span className="mp-flotante mp-flotante--ubicacion"><MapPin size={15} /> Elige entrega o recojo</span>
-          <span className="mp-flotante mp-flotante--pedido"><ShoppingBag size={15} /> Pedido a un toque</span>
+          <a className="mp-qr" href="/ejemplos/cafeteria" aria-label="Abrir el ejemplo de cafetería del código QR"><Image src="/assets/mi-pagina/qr-cafeteria.svg" alt="Código QR del ejemplo Grano de Barrio" width={132} height={132} unoptimized /></a>
           <p>Prueba la vista: elige una categoría y agrega un producto.</p>
         </div>
       </section>
@@ -134,9 +156,18 @@ export default function MiPaginaLanding() {
 
       <div className="mp-cinta" aria-label="Tipos de negocio"><span>UNA PÁGINA PARA TU FORMA DE TRABAJAR</span><div className="mp-cinta__rubros"><span>Catálogo</span><i /> <span>Reservas</span><i /> <span>Pedidos</span><i /> <span>Canchas</span></div></div>
 
-      <section className="mp-seccion" id="soluciones"><div className="mp-seccion__cabecera mp-reveal"><div><span className="mp-sobre">TU PÁGINA, A TU MEDIDA</span><h2>Elige lo que necesita<br />tu negocio hoy.</h2></div><p>Los diseños comparten una idea: que tu cliente entienda qué ofreces y pueda actuar en pocos toques.</p></div><div className="mp-soluciones"><a href="/ejemplos/la-baguette" className="mp-solucion mp-solucion--tienda mp-reveal"><span>01 / VENDE</span><ShoppingBag size={32} /><h3>Una tienda para tus productos</h3><p>Fotos, categorías, precios y carrito en un recorrido simple.</p><b>Ver ejemplo <ArrowRight size={18} /></b></a><a href="/ejemplos/clinica-dental?diseno=clara" className="mp-solucion mp-solucion--agenda mp-reveal"><span>02 / AGENDA</span><CalendarDays size={32} /><h3>Una agenda para tus servicios</h3><p>Servicios y horarios fáciles de encontrar desde el primer vistazo.</p><b>Ver ejemplo <ArrowRight size={18} /></b></a><a href="/ejemplos/canchas" className="mp-solucion mp-solucion--canchas mp-reveal"><span>03 / RESERVA</span><Clock3 size={32} /><h3>Una cancha lista para reservar</h3><p>Modalidad, día y hora visibles, con extras opcionales.</p><b>Ver ejemplo <ArrowRight size={18} /></b></a></div></section>
+      <section className="mp-seccion mp-soluciones-seccion" id="soluciones">
+        <div className="mp-soluciones-seccion__intro mp-reveal"><h2>Tres formas de hacer más<br />con tu página</h2><p>Elige la que va con tu negocio hoy. Puedes sumar otra cuando la necesites.</p></div>
+        <div className="mp-soluciones-grid">
+          <a href="/ejemplos/cafeteria" className="mp-solucion mp-solucion--principal mp-reveal"><span className="mp-solucion__icono"><ShoppingBag size={27} /></span><h3>Catálogo interactivo</h3><p>Muestra tus productos con fotos, precios y carrito. Tus clientes preparan un pedido claro desde el celular y tú administras el contenido desde tu panel.</p><ul><li><Check size={18} /> Carrito y pedidos por WhatsApp</li><li><Check size={18} /> Productos y precios editables</li><li><Check size={18} /> Tu marca en una página propia</li><li><Check size={18} /> Enlace fácil de compartir</li></ul><b>Ver catálogo de ejemplo <ArrowRight size={19} /></b></a>
+          <div className="mp-soluciones-grid__secundarias">
+            <a href="/ejemplos/clinica-dental?diseno=clara" className="mp-solucion mp-solucion--secundaria mp-reveal"><span className="mp-solucion__icono"><CalendarDays size={27} /></span><h3>Agenda para tus servicios</h3><p>Tus clientes ven los servicios, eligen una fecha y encuentran horarios disponibles en pocos toques.</p><b>Ver agenda de ejemplo <ArrowRight size={19} /></b></a>
+            <a href="/ejemplos/canchas" className="mp-solucion mp-solucion--destacada mp-reveal"><span className="mp-solucion__icono"><Clock3 size={27} /></span><h3>Canchas listas para reservar</h3><p>Modalidad, día y hora a primera vista, con extras opcionales y lista de espera para turnos ocupados.</p><b>Ver canchas de ejemplo <ArrowRight size={19} /></b></a>
+          </div>
+        </div>
+      </section>
 
-      <section className="mp-pasos" id="como-funciona"><div className="mp-seccion__cabecera mp-reveal"><div><span className="mp-sobre">ASÍ DE SIMPLE</span><h2>Lista en tres pasos.</h2></div><p>Empieza con una plantilla, agrega el contenido de tu negocio y comparte tu página.</p></div><div className="mp-pasos__grid">{pasos.map((paso) => <div className="mp-reveal" key={paso.numero}><span>{paso.numero}</span><h3>{paso.titulo}</h3><p>{paso.texto}</p></div>)}</div></section>
+      <section className="mp-pasos" id="como-funciona"><div className="mp-pasos__layout"><div className="mp-pasos__intro mp-reveal"><h2>Lista en tres pasos</h2><p>Sin instalar programas ni contratar a un programador.</p><a href="/panel/tu-pagina">Crear mi página <ArrowRight size={18} /></a></div><ol className="mp-pasos__lista">{pasos.map((paso) => <li className="mp-reveal" key={paso.numero}><span className="mp-pasos__numero">{Number(paso.numero)}</span><div><h3>{paso.titulo}</h3><p>{paso.texto}</p></div></li>)}</ol></div></section>
 
       <section className="mp-seccion mp-funciones" aria-labelledby="mp-funciones-titulo"><div className="mp-seccion__cabecera mp-reveal"><div><span className="mp-sobre">LO IMPORTANTE, A MANO</span><h2 id="mp-funciones-titulo">Diseñada para que<br />puedan elegirte.</h2></div><p>Una experiencia clara para tus clientes y contenido que puedes gestionar desde tu panel.</p></div><div className="mp-funciones__grid">{funciones.map(({ icono: Icono, titulo, texto }) => <div className="mp-reveal" key={titulo}><span><Icono size={24} /></span><h3>{titulo}</h3><p>{texto}</p></div>)}</div></section>
 

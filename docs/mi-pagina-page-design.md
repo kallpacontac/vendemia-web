@@ -15,11 +15,15 @@ Referencia visual consultada: https://qcarta.com/ (3 de noviembre de 2026).
 
 En una ventana CSS de 1530 px, la portada de referencia usa un contenedor de 1152 px con 24 px de espacio interior, dos columnas de unos 549 y 499 px separadas por 56 px, un título Poppins 800 de 68 px con interlineado de 69,36 px y un teléfono de 320 × 624 px. Las banderas son imágenes de 60 × 40 px en una fila que avanza horizontalmente, con 36 px entre ellas.
 
+La sección de soluciones usa una tarjeta de unos 654 × 602 px y dos tarjetas de unos 430 × 293 px apiladas con 20 px de separación. La sección de tres pasos divide 1104 px en columnas de 440 y 616 px, con 48 px entre ellas; cada paso ocupa al menos 125 px.
+
 ## Adaptación a Vendemia
 
 - La ruta `/mi-pagina` usa esta secuencia con la paleta de Vendemia: negro, crema y naranja. El texto de la portada usa Poppins. El wordmark dice «Vendemia» con lettering blanco, contorno negro grueso y extrusión negra que sigue cada letra; la «i» no tiene punto blanco y lleva un solo punto naranja. No lleva cápsula de fondo ni mascota.
 - El titular reserva un espacio fijo para «local», «carta» y «sitio» y las escribe con un cursor naranja, sin desplazar «digital» a otra línea. El teléfono, los avisos flotantes y las capas usan movimientos de distintas velocidades; `prefers-reduced-motion` los desactiva.
 - El teléfono de muestra mide 320 × 624 px en escritorio. La cabecera naranja llega hasta el marco superior y un surco negro queda centrado. La franja negra muestra los tipos de negocio; una sección blanca aparte presenta imágenes de 17 banderas en movimiento horizontal. Las imágenes se guardan localmente en `public/assets/mi-pagina/banderas/` para que no dependan de emoji ni de una conexión externa en producción.
+- Los avisos flotantes incluyen un contador de promoción de muestra y la opción de entrega o recojo. El QR local lleva al ejemplo de cafetería y el resumen suma los precios al agregar productos. El verde se reserva para el control de WhatsApp; el marco del QR y los demás acentos siguen el naranja Vendemia.
+- Las tres soluciones conservan los ejemplos propios de catálogo, agenda y canchas dentro de la composición asimétrica de la referencia. Los pasos se presentan como tres tarjetas numeradas con una línea de continuidad.
 - La demo de portada es ilustrativa y local: no envía pedidos ni guarda información.
 - La galería muestra únicamente ejemplos del proyecto: La Baguette, Grano de Barrio, Atelier Norte, Zona Gol y Sonrisa Norte.
 - Los CTA llevan al panel de Mi página. La landing principal enlaza la nueva página y muestra dos ejemplos propios.
