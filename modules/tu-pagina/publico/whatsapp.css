@@ -1,13 +1,33 @@
-.tp-whatsapp-flotante { position: fixed; z-index: 95; left: max(16px, env(safe-area-inset-left)); bottom: calc(18px + env(safe-area-inset-bottom)); display: inline-flex; align-items: center; justify-content: center; gap: 9px; min-width: 56px; min-height: 56px; padding: 0 16px; border: 0; border-radius: 999px; background: #16a34a; color: #fff !important; box-shadow: 0 8px 26px #0004; text-decoration: none; font: 800 13px/1 'Plus Jakarta Sans', system-ui, sans-serif; cursor: pointer; }
-.tp-whatsapp-flotante:hover { background: #12813c; }
-.tp-whatsapp-flotante:focus-visible { outline: 3px solid #102916; outline-offset: 3px; }
+.tp-whatsapp-flotante {
+  position: fixed; z-index: 95; left: max(20px, env(safe-area-inset-left)); bottom: calc(80px + env(safe-area-inset-bottom));
+  width: 56px; height: 56px; display: grid; place-items: center; padding: 0; border: 0; border-radius: 50%;
+  background: #25d366; color: #fff !important; box-shadow: 0 10px 15px -3px #0002, 0 4px 6px -4px #0002;
+  text-decoration: none; cursor: pointer; isolation: isolate; animation: tp-whatsapp-salto 4s infinite;
+}
+.tp-whatsapp-flotante__onda { position: absolute; inset: 0; z-index: -1; border-radius: 50%; background: #25d366; opacity: 0; pointer-events: none; animation: tp-whatsapp-pulso 4s cubic-bezier(0,0,.2,1) infinite; }
+.tp-whatsapp-flotante__icono { position: relative; width: 29px; height: 29px; }
+.tp-whatsapp-flotante__aviso { position: absolute; top: -5px; right: -5px; width: 21px; height: 21px; display: grid; place-items: center; border: 2px solid #fff; border-radius: 50%; background: #ef4444; color: #fff; font: 800 10px/1 'Plus Jakarta Sans', system-ui, sans-serif; }
+.tp-whatsapp-flotante:hover, .tp-whatsapp-flotante:focus-visible { background: #1cbd57; animation-play-state: paused; }
+.tp-whatsapp-flotante:focus-visible { outline: 3px solid #102916; outline-offset: 4px; }
+.tp-whatsapp-flotante:active { animation: none; transform: scale(.9); }
+@keyframes tp-whatsapp-salto {
+  0%, 25%, 100% { transform: translateY(0); }
+  6% { transform: translateY(-25%); }
+  13% { transform: translateY(0); }
+  19% { transform: translateY(-10%); }
+}
+@keyframes tp-whatsapp-pulso {
+  0% { transform: scale(1); opacity: .6; }
+  25%, 100% { transform: scale(2); opacity: 0; }
+}
+body:has(.tp-barra) .tp-whatsapp-flotante, body:has(.ne-cafe-cartbar) .tp-whatsapp-flotante { bottom: calc(154px + env(safe-area-inset-bottom)); }
+@media (prefers-reduced-motion: reduce) { .tp-whatsapp-flotante, .tp-whatsapp-flotante__onda { animation: none; } }
 .tp-whatsapp-demo-fondo { position: fixed; inset: 0; z-index: 230; display: grid; place-items: center; padding: 16px; background: #1119; }
 .tp-whatsapp-demo { position: relative; width: min(100%, 430px); display: grid; gap: 12px; padding: 28px; border-radius: 20px; background: #fff; color: #17251c; box-shadow: 0 20px 60px #0004; font: 14px/1.45 'Plus Jakarta Sans', system-ui, sans-serif; }
-.tp-whatsapp-demo > svg { color: #16a34a; }
+.tp-whatsapp-demo > svg { color: #25d366; }
 .tp-whatsapp-demo h2, .tp-whatsapp-demo p { margin: 0; }
 .tp-whatsapp-demo h2 { font-size: 23px; }
 .tp-whatsapp-demo blockquote { margin: 0; padding: 13px; border-radius: 10px; background: #eff8f1; }
 .tp-whatsapp-demo small { color: #526157; }
-.tp-whatsapp-demo > button:last-child { min-height: 46px; border: 0; border-radius: 10px; background: #16a34a; color: #fff; font: inherit; font-weight: 800; cursor: pointer; }
+.tp-whatsapp-demo > button:last-child { min-height: 46px; border: 0; border-radius: 10px; background: #25d366; color: #fff; font: inherit; font-weight: 800; cursor: pointer; }
 .tp-whatsapp-demo-cerrar { position: absolute; top: 15px; right: 15px; width: 36px; height: 36px; display: grid; place-items: center; border: 1px solid #d5ded7; border-radius: 50%; background: #fff; cursor: pointer; }
-@media (max-width: 540px) { .tp-whatsapp-flotante { width: 56px; padding: 0; } .tp-whatsapp-flotante span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0,0,0,0); } body:has(.ne-cafe-cartbar) .tp-whatsapp-flotante { bottom: calc(82px + env(safe-area-inset-bottom)); } }
