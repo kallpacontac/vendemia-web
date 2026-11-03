@@ -325,7 +325,7 @@ body:has(.mp){margin:0}.mp{--mp-ink:#0a0a0a;--mp-muted:#5c5c5c;--mp-line:#eaeae6
 @media(max-width:380px){.mp-planes__periodos button{padding:8px;font-size:11px}.mp-planes__periodos small{font-size:9px}}
 
 /* Navegación medida sobre la referencia de planes: Poppins 14/500. */
-.mp-nav{height:69px;gap:20px}
+.mp-nav{height:69px;gap:20px;background:rgba(255,255,255,.85);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px)}
 .mp-nav__enlaces{gap:4px;font-family:'Poppins',sans-serif;font-size:14px;font-weight:500}
 .mp-nav__enlaces>a,.mp-nav__soluciones>summary{min-height:37px;display:inline-flex;align-items:center;gap:5px;padding:8px 12px;border-radius:999px;white-space:nowrap;line-height:1.5;letter-spacing:0;cursor:pointer;transition:background .2s,color .2s}
 .mp-nav__enlaces>a:hover,.mp-nav__soluciones>summary:hover,.mp-nav__soluciones[open]>summary{background:#f1f1f2;color:#0a0a0a}
