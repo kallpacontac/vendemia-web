@@ -142,7 +142,7 @@ export default function MiPaginaLanding() {
           <span className="mp-hero__orbita" aria-hidden="true" />
           <span className="mp-hero__mancha mp-hero__mancha--uno" aria-hidden="true" />
           <span className="mp-hero__mancha mp-hero__mancha--dos" aria-hidden="true" />
-          <span className="mp-flotante mp-flotante--promo"><small>Promo del ejemplo termina en</small><b>{relojPromo}</b></span>
+          <span className="mp-flotante mp-flotante--promo"><small>Tu promo termina en</small><b>{relojPromo}</b></span>
           <span className="mp-flotante mp-flotante--sinapp"><span className="mp-flotante__sello"><Check size={15} /></span> Sin instalar apps</span>
           <div className="mp-telefono">
             <div className="mp-telefono__barra"><span /></div>
