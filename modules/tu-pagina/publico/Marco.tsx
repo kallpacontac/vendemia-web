@@ -11,7 +11,6 @@ import { colorO } from '@/modules/tu-pagina/dominio/apariencia';
 import { fotoDePlantilla } from '@/modules/tu-pagina/dominio/fotos';
 import LuxuryPortada from '@/modules/tu-pagina/publico/LuxuryPortada';
 import AnimacionesPlantilla from '@/modules/tu-pagina/publico/AnimacionesPlantilla';
-import BotonWhatsApp from '@/modules/tu-pagina/publico/BotonWhatsApp';
 import '@/modules/tu-pagina/estilos/publica.css';
 
 export function estiloDe(p: Pick<PaginaPublica, 'color' | 'secciones'>): React.CSSProperties {
@@ -58,7 +57,6 @@ export default function Marco({ pagina, children, vista, portada }: { pagina: Pa
       <AnimacionesPlantilla />
       {promocion && !(plantilla === 'restaurante' && portada) && <div className="tp-promocion" role="note"><span>OFERTA ESPECIAL</span><strong>{promocion}</strong></div>}
       {children}
-      {pagina.secciones.apariencia?.mostrarWhatsapp !== false && <BotonWhatsApp negocio={pagina.titulo} numero={pagina.whatsapp} />}
       {/* El Libro de Reclamaciones va en el pie de TODA la página, también la de inicio (sql/0006). */}
       {pagina.secciones.reclamos && pagina.secciones.proveedor?.ruc && (
         <p className="tp-pie tp-no-imprimir">

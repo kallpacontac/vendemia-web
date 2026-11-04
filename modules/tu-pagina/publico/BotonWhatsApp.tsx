@@ -20,7 +20,7 @@ function ContenidoBoton() {
   </>;
 }
 
-/** Acceso consistente en todas las plantillas. En ejemplos muestra el flujo sin enviar datos. */
+/** Botón flotante de demostración exclusivo del ejemplo Casa Brasa. */
 export default function BotonWhatsApp({ negocio, numero, demo = false }: { negocio: string; numero?: string; demo?: boolean }) {
   const [abierto, setAbierto] = useState(false);
   const cerrarRef = useRef<HTMLButtonElement>(null);
