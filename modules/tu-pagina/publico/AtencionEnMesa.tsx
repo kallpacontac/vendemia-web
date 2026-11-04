@@ -271,7 +271,7 @@ export default function AtencionEnMesa({ negocio, logo, whatsapp, token, mesa, e
             </button>
           )}
           <div className="tm-grandes">
-            <button type="button" className="tm-grande" disabled={enviando} onClick={() => void llamar({ tipo: 'mozo' }, vaEnCamino)}>
+            <button type="button" className="tm-grande tm-grande--mesero" disabled={enviando} onClick={() => void llamar({ tipo: 'mozo' }, vaEnCamino)}>
               <BellRing size={26} aria-hidden="true" /><b>{t.mozo}</b><small>{t.mozoSub}</small>
             </button>
             <button type="button" className="tm-grande" onClick={() => ir('cuenta')}>

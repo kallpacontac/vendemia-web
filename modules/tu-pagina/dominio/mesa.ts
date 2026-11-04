@@ -81,7 +81,7 @@ export function seSirveAhora(a: AjustePlato | undefined, ahora: number): boolean
 const ES = {
   pregunta: '¿Qué necesitas?',
   verCarta: 'Ver la carta', verCartaSub: 'Menú y precios, y arma tu pedido',
-  mozo: 'Llamar al mozo', mozoSub: 'Que se acerque a la mesa',
+  mozo: 'Llamar al mesero', mozoSub: 'Que se acerque a la mesa',
   cuenta: 'Pedir la cuenta', cuentaSub: 'Boleta o factura',
   otro: 'Otro pedido', otroSub: 'Cuéntanos qué necesitas',
   sugerencia: 'Sugerencias', sugerenciaSub: 'Queremos saber cómo mejorar',

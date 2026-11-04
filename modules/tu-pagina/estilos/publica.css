@@ -214,6 +214,7 @@
 
 .tp-galeria { position: relative; background: #fff; }
 .tp-galeria img { display: block; width: 100%; aspect-ratio: 1 / 1; object-fit: cover; }
+@media (max-width: 639px) { .tp-hojita--tienda .tp-galeria img { height: clamp(200px, 36dvh, 300px); aspect-ratio: auto; } }
 .tp-galeria__btn {
   position: absolute; top: 50%; transform: translateY(-50%); width: 36px; height: 36px; border-radius: 50%; border: 0;
   background: rgba(255, 255, 255, .9); display: grid; place-items: center; cursor: pointer; color: #16130f;
