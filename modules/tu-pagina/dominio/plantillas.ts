@@ -4,12 +4,14 @@ import type { BusinessMode } from '@/lib/supabase/types';
 
 export type TipoPagina = 'agenda' | 'tienda' | 'ambos';
 export type Disposicion = 'cuadricula' | 'filas' | 'carta';
-export type PlantillaGuardada = 'agenda' | 'vitrina' | 'lista' | 'carta' | 'clases' | 'envios' | 'impulso' | 'luxury' | 'restaurante' | 'canchas' | 'mesa';
+export type PlantillaGuardada = 'agenda' | 'vitrina' | 'lista' | 'carta' | 'clases' | 'envios' | 'impulso' | 'luxury' | 'restaurante' | 'canchas' | 'mesa' | 'unas';
 
 const LUXURY: { id: PlantillaGuardada; nombre: string; describe: string } =
   { id: 'luxury', nombre: 'Luxury', describe: 'Fotografía editorial y servicios para salones y barberías.' };
 const CANCHAS: { id: PlantillaGuardada; nombre: string; describe: string } =
   { id: 'canchas', nombre: 'Fútbol / canchas', describe: 'Modalidades, días y horarios listos para reservar.' };
+const UNAS: { id: PlantillaGuardada; nombre: string; describe: string } =
+  { id: 'unas', nombre: 'Estudio de uñas', describe: 'Fotografía elegante, servicios y reserva en línea.' };
 
 export const PLANTILLAS: { id: PlantillaGuardada; nombre: string; describe: string }[] = [
   { id: 'vitrina', nombre: 'Minimalista', describe: 'Fotos grandes y tarjetas limpias.' },
@@ -27,13 +29,14 @@ export const PLANTILLAS_AGENDA: { id: PlantillaGuardada; nombre: string; describ
   { id: 'lista', nombre: 'Agenda editorial', describe: 'Servicios en lista y una presentación más fotográfica.' },
   CANCHAS,
   LUXURY,
+  UNAS,
 ];
 
-export const PLANTILLAS_AMBOS: { id: PlantillaGuardada; nombre: string; describe: string }[] = [...PLANTILLAS, CANCHAS, LUXURY];
+export const PLANTILLAS_AMBOS: { id: PlantillaGuardada; nombre: string; describe: string }[] = [...PLANTILLAS, CANCHAS, LUXURY, UNAS];
 
 export const plantillaValida = (valor: unknown): valor is PlantillaGuardada =>
   valor === 'vitrina' || valor === 'lista' || valor === 'carta' ||
-  valor === 'agenda' || valor === 'clases' || valor === 'envios' || valor === 'impulso' || valor === 'luxury' || valor === 'restaurante' || valor === 'canchas' || valor === 'mesa';
+  valor === 'agenda' || valor === 'clases' || valor === 'envios' || valor === 'impulso' || valor === 'luxury' || valor === 'restaurante' || valor === 'canchas' || valor === 'mesa' || valor === 'unas';
 
 export const EXPERIENCIAS: { id: TipoPagina; nombre: string; describe: string }[] = [
   { id: 'agenda', nombre: 'Agenda', describe: 'Reservas claras, con servicios, día y hora.' },
@@ -57,6 +60,7 @@ export const esNegocioGastronomico = (nombre: string): boolean =>
 
 export const plantillaSugerida = (tipo: TipoPagina, nombre: string): PlantillaGuardada => {
   if (tipo !== 'agenda' && esNegocioGastronomico(nombre)) return 'restaurante';
+  if (tipo !== 'tienda' && /uñas|u[nñ]as|nail|manicur|pedicur/i.test(nombre)) return 'unas';
   if (tipo !== 'tienda' && /cancha|f[uú]tbol|fulbito|deporplaza/i.test(nombre)) return 'canchas';
   if (tipo !== 'tienda' && /barber|peluquer|sal[oó]n|estil|cabello|spa|beauty/i.test(nombre)) return 'luxury';
   return plantillaPorDefecto(tipo);
@@ -68,4 +72,4 @@ export const pedidoGastronomicoDe = (plantilla: PlantillaGuardada, tipo: TipoPag
 
 export const disposicionDe = (plantilla: PlantillaGuardada, tipo: TipoPagina): Disposicion =>
   plantilla === 'carta' ? 'carta' : plantilla === 'lista' || plantilla === 'agenda' || plantilla === 'clases'
-    ? 'filas' : plantilla === 'vitrina' || plantilla === 'impulso' || plantilla === 'luxury' || plantilla === 'restaurante' || plantilla === 'mesa' ? 'cuadricula' : tipo === 'agenda' ? 'filas' : 'cuadricula';
+    ? 'filas' : plantilla === 'vitrina' || plantilla === 'impulso' || plantilla === 'luxury' || plantilla === 'restaurante' || plantilla === 'mesa' || plantilla === 'unas' ? 'cuadricula' : tipo === 'agenda' ? 'filas' : 'cuadricula';

@@ -1,0 +1,131 @@
+.tp[data-plantilla='unas'] { background: #dfd0c8; --tp-fondo: #fbf9f7; --tp-papel: #fff; --tp-texto: #211b1a; }
+.tp[data-plantilla='unas'] > .tp-promocion { max-width: 1440px; margin: auto; padding: 7px 18px; background: #cbb3a8; color: #49342d; font-size: 11px; }
+.tp[data-plantilla='unas'] > .tp-pie { max-width: 1440px; margin: 0 auto; background: #181616; color: #fff; }
+.un { width: min(100%, 1440px); margin: 0 auto; overflow: hidden; background: #fff; color: #1f1b19; font-family: 'Plus Jakarta Sans', Arial, sans-serif; }
+.un a { text-decoration: none; }
+.un-nav { position: relative; z-index: 2; min-height: 82px; display: flex; align-items: center; justify-content: space-between; gap: 24px; padding: 10px 6.5%; background: #fff; }
+.un-marca { max-width: 230px; display: inline-flex; align-items: center; color: #171313; font-size: clamp(22px, 2vw, 30px); font-weight: 850; letter-spacing: -.075em; line-height: 1; }
+.un-marca img { display: block; max-width: 210px; max-height: 60px; object-fit: contain; }
+.un-nav nav { display: flex; align-items: center; gap: clamp(13px, 2.2vw, 33px); }
+.un-nav nav a { color: #322a27; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .08em; }
+.un-nav nav a:hover, .un-nav nav a:focus-visible { color: var(--tp-color); }
+.un-nav__acciones { display: flex; align-items: center; gap: 18px; }
+.un-nav__acciones > a { display: inline-flex; align-items: center; justify-content: center; }
+.un-nav__reserva { gap: 5px; min-height: 37px; padding: 0 13px; border-radius: 50px; background: #1b1918; color: #fff !important; font-size: 11px; font-weight: 800; }
+.un-hero { position: relative; min-height: 540px; display: flex; flex-direction: column; justify-content: center; padding: 48px 8.5% 94px; overflow: hidden; background-color: var(--un-rosa, #dcc1ba); background-position: center; background-size: cover; }
+.un-hero--foto::before { content: ''; position: absolute; inset: 0; background: linear-gradient(90deg, #e3c8c1eb 0%, #e3c8c1b3 24%, transparent 58%); pointer-events: none; }
+.un-hero__contenido { position: relative; z-index: 1; max-width: 500px; }
+.un-etiqueta { display: inline-flex; align-items: center; gap: 7px; color: #5c4b46; font-size: 11px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; }
+.un-hero h1 { max-width: 480px; margin: 17px 0 14px; font-size: clamp(48px, 5.7vw, 78px); line-height: 1.02; letter-spacing: -.065em; font-weight: 820; }
+.un-hero p { max-width: 410px; margin: 0 0 27px; color: #534540; font-size: 15px; line-height: 1.7; }
+.un-boton { min-height: 45px; display: inline-flex; align-items: center; justify-content: center; gap: 10px; padding: 0 18px; border-radius: 999px; background: #1b1918; color: #fff !important; font-size: 12px; font-weight: 800; }
+.un-boton:hover { background: var(--tp-color); }
+.un-hero__beneficios { position: absolute; z-index: 1; bottom: 32px; left: 8.5%; display: flex; gap: 40px; }
+.un-hero__beneficios span { display: grid; justify-items: center; gap: 6px; color: #2e2724; font-size: 11px; font-weight: 750; }
+.un-servicios { padding: 75px 8.5% 15px; background: var(--un-fondo, #fbf9f7); }
+.un-seccion-cabeza > span, .un-sobretitulo { color: #b89686; font-size: 11px; font-weight: 800; letter-spacing: .16em; }
+.un-seccion-cabeza h2, .un-reserva h2, .un-historia h2 { margin: 11px 0 12px; font-size: clamp(30px, 3.3vw, 45px); line-height: 1.15; letter-spacing: -.045em; }
+.un-seccion-cabeza p, .un-reserva__intro p { max-width: 550px; margin: 0; color: #746b66; font-size: 14px; line-height: 1.7; }
+.un-servicios__lista { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-top: 28px; }
+.un-servicio { min-width: 0; display: flex; align-items: center; gap: 12px; padding: 17px 14px; border: 1px solid #e9e0db; border-radius: 13px; background: #fff; }
+.un-servicio > span { flex: none; width: 35px; height: 35px; display: grid; place-items: center; border-radius: 50%; background: #f5e6df; color: #9c7167; }
+.un-servicio div { min-width: 0; display: grid; gap: 5px; }
+.un-servicio b { overflow: hidden; color: #28211f; font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
+.un-servicio small { color: #8f817b; font-size: 10px; }
+.un-servicio > svg { flex: none; margin-left: auto; color: #9c7167; }
+.un-vacio { margin: 26px 0 0; color: #746b66; font-size: 13px; }
+.un-reserva { position: relative; min-height: 620px; padding: 60px 8.5% 95px; background: var(--un-fondo, #fbf9f7); }
+.un-reserva__intro { position: absolute; z-index: 1; top: 60px; left: 8.5%; width: min(43%, 500px); }
+.un-reserva__widget { width: 100%; }
+.un .tp-agenda-widget { display: grid; grid-template-columns: minmax(0, 1fr) minmax(330px, 420px); grid-template-areas: 'cal resumen' 'cal horas' 'cal datos'; gap: 0 8%; overflow: visible; border: 0; border-radius: 0; background: transparent; box-shadow: none; }
+.un .tp-agenda-widget > * { min-width: 0; border-color: #e7d6ca; }
+.un .tp-agenda-widget__resumen { grid-area: resumen; padding: 30px 30px 22px; border: 1px solid #e5d4c5; border-bottom: 0; border-radius: 18px 18px 0 0; background: #fff; box-shadow: 0 -5px 27px #62433312; }
+.un .tp-agenda-widget__calendario { grid-area: cal; align-self: start; padding: 210px 0 0; border: 0 !important; }
+.un .tp-agenda-widget__horas { grid-area: horas; padding: 4px 30px 20px; border: 1px solid #e5d4c5; border-top: 0; background: #fff; box-shadow: 0 8px 27px #62433312; }
+.un .tp-agenda-widget__datos { grid-area: datos; padding: 0 30px 28px; border: 1px solid #e5d4c5 !important; border-top: 0 !important; border-radius: 0 0 18px 18px; background: #fff; box-shadow: 0 14px 27px #62433312; }
+.un .tp-agenda-widget__horas:last-child { padding-bottom: 30px; border-radius: 0 0 18px 18px; }
+.un .tp-agenda-widget__paso { color: #a57d70 !important; font-size: 10px !important; }
+.un .tp-agenda-widget__marca { background: #f2e7e1; color: #9b7569; }
+.un .tp-agenda-widget h3, .un .tp-agenda-widget label, .un .tp-agenda-widget select { color: #28211f; }
+.un .tp-agenda-widget h3 { font-size: 18px; }
+.un .tp-agenda-widget p, .un .tp-agenda-widget__resumen > span:not(.tp-agenda-widget__marca) { color: #766b66; }
+.un .tp-agenda-widget select, .un .tp-agenda-widget input { width: 100%; min-height: 43px; padding: 9px 11px; border: 1px solid #dfd5ce; border-radius: 8px; background: #fff; color: #28211f; font: inherit; }
+.un .tp-agenda-widget__dias { grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 5px; }
+.un .tp-agenda-widget__dias button { min-height: 62px; border: 0; border-radius: 50%; background: transparent; color: #342925; }
+.un .tp-agenda-widget__dias button:hover:not(:disabled) { background: #f2e6df; }
+.un .tp-agenda-widget__dias button[aria-pressed='true'] { background: #ead0bd; color: #251c18; }
+.un .tp-agenda-widget__dias b { font-size: 16px; }
+.un .tp-agenda-widget__horas > div { grid-template-columns: repeat(3, 1fr); gap: 6px; margin-top: 12px; }
+.un .tp-agenda-widget__horas button { min-height: 35px; border-color: #ddcec3; color: #513b33; font-size: 12px; }
+.un .tp-agenda-widget__horas button[aria-pressed='true'] { border-color: #2b2522; background: #2b2522; color: #fff; }
+.un .tp-agenda-widget__datos .tp-boton, .un-demo-widget__boton { width: 100%; min-height: 43px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; border: 0; border-radius: 8px; background: #1c1a19; color: #fff !important; font-size: 12px; font-weight: 800; cursor: pointer; }
+.un .tp-agenda-widget__datos .tp-boton:disabled, .un-demo-widget__boton:disabled { opacity: .5; cursor: not-allowed; }
+.un-demo-widget__resumen { display: flex; align-items: center; gap: 6px; margin: 16px 0 9px !important; }
+.un-demo-widget__nota { margin-top: 9px !important; font-size: 11px !important; }
+.un-reserva__enlace { display: inline-flex; align-items: center; gap: 5px; margin: 16px 0 0 58%; color: #8e6259 !important; font-size: 12px; font-weight: 800; }
+.un-reserva__vacio { width: min(420px, 45%); margin-left: auto; padding: 33px; border: 1px solid #e5d4c5; border-radius: 18px; background: #fff; box-shadow: 0 10px 30px #62433312; }
+.un-reserva__vacio h3 { margin: 12px 0 8px; }
+.un-reserva__vacio p { color: #766b66; font-size: 13px; }
+.un-reserva__vacio a { display: inline-flex; align-items: center; gap: 5px; margin-top: 10px; color: #8e6259; font-weight: 800; }
+.un-historia { min-height: 520px; display: grid; grid-template-columns: 1fr 1fr; align-items: center; gap: 6%; padding: 75px 12%; background: #fff; }
+.un-historia__foto { width: min(100%, 380px); aspect-ratio: 1; justify-self: center; border-radius: 50%; background: #d7b8ad center / cover no-repeat; box-shadow: 0 12px 38px #55362e20; }
+.un-historia__texto { max-width: 500px; }
+.un-historia__texto p { color: #746b66; font-size: 14px; line-height: 1.75; }
+.un-historia__puntos { display: flex; flex-wrap: wrap; gap: 15px; margin: 25px 0; }
+.un-historia__puntos span { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 750; }
+.un-historia__texto > a { display: inline-flex; align-items: center; gap: 7px; color: #8f6259; font-size: 13px; font-weight: 800; }
+.un-productos { padding: 72px 8.5%; background: #fbf9f7; }
+.un-productos .tp-catalogo { margin-top: 25px; }
+.un-pie { min-height: 145px; display: flex; justify-content: space-between; align-items: center; gap: 28px; padding: 25px 8.5%; background: #1b1918; color: #fff; }
+.un-pie b { font-size: 23px; letter-spacing: -.05em; }
+.un-pie p { max-width: 330px; margin: 5px 0 0; color: #bbb2ad; font-size: 11px; }
+.un-pie > div:last-child { display: grid; gap: 8px; font-size: 11px; }
+.un-pie > div:last-child > * { display: inline-flex; align-items: center; gap: 7px; }
+.un-pie a { color: #fff; }
+.un--reserva-sola .un-nav__reserva { display: inline-flex !important; }
+.un--reserva-sola .un-reserva { min-height: 700px; }
+.un--reserva-sola .un-reserva__intro h1 { margin: 11px 0 12px; font-size: clamp(30px, 3.3vw, 45px); letter-spacing: -.045em; }
+@media (max-width: 950px) {
+  .un-nav { padding-inline: 4%; }
+  .un-nav nav { gap: 12px; }
+  .un-nav__reserva { display: none !important; }
+  .un-servicios__lista { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .un .tp-agenda-widget { grid-template-columns: minmax(0, 1fr) minmax(290px, 360px); gap: 0 4%; }
+  .un .tp-agenda-widget__dias { grid-template-columns: repeat(4, 1fr); }
+}
+@media (max-width: 700px) {
+  .un-nav { min-height: 66px; padding: 10px 16px; }
+  .un-marca { max-width: 160px; font-size: 22px; }
+  .un-marca img { max-width: 150px; max-height: 42px; }
+  .un-nav nav { display: none; }
+  .un-nav__acciones { gap: 12px; }
+  .un-hero { min-height: 580px; justify-content: flex-start; padding: 40px 22px 100px; background-position: 60% center; }
+  .un-hero--foto::before { background: linear-gradient(180deg, #e5c9c2f5 0%, #e5c9c2dc 35%, #e5c9c220 75%); }
+  .un-hero__contenido { max-width: 390px; }
+  .un-hero h1 { max-width: 320px; margin-top: 15px; font-size: clamp(39px, 11vw, 54px); }
+  .un-hero p { max-width: 310px; font-size: 13px; line-height: 1.55; }
+  .un-hero__beneficios { right: 0; bottom: 20px; left: 0; justify-content: center; gap: 25px; }
+  .un-hero__beneficios span { font-size: 10px; }
+  .un-servicios { padding: 45px 20px 10px; }
+  .un-servicios__lista { grid-template-columns: 1fr 1fr; gap: 8px; }
+  .un-servicio { padding: 10px; gap: 7px; }
+  .un-servicio > span { display: none; }
+  .un-servicio > svg { width: 14px; }
+  .un-reserva { min-height: 0; padding: 42px 20px 62px; }
+  .un-reserva__intro { position: static; width: 100%; margin-bottom: 25px; }
+  .un .tp-agenda-widget { display: flex; flex-direction: column; gap: 0; }
+  .un .tp-agenda-widget__resumen { order: 0; padding: 22px 20px; }
+  .un .tp-agenda-widget__calendario { order: 1; align-self: stretch; padding: 22px 20px; border: 1px solid #e5d4c5 !important; border-top: 0 !important; background: #fff; }
+  .un .tp-agenda-widget__horas { order: 2; padding: 0 20px 20px; border-top: 0 !important; border-radius: 0; }
+  .un .tp-agenda-widget__datos { order: 3; padding: 0 20px 22px; }
+  .un .tp-agenda-widget__dias { grid-template-columns: repeat(7, 1fr); }
+  .un .tp-agenda-widget__dias button { min-height: 45px; }
+  .un .tp-agenda-widget__dias small { font-size: 10px; }
+  .un .tp-agenda-widget__dias b { font-size: 14px; }
+  .un-reserva__enlace { margin-left: 0; }
+  .un-reserva__vacio { width: 100%; }
+  .un-historia { grid-template-columns: 1fr; gap: 33px; padding: 55px 23px; }
+  .un-historia__foto { width: min(100%, 320px); }
+  .un-productos { padding: 48px 20px; }
+  .un-pie { flex-direction: column; align-items: flex-start; padding: 33px 22px; }
+}

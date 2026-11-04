@@ -65,6 +65,8 @@ const urlVista = (slug: string, valores: {
     pnp: (valores.apariencia.pedirNotaPedido ?? pedidoGastronomicoDe(valores.plantilla, valores.tipo)) ? '1' : '0',
     pup: (valores.apariencia.pedirUbicacion ?? pedidoGastronomicoDe(valores.plantilla, valores.tipo)) ? '1' : '0',
     fp: valores.apariencia.fotoPlantilla ?? '', sp: valores.sinPortada ? '1' : '0',
+    ust: valores.apariencia.tituloSeccionUnas ?? '', ustx: valores.apariencia.textoSeccionUnas ?? '',
+    usf: valores.apariencia.fotoDetalleUnas ?? '',
   });
   return `/tu-pagina/${slug}?${q.toString()}`;
 };
@@ -234,7 +236,7 @@ function MiPagina({ companyId, nombre, pagina, agendaNube, alGuardar }: {
   const [logo, setLogo] = useState(pagina?.logo_url ?? '');
   const [portada, setPortada] = useState(pagina?.portada_url ?? '');
   const [apariencia, setApariencia] = useState<AparienciaPagina>(pagina?.secciones?.apariencia ?? (esNegocioGastronomico(nombre) ? { fotoPlantilla: /pizzer|pizza/i.test(nombre) ? 'pizzeria' : 'cafeteria' } : {}));
-  const [subiendo, setSubiendo] = useState<'logo' | 'portada' | 'portadaLuxurySecundaria' | null>(null);
+  const [subiendo, setSubiendo] = useState<'logo' | 'portada' | 'portadaLuxurySecundaria' | 'fotoDetalleUnas' | null>(null);
   const [porEncuadrar, setPorEncuadrar] = useState<File | null>(null);
   const [libre, setLibre] = useState<boolean | null>(null);
   const [errorSlug, setErrorSlug] = useState(false);
@@ -267,13 +269,14 @@ function MiPagina({ companyId, nombre, pagina, agendaNube, alGuardar }: {
     };
   }, [slug, companyId, pagina?.slug]);
 
-  async function subirImagen(file: File, destino: 'logo' | 'portada' | 'portadaLuxurySecundaria') {
+  async function subirImagen(file: File, destino: 'logo' | 'portada' | 'portadaLuxurySecundaria' | 'fotoDetalleUnas') {
     setSubiendo(destino);
     try {
       const url = await subirImagenMarca(file, companyId, destino === 'logo' ? 'brand' : 'catalog');
       if (destino === 'logo') setLogo(url);
       else if (destino === 'portada') setPortada(url);
-      else setApariencia((actual) => ({ ...actual, portadaLuxurySecundaria: url }));
+      else if (destino === 'portadaLuxurySecundaria') setApariencia((actual) => ({ ...actual, portadaLuxurySecundaria: url }));
+      else setApariencia((actual) => ({ ...actual, fotoDetalleUnas: url }));
       avisar('Imagen lista. Guarda los cambios para publicarla.');
     } catch (e) {
       avisar(mensajeDe(e), 'error');
@@ -283,7 +286,7 @@ function MiPagina({ companyId, nombre, pagina, agendaNube, alGuardar }: {
   }
 
   async function guardar() {
-    if (!esUrlPublica(logo) || !esUrlPublica(portada) || !esUrlPublica(apariencia.portadaLuxurySecundaria ?? '')) { avisar('Las fotos deben tener un enlace público https.', 'error'); return; }
+    if (!esUrlPublica(logo) || !esUrlPublica(portada) || !esUrlPublica(apariencia.portadaLuxurySecundaria ?? '') || !esUrlPublica(apariencia.fotoDetalleUnas ?? '')) { avisar('Las fotos deben tener un enlace público https.', 'error'); return; }
     if (!/^\d{8,15}$/.test(telefonoNormal(whatsapp))) { avisar('Revisa el número de WhatsApp antes de publicar.', 'error'); return; }
     if (reclamos && !proveedorCompleto(proveedor)) { avisar('Para el Libro de Reclamaciones faltan tu razón social, un RUC válido (11 cifras) y la dirección.', 'error'); return; }
     const aparienciaPublicada = { ...apariencia, plantillaActiva: !pagina?.publicada || plantillaManual || apariencia.plantillaActiva === true };
@@ -389,6 +392,10 @@ function MiPagina({ companyId, nombre, pagina, agendaNube, alGuardar }: {
                     if (opcion.id === 'luxury' && plantilla !== 'luxury') {
                       setApariencia((actual) => ({ ...actual, fotoPlantilla: 'barberia' }));
                       if (!pagina?.publicada && !colorManual) setColor('#D0AB75');
+                    }
+                    if (opcion.id === 'unas' && plantilla !== 'unas') {
+                      setApariencia((actual) => ({ ...actual, fotoPlantilla: 'unas' }));
+                      if (!pagina?.publicada && !colorManual) setColor('#A57970');
                     }
                     if ((opcion.id === 'restaurante' || opcion.id === 'mesa') && plantilla !== opcion.id) {
                       setApariencia((actual) => ({ ...actual, fotoPlantilla: /pizzer|pizza/i.test(titulo) ? 'pizzeria' : 'cafeteria' }));
@@ -502,8 +509,22 @@ function MiPagina({ companyId, nombre, pagina, agendaNube, alGuardar }: {
               <img className="tp-panel-imagen tp-panel-imagen--portada" src={esUrlPublica(apariencia.portadaLuxurySecundaria ?? '') && apariencia.portadaLuxurySecundaria || FOTOS_SERVICIOS_LUXURY.corte} alt="Vista previa del segundo banner" />
               <label className="tp-panel-enlace-imagen">O pega un enlace HTTPS<input className="input" type="url" value={apariencia.portadaLuxurySecundaria ?? ''} placeholder="https://…/segundo-banner.jpg" onChange={(e) => setApariencia({ ...apariencia, portadaLuxurySecundaria: e.target.value })} /></label>
             </div>}
-            {plantilla !== 'luxury' && <label className="tp-panel-check"><input type="checkbox" checked={apariencia.mostrarBanner !== false} onChange={(e) => setApariencia({ ...apariencia, mostrarBanner: e.target.checked })} /><span><b>Mostrar portada</b><small className="muted">Puede llevar imagen o un color de fondo.</small></span></label>}
-            {(plantilla === 'luxury' || apariencia.mostrarBanner !== false) && <label className="tp-panel-campo"><span>{plantilla === 'luxury' ? 'Texto pequeño del primer banner' : 'Título de la portada'} <small className="muted">(opcional)</small></span><input className="input" maxLength={80} value={apariencia.tituloBanner ?? ''} placeholder={plantilla === 'luxury' ? 'BARBERÍA · LIMA' : 'Algo nuevo te espera'} onChange={(e) => setApariencia({ ...apariencia, tituloBanner: e.target.value })} /></label>}
+            {plantilla === 'unas' && <div className="tp-panel-campo">
+              <span>Foto de la sección «Nosotros» <small className="muted">(opcional)</small></span>
+              <small className="muted">Si no subes una foto, se muestra la del diseño.</small>
+              <div className="tp-panel-imagen-acciones">
+                <label className="tp-panel-subir">{subiendo === 'fotoDetalleUnas' ? 'Subiendo…' : apariencia.fotoDetalleUnas ? 'Cambiar foto' : 'Subir mi foto'}
+                  <input type="file" accept="image/*" disabled={subiendo !== null} onChange={(e) => { const file = e.target.files?.[0]; if (file) void subirImagen(file, 'fotoDetalleUnas'); e.target.value = ''; }} />
+                </label>
+                {apariencia.fotoDetalleUnas && <button type="button" className="btn btn-sm btn-ghost" disabled={subiendo !== null} onClick={() => setApariencia({ ...apariencia, fotoDetalleUnas: '' })}>Usar foto del diseño</button>}
+              </div>
+              <img className="tp-panel-imagen tp-panel-imagen--portada" src={esUrlPublica(apariencia.fotoDetalleUnas ?? '') && apariencia.fotoDetalleUnas || '/assets/unas-ejemplo/detalle.webp'} alt="Vista previa de la sección Nosotros" />
+              <label className="tp-panel-enlace-imagen">O pega un enlace HTTPS<input className="input" type="url" value={apariencia.fotoDetalleUnas ?? ''} placeholder="https://…/trabajo.jpg" onChange={(e) => setApariencia({ ...apariencia, fotoDetalleUnas: e.target.value })} /></label>
+              <label className="tp-panel-campo"><span>Título de la sección</span><input className="input" maxLength={90} value={apariencia.tituloSeccionUnas ?? ''} placeholder="Belleza en cada detalle" onChange={(e) => setApariencia({ ...apariencia, tituloSeccionUnas: e.target.value })} /></label>
+              <label className="tp-panel-campo"><span>Texto de la sección</span><textarea className="input" rows={3} maxLength={240} value={apariencia.textoSeccionUnas ?? ''} placeholder="Cuéntales qué hace especial tu atención." onChange={(e) => setApariencia({ ...apariencia, textoSeccionUnas: e.target.value })} /></label>
+            </div>}
+            {plantilla !== 'luxury' && plantilla !== 'unas' && <label className="tp-panel-check"><input type="checkbox" checked={apariencia.mostrarBanner !== false} onChange={(e) => setApariencia({ ...apariencia, mostrarBanner: e.target.checked })} /><span><b>Mostrar portada</b><small className="muted">Puede llevar imagen o un color de fondo.</small></span></label>}
+            {(plantilla === 'luxury' || plantilla === 'unas' || apariencia.mostrarBanner !== false) && <label className="tp-panel-campo"><span>{plantilla === 'luxury' ? 'Texto pequeño del primer banner' : 'Título de la portada'} <small className="muted">(opcional)</small></span><input className="input" maxLength={80} value={apariencia.tituloBanner ?? ''} placeholder={plantilla === 'luxury' ? 'BARBERÍA · LIMA' : plantilla === 'unas' ? 'Uñas que hablan de ti.' : 'Algo nuevo te espera'} onChange={(e) => setApariencia({ ...apariencia, tituloBanner: e.target.value })} /></label>}
             <label className="tp-panel-campo"><span>Banner de promoción <small className="muted">(opcional)</small></span><input className="input" maxLength={100} value={apariencia.promocionTexto ?? ''} placeholder="Esta semana: 2x1 en productos seleccionados" onChange={(e) => setApariencia({ ...apariencia, promocionTexto: e.target.value })} /><small className="muted">Aparece arriba de tu página en cualquier plantilla. Déjalo vacío para ocultarlo.</small></label>
             <label className="tp-panel-check"><input type="checkbox" checked={apariencia.mostrarWhatsapp !== false} onChange={(e) => setApariencia({ ...apariencia, mostrarWhatsapp: e.target.checked })} /><span><b>Mostrar botón de WhatsApp</b><small className="muted">Los pedidos y reservas siguen enviando su aviso.</small></span></label>
             <label className="tp-panel-check"><input type="checkbox" checked={apariencia.mostrarHorario !== false} onChange={(e) => setApariencia({ ...apariencia, mostrarHorario: e.target.checked })} /><span><b>Mostrar si estás abierto</b><small className="muted">«Abierto ahora» o «Cerrado», según tu horario de atención. Solo informa: tus clientes pueden pedir igual.</small></span></label>
@@ -559,7 +580,7 @@ function MiPagina({ companyId, nombre, pagina, agendaNube, alGuardar }: {
 
         {!publicada && paso < 3 && <button type="button" className="btn btn-primary tp-panel-siguiente" disabled={paso === 1 && !titulo.trim()} onClick={() => setPaso(paso === 1 ? 2 : 3)}>Siguiente paso →</button>}
         {!publicada && paso > 1 && <button type="button" className="btn btn-ghost tp-panel-volver" onClick={() => setPaso(paso === 3 ? 2 : 1)}>← Volver</button>}
-        {(publicada || paso === 3) && <button className="btn btn-primary tp-panel-siguiente" disabled={guardando || subiendo !== null || libre !== true || !whatsapp.trim() || !titulo.trim() || !esUrlPublica(logo) || !esUrlPublica(portada)} onClick={() => void guardar()}>
+        {(publicada || paso === 3) && <button className="btn btn-primary tp-panel-siguiente" disabled={guardando || subiendo !== null || libre !== true || !whatsapp.trim() || !titulo.trim() || !esUrlPublica(logo) || !esUrlPublica(portada) || !esUrlPublica(apariencia.fotoDetalleUnas ?? '')} onClick={() => void guardar()}>
           {guardando ? 'Publicando…' : publicada ? 'Guardar cambios' : 'Publicar mi página'}
         </button>}
       </section>
@@ -590,7 +611,7 @@ function MiPagina({ companyId, nombre, pagina, agendaNube, alGuardar }: {
 /** Sin foto propia, la portada lleva la de un ejemplo; al subir la suya, esta deja de salir. */
 function FotosPlantilla({ tipo, plantilla, elegida, alElegir }: { tipo: TipoPagina; plantilla: PlantillaGuardada; elegida?: string; alElegir: (id: string) => void }) {
   const actual = plantilla === 'luxury' && elegida === 'ninguna' ? fotoPlantillaPorDefecto(tipo, plantilla) : esFotoPlantilla(elegida) ? elegida : fotoPlantillaPorDefecto(tipo, plantilla);
-  const categorias = plantilla === 'luxury' ? ['barberia'] : plantilla === 'canchas' ? ['canchas'] : plantilla === 'restaurante' || plantilla === 'mesa' ? ['cafeteria', 'pizzeria'] : tipo === 'agenda' ? ['clinica', 'barberia'] : tipo === 'tienda' ? ['cafeteria', 'pizzeria', 'clinica'] : ['clinica', 'barberia', 'cafeteria', 'pizzeria'];
+  const categorias = plantilla === 'unas' ? ['unas'] : plantilla === 'luxury' ? ['barberia'] : plantilla === 'canchas' ? ['canchas'] : plantilla === 'restaurante' || plantilla === 'mesa' ? ['cafeteria', 'pizzeria'] : tipo === 'agenda' ? ['clinica', 'barberia'] : tipo === 'tienda' ? ['cafeteria', 'pizzeria', 'clinica'] : ['clinica', 'barberia', 'cafeteria', 'pizzeria'];
   return (
     <div className="tp-panel-fotos">
       <small className="muted">Mientras no subas la tuya, tu portada usa una foto de la plantilla:</small>

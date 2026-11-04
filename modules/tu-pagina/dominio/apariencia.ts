@@ -23,6 +23,10 @@ export interface AparienciaPagina {
   fotoPlantilla?: string;
   /** Foto opcional del segundo banner de Luxury; sin ella se usa la de la plantilla. */
   portadaLuxurySecundaria?: string;
+  /** Estudio de uñas: contenido e imagen de la sección inferior. */
+  tituloSeccionUnas?: string;
+  textoSeccionUnas?: string;
+  fotoDetalleUnas?: string;
   /** Primera línea del pedido enviado por WhatsApp. El resto del resumen se genera con los datos reales. */
   mensajePedidoIntro?: string;
   pedirMetodoPago?: boolean;

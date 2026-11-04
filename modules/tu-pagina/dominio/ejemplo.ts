@@ -21,6 +21,7 @@ export const urlEjemploPara = (tipo: TipoPagina, plantilla: PlantillaGuardada, v
   if (plantilla === 'restaurante') return '/ejemplos/la-baguette';
   if (plantilla === 'mesa') return '/ejemplos/mesa';
   if (plantilla === 'luxury') return `/ejemplos/barberia?tipo=${tipo}&servicios=${vistaServicios}`;
+  if (plantilla === 'unas') return '/ejemplos/unas';
   if (tipo === 'agenda') return `/ejemplos/clinica-dental?diseno=${plantilla === 'lista' ? 'editorial' : 'clara'}`;
   if (tipo === 'tienda' && plantilla === 'agenda') return '/ejemplos/cafeteria';
   return urlEjemplo(esPlantillaEjemplo(plantilla) ? plantilla : 'vitrina');

@@ -39,6 +39,9 @@ export function conVista(p: PaginaPublica, q?: ParametrosVista): PaginaPublica {
         pedirNotaPedido: q.pnp === '0' ? false : q.pnp === '1' ? true : anterior.pedirNotaPedido,
         pedirUbicacion: q.pup === '0' ? false : q.pup === '1' ? true : anterior.pedirUbicacion,
         fotoPlantilla: q.fp === undefined ? anterior.fotoPlantilla : esFotoPlantilla(q.fp) ? q.fp : undefined,
+        tituloSeccionUnas: q.ust === undefined ? anterior.tituloSeccionUnas : q.ust.slice(0, 90),
+        textoSeccionUnas: q.ustx === undefined ? anterior.textoSeccionUnas : q.ustx.slice(0, 240),
+        fotoDetalleUnas: q.usf === undefined ? anterior.fotoDetalleUnas : q.usf.startsWith('https://') ? q.usf : undefined,
       },
     },
   };
@@ -47,7 +50,7 @@ export function conVista(p: PaginaPublica, q?: ParametrosVista): PaginaPublica {
 /** Conserva solo los parámetros necesarios al abrir la reserva de una vista previa. */
 export function consultaVista(q?: ParametrosVista): string {
   if (q?.vista !== '1') return '';
-  const claves = ['vista', 'tipo', 'plantilla', 'pa', 'color', 'ct', 'fa', 'ft', 'cb', 'mb', 'promo', 'mw', 'mh', 'lcd', 'vs', 'lm', 'mpi', 'pmp', 'pnp', 'pup', 'fp', 'sp'];
+  const claves = ['vista', 'tipo', 'plantilla', 'pa', 'color', 'ct', 'fa', 'ft', 'cb', 'mb', 'promo', 'mw', 'mh', 'lcd', 'vs', 'lm', 'mpi', 'pmp', 'pnp', 'pup', 'fp', 'sp', 'ust', 'ustx', 'usf'];
   const parametros = new URLSearchParams();
   for (const clave of claves) if (q[clave] !== undefined) parametros.set(clave, q[clave]);
   return `?${parametros.toString()}`;

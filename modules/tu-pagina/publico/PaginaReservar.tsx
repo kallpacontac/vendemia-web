@@ -18,6 +18,7 @@ import { conCanchas } from '@/modules/tu-pagina/dominio/canchas';
 import { paginaDe } from '@/modules/tu-pagina/servidor/pagina';
 import { escaparateDe } from '@/modules/tu-pagina/servidor/escaparate';
 import { conVista, consultaVista } from '@/modules/tu-pagina/dominio/vista';
+import './unas.css';
 
 type Props = { params: { slug: string }; searchParams?: Record<string, string | undefined> };
 
@@ -36,6 +37,7 @@ export default async function PaginaReservar({ params, searchParams }: Props) {
   const soloGrupos = reservables.length > 0 && reservables.every((i) => i.tipo === 'grupo');
   const luxury = p.secciones.apariencia?.plantillaActiva && p.plantilla === 'luxury';
   const agendaDisenada = p.secciones.apariencia?.plantillaActiva && (p.plantilla === 'agenda' || p.plantilla === 'lista');
+  const unas = p.secciones.apariencia?.plantillaActiva && p.plantilla === 'unas';
 
   if (conCanchas(p.secciones)) return (
     <Marco pagina={p} vista="agenda">
@@ -51,6 +53,15 @@ export default async function PaginaReservar({ params, searchParams }: Props) {
       </div>
     </Marco>
   );
+
+  if (unas) return <Marco pagina={p} vista="agenda">
+    <div className="un un--reserva-sola">
+      <header className="un-nav"><a className="un-marca" href={`../${p.slug}${consultaVista(searchParams)}`}>{p.titulo}</a><a className="un-nav__reserva" href={`../${p.slug}${consultaVista(searchParams)}`}><ChevronLeft size={16} /> Volver al inicio</a></header>
+      <section className="un-reserva" aria-label="Reservar una cita"><div className="un-reserva__intro"><span className="un-sobretitulo">TU TIEMPO, TU ESTILO ♡</span><h1>Elige tu momento</h1><p>Selecciona un servicio, un día y un horario disponible para separar tu cita.</p></div>
+        {esc && reservables.length > 0 ? <div className="un-reserva__widget"><Escaparate esc={esc} slug={p.slug} whatsapp={p.whatsapp} disposicion="filas" puedePedir={false} puedeReservar solo="reservas" agendaEstilo="agenda" agendaNombre={p.titulo} servicioInicialId={searchParams?.servicio} /></div> : <div className="un-reserva__vacio"><h2>Pronto podrás reservar aquí</h2><p>El negocio aún no publicó servicios con horarios.</p></div>}
+      </section>
+    </div>
+  </Marco>;
 
   if (agendaDisenada) return <Marco pagina={p} vista="agenda">
     <main className="tp-agenda-reserva-pagina">

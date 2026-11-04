@@ -30,6 +30,7 @@ import AgendaPortada from '@/modules/tu-pagina/publico/AgendaPortada';
 import CanchasPortada from '@/modules/tu-pagina/publico/CanchasPortada';
 import EstadoHorario from '@/modules/tu-pagina/publico/EstadoHorario';
 import { CartaSoloVer } from '@/modules/tu-pagina/publico/CartaMesa';
+import UnasPortada from '@/modules/tu-pagina/publico/UnasPortada';
 
 type Props = { params: { slug: string }; searchParams?: Record<string, string | undefined> };
 
@@ -86,6 +87,9 @@ export default async function Portada({ params, searchParams }: Props) {
   // Las demos de agenda y la página del negocio comparten ahora la misma
   // composición: portada, servicios y el selector de horarios real.
   const agendaDisenada = p.secciones.apariencia?.plantillaActiva && tipo === 'agenda' && (plantilla === 'agenda' || plantilla === 'lista');
+  if (plantilla === 'unas' && p.secciones.apariencia?.plantillaActiva && p.secciones.reservar) {
+    return <Marco pagina={p} portada><UnasPortada pagina={p} esc={escTodo} reservarHref={`./${p.slug}/reservar${consultaVista(searchParams)}`} /></Marco>;
+  }
   if (agendaDisenada) {
     const reservarHref = `./${p.slug}/reservar${consultaVista(searchParams)}`;
     return <Marco pagina={p} portada>
