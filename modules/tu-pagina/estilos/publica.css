@@ -1032,6 +1032,7 @@ body:has(.tp[data-plantilla='restaurante']) { margin: 0; }
 .tp[data-plantilla='restaurante'] .tp-catalogo__busqueda { max-width: 560px; margin-bottom: 18px; border-radius: 999px; }
 .tp[data-plantilla='restaurante'] .tp-catalogo__layout { display: block; }
 .tp[data-plantilla='restaurante'] .tp-familias { display: flex; gap: 16px; margin: 0 0 28px; padding: 3px 0 9px; overflow-x: auto; scrollbar-width: thin; }
+@media (min-width: 768px) { .tp[data-plantilla='restaurante'] .tp-catalogo__busqueda { margin-inline: auto; } .tp[data-plantilla='restaurante'] .tp-familias { justify-content: safe center; } }
 .tp[data-plantilla='restaurante'] .tp-familias .tp-chip { width: 90px; min-width: 90px; padding: 0; display: grid; justify-items: center; gap: 5px; border: 0; border-radius: 0; background: transparent; color: var(--tp-texto); white-space: nowrap; }
 .tp[data-plantilla='restaurante'] .tp-familias .tp-chip > span:not(.tp-chip__imagen) { max-width: 88px; overflow: hidden; text-overflow: ellipsis; font-size: 12px; }
 .tp[data-plantilla='restaurante'] .tp-familias .tp-chip small { display: none; }
