@@ -2,9 +2,10 @@
 -- FOTOS DE EJEMPLO · el equipo de barberia-01
 -- ═══════════════════════════════════════════════════════════════════════════
 --
--- Pedido por Alvaro el 2-nov-2026. Son caras generadas por IA, no los barberos:
--- solo para ver la reserva con fotos en el negocio de prueba. Viven en
--- public/assets/equipo-barberia/, así que hay que subir la web antes.
+-- Fotografías reales de Pexels, solo para visualizar la selección en el negocio
+-- de prueba. No corresponden a sus empleados. Fuentes y autores en
+-- docs/fuentes-fotos-barberia.md. Viven en public/assets/equipo-barberia/,
+-- así que hay que subir la web antes.
 --
 -- Requiere modules/tu-pagina/sql/0012_foto_del_equipo.sql. Se reparten por orden
 -- de nombre y solo a quien no tiene foto: no pisa ninguna subida desde el panel.

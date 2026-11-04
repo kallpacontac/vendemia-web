@@ -3,6 +3,7 @@ import LuxuryPortada from '@/modules/tu-pagina/publico/LuxuryPortada';
 import AnimacionesPlantilla from '@/modules/tu-pagina/publico/AnimacionesPlantilla';
 import LuxuryCatalogoEjemplo from '@/modules/tu-pagina/publico/LuxuryCatalogoEjemplo';
 import LuxuryServiciosEjemplo from '@/modules/tu-pagina/publico/LuxuryServiciosEjemplo';
+import LuxuryEquipoEjemplo from '@/modules/tu-pagina/publico/LuxuryEquipoEjemplo';
 import EjemplosNav from '@/modules/tu-pagina/publico/EjemplosNav';
 import { SERVICIOS_BARBERIA } from '@/modules/tu-pagina/dominio/barberia-ejemplo';
 import '@/modules/tu-pagina/estilos/publica.css';
@@ -30,6 +31,7 @@ export default function BarberiaLuxuryEjemplo({ searchParams }: { searchParams?:
       catalogoProductosDisponible={conProductos}
     />
     <main className="tp-hoja">
+      <LuxuryEquipoEjemplo />
       <LuxuryServiciosEjemplo vista={vistaServicios} />
       {conProductos && <LuxuryCatalogoEjemplo />}
     </main>

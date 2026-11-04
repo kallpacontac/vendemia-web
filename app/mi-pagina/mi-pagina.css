@@ -241,6 +241,8 @@ body:has(.mp){margin:0}.mp{--mp-ink:#0a0a0a;--mp-muted:#5c5c5c;--mp-line:#eaeae6
 .mp-ejemplo--pan .mp-ejemplo__marco{background:radial-gradient(circle at 50% 40%,#f9ddac,#ece8df 70%)}
 .mp-ejemplo--cafe .mp-ejemplo__marco{background:radial-gradient(circle at 50% 40%,#e7d8c3,#e9e4dc 70%)}
 .mp-ejemplo--barberia .mp-ejemplo__marco{background:radial-gradient(circle at 50% 40%,#d1c5b9,#e8e3de 70%)}
+.mp-ejemplo--brasa .mp-ejemplo__marco{background:radial-gradient(circle at 50% 40%,#f4c8a3,#f1e2d5 70%)}
+.mp-ejemplo--unas .mp-ejemplo__marco{background:radial-gradient(circle at 50% 40%,#e5c8c2,#f3ebe7 70%)}
 .mp-ejemplo--cancha .mp-ejemplo__marco{background:radial-gradient(circle at 50% 40%,#ffd0ae,#f1e7df 70%)}
 .mp-ejemplo--clinica .mp-ejemplo__marco{background:radial-gradient(circle at 50% 40%,#dcebea,#edf2ef 70%)}
 .mp-ejemplo:hover .mp-ejemplo__marco,.mp-ejemplo:focus-visible .mp-ejemplo__marco{transform:perspective(900px) rotateY(-2deg) rotateZ(-.5deg) scale(1.015);box-shadow:0 20px 40px #00000012}

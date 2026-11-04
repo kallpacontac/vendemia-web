@@ -7,3 +7,16 @@ export const SERVICIOS_BARBERIA = [
 ] as const;
 
 export const HORAS_BARBERIA = ['09:00', '10:30', '12:00', '15:00', '16:30'] as const;
+
+/** Personas y fotografías ilustrativas: no representan empleados de Atelier Norte. */
+export const BARBEROS_EJEMPLO = [
+  { nombre: 'Andrés', especialidad: 'Cortes clásicos', foto: '/assets/barberos-fotos/12946033.jpg' },
+  { nombre: 'Mateo', especialidad: 'Barba y precisión', foto: '/assets/barberos-fotos/18483774.jpg' },
+  { nombre: 'Diego', especialidad: 'Estilo contemporáneo', foto: '/assets/barberos-fotos/20302333.jpg' },
+] as const;
+
+export const HORAS_POR_BARBERO: readonly (readonly string[])[] = [
+  ['09:00', '10:30', '15:00'],
+  ['10:30', '12:00', '16:30'],
+  ['09:00', '12:00', '15:00', '16:30'],
+];

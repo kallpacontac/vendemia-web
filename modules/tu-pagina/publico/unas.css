@@ -104,8 +104,8 @@
   .un-hero__contenido { max-width: 390px; }
   .un-hero h1 { max-width: 320px; margin-top: 15px; font-size: clamp(39px, 11vw, 54px); }
   .un-hero p { max-width: 310px; font-size: 13px; line-height: 1.55; }
-  .un-hero__beneficios { right: 0; bottom: 20px; left: 0; justify-content: center; gap: 25px; }
-  .un-hero__beneficios span { font-size: 10px; }
+  .un-hero__beneficios { right: 20px; bottom: 18px; left: 20px; justify-content: space-around; gap: 0; padding: 12px 8px; border: 1px solid #ffffffa8; border-radius: 18px; background: #fffaf0e8; box-shadow: 0 10px 30px #49302626; backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
+  .un-hero__beneficios span { flex: 1; gap: 5px; color: #2e2724; font-size: 11px; }
   .un-servicios { padding: 45px 20px 10px; }
   .un-servicios__lista { grid-template-columns: 1fr 1fr; gap: 8px; }
   .un-servicio { padding: 10px; gap: 7px; }

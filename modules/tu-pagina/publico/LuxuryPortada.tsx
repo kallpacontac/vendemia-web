@@ -22,7 +22,7 @@ type Props = {
   catalogoProductosDisponible?: boolean;
 };
 
-/** Escritorio: desplazamiento editorial. Móvil: dos escenas laterales y luego catálogo vertical. */
+/** El desplazamiento vertical mueve lateralmente las dos escenas, también en móvil. */
 export default function LuxuryPortada({ titulo, frase, etiqueta, logo, portada, portadaSecundaria, servicio, inicioHref, reservarHref, catalogoDisponible, catalogoProductosDisponible = false }: Props) {
   const marco = useRef<HTMLDivElement>(null);
   const fijo = useRef<HTMLDivElement>(null);
@@ -37,7 +37,6 @@ export default function LuxuryPortada({ titulo, frase, etiqueta, logo, portada, 
     const linea = progreso.current;
     if (!zona || !ventana || !carril || !linea) return;
     const reducida = window.matchMedia('(prefers-reduced-motion: reduce)');
-    const movil = window.matchMedia('(max-width: 560px)');
     let pendiente = false;
     const actualizar = () => {
       pendiente = false;
@@ -48,10 +47,8 @@ export default function LuxuryPortada({ titulo, frase, etiqueta, logo, portada, 
         zona.style.removeProperty('--tp-luxury-entrada');
         return;
       }
-      const avance = movil.matches
-        ? Math.max(0, Math.min(1, ventana.scrollLeft / Math.max(1, ventana.clientWidth)))
-        : Math.max(0, Math.min(1, -zona.getBoundingClientRect().top / Math.max(1, zona.offsetHeight - ventana.clientHeight)));
-      carril.style.transform = movil.matches ? '' : `translate3d(${-avance * zona.clientWidth}px, 0, 0)`;
+      const avance = Math.max(0, Math.min(1, -zona.getBoundingClientRect().top / Math.max(1, zona.offsetHeight - ventana.clientHeight)));
+      carril.style.transform = `translate3d(${-avance * zona.clientWidth}px, 0, 0)`;
       linea.style.transform = `scaleX(${avance})`;
       zona.style.setProperty('--tp-luxury-salida', String(Math.max(0, 1 - avance * 2.8)));
       zona.style.setProperty('--tp-luxury-entrada', String(Math.max(0, Math.min(1, (avance - .55) * 2.8))));
@@ -68,15 +65,11 @@ export default function LuxuryPortada({ titulo, frase, etiqueta, logo, portada, 
     };
     actualizar();
     window.addEventListener('scroll', solicitar, { passive: true });
-    ventana.addEventListener('scroll', solicitar, { passive: true });
     window.addEventListener('resize', solicitar);
-    movil.addEventListener('change', solicitar);
     reducida.addEventListener('change', solicitar);
     return () => {
       window.removeEventListener('scroll', solicitar);
-      ventana.removeEventListener('scroll', solicitar);
       window.removeEventListener('resize', solicitar);
-      movil.removeEventListener('change', solicitar);
       reducida.removeEventListener('change', solicitar);
     };
   }, []);
@@ -88,10 +81,6 @@ export default function LuxuryPortada({ titulo, frase, etiqueta, logo, portada, 
     }
     const zona = marco.current;
     if (!zona) return;
-    if (window.matchMedia('(max-width: 560px)').matches) {
-      fijo.current?.scrollTo({ left: numero * (fijo.current?.clientWidth ?? 0), behavior: 'smooth' });
-      return;
-    }
     const altoVisible = (zona.firstElementChild as HTMLElement).clientHeight;
     window.scrollTo({ top: zona.getBoundingClientRect().top + window.scrollY + (numero ? zona.offsetHeight - altoVisible : 0), behavior: 'smooth' });
   };
