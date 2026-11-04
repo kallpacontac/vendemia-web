@@ -1,0 +1,540 @@
+{
+  "banners": [
+    "/assets/restaurante-ejemplo/casa-brasa/banner-1.webp",
+    "/assets/restaurante-ejemplo/casa-brasa/banner-2.webp"
+  ],
+  "popup": "/assets/restaurante-ejemplo/casa-brasa/promocion.webp",
+  "categories": [
+    {
+      "id": "276",
+      "name": "Entradas y Piqueos",
+      "products": [
+        {
+          "id": "1157",
+          "name": "Tequeños Brasa",
+          "price": 16.9,
+          "description": "8 unidades rellenos de pollo a la brasa.",
+          "image": "/assets/restaurante-ejemplo/casa-brasa/producto-1157.webp",
+          "new": false,
+          "sizes": []
+        },
+        {
+          "id": "1158",
+          "name": "Tequeños de Queso",
+          "price": 16.9,
+          "description": "8 unidades rellenos de queso con salsa guacamole.",
+          "image": "/assets/restaurante-ejemplo/casa-brasa/producto-1158.webp",
+          "new": false,
+          "sizes": []
+        },
+        {
+          "id": "1159",
+          "name": "Alitas Broaster",
+          "price": 26.9,
+          "description": "8 alitas + papas fritas + ensalada.",
+          "image": "/assets/restaurante-ejemplo/casa-brasa/producto-1159.webp",
+          "new": false,
+          "sizes": []
+        },
+        {
+          "id": "1160",
+          "name": "Alitas BBQ",
+          "price": 26.9,
+          "description": "8 alitas + papas fritas + ensalada.",
+          "image": "/assets/restaurante-ejemplo/casa-brasa/producto-1160.webp",
+          "new": false,
+          "sizes": []
+        }
+      ],
+      "image": "/assets/restaurante-ejemplo/casa-brasa/categoria-276.webp"
+    },
+    {
+      "id": "288",
+      "name": "PROMO MIER Y JUEV",
+      "products": [
+        {
+          "id": "1235",
+          "name": "1/4 Pollos a la Brasa - \"MIER y JUEV\"",
+          "price": 15.9,
+          "description": "Acompañado de papas fritas y ensalada fresca.",
+          "image": "/assets/restaurante-ejemplo/casa-brasa/producto-1235.webp",
+          "new": true,
+          "sizes": []
+        }
+      ],
+      "image": "/assets/restaurante-ejemplo/casa-brasa/categoria-288.jpeg"
+    },
+    {
+      "id": "277",
+      "name": "Brasas",
+      "products": [
+        {
+          "id": "1161",
+          "name": "1 Pollo a la brasa",
+          "price": 69.9,
+          "description": "Acompañado de papas fritas y ensalada fresca.",
+          "image": "/assets/restaurante-ejemplo/casa-brasa/producto-1161.webp",
+          "new": false,
+          "sizes": []
+        },
+        {
+          "id": "1162",
+          "name": "1/2 Pollo a la brasa",
+          "price": 42,
+          "description": "Acompañado de papas fritas y ensalada fresca.",
+          "image": "/assets/restaurante-ejemplo/casa-brasa/producto-1162.webp",
+          "new": false,
+          "sizes": []
+        },
+        {
+          "id": "1224",
+          "name": "1/4 de Pollo a la Brasa",
+          "price": 21,
+          "description": "Acompañado de papas fritas y ensalada fresca.",
+          "image": "/assets/restaurante-ejemplo/casa-brasa/producto-1224.webp",
+          "new": false,
+          "sizes": []
+        },
+        {
+          "id": "1164",
+          "name": "Ofertón",
+          "price": 81.9,
+          "description": "1 Pollo a la Brasa + 1/4 de pollo + papas fritas + ensalada + gaseosa de 2 litros.",
+          "image": "/assets/restaurante-ejemplo/casa-brasa/producto-1164.webp",
+          "new": false,
+          "sizes": []
+        },
+        {
+          "id": "1165",
+          "name": "Mostro Familiar",
+          "price": 101.9,
+          "description": "1 pollo + 1/4 de pollo + papas fritas + ensalada + arroz chaufa + gaseosa de 2 litros.",
+          "image": "/assets/restaurante-ejemplo/casa-brasa/producto-1165.webp",
+          "new": false,
+          "sizes": []
+        }
+      ],
+      "image": "/assets/restaurante-ejemplo/casa-brasa/categoria-277.webp"
+    },
+    {
+      "id": "278",
+      "name": "La Carreta de Casa Brasa",
+      "products": [
+        {
+          "id": "1166",
+          "name": "Churrasco",
+          "price": 42,
+          "description": "Acompañado de papas y ensalada fresca.",
+          "image": "/assets/restaurante-ejemplo/casa-brasa/producto-1166.webp",
+          "new": false,
+          "sizes": []
+        },
+        {
+          "id": "1167",
+          "name": "Cordero",
+          "price": 42,
+          "description": "Acompañado de papas y ensalada fresca.",
+          "image": "/assets/restaurante-ejemplo/casa-brasa/producto-1167.webp",
+          "new": false,
+          "sizes": []
+        },
+        {
+          "id": "1168",
+          "name": "Chuleta de Cerdo",
+          "price": 35,
+          "description": "Acompañado de papas y ensalada fresca.",
+          "image": "/assets/restaurante-ejemplo/casa-brasa/producto-1168.webp",
+          "new": false,
+          "sizes": []
+        },
+        {
+          "id": "1169",
+          "name": "Filete de Pollo",
+          "price": 35,
+          "description": "Acompañado de papas y ensalada fresca.",
+          "image": "/assets/restaurante-ejemplo/casa-brasa/producto-1169.webp",
+          "new": false,
+          "sizes": []
+        },
+        {
+          "id": "1170",
+          "name": "Filete de pierna de pollo",
+          "price": 35,
+          "description": "Acompañado de papas y ensalada fresca.",
+          "image": "/assets/restaurante-ejemplo/casa-brasa/producto-1170.webp",
+          "new": false,
+          "sizes": []
+        }
+      ],
+      "image": "/assets/restaurante-ejemplo/casa-brasa/categoria-278.webp"
+    },
+    {
+      "id": "279",
+      "name": "Parrillero Casa Brasa",
+      "products": [
+        {
+          "id": "1171",
+          "name": "Parrilla Familiar",
+          "price": 209,
+          "description": "1 picaña + 1 churrasco + 1 cordero + 1 chuleta de cerdo + 2 brochetas de lomo + 1 filete de pechuga + 1/2 pollo + 2 chorizos + papas fritas + ensalada con palta.",
+          "image": "/assets/restaurante-ejemplo/casa-brasa/producto-1171.webp",
+          "new": false,
+          "sizes": []
+        },
+        {
+          "id": "1172",
+          "name": "Parrilla Mediana",
+          "price": 154,
+          "description": "1 churrasco + 1 cordero + 1 filete + 1 cerdo + 1/4 pollo + 2 chorizos + papas fritas + ensalada con palta.",
+          "image": "/assets/restaurante-ejemplo/casa-brasa/producto-1172.webp",
+          "new": false,
+          "sizes": []
+        },
+        {
+          "id": "1173",
+          "name": "Lomo Fino",
+          "price": 60,
+          "description": "400 gr de lomo + papas doradas + ensalada fresca.",
+          "image": "/assets/restaurante-ejemplo/casa-brasa/producto-1173.webp",
+          "new": false,
+          "sizes": []
+        },
+        {
+          "id": "1174",
+          "name": "Bife Angosto",
+          "price": 82,
+          "description": "400 gr de bife + papas doradas + ensalada fresca.",
+          "image": "/assets/restaurante-ejemplo/casa-brasa/producto-1174.webp",
+          "new": false,
+          "sizes": []
+        },
+        {
+          "id": "1175",
+          "name": "Bife Ancho",
+          "price": 82,
+          "description": "400 gr de bife + papas doradas + ensalada fresca.",
+          "image": "/assets/restaurante-ejemplo/casa-brasa/producto-1175.webp",
+          "new": false,
+          "sizes": []
+        },
+        {
+          "id": "1176",
+          "name": "Brochetas de lomo",
+          "price": 38.9,
+          "description": "2 unidades de brocheta + papas doradas + ensalada fresca.",
+          "image": "/assets/restaurante-ejemplo/casa-brasa/producto-1176.webp",
+          "new": false,
+          "sizes": []
+        },
+        {
+          "id": "1177",
+          "name": "Churrasco a lo Pobre",
+          "price": 47,
+          "description": "Acompañado de plátano frito + huevo + arroz blanco y papas fritas.",
+          "image": "/assets/restaurante-ejemplo/casa-brasa/producto-1177.webp",
+          "new": false,
+          "sizes": []
+        },
+        {
+          "id": "1178",
+          "name": "Picaña",
+          "price": 82,
+          "description": "400 gr de picaña + papas doradas + ensalada fresca.",
+          "image": "/assets/restaurante-ejemplo/casa-brasa/producto-1178.webp",
+          "new": false,
+          "sizes": []
+        },
+        {
+          "id": "1179",
+          "name": "Entraña Fina",
+          "price": 82,
+          "description": "400 gr de entraña fina + papas doradas + ensalada.",
+          "image": "/assets/restaurante-ejemplo/casa-brasa/producto-1179.webp",
+          "new": false,
+          "sizes": []
+        },
+        {
+          "id": "1180",
+          "name": "Asado de Tira",
+          "price": 82,
+          "description": "500 gr de asado de tira + papas doradas + ensalada fresca.",
+          "image": "/assets/restaurante-ejemplo/casa-brasa/producto-1180.webp",
+          "new": false,
+          "sizes": []
+        }
+      ],
+      "image": "/assets/restaurante-ejemplo/casa-brasa/categoria-279.jpeg"
+    },
+    {
+      "id": "280",
+      "name": "Los Criollos de Casa Brasa",
+      "products": [
+        {
+          "id": "1181",
+          "name": "Lomo saltado",
+          "price": 24.9,
+          "description": "",
+          "image": "/assets/restaurante-ejemplo/casa-brasa/producto-1181.webp",
+          "new": false,
+          "sizes": []
+        },
+        {
+          "id": "1182",
+          "name": "Pollo saltado",
+          "price": 23.9,
+          "description": "",
+          "image": "/assets/restaurante-ejemplo/casa-brasa/producto-1182.webp",
+          "new": false,
+          "sizes": []
+        },
+        {
+          "id": "1183",
+          "name": "Chaufa de pollo",
+          "price": 22.9,
+          "description": "",
+          "image": "/assets/restaurante-ejemplo/casa-brasa/producto-1183.webp",
+          "new": false,
+          "sizes": []
+        },
+        {
+          "id": "1184",
+          "name": "Chaufa de carne",
+          "price": 24.9,
+          "description": "",
+          "image": "/assets/restaurante-ejemplo/casa-brasa/producto-1184.webp",
+          "new": false,
+          "sizes": []
+        },
+        {
+          "id": "1185",
+          "name": "Chaufa 3 sabores",
+          "price": 26.9,
+          "description": "",
+          "image": "/assets/restaurante-ejemplo/casa-brasa/producto-1185.webp",
+          "new": false,
+          "sizes": []
+        },
+        {
+          "id": "1186",
+          "name": "Lomo Casa Brasa",
+          "price": 27.9,
+          "description": "",
+          "image": "/assets/restaurante-ejemplo/casa-brasa/producto-1186.webp",
+          "new": false,
+          "sizes": []
+        },
+        {
+          "id": "1187",
+          "name": "Mostro",
+          "price": 23.9,
+          "description": "",
+          "image": "/assets/restaurante-ejemplo/casa-brasa/producto-1187.webp",
+          "new": false,
+          "sizes": []
+        },
+        {
+          "id": "1188",
+          "name": "Fettuccini a la huancaína con lomo saltado",
+          "price": 42,
+          "description": "",
+          "image": "/assets/restaurante-ejemplo/casa-brasa/producto-1188.webp",
+          "new": false,
+          "sizes": []
+        },
+        {
+          "id": "1189",
+          "name": "Fettuccini al pesto con churrasco",
+          "price": 42,
+          "description": "",
+          "image": "/assets/restaurante-ejemplo/casa-brasa/producto-1189.webp",
+          "new": false,
+          "sizes": []
+        },
+        {
+          "id": "1190",
+          "name": "Dúo de pastas con lomo saltado",
+          "price": 47,
+          "description": "",
+          "image": "/assets/restaurante-ejemplo/casa-brasa/producto-1190.webp",
+          "new": false,
+          "sizes": []
+        },
+        {
+          "id": "1191",
+          "name": "Saltado de lomo fino",
+          "price": 46.9,
+          "description": "",
+          "image": "/assets/restaurante-ejemplo/casa-brasa/producto-1191.jpeg",
+          "new": false,
+          "sizes": []
+        }
+      ],
+      "image": "/assets/restaurante-ejemplo/casa-brasa/categoria-280.jpeg"
+    },
+    {
+      "id": "281",
+      "name": "Postres",
+      "products": [
+        {
+          "id": "1192",
+          "name": "Tres leches",
+          "price": 12,
+          "description": "Bizcocho suave y esponjoso, bañado en nuestra mezcla tradicional de tres leches, decorado con crema chantilly y un toque de canela.",
+          "image": "/assets/restaurante-ejemplo/casa-brasa/producto-1192.webp",
+          "new": false,
+          "sizes": []
+        },
+        {
+          "id": "1193",
+          "name": "Pie de limón",
+          "price": 12,
+          "description": "Clásico pie con base de galleta crujiente, relleno de una crema cítrica y refrescante, coronado con un suave merengue tostado.",
+          "image": "/assets/restaurante-ejemplo/casa-brasa/producto-1193.webp",
+          "new": false,
+          "sizes": []
+        },
+        {
+          "id": "1194",
+          "name": "Crema volteada",
+          "price": 12,
+          "description": "Tradicional postre de textura suave y cremosa, horneado a la perfección y bañado en un delicioso caramelo oscuro.",
+          "image": "/assets/restaurante-ejemplo/casa-brasa/producto-1194.webp",
+          "new": false,
+          "sizes": []
+        },
+        {
+          "id": "1195",
+          "name": "Carrot cake",
+          "price": 12,
+          "description": "Esponjoso bizcocho húmedo de zanahoria con un toque de especias y pecanas, cubierto con un cremoso glaseado de queso crema.",
+          "image": "/assets/restaurante-ejemplo/casa-brasa/producto-1195.webp",
+          "new": false,
+          "sizes": []
+        },
+        {
+          "id": "1196",
+          "name": "Torta de chocolate",
+          "price": 12,
+          "description": "Húmedo bizcocho de chocolate, relleno y completamente bañado en abundante fudge artesanal.",
+          "image": "/assets/restaurante-ejemplo/casa-brasa/producto-1196.webp",
+          "new": false,
+          "sizes": []
+        }
+      ],
+      "image": "/assets/restaurante-ejemplo/casa-brasa/categoria-281.webp"
+    },
+    {
+      "id": "283",
+      "name": "Bebidas con alcohol",
+      "products": [
+        {
+          "id": "1208",
+          "name": "Pisco sour",
+          "price": 15,
+          "description": "Coctel insignia y bebida nacional del Perú, reconocido por su equilibrio entre el dulzor, la acidez y una textura espumosa.",
+          "image": "/assets/restaurante-ejemplo/casa-brasa/producto-1208.webp",
+          "new": false,
+          "sizes": []
+        },
+        {
+          "id": "1209",
+          "name": "Piña colada",
+          "price": 15,
+          "description": "Coctel tropical dulce y cremoso, originario de Puerto Rico, elaborado tradicionalmente con ron blanco o dorado, crema de coco y jugo de piña.",
+          "image": "/assets/restaurante-ejemplo/casa-brasa/producto-1209.webp",
+          "new": false,
+          "sizes": []
+        },
+        {
+          "id": "1210",
+          "name": "Algarrobina",
+          "price": 15,
+          "description": "es un ponche peruano a base de pisco y algarrobina, y cóctel bandera del departamento de Lambayeque.",
+          "image": "/assets/restaurante-ejemplo/casa-brasa/producto-1210.webp",
+          "new": false,
+          "sizes": []
+        },
+        {
+          "id": "1211",
+          "name": "Mojito",
+          "price": 15,
+          "description": "Coctel popular originario de Cuba, compuesto de ron, limón, azúcar, menta y agua mineral con gas.​​ La combinación de sabor dulce, cítrico, y menta complementa el sabor del ron, y hace del mojito una bebida popular de verano.",
+          "image": "/assets/restaurante-ejemplo/casa-brasa/producto-1211.webp",
+          "new": false,
+          "sizes": []
+        }
+      ],
+      "image": "/assets/restaurante-ejemplo/casa-brasa/categoria-283.webp"
+    },
+    {
+      "id": "284",
+      "name": "Bebidas sin alcohol",
+      "products": [
+        {
+          "id": "1212",
+          "name": "Refresco de maracuyá 1 litro",
+          "price": 18,
+          "description": "Refresco de maracuyá en jarra, bebida tradicional, refrescante.",
+          "image": "/assets/restaurante-ejemplo/casa-brasa/producto-1212.webp",
+          "new": false,
+          "sizes": []
+        },
+        {
+          "id": "1213",
+          "name": "Refresco de tumbo",
+          "price": 16,
+          "description": "Bebida tradicional, cítrica y muy refrescante.",
+          "image": "/assets/restaurante-ejemplo/casa-brasa/producto-1213.webp",
+          "new": false,
+          "sizes": []
+        },
+        {
+          "id": "1214",
+          "name": "Refresco de limonada",
+          "price": 16,
+          "description": "Un clásico infaltable para compartir. Zumo de limón recién exprimido, endulzado al gusto y servido con mucho hielo.",
+          "image": "/assets/restaurante-ejemplo/casa-brasa/producto-1214.webp",
+          "new": false,
+          "sizes": []
+        },
+        {
+          "id": "1215",
+          "name": "Chicha morada",
+          "price": 18,
+          "description": "Refresco bandera del Perú a base de maíz morado, frutas seleccionadas (piña y manzana), canela y limón. Servida muy fría.",
+          "image": "/assets/restaurante-ejemplo/casa-brasa/producto-1215.webp",
+          "new": false,
+          "sizes": []
+        },
+        {
+          "id": "1216",
+          "name": "Té",
+          "price": 4,
+          "description": "Infusión",
+          "image": "/assets/restaurante-ejemplo/casa-brasa/producto-1216.webp",
+          "new": false,
+          "sizes": []
+        },
+        {
+          "id": "1217",
+          "name": "Anís",
+          "price": 4,
+          "description": "infusión",
+          "image": "/assets/restaurante-ejemplo/casa-brasa/producto-1217.webp",
+          "new": false,
+          "sizes": []
+        },
+        {
+          "id": "1218",
+          "name": "Café",
+          "price": 5,
+          "description": "Bebida tradicional obtenida mediante la infusión de café molido con agua caliente a través de un filtro",
+          "image": "/assets/restaurante-ejemplo/casa-brasa/producto-1218.webp",
+          "new": false,
+          "sizes": []
+        }
+      ],
+      "image": "/assets/restaurante-ejemplo/casa-brasa/categoria-284.webp"
+    }
+  ]
+}

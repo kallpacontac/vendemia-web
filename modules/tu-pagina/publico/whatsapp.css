@@ -21,8 +21,15 @@
   25%, 100% { transform: scale(2); opacity: 0; }
 }
 body:has(.tp-barra) .tp-whatsapp-flotante, body:has(.ne-cafe-cartbar) .tp-whatsapp-flotante { bottom: calc(154px + env(safe-area-inset-bottom)); }
-body:has(.tp-velo, .tm-fondo) .tp-whatsapp-flotante { visibility: hidden; }
-@media (min-width: 768px) { .tp-whatsapp-flotante { left: calc(50% - 28px); } }
+body:has(.tp-velo, .tm-fondo, .cb-velo) .tp-whatsapp-flotante { visibility: hidden; }
+@media (min-width: 768px) {
+  .tp-whatsapp-flotante { left: max(16px, calc(25vw - 168px)); }
+  body:has(.tp[data-diseno='tienda']) .tp-whatsapp-flotante { left: max(16px, calc(25vw - 388px)); }
+  body:has(.tp[data-diseno='agenda']) .tp-whatsapp-flotante, body:has(.tp[data-diseno='ambos']) .tp-whatsapp-flotante { left: max(16px, calc(25vw - 318px)); }
+  body:has(.tp[data-plantilla='restaurante']) .tp-whatsapp-flotante { left: max(16px, calc(25vw - 358px)); }
+  body:has(.tp[data-plantilla='luxury']) .tp-whatsapp-flotante { left: max(16px, calc(25vw - 393px)); }
+  body:has(.tp .cb) .tp-whatsapp-flotante { left: max(16px, calc(25vw - 308px)); }
+}
 @media (prefers-reduced-motion: reduce) { .tp-whatsapp-flotante, .tp-whatsapp-flotante__onda { animation: none; } }
 .tp-whatsapp-demo-fondo { position: fixed; inset: 0; z-index: 230; display: grid; place-items: center; padding: 16px; background: #1119; }
 .tp-whatsapp-demo { position: relative; width: min(100%, 430px); display: grid; gap: 12px; padding: 28px; border-radius: 20px; background: #fff; color: #17251c; box-shadow: 0 20px 60px #0004; font: 14px/1.45 'Plus Jakarta Sans', system-ui, sans-serif; }

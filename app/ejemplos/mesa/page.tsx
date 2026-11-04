@@ -12,15 +12,15 @@ export const metadata: Metadata = {
 
 const pagina: PaginaPublica = {
   slug: 'casa-brasa-ejemplo', version: 1, titulo: 'Casa Brasa', frase: 'Cocina peruana a la brasa', whatsapp: '',
-  secciones: { catalogo: true, apariencia: { plantillaActiva: true, promocionTexto: 'Hoy: pizza para compartir y postre de la casa' } }, plantilla: 'mesa', color: '#8A3D1E',
-  logo_url: '/assets/restaurante-ejemplo/casa-brasa-logo.svg', portada_url: null, distritos: [],
+  secciones: { catalogo: true, apariencia: { plantillaActiva: true } }, plantilla: 'mesa', color: '#ED1019',
+  logo_url: '/assets/restaurante-ejemplo/casa-brasa-wordmark.svg', portada_url: null, distritos: [],
 };
 
 export default function Page() {
   return (
     <Marco pagina={pagina}>
-      <EjemplosNav actual="mesa" />
       <MesaEjemplo />
+      <EjemplosNav actual="mesa" />
     </Marco>
   );
 }
