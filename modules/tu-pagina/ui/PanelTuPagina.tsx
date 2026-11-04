@@ -412,6 +412,7 @@ function MiPagina({ companyId, nombre, pagina, agendaNube, alGuardar }: {
             </div>
           </div>
         {plantilla === 'mesa' && <p className="tp-panel-aviso-mesa">Tras publicar, crea tus mesas e imprime sus QR en <a href="/panel/mesas">Mesas</a>. Tu sistema de comandas no cambia: lo que piden le llega al mozo como un aviso.</p>}
+        {plantilla === 'restaurante' && <p className="tp-panel-aviso-mesa">¿Atiendes en mesa? Crea tus QR en <a href="/panel/mesas">Mesas</a> para que llamen al mozo y pidan la cuenta desde el celular.</p>}
         <div className="tp-panel-campo"><span>Logo <small className="muted">(opcional)</small></span>
           <div className="tp-panel-imagen-acciones">
             <label className="tp-panel-subir">{subiendo === 'logo' ? 'Subiendo…' : logo ? 'Cambiar logo' : 'Subir logo'}

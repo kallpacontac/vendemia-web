@@ -69,7 +69,7 @@ const NAV = [
   // persona. Mismo criterio que ya aplicaba equipo/page.tsx:235.
   { href: '/panel/equipo', icon: UserCog, label: 'Equipo', sirveA: esCita },
   { href: '/panel/comisiones', icon: Percent, label: 'Comisiones', sirveA: esCita },
-  // Lo que piden desde el QR de las mesas: solo con la plantilla «Atención en mesa».
+  // Lo que piden desde el QR de las mesas: con «Atención en mesa» o «Carta visual».
   { href: '/panel/mesas', icon: ConciergeBell, label: 'Mesas', sirveA: () => false },
   // Pedidos es del negocio que vende productos: una barbería no crea pedidos.
   { href: '/panel/pedidos', icon: Receipt, label: 'Pedidos', sirveA: esEcommerce },
@@ -155,7 +155,7 @@ export default function Sidebar({
 
   const fijas = new Set(
     nav
-      .filter((n) => FIJAS_MOVIL.includes(n.href))
+      .filter((n) => FIJAS_MOVIL.includes(n.href) && (n.href !== '/panel/mesas' || pagina.mesasFija))
       .slice(0, MAX_FIJAS_MOVIL)
       .map((n) => n.href),
   );
@@ -168,7 +168,7 @@ export default function Sidebar({
 
   const rutaOperacion = esEcommerce(modo) ? '/panel/pedidos' : '/panel/agenda';
   const rail = nav.filter((n) =>
-    ['/panel', '/panel/mesas', RUTA_MI_AGENDA, RUTA_MI_COMISION, RUTA_MI_CATALOGO, '/panel/asistente', '/panel/mensajes', rutaOperacion, '/panel/leads', '/panel/caja', '/panel/configuracion'].includes(n.href),
+    [...(pagina.mesasFija ? ['/panel/mesas'] : []), '/panel', RUTA_MI_AGENDA, RUTA_MI_COMISION, RUTA_MI_CATALOGO, '/panel/asistente', '/panel/mensajes', rutaOperacion, '/panel/leads', '/panel/caja', '/panel/configuracion'].includes(n.href),
   );
   const railExtra = nav.filter((n) => !rail.some((r) => r.href === n.href));
   const railExtraActiva = railExtra.some((n) => esActivo(n.href));

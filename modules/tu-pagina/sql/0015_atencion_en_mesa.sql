@@ -354,11 +354,12 @@ returns text language sql stable security definer set search_path = public as $$
 $$;
 
 -- Para el menú. El empleado no puede leer tu_pagina, pero a él también le toca ver Mesas.
+-- «Carta visual» también atiende en mesa si el dueño crea sus QR; las demás plantillas no.
 create or replace function public.mesa_panel_usa(p_company text)
 returns boolean language plpgsql stable security definer set search_path = public as $$
 begin
     perform public.mesa_autorizar_equipo(p_company);
-    return exists (select 1 from public.tu_pagina where company_id = p_company and publicada and plantilla = 'mesa');
+    return exists (select 1 from public.tu_pagina where company_id = p_company and publicada and plantilla in ('mesa', 'restaurante'));
 end $$;
 
 create or replace function public.mesa_panel_vivo(p_company text)

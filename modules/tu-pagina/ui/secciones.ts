@@ -16,11 +16,13 @@ export interface LoQueHaceLaPagina {
   reserva: boolean;
   /** «Agendar un envío»: los recojos se ven en Pedidos. */
   envios: boolean;
-  /** Plantilla «Atención en mesa»: los llamados se ven en /panel/mesas. */
+  /** «Atención en mesa» o «Carta visual»: los llamados se ven en /panel/mesas. */
   mesas: boolean;
+  /** Mesas va a la vista en el menú. En «Carta visual» no: le quitaría el sitio a Caja a quien no use los QR. */
+  mesasFija: boolean;
 }
 
-const NADA: LoQueHaceLaPagina = { vende: false, reserva: false, envios: false, mesas: false };
+const NADA: LoQueHaceLaPagina = { vende: false, reserva: false, envios: false, mesas: false, mesasFija: false };
 
 export async function getLoQueHaceLaPagina(companyId: string): Promise<LoQueHaceLaPagina> {
   try {
@@ -28,9 +30,9 @@ export async function getLoQueHaceLaPagina(companyId: string): Promise<LoQueHace
     const s = (data?.publicada ? data.secciones : null) as { catalogo?: boolean; reservar?: boolean; envios?: boolean } | null;
     // El empleado no lee tu_pagina (corte de roles), y es quien más necesita ver las mesas.
     const mesas = data
-      ? Boolean(s && data.plantilla === 'mesa')
+      ? Boolean(s && (data.plantilla === 'mesa' || data.plantilla === 'restaurante'))
       : (await supabase().rpc('mesa_panel_usa', { p_company: companyId })).data === true;
-    return { vende: Boolean(s?.catalogo), reserva: Boolean(s?.reservar), envios: Boolean(s?.envios), mesas };
+    return { vende: Boolean(s?.catalogo), reserva: Boolean(s?.reservar), envios: Boolean(s?.envios), mesas, mesasFija: mesas && (!data || data.plantilla === 'mesa') };
   } catch {
     return NADA;
   }
