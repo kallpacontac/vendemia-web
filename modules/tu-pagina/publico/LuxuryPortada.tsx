@@ -66,10 +66,12 @@ export default function LuxuryPortada({ titulo, frase, etiqueta, logo, portada, 
     actualizar();
     window.addEventListener('scroll', solicitar, { passive: true });
     window.addEventListener('resize', solicitar);
+    window.visualViewport?.addEventListener('resize', solicitar);
     reducida.addEventListener('change', solicitar);
     return () => {
       window.removeEventListener('scroll', solicitar);
       window.removeEventListener('resize', solicitar);
+      window.visualViewport?.removeEventListener('resize', solicitar);
       reducida.removeEventListener('change', solicitar);
     };
   }, []);
