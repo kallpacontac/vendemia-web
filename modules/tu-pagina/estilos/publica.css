@@ -837,7 +837,7 @@ html:has(.tp[data-plantilla='luxury']), body:has(.tp[data-plantilla='luxury']) {
   .tp-luxury-motion__fijo { position: sticky; top: 0; height: 100svh; overflow: hidden; touch-action: pan-y; }
   .tp-luxury-motion .tp-luxury-hero { height: 100svh; min-height: 100svh; }
   .tp-luxury-hero { min-height: min(740px, 82svh); padding: 20px 22px 50px; background-position: 62% center; }
-  .tp-luxury-hero--foto-ejemplo { background-position: 78% center; }
+  .tp-luxury-hero--foto-ejemplo { background-position: 32% center; }
   .tp-luxury-motion .tp-luxury-hero { padding: 22px 22px 74px; }
   .tp-luxury-nav__paso { display: none; }
   .tp-luxury-motion__siguiente { right: 22px; bottom: 18px; font-size: 11px; }

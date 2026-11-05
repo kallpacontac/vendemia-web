@@ -177,9 +177,17 @@
 }
 
 @media (max-width: 650px) {
-  .ne-cafe-header button.ne-cafe-mesero { width: 42px; height: 42px; padding: 0; justify-content: center; font-size: 0; }
+  .ne-cafe-header button.ne-cafe-mesero { width: 42px; height: 42px; padding: 0; justify-content: center; gap: 0; font-size: 0; }
   .ne-cafe-header button.ne-cafe-mesero svg { flex: none; }
   .ne-cafe-cartbar { left: 12px; right: 12px; bottom: 12px; justify-content: space-between; font-size: 12px; }
   .ne-carrito-cabecera { padding: 20px 18px 15px; }
   .ne-carrito-contenido, .ne-carrito-pie { padding-left: 18px; padding-right: 18px; }
 }
+
+@keyframes ne-cafe-timbre {
+  0%, 24%, 100% { transform: rotate(0); }
+  5%, 15% { transform: rotate(-18deg); }
+  10%, 20% { transform: rotate(18deg); }
+}
+.ne-cafe-header button.ne-cafe-mesero svg { transform-origin: 50% 12%; animation: ne-cafe-timbre 3s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) { .ne-cafe-header button.ne-cafe-mesero svg { animation: none; } }
