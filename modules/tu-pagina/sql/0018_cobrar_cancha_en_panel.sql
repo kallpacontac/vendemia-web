@@ -12,6 +12,10 @@
 --                      foto o la misma operación dos veces. Los argumentos nuevos son
 --                      opcionales: el panel de antes sigue funcionando igual.
 --   · comprobantes_panel   Trae también el número de operación leído de la captura.
+--   · Validar el n.º de operación se puede apagar por negocio (secciones.canchas.validarOperacion
+--                      = false): se sigue leyendo, guardando y mostrando, pero una operación repetida
+--                      ya no se rechaza. Para demos. Por defecto, encendido. Ver
+--                      scripts/zona-gol-demo-sin-validar-operacion.sql y su reverso.
 --   · v2_comprobante_aplicar   Un pago que no llega al adelanto (S/ 20 de S/ 40) da otro plazo
 --                      completo desde ese pago, para que no pierda la cancha mientras paga el resto.
 --
@@ -20,6 +24,134 @@
 -- ═══════════════════════════════════════════════════════════════════════════════
 
 begin;
+
+-- ¿Se rechaza una operación repetida en este negocio? Sí, salvo validarOperacion = false.
+create or replace function public.v2_valida_operacion(p_company text)
+returns boolean language sql stable security definer set search_path = public as $$
+    select coalesce(public.v2_canchas_cfg(p_company) ->> 'validarOperacion', 'true') <> 'false';
+$$;
+revoke execute on function public.v2_valida_operacion(text) from public, anon, authenticated;
+
+-- Igual que en la 0017, con el interruptor de la operación repetida.
+create or replace function public.comprobante_srv_registrar(p_slug text, p_codigo text, p_telefono text, p_datos jsonb)
+returns jsonb language plpgsql security definer set search_path = public as $$
+declare
+    v_cita     public.appointments;
+    v_decision text := p_datos->>'decision';
+    v_motivo   text := coalesce(p_datos->>'motivo', '');
+    v_hash     text := coalesce(p_datos->>'hash', '');
+    v_op       text := coalesce(p_datos->>'operacion', '');
+    v_url      text := coalesce(p_datos->>'url', '');
+    v_metodo   text := coalesce(p_datos->>'metodo', '');
+    v_monto    numeric;
+    v_r        jsonb;
+    v_estado   text;
+begin
+    perform public.loyalty_srv_check();
+    if v_hash !~ '^[0-9a-f]{64}$' or v_decision not in ('aprobar', 'revisar', 'rechazar') then
+        return jsonb_build_object('status', 'datos_invalidos');
+    end if;
+    begin
+        v_monto := (p_datos->>'monto')::numeric;
+    exception when others then
+        v_monto := null;
+    end;
+
+    v_cita := public.v2_comprobante_cita(p_slug, p_codigo, p_telefono);
+    if v_cita.id is null then return jsonb_build_object('status', 'not_found'); end if;
+    perform pg_advisory_xact_lock(hashtext('tu_pagina:' || v_cita.company_id));
+    -- Otra vez, ya con el candado: pudo cancelarse o cobrarse mientras se leía la captura.
+    select * into v_cita from public.appointments where id = v_cita.id;
+    if v_cita.status not in ('pending_payment', 'confirmed') then return jsonb_build_object('status', 'vencida'); end if;
+    if coalesce(v_cita.pagado_por, '') <> '' then return jsonb_build_object('status', 'cobrada'); end if;
+
+    if exists (select 1 from public.comprobantes_web where company_id = v_cita.company_id and image_hash = v_hash)
+       or exists (select 1 from public.pending_payments where company_id = v_cita.company_id and image_hash = v_hash) then
+        return jsonb_build_object('status', 'repetida');
+    end if;
+    if v_op <> '' and public.v2_valida_operacion(v_cita.company_id)
+       and (exists (select 1 from public.pending_payments where company_id = v_cita.company_id and operation_id = v_op)
+                       or exists (select 1 from public.comprobantes_web where company_id = v_cita.company_id and operacion = v_op and estado <> 'rechazado')) then
+        return jsonb_build_object('status', 'operacion_repetida', 'operacion', v_op);
+    end if;
+
+    if v_decision = 'aprobar' then
+        if v_monto is null or v_monto <= 0 then
+            v_decision := 'revisar';
+            v_motivo := 'No se ve el monto.';
+        else
+            v_r := public.v2_comprobante_aplicar(v_cita, v_monto, v_metodo, v_op, v_hash, v_url, 'voucher');
+            if v_r->>'resultado' = 'sin_sitio' then
+                v_decision := 'revisar';
+                v_motivo := 'Pagó, pero la cancha ya no está libre: ' || (v_r->>'motivo') || '. Dale otra hora o devuélvele el dinero.';
+            end if;
+        end if;
+    end if;
+
+    v_estado := case v_decision when 'aprobar' then 'aprobado' when 'revisar' then 'revisar' else 'rechazado' end;
+    insert into public.comprobantes_web (company_id, appointment_id, lead_id, codigo, url, image_hash, estado, motivo, monto, metodo, operacion, destino, fecha_pago, revisado_por, revisado_at)
+    values (v_cita.company_id, v_cita.id, v_cita.lead_id, upper(btrim(p_codigo)), v_url, v_hash, v_estado, v_motivo, v_monto, v_metodo, v_op,
+            coalesce(p_datos->>'destino', ''), coalesce(p_datos->>'fecha_pago', ''),
+            case when v_estado = 'aprobado' then 'automatico' else '' end,
+            case when v_estado = 'aprobado' then now() end);
+
+    if v_decision = 'aprobar' then return jsonb_build_object('status', 'ok') || v_r; end if;
+    if v_decision = 'rechazar' then return jsonb_build_object('status', 'ok', 'resultado', 'rechazado', 'motivo', v_motivo); end if;
+
+    -- Por revisar: el cliente ya hizo su parte. Que el plazo no le quite la cancha mientras
+    -- alguien mira la captura: se cuenta otra vez desde ahora (como mucho 6 veces por reserva).
+    if v_cita.status = 'pending_payment' then
+        update public.appointments set created_at = extract(epoch from now())::bigint where id = v_cita.id;
+    end if;
+    begin
+        perform public.avisos_apuntar(v_cita.company_id, 'pago', 'comprobante:' || v_hash,
+            jsonb_build_object('clase', 'comprobante_por_revisar', 'servicio', v_cita.service, 'slot', v_cita.slot_start));
+    exception when others then
+        raise warning 'comprobante_srv_registrar: aviso: %', sqlerrm;
+    end;
+    return jsonb_build_object('status', 'ok', 'resultado', 'revisar');
+end $$;
+
+-- Igual que en la 0017, con el interruptor de la operación repetida.
+create or replace function public.comprobante_revisar(p_company text, p_id uuid, p_accion text, p_monto numeric, p_metodo text)
+returns jsonb language plpgsql security definer set search_path = public as $$
+declare
+    v_c    public.comprobantes_web;
+    v_cita public.appointments;
+    v_r    jsonb;
+begin
+    perform public.v2_autorizar_agenda(p_company);
+    perform pg_advisory_xact_lock(hashtext('tu_pagina:' || p_company));
+    select * into v_c from public.comprobantes_web where id = p_id and company_id = p_company and estado = 'revisar';
+    if not found then raise exception 'Ese comprobante ya se revisó.'; end if;
+
+    if p_accion = 'rechazar' then
+        update public.comprobantes_web set estado = 'rechazado', revisado_por = 'panel', revisado_at = now() where id = p_id;
+        return jsonb_build_object('detalle', 'Comprobante rechazado.');
+    end if;
+    if p_accion <> 'aprobar' then raise exception 'Acción no válida.'; end if;
+    if p_monto is null or p_monto <= 0 then raise exception 'Escribe el monto que ves en el comprobante.'; end if;
+
+    select * into v_cita from public.appointments where id = v_c.appointment_id and company_id = p_company;
+    if not found or v_cita.status not in ('pending_payment', 'confirmed') then
+        raise exception 'Esta reserva ya no está activa: fue cancelada. Devuélvele el dinero o dale otra hora.';
+    end if;
+    if coalesce(v_cita.pagado_por, '') <> '' then raise exception 'Esta reserva ya consta cobrada entera.'; end if;
+    if v_c.operacion <> '' and public.v2_valida_operacion(p_company)
+       and exists (select 1 from public.pending_payments where company_id = p_company and operation_id = v_c.operacion) then
+        raise exception 'La operación #% ya fue registrada antes.', v_c.operacion;
+    end if;
+
+    v_r := public.v2_comprobante_aplicar(v_cita, p_monto, p_metodo, v_c.operacion, v_c.image_hash, v_c.url, 'panel');
+    if v_r->>'resultado' = 'sin_sitio' then
+        raise exception 'No se puede confirmar: %. Mueve la reserva a otra hora y vuelve a aprobar.', v_r->>'motivo';
+    end if;
+    update public.comprobantes_web set estado = 'aprobado', monto = p_monto, metodo = coalesce(p_metodo, metodo), revisado_por = 'panel', revisado_at = now() where id = p_id;
+    return v_r || jsonb_build_object('detalle', case v_r->>'resultado'
+        when 'parcial' then 'Pago registrado, pero no alcanza el adelanto: sigue apartada. Faltan S/ ' || ((v_r->>'minimo')::numeric - (v_r->>'pagado')::numeric) || ' para confirmarla.'
+        when 'cobrada' then 'Pago registrado. Reserva confirmada y cobrada completa.'
+        else 'Pago registrado. Reserva confirmada. Faltan S/ ' || (v_r->>'falta') || '. Avísale al cliente por WhatsApp.' end);
+end $$;
 
 create or replace function public.cancha_codigos(p_company text, p_ids text[])
 returns jsonb language plpgsql stable security definer set search_path = public as $$
@@ -178,7 +310,8 @@ begin
     if v_hash <> '' and exists (select 1 from public.pending_payments where company_id = p_company and image_hash = v_hash) then
         raise exception 'Esta misma foto ya se usó para registrar otro pago.';
     end if;
-    if v_op <> '' and exists (select 1 from public.pending_payments where company_id = p_company and operation_id = v_op) then
+    if v_op <> '' and public.v2_valida_operacion(p_company)
+       and exists (select 1 from public.pending_payments where company_id = p_company and operation_id = v_op) then
         raise exception 'La operación #% ya fue registrada antes.', v_op;
     end if;
 
