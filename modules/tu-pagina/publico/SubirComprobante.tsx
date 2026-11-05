@@ -28,8 +28,8 @@ function textoOk(r: Resultado, d: { pagado?: number; total?: number; falta?: num
       return { titulo: 'Pago validado', detalle: `Te queda ${soles(falta)} por pagar en la cancha.` };
     case 'parcial':
       return {
-        titulo: `Recibimos ${soles(d.pagado ?? 0)}, todavía no alcanza`,
-        detalle: `Para confirmar necesitas ${soles(d.minimo ?? 0)} de adelanto. Paga la diferencia y sube ese comprobante.`,
+        titulo: `Recibimos ${soles(d.pagado ?? 0)}. Te faltan ${soles(Math.max((d.minimo ?? 0) - (d.pagado ?? 0), 0))} para confirmar`,
+        detalle: `El adelanto es ${soles(d.minimo ?? 0)}. Yapea ${soles(Math.max((d.minimo ?? 0) - (d.pagado ?? 0), 0))} más al mismo número y sube esa captura aquí. Tu cancha sigue apartada mientras tanto.`,
       };
     default:
       return { titulo: 'Recibimos tu comprobante', detalle: 'El negocio lo revisa y te confirma. Mientras tanto, tu cancha sigue apartada.' };

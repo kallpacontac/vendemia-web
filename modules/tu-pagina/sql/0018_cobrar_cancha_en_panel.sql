@@ -11,6 +11,8 @@
 --   · cancha_validar_pago   Ahora guarda también la foto del pago (p_url) y rechaza la misma
 --                      foto o la misma operación dos veces. Los argumentos nuevos son
 --                      opcionales: el panel de antes sigue funcionando igual.
+--   · v2_comprobante_aplicar   Un pago que no llega al adelanto (S/ 20 de S/ 40) da otro plazo
+--                      completo desde ese pago, para que no pierda la cancha mientras paga el resto.
 --
 -- Todas: solo el dueño y el administrador de ESE negocio (v2_autorizar_agenda).
 -- Deshacer: scripts/cobrar-cancha-0018-deshacer.sql
@@ -65,6 +67,62 @@ begin
                         or l.name ilike v_nom)
                  order by n
                  limit 15) s), '[]'::jsonb);
+end $$;
+
+-- Igual que en la 0017, salvo el plazo tras un pago parcial (ver created_at).
+create or replace function public.v2_comprobante_aplicar(p_cita public.appointments, p_monto numeric, p_metodo text,
+                                                         p_op text, p_hash text, p_url text, p_quien text)
+returns jsonb language plpgsql security definer set search_path = public as $$
+declare
+    v_cfg      jsonb := public.v2_canchas_cfg(p_cita.company_id);
+    v_total    numeric;
+    v_previo   numeric;
+    v_pagado   numeric;
+    v_adelanto numeric := 0;
+    v_minimo   numeric;
+    v_item     text;
+    v_motivo   text;
+    v_confirma boolean := false;
+    v_cubre    boolean;
+begin
+    select coalesce(sum(s.price), 0) into v_total from public.appointment_services s where s.appointment_id = p_cita.id;
+    select coalesce(sum(p.amount), 0) into v_previo from public.pending_payments p
+     where p.company_id = p_cita.company_id and p.appointment_id = p_cita.id;
+    v_pagado := v_previo + p_monto;
+    if coalesce(v_cfg->>'adelanto', '') ~ '^\d+(\.\d+)?$' then v_adelanto := (v_cfg->>'adelanto')::numeric; end if;
+    v_minimo := least(v_adelanto, v_total);
+
+    if p_cita.status = 'pending_payment' and v_pagado >= v_minimo then
+        select s.catalog_item_id into v_item
+          from public.appointment_services s
+          join public.catalog k on k.id = s.catalog_item_id and k.company_id = p_cita.company_id
+         where s.appointment_id = p_cita.id and coalesce(k.tipo, '') <> 'producto' limit 1;
+        v_motivo := public.v2_cancha_motivo(p_cita.company_id, coalesce(v_item, ''), p_cita.slot_start, p_cita.slot_minutes, p_cita.id);
+        if v_motivo is not null then
+            return jsonb_build_object('resultado', 'sin_sitio', 'motivo', v_motivo, 'total', v_total, 'pagado', v_previo);
+        end if;
+        v_confirma := true;
+    end if;
+
+    insert into public.pending_payments (id, lead_id, company_id, amount, voucher_path, operation_id, image_hash, verified, order_id, appointment_id)
+    values (gen_random_uuid()::text, p_cita.lead_id, p_cita.company_id, p_monto, p_url, coalesce(p_op, ''), coalesce(p_hash, ''), 1, '', p_cita.id);
+
+    v_cubre := v_total > 0 and v_pagado >= v_total;
+    update public.appointments
+       set metodo_pago = case when p_metodo in ('yape', 'plin', 'bank_transfer', 'cash') then p_metodo else metodo_pago end,
+           status      = case when v_confirma then 'confirmed' else status end,
+           pagado_por  = case when v_cubre then p_quien else pagado_por end,
+           -- Pagó algo pero no llega al adelanto: el plazo vuelve a empezar desde este pago.
+           -- Si no, quien yapeó S/ 20 de S/ 40 perdía la cancha a los 30 minutos de reservar
+           -- (y otro podía reservarla encima) con su dinero ya dentro.
+           created_at  = case when p_cita.status = 'pending_payment' and not v_confirma
+                              then extract(epoch from now())::bigint else created_at end
+     where id = p_cita.id;
+
+    return jsonb_build_object(
+        'resultado', case when v_cubre then 'cobrada' when v_confirma then 'confirmada'
+                          when p_cita.status = 'pending_payment' then 'parcial' else 'a_cuenta' end,
+        'total', v_total, 'pagado', v_pagado, 'falta', greatest(v_total - v_pagado, 0), 'minimo', v_minimo);
 end $$;
 
 -- La de la 0017 tenía 4 argumentos: se quita para que no haya dos con el mismo nombre.
