@@ -27,6 +27,58 @@
 .tc__fecha input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; padding: 0; border: 0; opacity: 0; cursor: pointer; }
 .tc__fecha:hover { border-color: var(--tc-acento); }
 .tc__fecha:focus-within { outline: 2px solid var(--tc-acento); outline-offset: 2px; }
+/* La lista «Desde ahora»: quien llega a las 17:00 ya está arriba. */
+.tc__titulo { margin: 4px 0 0; font-size: 15px; }
+.tc-lista { display: grid; gap: 8px; padding: 12px; border: 1px solid var(--tc-linea); border-radius: 14px; background: var(--tc-tarjeta); min-width: 0; }
+.tc-lista__cabeza { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 12px; }
+.tc-lista__cabeza h3 { margin: 0; font-size: 15px; }
+.tc-buscar { display: flex; align-items: center; gap: 6px; flex: 1 1 220px; max-width: 340px; min-height: 40px; padding: 0 10px; border: 1px solid var(--tc-linea); border-radius: 10px; background: var(--tc-fondo); color: var(--tc-suave); }
+.tc-buscar input { flex: 1; min-width: 0; border: 0; background: transparent; font: inherit; font-size: 14px; color: var(--tc-tinta); outline: none; }
+.tc-buscar:focus-within { border-color: var(--tc-acento); }
+.tc-lista__items { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.tc-lista__items--jugadas { opacity: .75; }
+.tc-lista__vacia { margin: 0; padding: 10px 2px; font-size: 13.5px; color: var(--tc-suave); }
+.tc-lista__mas { justify-self: start; min-height: 36px; padding: 0 12px; border: 1px dashed var(--tc-linea); border-radius: 10px; background: transparent; color: var(--tc-suave); font: inherit; font-size: 13px; cursor: pointer; }
+.tc-lista__mas:hover { color: var(--tc-tinta); border-color: var(--tc-suave); }
+.tc-lista__otros { display: grid; gap: 6px; padding-top: 6px; border-top: 1px solid var(--tc-linea); }
+.tc-lista__otros > small { font-size: 12px; color: var(--tc-suave); }
+.tc-fila { width: 100%; display: grid; grid-template-columns: 52px minmax(0, 1fr) auto; align-items: center; gap: 10px; min-height: 56px; padding: 8px 12px; border: 1px solid var(--tc-linea); border-left-width: 4px; border-radius: 12px; background: var(--tc-tarjeta); color: var(--tc-tinta); font: inherit; text-align: left; cursor: pointer; }
+.tc-fila:hover, .tc-fila:focus-visible { border-color: var(--tc-suave); }
+.tc-fila__hora { display: grid; line-height: 1.15; font-variant-numeric: tabular-nums; }
+.tc-fila__hora b { font-size: 15px; }
+.tc-fila__hora small { font-size: 11.5px; color: var(--tc-suave); }
+.tc-fila__quien { display: grid; min-width: 0; line-height: 1.25; }
+.tc-fila__quien b, .tc-fila__quien small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tc-fila__quien small { font-size: 12px; color: var(--tc-suave); }
+.tc-fila__cobro { padding: 4px 9px; border-radius: 999px; font-size: 12.5px; font-weight: 600; white-space: nowrap; background: var(--tc-fondo); }
+.tc-fila--cobrada { border-left-color: var(--tc-cobrada-t); }
+.tc-fila--cobrada .tc-fila__cobro { background: var(--tc-cobrada); color: var(--tc-cobrada-t); }
+.tc-fila--a_cuenta, .tc-fila--por_cobrar { border-left-color: var(--tc-cobrar-t); }
+.tc-fila--a_cuenta .tc-fila__cobro, .tc-fila--por_cobrar .tc-fila__cobro { background: var(--tc-cobrar); color: var(--tc-cobrar-t); }
+.tc-fila--esperando_pago { border-left-color: var(--tc-espera-t); border-left-style: dashed; }
+.tc-fila--esperando_pago .tc-fila__cobro { background: var(--tc-espera); color: var(--tc-espera-t); }
+.tc-fila--no_vino { border-left-color: var(--tc-novino-t); }
+.tc-fila--no_vino .tc-fila__cobro { background: var(--tc-novino); color: var(--tc-novino-t); }
+.tc-fila--nueva { box-shadow: 0 0 0 2px var(--tc-tinta); }
+@media (max-width: 720px) {
+  .tc-buscar { max-width: none; flex-basis: 100%; }
+  .tc-buscar input { font-size: 16px; }
+}
+/* Foto del pago en «Validar pago». */
+.tc-foto__boton { position: relative; display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 46px; border: 1px dashed var(--tc-suave); border-radius: 12px; background: var(--tc-tarjeta); color: var(--tc-tinta); font-weight: 600; font-size: 14px; cursor: pointer; }
+.tc-foto__boton input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
+.tc-foto__boton.is-leyendo { opacity: .7; cursor: progress; }
+.tc-foto { display: grid; grid-template-columns: 56px minmax(0, 1fr) auto; align-items: center; gap: 10px; padding: 8px; border-radius: 12px; background: var(--tc-tarjeta); border: 1px solid var(--tc-linea); }
+.tc-foto img { width: 56px; height: 72px; object-fit: cover; border-radius: 8px; display: block; }
+.tc-foto > div { display: grid; gap: 2px; min-width: 0; font-size: 13px; }
+.tc-foto small { font-size: 12px; color: var(--tc-suave); }
+.tc-foto--aprobar { border-color: var(--tc-cobrada-t); }
+.tc-foto--revisar { border-color: var(--tc-cobrar-t); }
+.tc-foto--revisar small { color: var(--tc-cobrar-t); }
+.tc-foto--rechazar { border-color: #B42318; }
+.tc-foto--rechazar small { color: #B42318; font-weight: 600; }
+.tc-foto > button { width: 36px; height: 36px; display: grid; place-items: center; border: 1px solid var(--tc-linea); border-radius: 50%; background: transparent; color: inherit; cursor: pointer; }
+.tc-aviso-rojo { color: #B42318; font-weight: 600; }
 .tc-montos { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
 .tc-montos button { flex: 1 1 120px; display: grid; gap: 1px; justify-items: start; min-height: 48px; padding: 6px 12px; border: 1px solid var(--tc-linea); border-radius: 10px; background: var(--tc-tarjeta); color: var(--tc-tinta); font: inherit; text-align: left; cursor: pointer; }
 .tc-montos button span { font-size: 12px; color: var(--tc-suave); }

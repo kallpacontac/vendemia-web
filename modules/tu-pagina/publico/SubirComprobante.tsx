@@ -10,25 +10,12 @@
 import { useRef, useState } from 'react';
 import { Check, ImageUp } from 'lucide-react';
 import { MENSAJES } from '@/modules/tu-pagina/dominio/comprobante';
+import { achicarImagen } from '@/lib/achicarImagen';
 import { soles } from '@/modules/tu-pagina/dominio/tienda';
 
 type Resultado = 'confirmada' | 'parcial' | 'a_cuenta' | 'cobrada' | 'revisar';
 
-async function achicar(archivo: File): Promise<Blob> {
-  try {
-    const bmp = await createImageBitmap(archivo);
-    const escala = Math.min(1, 1600 / Math.max(bmp.width, bmp.height));
-    const lienzo = document.createElement('canvas');
-    lienzo.width = Math.round(bmp.width * escala);
-    lienzo.height = Math.round(bmp.height * escala);
-    lienzo.getContext('2d')?.drawImage(bmp, 0, 0, lienzo.width, lienzo.height);
-    bmp.close();
-    const blob = await new Promise<Blob | null>((ok) => lienzo.toBlob(ok, 'image/jpeg', 0.88));
-    return blob ?? archivo;
-  } catch {
-    return archivo;
-  }
-}
+const achicar = achicarImagen;
 
 function textoOk(r: Resultado, d: { pagado?: number; total?: number; falta?: number; minimo?: number }): { titulo: string; detalle: string } {
   const falta = d.falta ?? 0;

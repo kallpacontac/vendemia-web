@@ -423,8 +423,26 @@ export default function Agenda() {
               setCreando(true);
               window.scrollTo({ top: 0, behavior: 'smooth' });
             }}
-            alGestionar={(pasada) => setTab(pasada ? 'pasadas' : 'proximas')}
+            // Con canchas, las que ya pasaron están en esta misma pantalla, debajo.
+            alGestionar={(pasada) => {
+              if (pasada) document.getElementById('ya-jugaron')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+              else setTab('proximas');
+            }}
           />
+        )}
+
+        {/* Canchas, una sola pantalla: lo que ya se jugó y falta cerrar (vino / no vino / cobrada)
+            sale aquí abajo, sin pestaña aparte, y solo si hay algo que cerrar. */}
+        {tab === 'semana' && canchas && !esRecurrente && nPendientes > 0 && (
+          <div id="ya-jugaron" style={{ marginTop: 18, scrollMarginTop: 12 }}>
+            <PorConfirmar
+              v={v}
+              citas={citasVista}
+              nombrePorLead={new Map((datos?.leads ?? []).map((l) => [l.id, l.name || l.phone]))}
+              pagosCitas={datos?.pagosCitas ?? new Map()}
+              alCambiar={recargar}
+            />
+          </div>
         )}
 
         {tab === 'semana' && (!canchas || esRecurrente) && (esRecurrente ? (

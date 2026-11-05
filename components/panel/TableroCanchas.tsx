@@ -2,14 +2,14 @@
 
 /**
  * El tablero del día con los datos reales del negocio (ver lib/panel/tablero-canchas.ts).
- * Cobrar, mover o cancelar sigue en las pestañas de siempre: aquí se abre la reserva
- * y se lleva allí, para no tener dos sitios que hagan lo mismo.
+ * Cobrar se hace aquí mismo (Validar pago); mover o cancelar sigue en las pestañas de
+ * siempre. Se pone al día solo cada minuto: una reserva hecha en la página aparece sin tocar nada.
  */
-import { useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { armarTablero, type CanchaTablero, type EstadoCobro, type ReservaTablero } from '@/lib/panel/tablero-canchas';
 import { useCargar } from '@/components/panel/useCargar';
-import TableroCanchasVista from '@/components/panel/TableroCanchasVista';
+import TableroCanchasVista, { type Encontrada } from '@/components/panel/TableroCanchasVista';
 import ValidarPago from '@/components/panel/ValidarPago';
 import { supabase } from '@/lib/supabase/client';
 import { getCitasDelPeriodo, getPagosDeCitas, getServiciosDeCitas, type ItemCatalogo, type Lead } from '@/lib/supabase/queries';
@@ -43,6 +43,7 @@ export default function TableroCanchas({ companyId, catalogo, leads, horario, pa
 }) {
   const hoy = hoyLima();
   const [fecha, setFecha] = useState(hoy);
+  const [ahora, setAhora] = useState(ahoraEnLima);
 
   const canchas = useMemo((): CanchaTablero[] => catalogo
     .filter((k) => k.activo && k.tipo !== 'producto' && !conFranjas(k.schedule_slots))
@@ -57,8 +58,22 @@ export default function TableroCanchas({ companyId, catalogo, leads, horario, pa
       supabase().from('tu_pagina').select('secciones').eq('company_id', companyId).maybeSingle(),
     ]);
     const cfg = ((pagina.data as { secciones?: { canchas?: ConfigCanchas } } | null)?.secciones?.canchas ?? {}) as ConfigCanchas;
-    return { citas, lineas, pagos, cfg };
+    // Los códigos R-XXXX. Sin la 0018 la función no existe: la lista sale sin ellos.
+    const cods = citas.length ? await supabase().rpc('cancha_codigos', { p_company: companyId, p_ids: citas.map((c) => c.id) }) : null;
+    const codigos = (cods && !cods.error ? cods.data : {}) as Record<string, string>;
+    return { citas, lineas, pagos, cfg, codigos };
   }, [companyId, fecha, recarga]);
+
+  // Cada minuto: la hora actual (la lista empieza en ella) y lo que se haya reservado en la página.
+  useEffect(() => {
+    const t = setInterval(() => { setAhora(ahoraEnLima()); recargar(); }, 60_000);
+    return () => clearInterval(t);
+  }, [recargar]);
+
+  const buscar = useCallback(async (texto: string): Promise<Encontrada[]> => {
+    const { data, error } = await supabase().rpc('cancha_buscar', { p_company: companyId, p_texto: texto });
+    return error ? [] : ((data ?? []) as Encontrada[]);
+  }, [companyId]);
 
   const tablero = useMemo(() => {
     const clientes = new Map(leads.map((l) => [l.id, l] as const));
@@ -91,8 +106,8 @@ export default function TableroCanchas({ companyId, catalogo, leads, horario, pa
         apartadaDesde: c.status === 'pending_payment' && c.created_at ? c.created_at : undefined,
       });
     }
-    return armarTablero({ canchas, reservas, horario, paso, fecha, ahora: ahoraEnLima(), cfg: datos?.cfg ?? {} });
-  }, [datos, canchas, leads, horario, paso, fecha]);
+    return armarTablero({ canchas, reservas, horario, paso, fecha, ahora, cfg: datos?.cfg ?? {} });
+  }, [datos, canchas, leads, horario, paso, fecha, ahora]);
 
   if (error && !datos) return <p className="tc__vacio">No se pudieron cargar las reservas de este día. Vuelve a intentarlo.</p>;
 
@@ -101,6 +116,9 @@ export default function TableroCanchas({ companyId, catalogo, leads, horario, pa
       tablero={tablero}
       fecha={fecha}
       hoy={hoy}
+      ahora={ahora}
+      codigos={datos?.codigos}
+      buscar={buscar}
       alFecha={setFecha}
       alLibre={alLibre}
       alRefrescar={() => recargar()}

@@ -28,7 +28,8 @@ export default function AgendaControles(p: Props) {
         {(!p.recurrente || p.proximas > 0) && <button type="button" className={p.tab === 'proximas' ? 'active' : ''} aria-pressed={p.tab === 'proximas'} onClick={() => p.alTab('proximas')}>
           <Clock size={15} /> Próximas{p.proximas > 0 ? ` (${p.proximas})` : ''}
         </button>}
-        {(!p.recurrente || p.pendientes > 0) && <button type="button" className={p.tab === 'pasadas' ? 'active' : ''} aria-pressed={p.tab === 'pasadas'} onClick={() => p.alTab('pasadas')} title="Atenciones pasadas sin confirmar o sin cobrar">
+        {/* Con canchas no: lo que ya pasó sale en la misma pantalla del tablero (menos pestañas). */}
+        {!p.canchas && (!p.recurrente || p.pendientes > 0) && <button type="button" className={p.tab === 'pasadas' ? 'active' : ''} aria-pressed={p.tab === 'pasadas'} onClick={() => p.alTab('pasadas')} title="Atenciones pasadas sin confirmar o sin cobrar">
           <CheckCircle size={15} /> Por revisar{p.pendientes > 0 ? ` (${p.pendientes})` : ''}
         </button>}
       </div>

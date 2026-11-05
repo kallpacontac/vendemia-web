@@ -73,6 +73,7 @@ export default function CanchasPanelEjemplo({ hoy, ahora, fechaInicial, nueva }:
           tablero={tablero}
           fecha={fecha}
           hoy={hoy}
+          ahora={ahora}
           alFecha={setFecha}
           alLibre={reservarPorTelefono}
           resaltar={nueva}
