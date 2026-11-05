@@ -1,4 +1,5 @@
-.tc {
+/* .tc-revisar va fuera de .tc (encima del tablero): sin estas variables, «Aprobar pago» salía blanco sobre blanco. */
+.tc, .tc-revisar {
   --tc-acento: var(--brand, #183D2B);
   --tc-tinta: var(--ink, #14211A);
   --tc-suave: var(--ink-soft, #5C655F);
@@ -20,6 +21,18 @@
 .tc__dia b { font-size: 15px; min-width: 112px; text-align: center; text-transform: capitalize; }
 .tc__dia button { min-height: 36px; min-width: 36px; display: inline-grid; place-items: center; border: 1px solid var(--tc-linea); border-radius: 10px; background: var(--tc-tarjeta); color: var(--tc-tinta); cursor: pointer; font: inherit; font-size: 13px; }
 .tc__dia .tc__hoy { padding: 0 12px; font-weight: 600; }
+.tc__fecha { position: relative; display: inline-flex; align-items: center; gap: 7px; min-height: 36px; padding: 0 12px; border: 1px solid var(--tc-linea); border-radius: 10px; background: var(--tc-tarjeta); cursor: pointer; }
+.tc__fecha b { min-width: 0; }
+.tc__fecha svg { color: var(--tc-suave); flex: none; }
+.tc__fecha input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; padding: 0; border: 0; opacity: 0; cursor: pointer; }
+.tc__fecha:hover { border-color: var(--tc-acento); }
+.tc__fecha:focus-within { outline: 2px solid var(--tc-acento); outline-offset: 2px; }
+.tc-montos { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
+.tc-montos button { flex: 1 1 120px; display: grid; gap: 1px; justify-items: start; min-height: 48px; padding: 6px 12px; border: 1px solid var(--tc-linea); border-radius: 10px; background: var(--tc-tarjeta); color: var(--tc-tinta); font: inherit; text-align: left; cursor: pointer; }
+.tc-montos button span { font-size: 12px; color: var(--tc-suave); }
+.tc-montos button b { font-size: 15px; }
+.tc-montos button[aria-pressed='true'] { border-color: var(--tc-tinta); box-shadow: inset 0 0 0 1px var(--tc-tinta); background: var(--tc-fondo); }
+.tc-montos button[aria-pressed='true'] span { color: var(--tc-tinta); }
 .tc__cifras { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin: 0; }
 .tc__cifras > div { background: var(--tc-tarjeta); border: 1px solid var(--tc-linea); border-radius: 14px; padding: 12px 14px; min-width: 0; }
 .tc__cifras dt { display: flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--tc-suave); }
@@ -77,11 +90,13 @@
 .tc-revisar { display: grid; gap: 10px; padding: 14px; border-radius: 14px; background: #FFF7EA; border: 1px solid #F0D9B0; color: var(--ink, #14211A); }
 .tc-revisar, .tc-revisar * { box-sizing: border-box; }
 .tc-revisar h3 { margin: 0; font-size: 15px; }
-.tc-revisar__item { display: flex; gap: 12px; padding: 10px; border-radius: 12px; background: var(--bg-card, #fff); }
-.tc-revisar__foto { position: relative; flex: 0 0 96px; height: 150px; border-radius: 8px; overflow: hidden; background: var(--bg-soft, #F3F6F3); color: #fff; }
+.tc-revisar__item { display: grid; grid-template-columns: 96px minmax(0, 1fr); grid-template-areas: 'foto datos' 'foto acciones'; align-items: start; gap: 8px 12px; padding: 10px; border-radius: 12px; background: var(--bg-card, #fff); }
+.tc-revisar__item:not(:has(.tc-revisar__foto)) { grid-template-columns: minmax(0, 1fr); grid-template-areas: 'datos' 'acciones'; }
+.tc-revisar__acciones { grid-area: acciones; display: grid; gap: 4px; min-width: 0; max-width: 640px; }
+.tc-revisar__foto { grid-area: foto; position: relative; height: 150px; border-radius: 8px; overflow: hidden; background: var(--bg-soft, #F3F6F3); color: #fff; }
 .tc-revisar__foto img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .tc-revisar__foto svg { position: absolute; right: 6px; bottom: 6px; filter: drop-shadow(0 1px 2px rgba(0, 0, 0, .6)); }
-.tc-revisar__datos { flex: 1; min-width: 0; display: grid; gap: 4px; align-content: start; }
+.tc-revisar__datos { grid-area: datos; min-width: 0; display: grid; gap: 4px; align-content: start; }
 .tc-revisar__datos small { font-size: 12.5px; color: var(--ink-soft, #5C655F); }
 .tc-revisar__datos .tc-revisar__motivo { color: #8A4B00; font-weight: 600; }
 .tc-revisar__campos { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
@@ -109,4 +124,7 @@
   .tc__cifras small { display: block; line-height: 1.25; }
   .tc__velo { place-items: end center; padding: 0; }
   .tc__hoja { width: 100%; border-radius: 18px 18px 0 0; }
+  /* Celular: foto y datos arriba; montos y botones a todo el ancho debajo. */
+  .tc-revisar__item { grid-template-columns: 72px minmax(0, 1fr); grid-template-areas: 'foto datos' 'acciones acciones'; }
+  .tc-revisar__foto { height: 112px; }
 }

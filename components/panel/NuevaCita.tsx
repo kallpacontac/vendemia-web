@@ -270,11 +270,8 @@ export default function NuevaCita({
 
         <div>
           <label className="field-label">{canchas ? 'Cancha' : 'Servicio'}</label>
-          <ComboPanel tipo="servicio" etiqueta={canchas ? 'Cancha' : 'Servicio'} value={itemId} alCambiar={setItemId}
+          <ComboPanel tipo={canchas ? 'cancha' : 'servicio'} etiqueta={canchas ? 'Cancha' : 'Servicio'} value={itemId} alCambiar={setItemId}
             opciones={[{ value:'', label: canchas ? 'Elige la cancha' : 'Elige el servicio' }, ...servicios.map((s) => ({ value:s.id, label:s.name, detalle:s.price != null ? soles(s.price) : undefined }))]} />
-          <small className="muted" style={{ fontSize: 11.5 }}>
-            {canchas ? 'El precio sale de la cancha y de la hora (día o noche): no se teclea.' : 'De él salen el precio y la duración: no se teclean.'}
-          </small>
         </div>
 
         {canchas && (
@@ -302,6 +299,10 @@ export default function NuevaCita({
           </div>
         )}
 
+        <small className="muted full" style={{ fontSize: 11.5, marginTop: -4 }}>
+          {canchas ? 'El precio sale de la cancha y de la hora (día o noche): no se teclea.' : 'Del servicio salen el precio y la duración: no se teclean.'}
+        </small>
+
         <div className="full nav-btns">
           <button className="btn btn-ghost" onClick={alCerrar}>
             Dejarlo
@@ -313,7 +314,7 @@ export default function NuevaCita({
 
         <small className="muted full" style={{ fontSize: 11.5 }}>
           Si no cabe —ocupado, bloqueado o fuera de horario— Mia te dirá exactamente por qué y no se
-          crea nada. Al terminar te doy el mensaje para avisar al cliente: <b>esta cita no pasa por
+          crea nada. Al terminar te doy el mensaje para avisar al cliente: <b>{canchas ? 'esta reserva' : 'esta cita'} no pasa por
           Mia</b>, así que nadie le avisa si no lo mandas tú.
         </small>
       </div>

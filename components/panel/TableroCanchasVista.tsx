@@ -6,7 +6,7 @@
  * En el celular se ve una cancha cada vez: cuatro columnas no caben en 360 píxeles.
  */
 import { useEffect, useState, type ReactNode } from 'react';
-import { CalendarClock, ChevronLeft, ChevronRight, CircleDollarSign, Plus, RefreshCw, Wallet, X } from 'lucide-react';
+import { CalendarClock, CalendarDays, ChevronLeft, ChevronRight, CircleDollarSign, Plus, RefreshCw, Wallet, X } from 'lucide-react';
 import { sumarDias } from '@/modules/tu-pagina/dominio/agenda';
 import { fechaCorta } from '@/modules/tu-pagina/dominio/envio';
 import type { EstadoCobro, ReservaTablero, Tablero } from '@/lib/panel/tablero-canchas';
@@ -62,7 +62,14 @@ export default function TableroCanchasVista({ tablero, fecha, hoy, alFecha, alLi
       <div className="tc__cabeza">
         <div className="tc__dia">
           <button type="button" aria-label="Día anterior" onClick={() => alFecha(sumarDias(fecha, -1))}><ChevronLeft size={17} aria-hidden="true" /></button>
-          <b aria-live="polite">{fecha === hoy ? 'Hoy · ' : ''}{fechaCorta(fecha)}</b>
+          {/* Tocar la fecha abre el calendario: saltar al 21 sin pulsar la flecha diez veces. */}
+          <label className="tc__fecha">
+            <CalendarDays size={16} aria-hidden="true" />
+            <b aria-live="polite">{fecha === hoy ? 'Hoy · ' : ''}{fechaCorta(fecha)}</b>
+            <input type="date" aria-label="Elegir día" value={fecha}
+              onChange={(e) => { if (e.target.value) alFecha(e.target.value); }}
+              onClick={(e) => { try { e.currentTarget.showPicker(); } catch { /* sin showPicker el navegador lo abre solo */ } }} />
+          </label>
           <button type="button" aria-label="Día siguiente" onClick={() => alFecha(sumarDias(fecha, 1))}><ChevronRight size={17} aria-hidden="true" /></button>
           {fecha !== hoy && <button type="button" className="tc__hoy" onClick={() => alFecha(hoy)}>Hoy</button>}
           {alRefrescar && <button type="button" aria-label="Actualizar" disabled={cargando} onClick={alRefrescar}><RefreshCw size={15} aria-hidden="true" /></button>}

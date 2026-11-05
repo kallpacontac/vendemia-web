@@ -42,11 +42,15 @@ export default function Confirmar({
   const caja = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    // En captura y sin propagar: si hay una hoja abierta debajo (tablero de canchas), Escape
+    // cierra solo este cuadro y no también la hoja.
     const tecla = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') alCerrar();
+      if (e.key !== 'Escape') return;
+      e.stopPropagation();
+      alCerrar();
     };
-    document.addEventListener('keydown', tecla);
-    return () => document.removeEventListener('keydown', tecla);
+    window.addEventListener('keydown', tecla, true);
+    return () => window.removeEventListener('keydown', tecla, true);
   }, [alCerrar]);
 
   return (

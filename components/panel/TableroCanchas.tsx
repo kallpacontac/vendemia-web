@@ -108,7 +108,7 @@ export default function TableroCanchas({ companyId, catalogo, leads, horario, pa
       enlaceCaja={<Link href="/panel/caja">Ver Caja</Link>}
       acciones={(r, cerrar) => (
         <>
-          <ValidarPago companyId={companyId} reserva={r} adelanto={Number(datos?.cfg.adelanto) || 0} alValidar={() => { cerrar(); recargar(); }} />
+          <ValidarPago companyId={companyId} reserva={r} nombreCancha={canchas.find((c) => c.id === r.cancha)?.nombre} adelanto={Number(datos?.cfg.adelanto) || 0} alValidar={() => { cerrar(); recargar(); }} />
           <button type="button" className="tc__accion tc__accion--suave" onClick={() => { cerrar(); alGestionar(r.fin <= ahoraEnLima()); }}>
             Mover, cancelar o ver detalle
           </button>

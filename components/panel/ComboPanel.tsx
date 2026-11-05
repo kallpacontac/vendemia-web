@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useId, useRef, useState } from 'react';
-import { Building2, Check, ChevronDown, ListFilter, Scissors, UserRound } from 'lucide-react';
+import { Building2, Check, ChevronDown, LandPlot, ListFilter, Scissors, UserRound } from 'lucide-react';
 
 export type OpcionCombo = { value: string; label: string; detalle?: string };
 
@@ -11,7 +11,7 @@ type Props = {
   alCambiar: (value: string) => void;
   etiqueta: string;
   className?: string;
-  tipo?: 'negocio' | 'servicio' | 'persona' | 'filtro';
+  tipo?: 'negocio' | 'servicio' | 'cancha' | 'persona' | 'filtro';
   tituloMenu?: string;
 };
 
@@ -25,7 +25,7 @@ export default function ComboPanel({ value, opciones, alCambiar, etiqueta, class
   const id = useId();
   const indiceElegido = Math.max(0, opciones.findIndex((o) => o.value === value));
   const elegida = opciones.find((o) => o.value === value);
-  const Icono = tipo === 'servicio' ? Scissors : tipo === 'persona' ? UserRound : tipo === 'filtro' ? ListFilter : Building2;
+  const Icono = tipo === 'cancha' ? LandPlot : tipo === 'servicio' ? Scissors : tipo === 'persona' ? UserRound : tipo === 'filtro' ? ListFilter : Building2;
 
   useEffect(() => {
     if (!abierto) return;
