@@ -61,6 +61,12 @@ const enlace = z
   .strict()
   .refine((l) => l.kind !== 'url' || Boolean(l.url), 'url');
 
+const avisoPublico = z.object({
+  companyId: compania,
+  audiencia: z.enum(['todos', 'inactivos', 'cerca']),
+  valor: z.number().int().min(1).max(1_000_000),
+});
+
 type Ctx = { sb: SupabaseClient };
 interface Accion<S extends z.ZodTypeAny> {
   esquema: S;
@@ -555,6 +561,25 @@ export const ACCIONES = {
     }),
     ejecutar: (d, { sb }) =>
       rpc(sb, 'loyalty_campaign_audience', { p_company: d.companyId, p_template: d.template, p_config: d.config }),
+  }),
+
+  'aviso.audiencia': accion({
+    esquema: avisoPublico,
+    limite: ['aviso-audiencia', 30],
+    ejecutar: (d, { sb }) =>
+      rpc(sb, 'loyalty_aviso_audiencia', { p_company: d.companyId, p_audience: d.audiencia, p_valor: d.valor }),
+  }),
+  'aviso.enviar': accion({
+    esquema: avisoPublico.extend({ title: textoCorto(60).min(1), body: textoCorto(160).min(1) }),
+    limite: ['aviso', 5],
+    ejecutar: (d, { sb }) =>
+      rpc(sb, 'loyalty_aviso_enviar', {
+        p_company: d.companyId,
+        p_audience: d.audiencia,
+        p_valor: d.valor,
+        p_title: d.title,
+        p_body: d.body,
+      }),
   }),
 
   // ── Wallet, cola y métricas ────────────────────────────────────────────

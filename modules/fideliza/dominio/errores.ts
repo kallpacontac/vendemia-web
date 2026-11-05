@@ -60,6 +60,8 @@ export const MENSAJES: Record<string, string> = {
   invalid_count: 'Cantidad no válida (1 a 500; 1 a 200 si es un pedido con código común).',
   invalid_campaign: 'Revisa el título y el texto del mensaje.',
   invalid_campaign_config: 'Revisa los días y el tope de mensajes.',
+  invalid_audience: 'Revisa los días o la cantidad elegida.',
+  faltan_sin_audiencia: '{faltan} solo funciona con «Les falta poco». Quítalo del mensaje o elige esa opción.',
   invalid_range: 'Rango de fechas no válido.',
   consent_required: 'Primero hay que aceptar recibir avisos.',
   invalid_channel: 'Canal no válido.',

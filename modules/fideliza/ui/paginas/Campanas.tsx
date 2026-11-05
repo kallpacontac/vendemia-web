@@ -15,6 +15,7 @@ import { useAvisar } from '@/components/panel/Avisos';
 import { useCargar } from '@/components/panel/useCargar';
 import { accion, lecturas, mensaje, type Campana } from '@/modules/fideliza/cliente/api';
 import { DEFINICIONES, type Metricas } from '@/modules/fideliza/dominio/metricas';
+import AvisoRapido from '@/modules/fideliza/ui/paginas/AvisoRapido';
 
 type Plantilla = Campana['template'];
 const PLANTILLAS: { t: Plantilla; nombre: string; cuando: string; titulo: string; texto: string }[] = [
@@ -89,6 +90,11 @@ export default function Campanas() {
     }
   }
 
+  const etapas = (t: string) => {
+    const e = datos.m?.campaigns[t];
+    return e ? Object.entries(e).map(([k, v]) => `${ETAPA[k] ?? k} ${v}`).join(' · ') : null;
+  };
+
   return (
     <>
       {!datos.config.push && (
@@ -96,6 +102,8 @@ export default function Campanas() {
           Avisos push: <b>No configurado</b> (faltan las claves VAPID en el servidor). Las campañas se pueden preparar, pero no se enviará nada.
         </div>
       )}
+      {editable && companyId && <AvisoRapido companyId={companyId} push={datos.config.push} resumen={etapas('manual')} alEnviar={releer} />}
+
       <div className="fz-panel-aviso fz-panel-aviso--info">
         Se envían solo a quien activó los avisos en su tarjeta, entre 09:00 y 20:00, como máximo {borr?.config.max_per_30d ?? 2} por persona cada 30 días. {DEFINICIONES.campanas}
       </div>
@@ -103,7 +111,7 @@ export default function Campanas() {
       <div className="fz-grid">
         {PLANTILLAS.map((p) => {
           const c = datos.campanas.find((x) => x.template === p.t);
-          const etapas = datos.m?.campaigns[p.t] ?? null;
+          const resumen = etapas(p.t);
           return (
             <div key={p.t} className="card">
               <div className="fz-fila" style={{ justifyContent: 'space-between' }}>
@@ -113,11 +121,7 @@ export default function Campanas() {
                 </span>
               </div>
               <p className="fz-def">{p.cuando}</p>
-              {etapas && (
-                <p className="fz-def">
-                  Últimos 30 días: {Object.entries(etapas).map(([k, v]) => `${ETAPA[k] ?? k} ${v}`).join(' · ')}
-                </p>
-              )}
+              {resumen && <p className="fz-def">Últimos 30 días: {resumen}</p>}
               <button className="btn btn-ghost btn-sm" style={{ marginTop: 10 }} onClick={() => abrir(p.t)}>
                 {editable ? 'Configurar' : 'Ver'}
               </button>
