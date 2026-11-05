@@ -16,8 +16,8 @@
  *     este no sale en esa visita.
  *   · Sale justo después de instalar y la primera vez que se abre desde el icono.
  *   · «Ahora no» descansa 1, 3 y 7 días, y desde ahí 14. No deja de volver.
- *   · Si el permiso está bloqueado, el navegador ya no lo vuelve a pedir: se
- *     explica dónde quitar el bloqueo.
+ *   · Siempre ofrece «Activar». Si está bloqueado, el navegador no vuelve a preguntar:
+ *     al tocar se explica dónde quitar el bloqueo (una página no puede quitarlo).
  *   · Mientras está este aviso no sale el de instalar: uno a la vez. En iPhone no
  *     hay conflicto, sin instalar no llega a montarse.
  *
@@ -73,7 +73,11 @@ export default function AvisoActivar(props: {
 }) {
   const { slug, enApp, alOcupar } = props;
   const [visible, setVisible] = useState(false);
-  const bloqueado = props.permiso === 'denied' || FORZADO === 'bloqueado';
+  // Siempre se ofrece «Activar»: un bloqueo de antes no se ve como bloqueo. Solo si al
+  // tocar el navegador lo sigue negando se explica cómo quitarlo; si lo quita y vuelve
+  // a la tarjeta (Tarjeta relee el permiso), «Activar» regresa solo.
+  const [pidioAyuda, setPidioAyuda] = useState(false);
+  const bloqueado = pidioAyuda && (props.permiso === 'denied' || FORZADO === 'bloqueado');
   const instalando = useRef(props.instalarVisible);
   instalando.current = props.instalarVisible;
 
@@ -121,6 +125,11 @@ export default function AvisoActivar(props: {
 
   async function activar() {
     await props.activar();
+    // Bloqueado: el navegador ni siquiera preguntó. Se queda abierto con los pasos.
+    if (Notification.permission === 'denied' || FORZADO === 'bloqueado') {
+      setPidioAyuda(true);
+      return;
+    }
     // Si los activó, Tarjeta ya desmontó esto. Si dijo que no, descansa como un «Ahora no».
     ahoraNo();
   }
@@ -133,8 +142,8 @@ export default function AvisoActivar(props: {
             <b>Tus avisos están bloqueados</b>
             <small>
               {enApp
-                ? 'En los ajustes del teléfono, busca esta app y permite sus notificaciones.'
-                : 'Toca el icono junto a la dirección, entra en Permisos y permite las notificaciones.'}
+                ? 'En los ajustes del teléfono, busca esta app, permite sus notificaciones y vuelve aquí.'
+                : 'Toca el icono junto a la dirección › Permisos › Notificaciones › Permitir, y vuelve a tocar Activar.'}
             </small>
           </>
         ) : (
