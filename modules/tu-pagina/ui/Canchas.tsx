@@ -83,6 +83,29 @@ export function ConfigDeCanchas({ companyId, valor, alCambiar }: { companyId: st
         )}
       </div>
       <label className="tp-panel-campo">
+        <span>Adelanto para confirmar (S/)</span>
+        <input className="input" inputMode="decimal" placeholder="Por ejemplo, 40" defaultValue={valor.adelanto || ''} onChange={(e) => alCambiar({ ...valor, adelanto: Number(e.target.value.replace(',', '.')) || 0 })} />
+        <small className="muted">Se le pide al apartar la cancha, junto con tu número de Yape o Plin de Ajustes. El resto se paga en la cancha. Funciona con «Requerir pago para confirmar» encendido.</small>
+      </label>
+      <label className="tp-panel-campo">
+        <span>Cómo te envían el comprobante</span>
+        <select className="input" value={valor.comprobante ?? 'whatsapp'} onChange={(e) => alCambiar({ ...valor, comprobante: e.target.value as ConfigCanchas['comprobante'] })}>
+          <option value="whatsapp">Por WhatsApp, y Mia lo valida</option>
+          <option value="pagina">Subiéndolo en la página</option>
+          <option value="ambos">Las dos opciones, que elija el cliente</option>
+        </select>
+      </label>
+      {(valor.comprobante === 'pagina' || valor.comprobante === 'ambos') && (
+        <label className="tp-panel-campo">
+          <span>Quién valida lo que suben en la página</span>
+          <select className="input" value={valor.validacion ?? 'automatica'} onChange={(e) => alCambiar({ ...valor, validacion: e.target.value as ConfigCanchas['validacion'] })}>
+            <option value="automatica">Automático: se confirma solo si todo cuadra</option>
+            <option value="manual">Yo: lo apruebo en Reservas</option>
+          </select>
+          <small className="muted">En automático se comprueba que sea un comprobante completado, a tu número, de las últimas 4 horas y no repetido. Si algo no se lee, lo revisas tú en Reservas.</small>
+        </label>
+      )}
+      <label className="tp-panel-campo">
         <span>Si piden adelanto, cuánto se guarda la cancha sin pagar</span>
         <select className="input" value={plazoDe(valor)} onChange={(e) => alCambiar({ ...valor, plazo: Number(e.target.value) })}>
           {PLAZOS.map((m) => <option key={m} value={m}>{m < 60 ? `${m} minutos` : m < 1440 ? `${m / 60} ${m === 60 ? 'hora' : 'horas'}` : '24 horas'}</option>)}

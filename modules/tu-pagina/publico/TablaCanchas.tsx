@@ -20,8 +20,11 @@
 import { useEffect, useMemo, useState } from 'react';
 import { ArrowRight, Bell, Check, ChevronLeft, ChevronRight, Clock3, MessageCircle, Minus, Plus, X } from 'lucide-react';
 import { sumarDias, sumarMin } from '@/modules/tu-pagina/dominio/agenda';
+import { guardarReservaDemo, leerReservasDemo, validarReservaDemo } from '@/modules/tu-pagina/dominio/canchas-ejemplo';
+import SubirComprobante from '@/modules/tu-pagina/publico/SubirComprobante';
 import {
   MAX_TURNOS,
+  adelantoDe,
   canchaLibre,
   canchasDe,
   estadoCasilla,
@@ -46,6 +49,26 @@ const MENSAJE_FALLO: Record<string, string> = {
   not_found: 'Esta página ya no recibe reservas en línea. Escríbenos por WhatsApp.',
 };
 
+interface MetodoDePago {
+  tipo: string;
+  numero: string;
+  titular: string;
+}
+
+interface Terminada {
+  codigo: string;
+  mensaje: string;
+  apartada?: boolean;
+  adelanto?: number;
+  metodos?: MetodoDePago[];
+  telefono?: string;
+  precio?: number | null;
+  demo?: { id: string; fecha: string };
+}
+
+const textoPlazo = (m: number) => (m < 60 ? `${m} minutos` : m < 1440 ? `${m / 60} ${m === 60 ? 'hora' : 'horas'}` : '24 horas');
+const numeroBonito = (n: string) => n.replace(/^51(?=\d{9}$)/, '').replace(/(\d{3})(?=\d)/g, '$1 ').trim();
+
 interface Seleccion {
   item: string;
   inicio: string;
@@ -62,6 +85,7 @@ export default function TablaCanchas({ esc, cfg, slug, whatsapp, negocio, ejempl
   const tipos = useMemo(() => [...new Set(canchas.map((c) => c.familia).filter(Boolean))], [canchas]);
   const [tipo, setTipo] = useState(tipos[0] ?? '');
   const plazo = plazoDe(cfg);
+  const modoComprobante = cfg.comprobante ?? 'whatsapp';
   const visibles = tipo ? canchas.filter((c) => c.familia === tipo) : canchas;
 
   const dias = useMemo(
@@ -82,7 +106,12 @@ export default function TablaCanchas({ esc, cfg, slug, whatsapp, negocio, ejempl
 
   const [sel, setSel] = useState<Seleccion | null>(null);
   const [avisame, setAvisame] = useState<{ item: Item; inicio: string } | null>(null);
-  const [hecho, setHecho] = useState<{ codigo: string; mensaje: string } | null>(null);
+  const [hecho, setHecho] = useState<Terminada | null>(null);
+
+  // Lo que ya se reservó en esta demo sigue ocupado al volver desde el panel del dueño.
+  useEffect(() => {
+    if (ejemplo) setTomadas(leerReservasDemo().map((r) => ({ item: r.cancha, inicio: r.inicio, fin: r.fin })));
+  }, [ejemplo]);
 
   useEffect(() => {
     if (!sel && !avisame) return;
@@ -126,13 +155,28 @@ export default function TablaCanchas({ esc, cfg, slug, whatsapp, negocio, ejempl
     return (
       <section className="tp-hecho" aria-live="polite">
         <div className="tp-hecho__marca"><Check size={36} aria-hidden="true" /></div>
-        <h2 className="tp-h1">{ejemplo ? 'Así se vería tu reserva' : '¡Tu cancha está reservada!'}</h2>
-        <p className="tp-lead">{ejemplo ? 'Es una demostración: no se guardó ni envió nada.' : 'Guarda tu código y avísanos por WhatsApp.'}</p>
+        <h2 className="tp-h1">{hecho.apartada ? 'Tu cancha está apartada, falta confirmarla' : ejemplo ? 'Así se vería tu reserva' : '¡Tu cancha está reservada!'}</h2>
+        <p className="tp-lead">{hecho.apartada ? `${modoComprobante === 'whatsapp' ? 'Confírmala por WhatsApp y paga' : 'Paga y envía tu comprobante'} en los próximos ${textoPlazo(plazo)}. Si no, la cancha se vuelve a ofrecer.` : ejemplo ? 'Es una demostración: no se guardó ni envió nada.' : 'Guarda tu código y avísanos por WhatsApp.'}</p>
+        {hecho.apartada && (
+          <ol className="tp-pago" aria-label="Cómo confirmar tu reserva">
+            {modoComprobante === 'whatsapp' && <li><b>Confirma por WhatsApp</b><span>Se envía el detalle con tu código {hecho.codigo}.</span></li>}
+            <li>
+              <b>{hecho.adelanto ? `Paga ${soles(hecho.adelanto)}` : 'Paga'} y {modoComprobante === 'pagina' ? 'sube' : modoComprobante === 'ambos' ? 'envía o sube' : 'manda'} la captura</b>
+              {hecho.metodos?.[0]
+                ? <span className="tp-pago__numero">{[...new Set(hecho.metodos.map((m) => (m.tipo === 'plin' ? 'Plin' : 'Yape')))].join(' o ')}: {numeroBonito(hecho.metodos[0].numero)}</span>
+                : <span>Por Yape o Plin. Te pasamos el número en el chat.</span>}
+              {hecho.metodos?.[0]?.titular && <span>A nombre de {hecho.metodos[0].titular}</span>}
+            </li>
+            <li><b>Revisamos tu pago y confirmamos</b><span>{modoComprobante === 'pagina' ? 'Lo ves aquí mismo.' : 'Te avisamos en cuanto esté listo.'}</span></li>
+          </ol>
+        )}
         <div className="tp-codigo">{hecho.codigo}</div>
-        <p className="tp-resumen">{hecho.mensaje}</p>
-        {!ejemplo && <a className="tp-boton tp-boton--wsp" href={urlWhatsApp(whatsapp, hecho.mensaje)} rel="noopener">
-          <MessageCircle size={20} aria-hidden="true" /> Avisar por WhatsApp
+        {hecho.apartada && modoComprobante !== 'whatsapp' && <SubirComprobante slug={slug} codigo={hecho.codigo} telefono={hecho.telefono ?? ''} ejemplo={ejemplo} faltaEjemplo={Math.max((hecho.precio ?? 0) - (hecho.adelanto ?? 0), 0)} alValidar={() => { if (hecho.demo) validarReservaDemo(hecho.demo.id); }} />}
+        {!ejemplo && (!hecho.apartada || modoComprobante !== 'pagina') && <a className={`tp-boton ${modoComprobante === 'ambos' ? 'tp-boton--suave' : 'tp-boton--wsp'}`} href={urlWhatsApp(whatsapp, hecho.mensaje)} rel="noopener">
+          <MessageCircle size={20} aria-hidden="true" /> {hecho.apartada ? 'Confirmar mi reserva por WhatsApp' : 'Avisar por WhatsApp'}
         </a>}
+        <p className="tp-resumen">{hecho.mensaje}</p>
+        {hecho.demo && <a className="tp-boton tp-boton--enlace" href={`/ejemplos/canchas/panel?fecha=${hecho.demo.fecha}&nueva=${encodeURIComponent(hecho.demo.id)}`}>Ver cómo le llega al dueño <ArrowRight size={18} aria-hidden="true" /></a>}
         <button type="button" className="tp-boton tp-boton--suave" onClick={() => { setHecho(null); setSel(null); }}>Reservar otra</button>
       </section>
     );
@@ -197,12 +241,22 @@ export default function TablaCanchas({ esc, cfg, slug, whatsapp, negocio, ejempl
           precio={precioReserva(cfg, itemSel, sel.inicio, sel.turnos)}
           slug={slug}
           ejemplo={ejemplo}
+          adelanto={adelantoDe(cfg, precioReserva(cfg, itemSel, sel.inicio, sel.turnos))}
           direccion={esc.direccion}
           alCerrar={() => setSel(null)}
           puedeSumar={sel.turnos < MAX_TURNOS && canchaLibre(agenda, itemSel.id, sel.inicio, itemSel.duracion * (sel.turnos + 1), plazo)}
           alCambiarTurnos={(n) => setSel((actual) => actual ? { ...actual, turnos: n } : actual)}
           alLlenarse={() => { setTomadas((t) => [...t, { item: sel.item, inicio: sel.inicio, fin: finSel }]); setSel(null); }}
-          alTerminar={setHecho}
+          alTerminar={(h) => {
+            if (ejemplo) {
+              const id = `demo-${sel.item}-${sel.inicio}`;
+              guardarReservaDemo({ id, cancha: sel.item, cliente: h.cliente, inicio: sel.inicio, fin: finSel, total: h.precio ?? 0 });
+              setTomadas((t) => [...t, { item: sel.item, inicio: sel.inicio, fin: finSel }]);
+              setHecho({ ...h, demo: { id, fecha: sel.inicio.slice(0, 10) } });
+              return;
+            }
+            setHecho(h);
+          }}
         />
         </div>
       )}
@@ -211,10 +265,10 @@ export default function TablaCanchas({ esc, cfg, slug, whatsapp, negocio, ejempl
   );
 }
 
-function Confirmar({ item, sel, precio, slug, direccion, ejemplo, alCerrar, puedeSumar, alCambiarTurnos, alLlenarse, alTerminar }: {
-  item: Item; sel: Seleccion; precio: number | null; slug: string; direccion: string; ejemplo: boolean;
+function Confirmar({ item, sel, precio, adelanto, slug, direccion, ejemplo, alCerrar, puedeSumar, alCambiarTurnos, alLlenarse, alTerminar }: {
+  item: Item; sel: Seleccion; precio: number | null; adelanto: number; slug: string; direccion: string; ejemplo: boolean;
   alCerrar: () => void; puedeSumar: boolean; alCambiarTurnos: (n: number) => void;
-  alLlenarse: () => void; alTerminar: (h: { codigo: string; mensaje: string }) => void;
+  alLlenarse: () => void; alTerminar: (h: Terminada & { cliente: string; precio: number | null }) => void;
 }) {
   const { cliente, setCliente, recordar } = useCliente();
   const [errores, setErrores] = useState<ErroresCliente>({});
@@ -230,13 +284,15 @@ function Confirmar({ item, sel, precio, slug, direccion, ejemplo, alCerrar, pued
     setFallo('');
     if (Object.keys(e).length) return;
     if (ejemplo) {
-      alTerminar({ codigo: 'DEMO-001', mensaje: mensajeCancha('DEMO-001', { cancha: item.nombre, inicio: sel.inicio, minutos, precio, nombre: cliente.nombre, extras }) });
+      const apartada = adelanto > 0;
+      alTerminar({ codigo: 'R-DEMO', telefono: cliente.telefono, cliente: cliente.nombre.trim(), precio, apartada, adelanto, mensaje: mensajeCancha('R-DEMO', { cancha: item.nombre, inicio: sel.inicio, minutos, precio, nombre: cliente.nombre, extras, apartada, adelanto }) });
       return;
     }
     const j = await enviar({ slug, item: item.id, inicio: sel.inicio, turnos: sel.turnos, nombre: cliente.nombre, telefono: cliente.telefono, web: '' });
     if (j.status === 'ok' && typeof j.codigo === 'string') {
       recordar(cliente);
-      alTerminar({ codigo: j.codigo, mensaje: mensajeCancha(j.codigo, { cancha: item.nombre, inicio: sel.inicio, minutos, precio, nombre: cliente.nombre, extras }) });
+      const apartada = j.estado === 'pending_payment';
+      alTerminar({ codigo: j.codigo, apartada, adelanto, telefono: cliente.telefono, metodos: Array.isArray(j.metodos) ? (j.metodos as MetodoDePago[]) : [], cliente: cliente.nombre.trim(), precio, mensaje: mensajeCancha(j.codigo, { cancha: item.nombre, inicio: sel.inicio, minutos, precio, nombre: cliente.nombre, extras, apartada, adelanto }) });
       return;
     }
     if (j.errores) setErrores(j.errores as ErroresCliente);
@@ -256,6 +312,8 @@ function Confirmar({ item, sel, precio, slug, direccion, ejemplo, alCerrar, pued
         <div><dt>Hora</dt><dd>{sel.inicio.slice(11, 16)} – {sumarMin(sel.inicio, minutos).slice(11, 16)}</dd></div>
         {direccion && <div><dt>Dirección</dt><dd>{direccion}</dd></div>}
         <div className="tp-reserva-resumen__precio"><dt>Total</dt><dd>{soles(precio)}</dd></div>
+        {adelanto > 0 && precio !== null && <div><dt>Adelanto para confirmar</dt><dd>{soles(adelanto)}</dd></div>}
+        {adelanto > 0 && precio !== null && <div><dt>Resto en la cancha</dt><dd>{soles(precio - adelanto)}</dd></div>}
       </dl></div>
       <div className="tp-canchas__duracion"><div><b>Tiempo de juego</b><small>{minutos} min · {sel.turnos} {sel.turnos === 1 ? 'turno' : 'turnos'}</small></div><div className="tp-canchas__duracion-botones"><button type="button" aria-label="Quitar un turno" disabled={sel.turnos === 1} onClick={() => alCambiarTurnos(sel.turnos - 1)}><Minus size={16} /></button><button type="button" aria-label="Añadir un turno" disabled={!puedeSumar} onClick={() => alCambiarTurnos(sel.turnos + 1)}><Plus size={16} /></button></div></div>
       <div className="tp-canchas__extras">
@@ -265,8 +323,8 @@ function Confirmar({ item, sel, precio, slug, direccion, ejemplo, alCerrar, pued
       </div>
       <CamposCliente d={cliente} errores={errores} alCambiar={(k, v) => { setCliente((c) => ({ ...c, [k]: v })); setErrores((x) => ({ ...x, [k]: undefined })); }} />
       {fallo && <p className="tp-aviso" role="alert">{fallo}</p>}
-      <button type="button" className="tp-boton" disabled={enviando} onClick={() => void reservar()}>{enviando ? 'Reservando…' : <>Confirmar reserva <ArrowRight size={18} aria-hidden="true" /></>}</button>
-      <p className="tp-nota">{ejemplo ? 'Esta muestra no guarda ni envía reservas.' : 'La cancha se reserva aquí. Los complementos se solicitan por WhatsApp después.'}</p>
+      <button type="button" className="tp-boton" disabled={enviando} onClick={() => void reservar()}>{enviando ? 'Reservando…' : <>{adelanto > 0 ? 'Apartar mi cancha' : 'Confirmar reserva'} <ArrowRight size={18} aria-hidden="true" /></>}</button>
+      <p className="tp-nota">{ejemplo ? 'Esta muestra no guarda ni envía reservas.' : adelanto > 0 ? 'Pon el celular de tu WhatsApp: con ese número revisamos tu pago y confirmamos tu reserva.' : 'La cancha se reserva aquí. Los complementos se solicitan por WhatsApp después.'}</p>
     </section>
   );
 }

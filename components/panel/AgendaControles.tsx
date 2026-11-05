@@ -12,16 +12,18 @@ type Props = {
   fecha: string; vista: Vista; alVista: (vista: Vista) => void;
   anterior: () => void; siguiente: () => void; hoy: () => void;
   resumen?: { reservas: number; libres: number; ocupacion: number };
+  /** Con canchas, la primera pestaña es el tablero del día, que trae sus propios controles. */
+  canchas?: boolean;
 };
 
 /** Controles presentacionales compartidos por la agenda real y su prueba responsive. */
 export default function AgendaControles(p: Props) {
-  const calendario = !p.recurrente && p.tab === 'semana';
+  const calendario = !p.recurrente && p.tab === 'semana' && !p.canchas;
   return (
     <section className="agenda-controls" aria-label="Filtros de la agenda">
       <div className="view-toggle tabs-agenda" role="group" aria-label="Contenido de la agenda">
         <button type="button" className={p.tab === 'semana' ? 'active' : ''} aria-pressed={p.tab === 'semana'} onClick={() => p.alTab('semana')}>
-          <CalendarCheck size={15} /> {p.recurrente ? 'Grupos' : p.movil ? 'Día' : 'Semana'}
+          <CalendarCheck size={15} /> {p.recurrente ? 'Grupos' : p.canchas ? 'Canchas' : p.movil ? 'Día' : 'Semana'}
         </button>
         {(!p.recurrente || p.proximas > 0) && <button type="button" className={p.tab === 'proximas' ? 'active' : ''} aria-pressed={p.tab === 'proximas'} onClick={() => p.alTab('proximas')}>
           <Clock size={15} /> Próximas{p.proximas > 0 ? ` (${p.proximas})` : ''}

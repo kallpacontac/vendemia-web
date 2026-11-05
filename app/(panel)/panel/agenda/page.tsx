@@ -36,6 +36,8 @@ import Topbar from '@/components/panel/Topbar';
 import AgendaControles from '@/components/panel/AgendaControles';
 import AvisarCliente from '@/components/panel/AvisarCliente';
 import NuevaCita from '@/components/panel/NuevaCita';
+import TableroCanchas from '@/components/panel/TableroCanchas';
+import ComprobantesPorRevisar from '@/components/panel/ComprobantesPorRevisar';
 import Consumos from '@/components/panel/Consumos';
 import TurnosFijos from '@/components/panel/TurnosFijos';
 import FaltanSeguido from '@/components/panel/FaltanSeguido';
@@ -149,6 +151,8 @@ export default function Agenda() {
   const [fEmpleado, setFEmpleado] = useState('');
   /** El formulario de alta: la cita que se pide por teléfono o en el mostrador. */
   const [creando, setCreando] = useState(false);
+  /** La casilla libre tocada en el tablero de canchas: abre el alta ya rellena. */
+  const [altaInicial, setAltaInicial] = useState<{ fecha: string; hora: string; itemId: string } | undefined>();
   /**
    * En el móvil la rejilla se convierte en UN DÍA por pantalla. Siete columnas
    * en 360 píxeles tocan a cincuenta cada una: se veía media semana y había que
@@ -323,15 +327,15 @@ export default function Agenda() {
     <main className="main main--agenda">
       <div className="wrap">
         <Topbar titulo={v.agenda} sub={esRecurrente ? "Grupos e inscripciones" : "Disponibilidad y reservas"} accionesTitulo={!esRecurrente ? (
-          <button type="button" className="btn btn-primary" aria-expanded={creando} aria-controls="agenda-nueva-cita" onClick={() => setCreando((v) => !v)}>
-            <CalendarPlus size={17} /> {creando ? "Cerrar formulario" : "Nueva cita"}
+          <button type="button" className="btn btn-primary" aria-expanded={creando} aria-controls="agenda-nueva-cita" onClick={() => { setAltaInicial(undefined); setCreando((v) => !v); }}>
+            <CalendarPlus size={17} /> {creando ? "Cerrar formulario" : canchas ? "Nueva reserva" : "Nueva cita"}
           </button>
         ) : undefined} />
 
         <AgendaControles
-          recurrente={esRecurrente} movil={esMovil} tab={tab} alTab={setTab}
+          recurrente={esRecurrente} movil={esMovil} tab={tab} alTab={setTab} canchas={canchas}
           proximas={nProximas} pendientes={nPendientes}
-          resumen={!esRecurrente ? { reservas: semana?.totales.reservado ?? 0, libres: semana?.totales.libre ?? 0, ocupacion } : undefined}
+          resumen={!esRecurrente && !canchas ? { reservas: semana?.totales.reservado ?? 0, libres: semana?.totales.libre ?? 0, ocupacion } : undefined}
           profesionales={datos?.trabajadores ?? []} profesional={fEmpleado} alProfesional={setFEmpleado}
           fecha={esMovil
             ? `${dia?.esHoy ? 'Hoy · ' : ''}${dia ? `${dia.weekday.replace('.', '')} ${diaMes(dia.fecha)}` : '—'}`
@@ -344,6 +348,8 @@ export default function Agenda() {
 
         {creando && !esRecurrente && (
           <div id="agenda-nueva-cita"><NuevaCita
+            key={altaInicial ? `${altaInicial.itemId}|${altaInicial.fecha}|${altaInicial.hora}` : 'nueva'}
+            inicial={altaInicial}
             leads={datos?.leads ?? []}
             catalogo={datos?.catalogo ?? []}
             trabajadores={datos?.trabajadores ?? []}
@@ -402,7 +408,26 @@ export default function Agenda() {
           />
         )}
 
-        {tab === 'semana' && (esRecurrente ? (
+        {canchas && companyId && <ComprobantesPorRevisar companyId={companyId} recarga={datos?.citas} alCambiar={recargar} />}
+
+        {tab === 'semana' && canchas && !esRecurrente && companyId && datos?.empresa && (
+          <TableroCanchas
+            companyId={companyId}
+            catalogo={datos.catalogo}
+            leads={datos.leads}
+            horario={datos.empresa.horario}
+            paso={datos.empresa.slot_minutes || 60}
+            recarga={datos.citas}
+            alLibre={(item, inicio) => {
+              setAltaInicial({ fecha: inicio.slice(0, 10), hora: inicio.slice(11, 16), itemId: item });
+              setCreando(true);
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
+            alGestionar={(pasada) => setTab(pasada ? 'pasadas' : 'proximas')}
+          />
+        )}
+
+        {tab === 'semana' && (!canchas || esRecurrente) && (esRecurrente ? (
           <Recurrentes
             catalogo={datos?.catalogo ?? []}
             citas={datos?.citas ?? []}

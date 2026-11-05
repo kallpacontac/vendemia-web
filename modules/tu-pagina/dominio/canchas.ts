@@ -48,12 +48,24 @@ export interface ConfigCanchas {
    * la reserva, la apartada se cancela. Sin elegir, 24 h (como el bot). sql/0011, v2_cancha_plazo.
    */
   plazo?: number;
+  /** Soles que aparta la cancha, con «Requerir pago para confirmar». El resto se paga en la cancha. */
+  adelanto?: number;
+  /** Cómo llega el comprobante: por WhatsApp (Mia), subido en la página, o las dos. */
+  comprobante?: 'whatsapp' | 'pagina' | 'ambos';
+  /** El subido en la página: lo valida la IA con las reglas del bot, o el dueño a mano. */
+  validacion?: 'automatica' | 'manual';
 }
 
 export const PLAZOS = [30, 60, 120, 1440] as const;
 
 /** El plazo válido (15–1440 min); 24 h si no se eligió. */
 export const plazoDe = (cfg: ConfigCanchas): number => Math.min(Math.max(Math.round(Number(cfg.plazo) || 1440), 15), 1440);
+
+/** El adelanto de una reserva: nunca más que su total. 0 = sin adelanto configurado. */
+export const adelantoDe = (cfg: ConfigCanchas, total: number | null): number => {
+  const a = Number(cfg.adelanto) || 0;
+  return a > 0 && total !== null && total > 0 ? Math.min(a, total) : 0;
+};
 
 /** Cuántos turnos seguidos se pueden reservar de una vez. */
 export const MAX_TURNOS = 4;
@@ -150,17 +162,36 @@ export function normalizarCanchas(c: ConfigCanchas): ConfigCanchas {
     const n = Number(v);
     if (id && Number.isFinite(n) && n >= 0) noche[id] = Math.round(n * 100) / 100;
   }
-  return { activo: Boolean(c.activo), desde: HORA.test(c.desde ?? '') ? c.desde : '18:00', finde: Boolean(c.finde), noche, plazo: plazoDe(c) };
+  const adelanto = Math.max(0, Math.round((Number(c.adelanto) || 0) * 100) / 100);
+  return { activo: Boolean(c.activo), desde: HORA.test(c.desde ?? '') ? c.desde : '18:00', finde: Boolean(c.finde), noche, plazo: plazoDe(c), adelanto,
+    comprobante: c.comprobante === 'pagina' || c.comprobante === 'ambos' ? c.comprobante : 'whatsapp',
+    validacion: c.validacion === 'manual' ? 'manual' : 'automatica' };
 }
 
-/** El WhatsApp que el cliente manda al terminar: sin bot, es lo único que lee el dueño. */
-export function mensajeCancha(codigo: string, r: { cancha: string; inicio: string; minutos: number; precio: number | null; nombre: string; extras?: string[] }): string {
+/** El WhatsApp que el cliente manda al terminar: el detalle con su código, que Mia y el dueño leen. */
+export function mensajeCancha(codigo: string, r: { cancha: string; inicio: string; minutos: number; precio: number | null; nombre: string; extras?: string[]; apartada?: boolean; adelanto?: number }): string {
+  const horas = `• ${fechaCorta(r.inicio.slice(0, 10))}, de ${r.inicio.slice(11, 16)} a ${sumarMin(r.inicio, r.minutos).slice(11, 16)}`;
+  const nota = r.extras?.length ? [`También quisiera pedir: ${r.extras.join(', ')} (sujeto a disponibilidad y precio).`] : [];
+  if (r.apartada) {
+    const adelanto = r.adelanto ?? 0;
+    return [
+      'Hola, quiero confirmar mi reserva.',
+      `Código: ${codigo}`,
+      `• ${r.cancha}`,
+      horas,
+      ...(r.precio !== null ? [`• Total: ${soles(r.precio)}`] : []),
+      ...(adelanto > 0 && r.precio !== null ? [`• Adelanto: ${soles(adelanto)} (resto en la cancha: ${soles(r.precio - adelanto)})`] : []),
+      `A nombre de: ${r.nombre.trim()}`,
+      ...nota,
+      '¿Me indicas cómo pagar el adelanto?',
+    ].join('\n');
+  }
   return [
     `Hola, reservé una cancha en tu página (${codigo}):`,
     `• ${r.cancha}`,
-    `• ${fechaCorta(r.inicio.slice(0, 10))}, de ${r.inicio.slice(11, 16)} a ${sumarMin(r.inicio, r.minutos).slice(11, 16)}`,
+    horas,
     ...(r.precio !== null ? [`• ${soles(r.precio)}`] : []),
     `A nombre de: ${r.nombre.trim()}`,
-    ...(r.extras?.length ? [`También quisiera pedir: ${r.extras.join(', ')} (sujeto a disponibilidad y precio).`] : []),
+    ...nota,
   ].join('\n');
 }

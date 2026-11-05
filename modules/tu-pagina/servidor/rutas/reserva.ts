@@ -105,13 +105,22 @@ export async function POST(req: Request) {
       },
     };
     // Con la agenda en la nube (0004) la reserva entra directo en la agenda real; si no, en reservas_web.
-    let r = await rpc<{ status: string; codigo?: string }>(servidor(), 'agenda_srv_reservar', args);
+    let r = await rpc<{ status: string; codigo?: string; estado?: string }>(servidor(), 'agenda_srv_reservar', args);
     // Las canchas necesitan la agenda en la nube: reservas_web no sabe ocuparlas por separado.
     if (r.status === 'no_es_nube' && datos.tipo === 'cancha') return responder({ status: 'not_found' }, 404);
-    if (r.status === 'no_es_nube') r = await rpc<{ status: string; codigo?: string }>(servidor(), 'reserva_srv_crear', args);
+    if (r.status === 'no_es_nube') r = await rpc<{ status: string; codigo?: string; estado?: string }>(servidor(), 'reserva_srv_crear', args);
     if (r.status !== 'ok') return responder(r, r.status === 'lleno' || r.status === 'pasada' ? 409 : 400);
     revalidateTag(`tu-pagina:${c.slug.toLowerCase()}`);
-    return responder({ status: 'ok', codigo: r.codigo });
+    // Apartada: a dónde pagar. Sin la 0017 o sin métodos, la página dice que escriban por WhatsApp.
+    let metodos: { tipo: string; numero: string; titular: string }[] = [];
+    if (r.estado === 'pending_payment') {
+      try {
+        metodos = (await rpc<{ status: string; metodos?: typeof metodos }>(servidor(), 'tu_pagina_srv_pago', { p_slug: c.slug })).metodos ?? [];
+      } catch {
+        metodos = [];
+      }
+    }
+    return responder({ status: 'ok', codigo: r.codigo, estado: r.estado, metodos });
   } catch (e) {
     log('tu_pagina_reserva_error', { mensaje: e instanceof Error ? e.message.slice(0, 120) : 'x' });
     return responder({ status: 'error' }, 503);

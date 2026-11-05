@@ -31,7 +31,7 @@ export default function CanchasPortada({ pagina, esc, ejemplo = false, children 
       <section id="reservar" className="tp-futbol__reserva" aria-label="Reserva tu cancha">
         <div className="tp-futbol__reserva-cabeza"><div><span>JUEGA ESTA SEMANA</span><h2>Reserva tu cancha</h2><p>Elige modalidad, día y horario. Las horas libres se muestran al instante.</p></div><span className="tp-futbol__rapido"><Clock3 size={16} aria-hidden="true" /> En pocos pasos</span></div>
         {esc ? <TablaCanchas esc={esc} cfg={pagina.secciones.canchas ?? {}} slug={pagina.slug} whatsapp={pagina.whatsapp} negocio={pagina.titulo} ejemplo={ejemplo} /> : <p className="tp-vacio">Por ahora no hay canchas para reservar. Escríbenos por WhatsApp.</p>}
-        {ejemplo && <p className="tp-futbol__demo">Vista de ejemplo · Horarios y precios ilustrativos. Ninguna acción guarda o envía datos.</p>}
+        {ejemplo && <p className="tp-futbol__demo">Vista de ejemplo · Horarios y precios ilustrativos. Ninguna acción guarda o envía datos. <a href="/ejemplos/canchas/panel">Ver el panel del dueño</a></p>}
       </section>
       <div className="tp-futbol__pie">
         {esc?.direccion && <span><MapPin size={16} aria-hidden="true" /> {esc.direccion}</span>}

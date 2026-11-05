@@ -123,6 +123,16 @@ export function redactar(eventos: EventoPendiente[]): Mensaje {
   const prefijo = e.negocio ? `${e.negocio} · ` : '';
   const tag = `${e.company_id}:${e.tipo}`;
 
+  // Un comprobante subido en la página que tiene que mirar una persona (tu-pagina 0017).
+  if (e.datos.clase === 'comprobante_por_revisar') {
+    return {
+      title: n === 1 ? `${prefijo}Comprobante por revisar` : `${prefijo}${n} comprobantes por revisar`,
+      body: n === 1 ? `${String(e.datos.servicio ?? 'Una cancha')} · ${String(e.datos.slot ?? '').slice(0, 16)}. Apruébalo o recházalo para confirmar la reserva.` : 'Apruébalos o recházalos para confirmar las reservas.',
+      url: '/panel/agenda',
+      tag,
+    };
+  }
+
   // Lo que piden desde el QR de una mesa (tu-pagina 0015): sin importes ni teléfonos, porque
   // le llega también al equipo. Va a /panel/mesas y un llamado nuevo de esa mesa reemplaza al anterior.
   if (e.datos.clase === 'web_mesa') {

@@ -50,6 +50,7 @@ export default function NuevaCita({
   catalogo,
   trabajadores,
   canchas = false,
+  inicial,
   alCerrar,
   alCambiar,
 }: {
@@ -57,6 +58,8 @@ export default function NuevaCita({
   catalogo: ItemCatalogo[];
   trabajadores: Trabajador[];
   canchas?: boolean;
+  /** Lo que ya se sabe al abrirla: la casilla libre que se tocó en el tablero. */
+  inicial?: { fecha: string; hora: string; itemId: string };
   alCerrar: () => void;
   alCambiar: () => void;
 }) {
@@ -68,9 +71,9 @@ export default function NuevaCita({
   const [lead, setLead] = useState<Lead | null>(null);
   const [tel, setTel] = useState('');
   const [nombre, setNombre] = useState('');
-  const [fecha, setFecha] = useState(hoyLima());
-  const [hora, setHora] = useState('');
-  const [itemId, setItemId] = useState('');
+  const [fecha, setFecha] = useState(inicial?.fecha ?? hoyLima());
+  const [hora, setHora] = useState(inicial?.hora ?? '');
+  const [itemId, setItemId] = useState(inicial?.itemId ?? '');
   const [empId, setEmpId] = useState('');
   const [turnos, setTurnos] = useState(1);
   const [semanas, setSemanas] = useState(1);

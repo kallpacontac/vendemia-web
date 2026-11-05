@@ -76,6 +76,19 @@
 .tp-boton:disabled { opacity: .6; cursor: wait; }
 .tp-boton--wsp { background: #25d366; color: #0b2e17; }
 .tp-boton--suave { background: transparent; color: var(--tp-texto); border: 1px solid var(--tp-borde); }
+.tp a.tp-boton--enlace { color: var(--tp-tinta); }
+.tp-subir { width: 100%; display: grid; gap: 10px; }
+.tp-subir label.tp-boton { cursor: pointer; position: relative; }
+.tp-subir__archivo { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+.tp-subir label.tp-boton:focus-within { outline: 2px solid currentColor; outline-offset: 2px; }
+.tp-subir__ocupado { opacity: .65; pointer-events: none; }
+.tp-subir__ok { display: flex; gap: 10px; margin: 0; padding: 12px 14px; text-align: left; border-radius: var(--tp-radio); background: #e7f6ec; color: #14622f; }
+.tp-subir__ok--aviso { background: #fff1dc; color: #8a4b00; }
+.tp-subir__ok b { display: block; }
+.tp-pago { width: 100%; margin: 0; padding: 14px 16px 14px 34px; display: grid; gap: 12px; text-align: left; border: 1px solid var(--tp-borde); border-radius: var(--tp-radio); }
+.tp-pago li > b { display: block; font-size: 15px; }
+.tp-pago li > span { display: block; font-size: 14px; opacity: .78; }
+.tp-pago li > .tp-pago__numero { font-size: 19px; font-weight: 700; opacity: 1; font-variant-numeric: tabular-nums; }
 
 /* ── Formulario ───────────────────────────────────────────────────────────── */
 .tp-volver { display: inline-flex; align-items: center; gap: 6px; padding: 16px 0 8px; color: var(--tp-suave); text-decoration: none; }
