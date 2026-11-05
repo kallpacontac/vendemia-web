@@ -10,7 +10,7 @@
  * arriba de la lista. El buscador queda para el que viene de otro día.
  */
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
-import { CalendarClock, CalendarDays, ChevronLeft, ChevronRight, CircleDollarSign, Plus, RefreshCw, Search, Wallet, X } from 'lucide-react';
+import { CalendarClock, CalendarDays, ChevronDown, ChevronLeft, ChevronRight, CircleDollarSign, Plus, RefreshCw, Search, Wallet, X } from 'lucide-react';
 import { sumarDias } from '@/modules/tu-pagina/dominio/agenda';
 import { fechaCorta } from '@/modules/tu-pagina/dominio/envio';
 import { fechaCorta as fechaYHora } from '@/lib/panel/cobro-cancha';
@@ -50,6 +50,11 @@ export interface Encontrada {
   estado: string;
 }
 
+// Plegada o abierta: lo recuerda cada navegador. Puede no haber almacenamiento (privado, vista previa).
+const CLAVE_LISTA = 'tc-lista-abierta';
+const leerAbierta = () => { try { return localStorage.getItem(CLAVE_LISTA) === '1'; } catch { return false; } };
+const guardarAbierta = (v: boolean) => { try { localStorage.setItem(CLAVE_LISTA, v ? '1' : '0'); } catch { /* sin almacenamiento */ } };
+
 const normal = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
 
 export default function TableroCanchasVista({ tablero, fecha, hoy, ahora, alFecha, alLibre, acciones, alRefrescar, enlaceCaja, resaltar, codigos, buscar, cargando = false }: {
@@ -79,6 +84,10 @@ export default function TableroCanchasVista({ tablero, fecha, hoy, ahora, alFech
   const [porAbrir, setPorAbrir] = useState<string | null>(null);
   const [verJugadas, setVerJugadas] = useState(false);
   const [verPasadas, setVerPasadas] = useState(false);
+  // Plegada por defecto: el tablero manda; la lista se abre cuando hace falta.
+  const [listaAbierta, setListaAbierta] = useState(false);
+  useEffect(() => { setListaAbierta(leerAbierta()); }, []);
+  const plegar = () => setListaAbierta((v) => { guardarAbierta(!v); return !v; });
   const reserva = tablero.reservas.find((r) => r.id === abierta) ?? null;
   const columnaActiva = tablero.columnas.some((c) => c.cancha.id === activa) ? activa : tablero.columnas[0]?.cancha.id ?? '';
   const { resumen: t } = tablero;
@@ -116,6 +125,8 @@ export default function TableroCanchasVista({ tablero, fecha, hoy, ahora, alFech
   const delDia = tablero.reservas.filter(coincide);
   const vienen = esHoy && !filtro ? delDia.filter((r) => r.fin > ahora!) : delDia;
   const jugadas = esHoy && !filtro ? delDia.filter((r) => r.fin <= ahora!) : [];
+  const porCobrarN = (esHoy ? tablero.reservas.filter((r) => r.fin > ahora!) : tablero.reservas)
+    .filter((r) => r.estado !== 'cobrada' && r.estado !== 'no_vino').length;
 
   // Buscar en otros días: solo si se escribió algo y no está en este.
   useEffect(() => {
@@ -192,15 +203,20 @@ export default function TableroCanchasVista({ tablero, fecha, hoy, ahora, alFech
       </dl>
       <p className="tc__nota">Es el dinero de las reservas de este día. Lo que entró hoy, por fecha de pago, está en Caja.{enlaceCaja ? <> {enlaceCaja}</> : null}</p>
 
-      {/* ── Lo que hay que atender ── */}
-      <div className="tc-lista">
-        <div className="tc-lista__cabeza">
-          <h3>{esHoy ? 'Desde ahora' : 'Reservas del día'}</h3>
-          <label className="tc-buscar">
-            <Search size={15} aria-hidden="true" />
-            <input type="search" placeholder="Código, nombre o celular" aria-label="Buscar reserva por código, nombre o celular" value={texto} onChange={(e) => setTexto(e.target.value)} />
-          </label>
-        </div>
+      {/* ── Lo que hay que atender: plegado, con su resumen en una línea ── */}
+      <div className={`tc-lista ${listaAbierta ? 'is-abierta' : ''}`}>
+        <button type="button" className="tc-lista__plegar" aria-expanded={listaAbierta} aria-controls="tc-lista-cuerpo" onClick={plegar}>
+          <span className="tc-lista__titulo">{esHoy ? 'Reservas desde ahora' : 'Reservas del día'}</span>
+          <span className="tc-lista__resumen">
+            {(esHoy ? tablero.reservas.filter((r) => r.fin > ahora!) : tablero.reservas).length} · {porCobrarN} por cobrar
+          </span>
+          <ChevronDown size={18} aria-hidden="true" className="tc-lista__flecha" />
+        </button>
+        {listaAbierta && <div id="tc-lista-cuerpo" className="tc-lista__cuerpo">
+        <label className="tc-buscar">
+          <Search size={15} aria-hidden="true" />
+          <input type="search" placeholder="Código, nombre o celular" aria-label="Buscar reserva por código, nombre o celular" value={texto} onChange={(e) => setTexto(e.target.value)} />
+        </label>
         {vienen.length > 0 ? (
           <ul className="tc-lista__items">{vienen.map(fila)}</ul>
         ) : (
@@ -231,6 +247,7 @@ export default function TableroCanchasVista({ tablero, fecha, hoy, ahora, alFech
             )}
           </div>
         )}
+        </div>}
       </div>
 
       {/* ── Horarios libres ── */}

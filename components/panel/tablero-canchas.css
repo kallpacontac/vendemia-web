@@ -29,10 +29,15 @@
 .tc__fecha:focus-within { outline: 2px solid var(--tc-acento); outline-offset: 2px; }
 /* La lista «Desde ahora»: quien llega a las 17:00 ya está arriba. */
 .tc__titulo { margin: 4px 0 0; font-size: 15px; }
-.tc-lista { display: grid; gap: 8px; padding: 12px; border: 1px solid var(--tc-linea); border-radius: 14px; background: var(--tc-tarjeta); min-width: 0; }
-.tc-lista__cabeza { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 12px; }
-.tc-lista__cabeza h3 { margin: 0; font-size: 15px; }
-.tc-buscar { display: flex; align-items: center; gap: 6px; flex: 1 1 220px; max-width: 340px; min-height: 40px; padding: 0 10px; border: 1px solid var(--tc-linea); border-radius: 10px; background: var(--tc-fondo); color: var(--tc-suave); }
+.tc-lista { border: 1px solid var(--tc-linea); border-radius: 14px; background: var(--tc-tarjeta); min-width: 0; }
+.tc-lista__plegar { width: 100%; display: flex; align-items: center; gap: 10px; min-height: 50px; padding: 0 14px; border: 0; border-radius: 14px; background: transparent; color: var(--tc-tinta); font: inherit; text-align: left; cursor: pointer; }
+.tc-lista__titulo { font-weight: 600; font-size: 14.5px; }
+.tc-lista__resumen { margin-left: auto; font-size: 13px; color: var(--tc-suave); white-space: nowrap; }
+.tc-lista__flecha { flex: none; color: var(--tc-suave); transition: transform .15s ease; }
+.tc-lista.is-abierta .tc-lista__flecha { transform: rotate(180deg); }
+.tc-lista__cuerpo { display: grid; gap: 8px; padding: 0 12px 12px; }
+@media (prefers-reduced-motion: reduce) { .tc-lista__flecha { transition: none; } }
+.tc-buscar { display: flex; align-items: center; gap: 6px; max-width: 360px; min-height: 40px; padding: 0 10px; border: 1px solid var(--tc-linea); border-radius: 10px; background: var(--tc-fondo); color: var(--tc-suave); }
 .tc-buscar input { flex: 1; min-width: 0; border: 0; background: transparent; font: inherit; font-size: 14px; color: var(--tc-tinta); outline: none; }
 .tc-buscar:focus-within { border-color: var(--tc-acento); }
 .tc-lista__items { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
