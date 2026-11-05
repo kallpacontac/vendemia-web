@@ -85,6 +85,7 @@
 .tp-subir__ok { display: flex; gap: 10px; margin: 0; padding: 12px 14px; text-align: left; border-radius: var(--tp-radio); background: #e7f6ec; color: #14622f; }
 .tp-subir__ok--aviso { background: #fff1dc; color: #8a4b00; }
 .tp-subir__ok b { display: block; }
+.tp-subir__op { display: block; margin-top: 4px; font-size: 12.5px; font-weight: 600; font-variant-numeric: tabular-nums; opacity: .85; }
 .tp-pago { width: 100%; margin: 0; padding: 14px 16px 14px 34px; display: grid; gap: 12px; text-align: left; border: 1px solid var(--tp-borde); border-radius: var(--tp-radio); }
 .tp-pago li > b { display: block; font-size: 15px; }
 .tp-pago li > span { display: block; font-size: 14px; opacity: .78; }
@@ -1427,6 +1428,8 @@ button.tp-canchas__casilla { cursor: pointer; }
 .tp-futbol__pie { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px; margin: 15px 22px 0; color: #435c4b; font-size: 13px; }
 .tp-futbol__pie span, .tp-futbol__pie a { display: inline-flex; align-items: center; gap: 6px; }
 .tp-futbol__pie a { text-decoration: none; font-weight: 750; }
+/* Solo la dirección (sin WhatsApp): centrada, como «Abierto ahora» debajo. */
+.tp-futbol__pie:has(> :only-child) { justify-content: center; }
 .tp-futbol a:focus-visible, .tp-futbol button:focus-visible { outline: 3px solid var(--tp-color); outline-offset: 2px; }
 @media (max-width: 760px) {
   .tp-futbol { margin: 0; padding: 0 0 22px; }
@@ -1446,7 +1449,7 @@ button.tp-canchas__casilla { cursor: pointer; }
 
 /* «Abierto ahora · cierra a las 20:00» (publico/EstadoHorario.tsx). */
 .tp-estado-horario {
-  display: flex; width: fit-content; align-items: center; gap: 8px; margin: 16px 0 0; padding: 7px 12px;
+  display: flex; width: fit-content; align-items: center; gap: 8px; margin: 16px auto 0; padding: 7px 12px;
   background: var(--tp-papel); border: 1px solid var(--tp-borde); border-radius: 999px;
   color: var(--tp-texto); font-size: 13px; font-weight: 600;
 }

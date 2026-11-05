@@ -84,6 +84,15 @@
 .tc-foto--rechazar small { color: #B42318; font-weight: 600; }
 .tc-foto > button { width: 36px; height: 36px; display: grid; place-items: center; border: 1px solid var(--tc-linea); border-radius: 50%; background: transparent; color: inherit; cursor: pointer; }
 .tc-aviso-rojo { color: #B42318; font-weight: 600; }
+/* Pagos de una reserva, con su n.º de operación. */
+.tc-op { font-variant-numeric: tabular-nums; font-weight: 600; color: var(--tc-tinta) !important; }
+.tc-pagos { display: grid; gap: 6px; padding: 12px; border-radius: 12px; background: var(--tc-fondo); }
+.tc-pagos ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.tc-pagos li { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 10px; font-size: 13px; }
+.tc-pagos__monto { font-weight: 700; font-variant-numeric: tabular-nums; }
+.tc-pagos__dato { display: grid; min-width: 0; font-variant-numeric: tabular-nums; }
+.tc-pagos__dato small { font-size: 11.5px; color: var(--tc-suave); }
+.tc-pagos a { display: inline-flex; align-items: center; gap: 4px; font-size: 12.5px; font-weight: 600; color: var(--tc-tinta); }
 .tc-montos { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
 .tc-montos button { flex: 1 1 120px; display: grid; gap: 1px; justify-items: start; min-height: 48px; padding: 6px 12px; border: 1px solid var(--tc-linea); border-radius: 10px; background: var(--tc-tarjeta); color: var(--tc-tinta); font: inherit; text-align: left; cursor: pointer; }
 .tc-montos button span { font-size: 12px; color: var(--tc-suave); }

@@ -100,7 +100,7 @@ export async function POST(req: Request) {
     if (r.status === 'repetida') return fallo(MENSAJES.repetida, 409);
     if (r.status === 'operacion_repetida') return fallo(MENSAJES.operacionRepetida(r.operacion ?? ''), 409);
     if (r.status !== 'ok') return fallo(MOTIVO_BUSQUEDA[r.status] ?? MENSAJES.noGuardado, 409);
-    return responder({ status: 'ok', resultado: r.resultado, motivo: r.resultado === 'rechazado' ? r.motivo : undefined, pagado: r.pagado, total: r.total, falta: r.falta, minimo: r.minimo });
+    return responder({ status: 'ok', resultado: r.resultado, motivo: r.resultado === 'rechazado' ? r.motivo : undefined, pagado: r.pagado, total: r.total, falta: r.falta, minimo: r.minimo, operacion: lectura?.operacion || undefined });
   } catch (e) {
     log('tu_pagina_comprobante_error', { tipo: e instanceof Error ? e.name : 'x' });
     return fallo(MENSAJES.noGuardado, 503);

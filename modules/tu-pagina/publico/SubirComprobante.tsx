@@ -41,7 +41,7 @@ export default function SubirComprobante({ slug, codigo, telefono, ejemplo = fal
 }) {
   const [enviando, setEnviando] = useState(false);
   const [fallo, setFallo] = useState('');
-  const [listo, setListo] = useState<{ resultado: Resultado; pagado?: number; total?: number; falta?: number; minimo?: number } | null>(null);
+  const [listo, setListo] = useState<{ resultado: Resultado; pagado?: number; total?: number; falta?: number; minimo?: number; operacion?: string } | null>(null);
   const entrada = useRef<HTMLInputElement>(null);
 
   async function subir(archivo: File | undefined) {
@@ -66,7 +66,7 @@ export default function SubirComprobante({ slug, codigo, telefono, ejemplo = fal
       form.append('web', '');
       form.append('archivo', await achicar(archivo), 'comprobante.jpg');
       const r = await fetch('/api/tu-pagina/publico/comprobante', { method: 'POST', body: form });
-      const j = (await r.json().catch(() => ({}))) as { status?: string; resultado?: string; motivo?: string; mensaje?: string; pagado?: number; total?: number; falta?: number; minimo?: number };
+      const j = (await r.json().catch(() => ({}))) as { status?: string; resultado?: string; motivo?: string; mensaje?: string; pagado?: number; total?: number; falta?: number; minimo?: number; operacion?: string };
       if (j.status === 'ok' && j.resultado === 'rechazado') setFallo(j.motivo || MENSAJES.noComprobante);
       else if (j.status === 'ok' && j.resultado) setListo({ ...j, resultado: j.resultado as Resultado });
       else setFallo(j.mensaje || MENSAJES.noGuardado);
@@ -86,7 +86,7 @@ export default function SubirComprobante({ slug, codigo, telefono, ejemplo = fal
       {ok && (
         <p className={`tp-subir__ok ${terminado ? '' : 'tp-subir__ok--aviso'}`} role="status">
           {terminado && <Check size={18} aria-hidden="true" />}
-          <span><b>{ok.titulo}</b>{ok.detalle}</span>
+          <span><b>{ok.titulo}</b>{ok.detalle}{listo?.operacion && <small className="tp-subir__op">N.º de operación {listo.operacion}</small>}</span>
         </p>
       )}
       {fallo && <p className="tp-aviso" role="alert">{fallo}</p>}

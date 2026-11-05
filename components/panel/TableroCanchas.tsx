@@ -11,6 +11,7 @@ import { armarTablero, type CanchaTablero, type EstadoCobro, type ReservaTablero
 import { useCargar } from '@/components/panel/useCargar';
 import TableroCanchasVista, { type Encontrada } from '@/components/panel/TableroCanchasVista';
 import ValidarPago from '@/components/panel/ValidarPago';
+import PagosDeReserva from '@/components/panel/PagosDeReserva';
 import { supabase } from '@/lib/supabase/client';
 import { getCitasDelPeriodo, getPagosDeCitas, getServiciosDeCitas, type ItemCatalogo, type Lead } from '@/lib/supabase/queries';
 import type { Horario } from '@/lib/supabase/types';
@@ -126,6 +127,7 @@ export default function TableroCanchas({ companyId, catalogo, leads, horario, pa
       enlaceCaja={<Link href="/panel/caja">Ver Caja</Link>}
       acciones={(r, cerrar) => (
         <>
+          <PagosDeReserva companyId={companyId} reservaId={r.id} pagado={r.pagado} />
           <ValidarPago companyId={companyId} reserva={r} nombreCancha={canchas.find((c) => c.id === r.cancha)?.nombre} adelanto={Number(datos?.cfg.adelanto) || 0} alValidar={() => { cerrar(); recargar(); }} />
           <button type="button" className="tc__accion tc__accion--suave" onClick={() => { cerrar(); alGestionar(r.fin <= ahoraEnLima()); }}>
             Mover, cancelar o ver detalle

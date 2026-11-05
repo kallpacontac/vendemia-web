@@ -27,6 +27,8 @@ export interface PorRevisar {
   monto: number | null;
   metodo: string;
   motivo: string;
+  /** Leído de la captura. Sin la 0018, no viene. */
+  operacion?: string;
 }
 
 type Accion = 'aprobar' | 'rechazar';
@@ -92,6 +94,7 @@ export function ComprobantesPorRevisarVista({ datos, adelanto, alRevisar }: {
             <small>{c.servicio} · {fechaCorta(c.slot)}</small>
             <small>{c.telefono}</small>
             <small>Total {soles(Number(c.total) || 0)} · ya pagó {soles(Number(c.pagado) || 0)}</small>
+            {c.operacion && <small className="tc-op">N.º de operación {c.operacion}</small>}
             {c.motivo && <small className="tc-revisar__motivo">{c.motivo}</small>}
           </div>
           <div className="tc-revisar__acciones">
@@ -114,7 +117,7 @@ export function ComprobantesPorRevisarVista({ datos, adelanto, alRevisar }: {
           alConfirmar={() => void aplicar()}
           detalle={<>
             <p><b>{pregunta.c.cliente}</b> · {pregunta.c.servicio} · {fechaCorta(pregunta.c.slot)}</p>
-            <p>Se registra <b>{soles(pregunta.monto ?? 0)}</b> por <b>{NOMBRE_METODO[pregunta.metodo] ?? pregunta.metodo}</b>.</p>
+            <p>Se registra <b>{soles(pregunta.monto ?? 0)}</b> por <b>{NOMBRE_METODO[pregunta.metodo] ?? pregunta.metodo}</b>{pregunta.c.operacion ? <>, operación <b>{pregunta.c.operacion}</b></> : null}.</p>
             <p>{efectoDelPago(cobroDe(pregunta.c), pregunta.monto ?? 0)}</p>
             <p className="muted">Antes de aprobar, comprueba en tu app de Yape o Plin que el dinero llegó.</p>
           </>}

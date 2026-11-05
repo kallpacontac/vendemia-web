@@ -169,7 +169,7 @@ export default function ValidarPago({ companyId, reserva, nombreCancha, adelanto
           alConfirmar={() => void validar()}
           detalle={<>
             <p><b>{reserva.cliente}</b> · {nombreCancha ?? 'Cancha'} · {fechaCorta(reserva.inicio)}</p>
-            <p>Se registra <b>{soles(pregunta)}</b> por <b>{NOMBRE_METODO[metodo] ?? metodo}</b>{foto ? ', con la foto del pago' : ''}.</p>
+            <p>Se registra <b>{soles(pregunta)}</b> por <b>{NOMBRE_METODO[metodo] ?? metodo}</b>{foto?.operacion ? <>, operación <b>{foto.operacion}</b></> : null}{foto ? ', con la foto del pago' : ''}.</p>
             <p>{efectoDelPago(cobro, pregunta)}</p>
             {foto && foto.decision !== 'aprobar' && foto.motivo && <p className="tc-aviso-rojo">Ojo: {foto.motivo}</p>}
             {metodo !== 'cash' && <p className="muted">Antes de validar, comprueba en tu app que el dinero llegó.</p>}

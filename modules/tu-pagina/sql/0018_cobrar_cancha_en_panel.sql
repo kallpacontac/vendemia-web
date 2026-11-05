@@ -11,6 +11,7 @@
 --   · cancha_validar_pago   Ahora guarda también la foto del pago (p_url) y rechaza la misma
 --                      foto o la misma operación dos veces. Los argumentos nuevos son
 --                      opcionales: el panel de antes sigue funcionando igual.
+--   · comprobantes_panel   Trae también el número de operación leído de la captura.
 --   · v2_comprobante_aplicar   Un pago que no llega al adelanto (S/ 20 de S/ 40) da otro plazo
 --                      completo desde ese pago, para que no pierda la cancha mientras paga el resto.
 --
@@ -67,6 +68,24 @@ begin
                         or l.name ilike v_nom)
                  order by n
                  limit 15) s), '[]'::jsonb);
+end $$;
+
+-- Igual que en la 0017, con el número de operación para «Por revisar».
+create or replace function public.comprobantes_panel(p_company text)
+returns jsonb language plpgsql stable security definer set search_path = public as $$
+begin
+    perform public.v2_autorizar_agenda(p_company);
+    return coalesce((
+        select jsonb_agg(jsonb_build_object(
+            'id', c.id, 'cliente', coalesce(nullif(l.name, ''), l.phone), 'telefono', l.phone, 'servicio', a.service, 'slot', a.slot_start,
+            'total', (select coalesce(sum(s.price), 0) from public.appointment_services s where s.appointment_id = a.id),
+            'pagado', (select coalesce(sum(p.amount), 0) from public.pending_payments p where p.company_id = c.company_id and p.appointment_id = a.id),
+            'url', c.url, 'monto', c.monto, 'metodo', c.metodo, 'motivo', c.motivo,
+            'operacion', coalesce(c.operacion, '')) order by c.creado_at)
+          from public.comprobantes_web c
+          join public.appointments a on a.id = c.appointment_id
+          join public.leads l on l.id = c.lead_id
+         where c.company_id = p_company and c.estado = 'revisar'), '[]'::jsonb);
 end $$;
 
 -- Igual que en la 0017, salvo el plazo tras un pago parcial (ver created_at).
