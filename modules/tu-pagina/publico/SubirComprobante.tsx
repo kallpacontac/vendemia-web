@@ -45,7 +45,7 @@ function textoOk(r: Resultado, d: { pagado?: number; total?: number; falta?: num
         detalle: `Para confirmar necesitas ${soles(d.minimo ?? 0)} de adelanto. Paga la diferencia y sube ese comprobante.`,
       };
     default:
-      return { titulo: 'Recibimos tu comprobante', detalle: 'Lo estamos revisando. Tu cancha sigue apartada y te avisamos por WhatsApp.' };
+      return { titulo: 'Recibimos tu comprobante', detalle: 'El negocio lo revisa y te confirma. Mientras tanto, tu cancha sigue apartada.' };
   }
 }
 
