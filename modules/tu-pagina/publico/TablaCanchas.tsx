@@ -78,6 +78,24 @@ interface Seleccion {
 const etiquetaDia = (fecha: string, hoy: string) =>
   fecha === hoy ? 'Hoy' : fecha === sumarDias(hoy, 1) ? 'Mañana' : fechaCorta(fecha).split(' ')[0];
 
+// Lo que este celular acaba de reservar de verdad: ocupado al volver a la página aunque la foto
+// del servidor (hasta 15 s de caché) todavía no lo tenga. Se borra solo al vencer.
+type Propia = { item: string; inicio: string; fin: string; hasta: number };
+const clavePropias = (slug: string) => `tp-canchas-propias:${slug}`;
+function leerPropias(slug: string): Propia[] {
+  try {
+    const v = JSON.parse(localStorage.getItem(clavePropias(slug)) ?? '[]') as Propia[];
+    return Array.isArray(v) ? v.filter((x) => x && typeof x.hasta === 'number' && x.hasta > Date.now()) : [];
+  } catch {
+    return [];
+  }
+}
+function guardarPropia(slug: string, p: Propia) {
+  try {
+    localStorage.setItem(clavePropias(slug), JSON.stringify([...leerPropias(slug), p].slice(-20)));
+  } catch { /* sin almacenamiento: queda marcada solo mientras siga abierta */ }
+}
+
 export default function TablaCanchas({ esc, cfg, slug, whatsapp, negocio, ejemplo = false }: {
   esc: Escaparate; cfg: ConfigCanchas; slug: string; whatsapp: string; negocio: string; ejemplo?: boolean;
 }) {
@@ -111,7 +129,8 @@ export default function TablaCanchas({ esc, cfg, slug, whatsapp, negocio, ejempl
   // Lo que ya se reservó en esta demo sigue ocupado al volver desde el panel del dueño.
   useEffect(() => {
     if (ejemplo) setTomadas(leerReservasDemo().map((r) => ({ item: r.cancha, inicio: r.inicio, fin: r.fin })));
-  }, [ejemplo]);
+    else setTomadas(leerPropias(slug).map((r) => ({ item: r.item, inicio: r.inicio, fin: r.fin })));
+  }, [ejemplo, slug]);
 
   useEffect(() => {
     if (!sel && !avisame) return;
@@ -255,6 +274,11 @@ export default function TablaCanchas({ esc, cfg, slug, whatsapp, negocio, ejempl
               setHecho({ ...h, demo: { id, fecha: sel.inicio.slice(0, 10) } });
               return;
             }
+            // Ocupada en el acto, y guardada en este celular mientras dure el apartado (o hasta
+            // una hora después si ya quedó confirmada): volver a la página no la enseña libre.
+            const tomada = { item: sel.item, inicio: sel.inicio, fin: finSel };
+            setTomadas((t) => [...t, tomada]);
+            guardarPropia(slug, { ...tomada, hasta: Date.now() + (h.apartada ? plazo : 60) * 60_000 });
             setHecho(h);
           }}
         />
