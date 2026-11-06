@@ -29,10 +29,16 @@
 .tp a { color: inherit; }
 
 .tp-hoja { width: 100%; max-width: 560px; margin: 0 auto; padding: 0 16px 40px; }
-.tp-promocion { display: flex; justify-content: center; align-items: center; gap: 12px; padding: 10px 16px; background: var(--tp-color); color: var(--tp-tinta); text-align: center; font-size: 13px; }
-.tp-promocion span { flex: none; font-size: 10px; font-weight: 900; letter-spacing: .12em; }
-.tp-promocion strong { font-weight: 750; }
-@media (max-width: 540px) { .tp-promocion { flex-direction: column; gap: 3px; padding: 9px 14px; font-size: 12px; } }
+.tp-promocion { overflow: hidden; padding: 10px 0; background: var(--tp-color); color: var(--tp-tinta); font-size: 13px; }
+.tp-promocion__pista { display: flex; width: max-content; animation: tp-cinta 32s linear infinite; }
+.tp-promocion:hover .tp-promocion__pista { animation-play-state: paused; }
+.tp-promocion__tramo { display: flex; flex: none; }
+.tp-promocion__item { display: inline-flex; align-items: center; gap: 12px; padding: 0 32px; white-space: nowrap; }
+.tp-promocion__item span { flex: none; font-size: 10px; font-weight: 900; letter-spacing: .12em; }
+.tp-promocion__item strong { font-weight: 750; }
+@keyframes tp-cinta { to { transform: translateX(-50%); } }
+@media (prefers-reduced-motion: reduce) { .tp-promocion__pista { animation: none; } }
+@media (max-width: 540px) { .tp-promocion { padding: 9px 0; font-size: 12px; } .tp-promocion__pista { animation-duration: 22s; } }
 .tp-promocion-visual { width: calc(100% - 32px); max-width: 1232px; min-height: 350px; margin: 18px auto 28px; display: flex; align-items: center; overflow: hidden; border-radius: 20px; background: var(--tp-color) center / cover no-repeat; color: #fff; }
 .tp-promocion-visual > div { max-width: 570px; padding: clamp(26px, 5vw, 64px); }
 .tp-promocion-visual span { font-size: 11px; font-weight: 900; letter-spacing: .13em; text-transform: uppercase; }

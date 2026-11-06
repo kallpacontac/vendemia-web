@@ -53,9 +53,9 @@ export default function UnasPortada({ pagina, esc, reservarHref, demo = false, t
         <a href="#inicio">Inicio</a><a href="#servicios">Servicios</a><a href="#reserva">Reservar</a>{tarjeta && <a href="#tarjeta">Mi tarjeta</a>}<a href="#nosotros">Nosotros</a>
       </nav>
       <div className="un-nav__acciones">
-        {promocion
-          ? <UnasPromocion negocio={pagina.titulo} slug={pagina.slug} texto={promocion} imagen={promocionImagen} tarjeta={tarjeta} demo={demo} />
-          : tarjeta && <a className="un-promocion__acceso" href="#tarjeta" aria-label={`Tu tarjeta de puntos: ${tarjeta.nombre}`}><Gift size={19} aria-hidden="true" /></a>}
+        {/* El regalo: con tarjeta de puntos lleva directo a ella; la promoción sigue saliendo sola en su ventana. */}
+        {promocion && <UnasPromocion negocio={pagina.titulo} slug={pagina.slug} texto={promocion} imagen={promocionImagen} conAcceso={!tarjeta} />}
+        {tarjeta && <a className="un-promocion__acceso" href="#tarjeta" aria-label={`Tu tarjeta de puntos: ${tarjeta.nombre}`}><Gift size={19} aria-hidden="true" /></a>}
         <a href="#servicios" aria-label="Ver servicios"><Heart size={19} aria-hidden="true" /></a>
         {mostrarWhatsapp && <a href={contacto} aria-label="Contactar a la empresa"><MessageCircle size={19} aria-hidden="true" /></a>}
         <a className="un-nav__reserva" href="#reserva">Reservar cita <ArrowRight size={15} aria-hidden="true" /></a>

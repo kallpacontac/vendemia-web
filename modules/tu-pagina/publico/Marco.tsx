@@ -61,7 +61,7 @@ export default function Marco({ pagina, children, vista, portada, tarjeta }: { p
     // «Atención en mesa» se viste como «Carta visual»: lo suyo es lo que hace, no el aspecto de la portada.
     <div className="tp" data-diseno={tipo} data-plantilla={plantilla === 'mesa' ? 'restaurante' : plantilla} data-portada={portada ? 'si' : 'no'} style={estiloDe(pagina)}>
       <AnimacionesPlantilla />
-      {promocion && !(plantilla === 'restaurante' && portada) && <div className="tp-promocion" role="note"><span>OFERTA ESPECIAL</span><strong>{promocion}</strong></div>}
+      {promocion && !(plantilla === 'restaurante' && portada) && <CintaPromocion texto={promocion} />}
       {children}
       {tarjeta && <TarjetaPuntos tarjeta={tarjeta} negocio={pagina.titulo} />}
       {/* El Libro de Reclamaciones va en el pie de TODA la página, también la de inicio (sql/0006). */}
@@ -139,4 +139,16 @@ export function Cabecera({ pagina, fotoDestacada, servicioDestacado, catalogoDis
       </section>}
     </>
   );
+}
+
+/** La franja de «OFERTA ESPECIAL» corre de lado: dos tramos iguales que se relevan sin salto. */
+function CintaPromocion({ texto }: { texto: string }) {
+  const tramo = (oculto: boolean) => (
+    <div className="tp-promocion__tramo" aria-hidden={oculto || undefined}>
+      {Array.from({ length: 8 }, (_, i) => (
+        <span key={i} className="tp-promocion__item" aria-hidden={i > 0 || undefined}><span>OFERTA ESPECIAL</span><strong>{texto}</strong></span>
+      ))}
+    </div>
+  );
+  return <div className="tp-promocion" role="note"><div className="tp-promocion__pista">{tramo(false)}{tramo(true)}</div></div>;
 }
