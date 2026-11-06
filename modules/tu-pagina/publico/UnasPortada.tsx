@@ -1,4 +1,4 @@
-import { ArrowRight, CalendarDays, Gift, Heart, MapPin, MessageCircle, Palette, ShieldCheck, Sparkles, Stamp } from 'lucide-react';
+import { ArrowRight, CalendarDays, Gift, Heart, MapPin, MessageCircle, Palette, ShieldCheck, Sparkles } from 'lucide-react';
 import type { CSSProperties } from 'react';
 import type { PaginaPublica } from '@/modules/tu-pagina/servidor/pagina';
 import type { Escaparate as Datos } from '@/modules/tu-pagina/dominio/tienda';
@@ -53,10 +53,10 @@ export default function UnasPortada({ pagina, esc, reservarHref, demo = false, t
         <a href="#inicio">Inicio</a><a href="#servicios">Servicios</a><a href="#reserva">Reservar</a>{tarjeta && <a href="#tarjeta">Mi tarjeta</a>}<a href="#nosotros">Nosotros</a>
       </nav>
       <div className="un-nav__acciones">
-        {promocion && <UnasPromocion negocio={pagina.titulo} slug={pagina.slug} texto={promocion} imagen={promocionImagen} />}
-        {tarjeta
-          ? <a href="#tarjeta" aria-label={`Tu tarjeta de puntos: ${tarjeta.nombre}`}><Stamp size={19} aria-hidden="true" /></a>
-          : <a href="#servicios" aria-label="Ver servicios"><Heart size={19} aria-hidden="true" /></a>}
+        {promocion
+          ? <UnasPromocion negocio={pagina.titulo} slug={pagina.slug} texto={promocion} imagen={promocionImagen} tarjeta={tarjeta} demo={demo} />
+          : tarjeta && <a className="un-promocion__acceso" href="#tarjeta" aria-label={`Tu tarjeta de puntos: ${tarjeta.nombre}`}><Gift size={19} aria-hidden="true" /></a>}
+        <a href="#servicios" aria-label="Ver servicios"><Heart size={19} aria-hidden="true" /></a>
         {mostrarWhatsapp && <a href={contacto} aria-label="Contactar a la empresa"><MessageCircle size={19} aria-hidden="true" /></a>}
         <a className="un-nav__reserva" href="#reserva">Reservar cita <ArrowRight size={15} aria-hidden="true" /></a>
       </div>
