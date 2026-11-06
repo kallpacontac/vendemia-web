@@ -149,33 +149,29 @@ body:has(.un-promocion__fondo) .tp-whatsapp-flotante { visibility: hidden; }
   .un-promocion__contenido { padding: 32px 24px; }
 }
 
-/* El regalo de la cabecera «quiere abrirse»: cada pocos segundos se sacude y levanta la tapa
-   (el rectángulo y el lazo del icono, girando sobre una bisagra a la derecha), con un halo suave.
+/* El regalo de la cabecera se agita como un paquete que alguien sacude para adivinar qué trae:
+   cada pocos segundos, golpes rápidos de lado a lado con saltitos, y un halo suave.
    Sale solo cuando el regalo existe: con promoción o con tarjeta de puntos. */
-.un-promocion__acceso { animation: un-regalo-halo 4s ease-out 1.2s infinite; }
-.un-promocion__acceso svg { overflow: visible; animation: un-regalo-sacude 4s ease-in-out 1.2s infinite; transform-origin: 50% 85%; }
-.un-promocion__acceso svg > rect, .un-promocion__acceso svg > path:last-child { animation: un-regalo-tapa 4s ease-in-out 1.2s infinite; transform-box: view-box; transform-origin: 21px 12px; }
-.un-promocion__acceso:hover svg, .un-promocion__acceso:focus-visible svg,
-.un-promocion__acceso:hover svg > *, .un-promocion__acceso:focus-visible svg > * { animation-play-state: paused; }
+.un-promocion__acceso { animation: un-regalo-halo 3.6s ease-out 1.2s infinite; }
+.un-promocion__acceso svg { animation: un-regalo-sacude 3.6s linear 1.2s infinite; transform-origin: 50% 65%; }
+.un-promocion__acceso:hover svg, .un-promocion__acceso:focus-visible svg { animation-play-state: paused; }
 @keyframes un-regalo-sacude {
-  0%, 58%, 100% { transform: none; }
-  62% { transform: rotate(-12deg) scale(1.08); }
-  66% { transform: rotate(10deg) scale(1.08); }
-  70% { transform: rotate(-8deg) scale(1.06); }
-  74% { transform: rotate(6deg) scale(1.04); }
-  78% { transform: rotate(-3deg); }
-  82% { transform: none; }
-}
-@keyframes un-regalo-tapa {
-  0%, 60%, 92%, 100% { transform: none; }
-  68%, 84% { transform: translateY(-3px) rotate(14deg); }
-  76% { transform: translateY(-4px) rotate(18deg); }
+  0%, 54%, 100% { transform: none; }
+  57% { transform: translate(-2px, -1px) rotate(-13deg); }
+  60% { transform: translate(2px, -2px) rotate(13deg); }
+  63% { transform: translate(-2px, -1px) rotate(-12deg); }
+  66% { transform: translate(2px, -2px) rotate(12deg); }
+  69% { transform: translate(-1px, -1px) rotate(-8deg); }
+  72% { transform: translate(1px, -1px) rotate(8deg); }
+  75% { transform: rotate(-4deg); }
+  78% { transform: rotate(2deg); }
+  81% { transform: none; }
 }
 @keyframes un-regalo-halo {
-  0%, 58% { box-shadow: 0 0 0 0 #c99a8c00; }
-  62% { box-shadow: 0 0 0 0 #c99a8c66; }
-  90%, 100% { box-shadow: 0 0 0 12px #c99a8c00; }
+  0%, 54% { box-shadow: 0 0 0 0 #c99a8c00; }
+  57% { box-shadow: 0 0 0 0 #c99a8c66; }
+  88%, 100% { box-shadow: 0 0 0 12px #c99a8c00; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .un-promocion__acceso, .un-promocion__acceso svg, .un-promocion__acceso svg > * { animation: none; }
+  .un-promocion__acceso, .un-promocion__acceso svg { animation: none; }
 }
