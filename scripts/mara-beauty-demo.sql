@@ -180,8 +180,9 @@ begin
 
     -- ── 3 · El equipo ───────────────────────────────────────────────────────────
     for i in 1 .. array_length(v_emp_ids, 1) loop
-        insert into public.employees (id, company_id, name, is_active, schedule, comision_pct)
-        values (v_emp_ids[i], v_id, v_emp_nom[i], 1, '', v_emp_pct[i]);
+        -- Caras de ejemplo de Pexels (docs/fuentes-fotos-mara.md): no son las profesionales reales.
+        insert into public.employees (id, company_id, name, is_active, schedule, comision_pct, foto_url)
+        values (v_emp_ids[i], v_id, v_emp_nom[i], 1, '', v_emp_pct[i], 'https://vendemias.com/assets/equipo-mara/estilista-' || i || '.jpg');
     end loop;
 
     -- ── 4 · La página ───────────────────────────────────────────────────────────
