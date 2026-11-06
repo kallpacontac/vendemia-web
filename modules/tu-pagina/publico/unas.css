@@ -11,6 +11,18 @@
 .un-nav nav a:hover, .un-nav nav a:focus-visible { color: var(--tp-color); }
 .un-nav__acciones { display: flex; align-items: center; gap: 18px; }
 .un-nav__acciones > a { display: inline-flex; align-items: center; justify-content: center; }
+.un-promocion__acceso { flex: none; width: 38px; height: 38px; display: grid; place-items: center; border: 1px solid #e7d5ca; border-radius: 50%; background: #f7eae3; color: #8f6259; cursor: pointer; }
+.un-promocion__acceso:hover, .un-promocion__acceso:focus-visible { background: #ead1c4; }
+.un-promocion__fondo { position: fixed; z-index: 230; inset: 0; display: grid; place-items: center; padding: 20px; background: #211b1abb; }
+.un-promocion__dialogo { position: relative; width: min(100%, 520px); max-height: min(90dvh, 760px); overflow-y: auto; border-radius: 24px; background: #fffaf7; box-shadow: 0 24px 70px #1b110c66; }
+.un-promocion__cerrar { position: absolute; z-index: 1; top: 14px; right: 14px; width: 38px; height: 38px; display: grid; place-items: center; border: 0; border-radius: 50%; background: #fff; color: #352521; box-shadow: 0 3px 12px #0002; cursor: pointer; }
+.un-promocion__imagen { display: block; width: 100%; max-height: 310px; object-fit: cover; }
+.un-promocion__contenido { padding: 38px; }
+.un-promocion__contenido > span { color: #9c7167; font-size: 11px; font-weight: 850; letter-spacing: .14em; }
+.un-promocion__contenido h2 { margin: 12px 0; color: #28211f; font-size: clamp(29px, 5vw, 43px); line-height: 1.12; letter-spacing: -.045em; }
+.un-promocion__contenido p { margin: 0 0 25px; color: #746b66; font-size: 14px; line-height: 1.6; }
+.un-promocion__contenido a { min-height: 44px; display: inline-flex; align-items: center; gap: 9px; padding: 10px 18px; border-radius: 999px; background: #211b1a; color: #fff; font-size: 13px; font-weight: 800; }
+body:has(.un-promocion__fondo) .tp-whatsapp-flotante { visibility: hidden; }
 .un-nav__reserva { gap: 5px; min-height: 37px; padding: 0 13px; border-radius: 50px; background: #1b1918; color: #fff !important; font-size: 11px; font-weight: 800; }
 .un-hero { position: relative; min-height: 540px; display: flex; flex-direction: column; justify-content: center; padding: 48px 8.5% 94px; overflow: hidden; background-color: var(--un-rosa, #dcc1ba); background-position: center; background-size: cover; }
 .un-hero--foto::before { content: ''; position: absolute; inset: 0; background: linear-gradient(90deg, #e3c8c1eb 0%, #e3c8c1b3 24%, transparent 58%); pointer-events: none; }
@@ -113,11 +125,17 @@
   .un-servicio > svg { width: 14px; }
   .un-reserva { min-height: 0; padding: 42px 20px 62px; }
   .un-reserva__intro { position: static; width: 100%; margin-bottom: 25px; }
-  .un .tp-agenda-widget { display: flex; flex-direction: column; gap: 0; }
-  .un .tp-agenda-widget__resumen { order: 0; padding: 22px 20px; }
-  .un .tp-agenda-widget__calendario { order: 1; align-self: stretch; padding: 22px 20px; border: 1px solid #e5d4c5 !important; border-top: 0 !important; background: #fff; }
-  .un .tp-agenda-widget__horas { order: 2; padding: 0 20px 20px; border-top: 0 !important; border-radius: 0; }
-  .un .tp-agenda-widget__datos { order: 3; padding: 0 20px 22px; }
+  .un .tp-agenda-widget { display: flex; flex-direction: column; gap: 14px; }
+  .un .tp-agenda-widget > * { border: 1px solid #e5d4c5 !important; border-radius: 18px; background: #fff; box-shadow: 0 8px 27px #62433312; }
+  .un .tp-agenda-widget__resumen { order: 0; padding: 24px 20px; }
+  .un .tp-agenda-widget__calendario { order: 1; align-self: stretch; padding: 28px 20px 32px; }
+  .un .tp-agenda-widget__horas { order: 2; padding: 28px 20px 32px; }
+  .un .tp-agenda-widget__datos { order: 3; padding: 28px 20px 26px; }
+  .un .tp-agenda-widget__paso { margin-bottom: 14px; }
+  .un .tp-agenda-widget__calendario > p { margin-top: 4px; }
+  .un .tp-agenda-widget__horas > div { margin-top: 18px; gap: 9px; }
+  .un .tp-agenda-widget__horas button { min-height: 42px; }
+  .un .tp-agenda-widget__datos h3 { margin-bottom: 18px; }
   .un .tp-agenda-widget__dias { grid-template-columns: repeat(7, 1fr); }
   .un .tp-agenda-widget__dias button { min-height: 45px; }
   .un .tp-agenda-widget__dias small { font-size: 10px; }
@@ -128,4 +146,5 @@
   .un-historia__foto { width: min(100%, 320px); }
   .un-productos { padding: 48px 20px; }
   .un-pie { flex-direction: column; align-items: flex-start; padding: 33px 22px; }
+  .un-promocion__contenido { padding: 32px 24px; }
 }

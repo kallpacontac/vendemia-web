@@ -8,6 +8,8 @@ import { colorO } from '@/modules/tu-pagina/dominio/apariencia';
 import { urlWhatsApp } from '@/modules/tu-pagina/dominio/envio';
 import Escaparate from './Escaparate';
 import UnasReservaDemo from './UnasReservaDemo';
+import UnasPromocion from './UnasPromocion';
+import BotonWhatsApp from './BotonWhatsApp';
 import './unas.css';
 
 export default function UnasPortada({ pagina, esc, reservarHref, demo = false }: {
@@ -24,6 +26,9 @@ export default function UnasPortada({ pagina, esc, reservarHref, demo = false }:
   const productos = (esc?.items ?? []).filter((item) => item.tipo === 'producto');
   const escProductos = esc && productos.length ? { ...esc, items: productos } : null;
   const contacto = demo ? '#contacto' : urlWhatsApp(pagina.whatsapp, `Hola ${pagina.titulo}, quisiera consultar por una cita.`);
+  const mostrarWhatsapp = apariencia.mostrarWhatsapp !== false;
+  const promocion = apariencia.promocionTexto?.trim();
+  const promocionImagen = apariencia.promocionImagenUnas?.startsWith('https://') ? apariencia.promocionImagenUnas : undefined;
   const heroStyle = {
     ['--un-rosa' as string]: colorO(apariencia.colorBanner, '#DCC1BA'),
     ['--un-fondo' as string]: colorO(apariencia.fondoAgenda, '#FBF9F7'),
@@ -44,8 +49,9 @@ export default function UnasPortada({ pagina, esc, reservarHref, demo = false }:
         <a href="#inicio">Inicio</a><a href="#servicios">Servicios</a><a href="#reserva">Reservar</a><a href="#nosotros">Nosotros</a>
       </nav>
       <div className="un-nav__acciones">
+        {promocion && <UnasPromocion negocio={pagina.titulo} slug={pagina.slug} texto={promocion} imagen={promocionImagen} />}
         <a href="#servicios" aria-label="Ver servicios"><Heart size={19} aria-hidden="true" /></a>
-        <a href={contacto} aria-label="Contactar a la empresa"><MessageCircle size={19} aria-hidden="true" /></a>
+        {mostrarWhatsapp && <a href={contacto} aria-label="Contactar a la empresa"><MessageCircle size={19} aria-hidden="true" /></a>}
         <a className="un-nav__reserva" href="#reserva">Reservar cita <ArrowRight size={15} aria-hidden="true" /></a>
       </div>
     </header>
@@ -76,7 +82,7 @@ export default function UnasPortada({ pagina, esc, reservarHref, demo = false }:
         <div className="un-reserva__intro"><span className="un-sobretitulo">TU TIEMPO, TU ESTILO ♡</span><h2>Reserva tu momento</h2><p>Selecciona el servicio, el día y la hora que mejor te acomoden. Tu cita se confirma desde la agenda de {pagina.titulo}.</p></div>
         {demo ? <UnasReservaDemo servicios={servicios.map((item) => item.nombre)} hoy={esc?.hoy ?? ''} /> : esc && servicios.length ?
           <div className="un-reserva__widget"><Escaparate esc={esc} slug={pagina.slug} whatsapp={pagina.whatsapp} puedePedir={false} puedeReservar solo="reservas" disposicion="filas" agendaEstilo="agenda" agendaNombre={pagina.titulo} /></div> :
-          <div className="un-reserva__vacio"><CalendarDays size={28} aria-hidden="true" /><h3>Pronto podrás reservar aquí</h3><p>Agrega servicios y horarios en tu catálogo para activar la reserva en línea.</p><a href={contacto}>Consultar por WhatsApp <ArrowRight size={16} aria-hidden="true" /></a></div>}
+          <div className="un-reserva__vacio"><CalendarDays size={28} aria-hidden="true" /><h3>Pronto podrás reservar aquí</h3><p>Agrega servicios y horarios en tu catálogo para activar la reserva en línea.</p>{mostrarWhatsapp && <a href={contacto}>Consultar por WhatsApp <ArrowRight size={16} aria-hidden="true" /></a>}</div>}
         {!demo && servicios.length > 0 && <a className="un-reserva__enlace" href={reservarHref}>Abrir la agenda completa <ArrowRight size={16} aria-hidden="true" /></a>}
       </section>
 
@@ -91,6 +97,7 @@ export default function UnasPortada({ pagina, esc, reservarHref, demo = false }:
       {escProductos && <section className="un-productos" aria-label="Productos"><div className="un-seccion-cabeza"><span>PARA LLEVAR</span><h2>Productos para tu rutina</h2></div><Escaparate esc={escProductos} slug={pagina.slug} whatsapp={pagina.whatsapp} puedePedir puedeReservar={false} disposicion="cuadricula" nombreNegocio={pagina.titulo} apariencia={apariencia} /></section>}
     </main>
 
-    <footer id="contacto" className="un-pie"><div><b>{pagina.titulo}</b><p>{frase}</p></div><div><span><MapPin size={16} aria-hidden="true" /> {esc?.direccion || 'Tu espacio de belleza'}</span>{demo ? <span>Plantilla de ejemplo · reserva simulada</span> : <a href={contacto}><MessageCircle size={16} aria-hidden="true" /> Escríbenos por WhatsApp</a>}</div></footer>
+    <footer id="contacto" className="un-pie"><div><b>{pagina.titulo}</b><p>{frase}</p></div><div><span><MapPin size={16} aria-hidden="true" /> {esc?.direccion || 'Tu espacio de belleza'}</span>{demo ? <span>Plantilla de ejemplo · reserva simulada</span> : mostrarWhatsapp && <a href={contacto}><MessageCircle size={16} aria-hidden="true" /> Escríbenos por WhatsApp</a>}</div></footer>
+    {mostrarWhatsapp && <BotonWhatsApp negocio={pagina.titulo} numero={pagina.whatsapp} demo={demo} />}
   </div>;
 }

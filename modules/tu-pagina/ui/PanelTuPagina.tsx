@@ -55,6 +55,7 @@ const urlVista = (slug: string, valores: {
     ft: valores.apariencia.fondoTienda ?? '', cb: valores.apariencia.colorBanner ?? '',
     mb: valores.apariencia.mostrarBanner === false ? '0' : '1',
     promo: valores.apariencia.promocionTexto ?? '',
+    upi: valores.apariencia.promocionImagenUnas ?? '',
     mw: valores.apariencia.mostrarWhatsapp === false ? '0' : '1',
     mh: valores.apariencia.mostrarHorario === false ? '0' : '1',
     lcd: valores.apariencia.catalogoLuxuryDestacado === true ? '1' : '0',
@@ -236,7 +237,7 @@ function MiPagina({ companyId, nombre, pagina, agendaNube, alGuardar }: {
   const [logo, setLogo] = useState(pagina?.logo_url ?? '');
   const [portada, setPortada] = useState(pagina?.portada_url ?? '');
   const [apariencia, setApariencia] = useState<AparienciaPagina>(pagina?.secciones?.apariencia ?? (esNegocioGastronomico(nombre) ? { fotoPlantilla: /pizzer|pizza/i.test(nombre) ? 'pizzeria' : 'cafeteria' } : {}));
-  const [subiendo, setSubiendo] = useState<'logo' | 'portada' | 'portadaLuxurySecundaria' | 'fotoDetalleUnas' | null>(null);
+  const [subiendo, setSubiendo] = useState<'logo' | 'portada' | 'portadaLuxurySecundaria' | 'fotoDetalleUnas' | 'promocionImagenUnas' | null>(null);
   const [porEncuadrar, setPorEncuadrar] = useState<File | null>(null);
   const [libre, setLibre] = useState<boolean | null>(null);
   const [errorSlug, setErrorSlug] = useState(false);
@@ -269,14 +270,15 @@ function MiPagina({ companyId, nombre, pagina, agendaNube, alGuardar }: {
     };
   }, [slug, companyId, pagina?.slug]);
 
-  async function subirImagen(file: File, destino: 'logo' | 'portada' | 'portadaLuxurySecundaria' | 'fotoDetalleUnas') {
+  async function subirImagen(file: File, destino: 'logo' | 'portada' | 'portadaLuxurySecundaria' | 'fotoDetalleUnas' | 'promocionImagenUnas') {
     setSubiendo(destino);
     try {
       const url = await subirImagenMarca(file, companyId, destino === 'logo' ? 'brand' : 'catalog');
       if (destino === 'logo') setLogo(url);
       else if (destino === 'portada') setPortada(url);
       else if (destino === 'portadaLuxurySecundaria') setApariencia((actual) => ({ ...actual, portadaLuxurySecundaria: url }));
-      else setApariencia((actual) => ({ ...actual, fotoDetalleUnas: url }));
+      else if (destino === 'fotoDetalleUnas') setApariencia((actual) => ({ ...actual, fotoDetalleUnas: url }));
+      else setApariencia((actual) => ({ ...actual, promocionImagenUnas: url }));
       avisar('Imagen lista. Guarda los cambios para publicarla.');
     } catch (e) {
       avisar(mensajeDe(e), 'error');
@@ -286,7 +288,7 @@ function MiPagina({ companyId, nombre, pagina, agendaNube, alGuardar }: {
   }
 
   async function guardar() {
-    if (!esUrlPublica(logo) || !esUrlPublica(portada) || !esUrlPublica(apariencia.portadaLuxurySecundaria ?? '') || !esUrlPublica(apariencia.fotoDetalleUnas ?? '')) { avisar('Las fotos deben tener un enlace público https.', 'error'); return; }
+    if (!esUrlPublica(logo) || !esUrlPublica(portada) || !esUrlPublica(apariencia.portadaLuxurySecundaria ?? '') || !esUrlPublica(apariencia.fotoDetalleUnas ?? '') || !esUrlPublica(apariencia.promocionImagenUnas ?? '')) { avisar('Las fotos deben tener un enlace público https.', 'error'); return; }
     if (!/^\d{8,15}$/.test(telefonoNormal(whatsapp))) { avisar('Revisa el número de WhatsApp antes de publicar.', 'error'); return; }
     if (reclamos && !proveedorCompleto(proveedor)) { avisar('Para el Libro de Reclamaciones faltan tu razón social, un RUC válido (11 cifras) y la dirección.', 'error'); return; }
     const aparienciaPublicada = { ...apariencia, plantillaActiva: !pagina?.publicada || plantillaManual || apariencia.plantillaActiva === true };
@@ -525,7 +527,19 @@ function MiPagina({ companyId, nombre, pagina, agendaNube, alGuardar }: {
             </div>}
             {plantilla !== 'luxury' && plantilla !== 'unas' && <label className="tp-panel-check"><input type="checkbox" checked={apariencia.mostrarBanner !== false} onChange={(e) => setApariencia({ ...apariencia, mostrarBanner: e.target.checked })} /><span><b>Mostrar portada</b><small className="muted">Puede llevar imagen o un color de fondo.</small></span></label>}
             {(plantilla === 'luxury' || plantilla === 'unas' || apariencia.mostrarBanner !== false) && <label className="tp-panel-campo"><span>{plantilla === 'luxury' ? 'Texto pequeño del primer banner' : 'Título de la portada'} <small className="muted">(opcional)</small></span><input className="input" maxLength={80} value={apariencia.tituloBanner ?? ''} placeholder={plantilla === 'luxury' ? 'BARBERÍA · LIMA' : plantilla === 'unas' ? 'Uñas que hablan de ti.' : 'Algo nuevo te espera'} onChange={(e) => setApariencia({ ...apariencia, tituloBanner: e.target.value })} /></label>}
-            <label className="tp-panel-campo"><span>Banner de promoción <small className="muted">(opcional)</small></span><input className="input" maxLength={100} value={apariencia.promocionTexto ?? ''} placeholder="Esta semana: 2x1 en productos seleccionados" onChange={(e) => setApariencia({ ...apariencia, promocionTexto: e.target.value })} /><small className="muted">Aparece arriba de tu página en cualquier plantilla. Déjalo vacío para ocultarlo.</small></label>
+            <label className="tp-panel-campo"><span>Banner de promoción <small className="muted">(opcional)</small></span><input className="input" maxLength={100} value={apariencia.promocionTexto ?? ''} placeholder={plantilla === 'unas' ? '20% de descuento en tu primer manicure' : 'Esta semana: 2x1 en productos seleccionados'} onChange={(e) => setApariencia({ ...apariencia, promocionTexto: e.target.value })} /><small className="muted">Aparece arriba de tu página{plantilla === 'unas' ? ' y en la ventana de promociones' : ''}. Déjalo vacío para ocultarlo.</small></label>
+            {plantilla === 'unas' && <div className="tp-panel-campo">
+              <span>Imagen de la promoción <small className="muted">(opcional)</small></span>
+              <small className="muted">Aparece al abrir la promoción. Añade el texto del banner para activarla.</small>
+              <div className="tp-panel-imagen-acciones">
+                <label className="tp-panel-subir">{subiendo === 'promocionImagenUnas' ? 'Subiendo…' : apariencia.promocionImagenUnas ? 'Cambiar imagen' : 'Subir imagen'}
+                  <input type="file" accept="image/*" disabled={subiendo !== null} onChange={(e) => { const file = e.target.files?.[0]; if (file) void subirImagen(file, 'promocionImagenUnas'); e.target.value = ''; }} />
+                </label>
+                {apariencia.promocionImagenUnas && <button type="button" className="btn btn-sm btn-ghost" disabled={subiendo !== null} onClick={() => setApariencia({ ...apariencia, promocionImagenUnas: '' })}>Quitar imagen</button>}
+              </div>
+              {apariencia.promocionImagenUnas && esUrlPublica(apariencia.promocionImagenUnas) && /* eslint-disable-next-line @next/next/no-img-element */ <img className="tp-panel-imagen tp-panel-imagen--portada" src={apariencia.promocionImagenUnas} alt="Vista previa de la promoción" />}
+              <label className="tp-panel-enlace-imagen">O pega un enlace HTTPS<input className="input" type="url" value={apariencia.promocionImagenUnas ?? ''} placeholder="https://…/promocion.jpg" onChange={(e) => setApariencia({ ...apariencia, promocionImagenUnas: e.target.value })} /></label>
+            </div>}
             <label className="tp-panel-check"><input type="checkbox" checked={apariencia.mostrarWhatsapp !== false} onChange={(e) => setApariencia({ ...apariencia, mostrarWhatsapp: e.target.checked })} /><span><b>Mostrar botón de WhatsApp</b><small className="muted">Los pedidos y reservas siguen enviando su aviso.</small></span></label>
             <label className="tp-panel-check"><input type="checkbox" checked={apariencia.mostrarHorario !== false} onChange={(e) => setApariencia({ ...apariencia, mostrarHorario: e.target.checked })} /><span><b>Mostrar si estás abierto</b><small className="muted">«Abierto ahora» o «Cerrado», según tu horario de atención. Solo informa: tus clientes pueden pedir igual.</small></span></label>
             {plantilla === 'luxury' && es === 'ambos' && <label className="tp-panel-check"><input type="checkbox" checked={apariencia.catalogoLuxuryDestacado === true} onChange={(e) => setApariencia({ ...apariencia, catalogoLuxuryDestacado: e.target.checked })} /><span><b>Mostrar botón «Ver catálogo» y carrusel de productos</b><small className="muted">Los servicios siguen primero. Si lo desactivas, tus productos conservan la vista actual.</small></span></label>}
@@ -580,7 +594,7 @@ function MiPagina({ companyId, nombre, pagina, agendaNube, alGuardar }: {
 
         {!publicada && paso < 3 && <button type="button" className="btn btn-primary tp-panel-siguiente" disabled={paso === 1 && !titulo.trim()} onClick={() => setPaso(paso === 1 ? 2 : 3)}>Siguiente paso →</button>}
         {!publicada && paso > 1 && <button type="button" className="btn btn-ghost tp-panel-volver" onClick={() => setPaso(paso === 3 ? 2 : 1)}>← Volver</button>}
-        {(publicada || paso === 3) && <button className="btn btn-primary tp-panel-siguiente" disabled={guardando || subiendo !== null || libre !== true || !whatsapp.trim() || !titulo.trim() || !esUrlPublica(logo) || !esUrlPublica(portada) || !esUrlPublica(apariencia.fotoDetalleUnas ?? '')} onClick={() => void guardar()}>
+        {(publicada || paso === 3) && <button className="btn btn-primary tp-panel-siguiente" disabled={guardando || subiendo !== null || libre !== true || !whatsapp.trim() || !titulo.trim() || !esUrlPublica(logo) || !esUrlPublica(portada) || !esUrlPublica(apariencia.fotoDetalleUnas ?? '') || !esUrlPublica(apariencia.promocionImagenUnas ?? '')} onClick={() => void guardar()}>
           {guardando ? 'Publicando…' : publicada ? 'Guardar cambios' : 'Publicar mi página'}
         </button>}
       </section>

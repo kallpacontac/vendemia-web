@@ -10,6 +10,8 @@ export interface AparienciaPagina {
   mostrarBanner?: boolean;
   /** Oferta breve visible en la parte superior de todas las plantillas. */
   promocionTexto?: string;
+  /** Imagen opcional de la promoción emergente en la plantilla de uñas. */
+  promocionImagenUnas?: string;
   mostrarWhatsapp?: boolean;
   /** «Abierto ahora» / «Cerrado» según el horario del negocio. Sale salvo que el dueño lo apague. */
   mostrarHorario?: boolean;

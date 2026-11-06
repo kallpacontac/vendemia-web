@@ -28,7 +28,7 @@ export default function PaginaUnasEjemplo() {
   const pagina: PaginaPublica = {
     slug: 'luna-unas-ejemplo', version: 1, titulo: 'Luna Uñas', frase: 'Manicure, diseño y cuidado para que cada detalle hable de ti.',
     whatsapp: '', color: '#A57970', plantilla: 'unas', logo_url: null, portada_url: null, distritos: [],
-    secciones: { reservar: true, catalogo: false, apariencia: { plantillaActiva: true, fotoPlantilla: 'unas', tituloBanner: 'Uñas que hablan de ti.', promocionTexto: 'Tu próxima visita comienza aquí', mostrarWhatsapp: true } },
+    secciones: { reservar: true, catalogo: false, apariencia: { plantillaActiva: true, fotoPlantilla: 'unas', tituloBanner: 'Uñas que hablan de ti.', promocionTexto: '20% de descuento en tu primer manicure', mostrarWhatsapp: true } },
   };
   const esc: Escaparate = {
     modo: 'appointment', entrega: 'pickup', direccion: 'Miraflores, Lima', hoy, ahora: `${hoy} 09:00`, pideProfesional: false,
