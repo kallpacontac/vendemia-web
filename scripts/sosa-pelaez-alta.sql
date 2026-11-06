@@ -5,8 +5,11 @@
 -- Un negocio NUEVO copiado de la demo Zona Gol (canchas, precios, horario, adelanto, página y
 -- su apariencia), SIN sus clientes, reservas ni pagos inventados. Zona Gol se queda de demo.
 --
--- ANTES: el cliente entra UNA vez en vendemias.com/login con «Continuar con Google» y su correo.
---        Así su cuenta existe y nunca se toca su contraseña. Este script no crea cuentas.
+-- ANTES: tiene que existir su cuenta. Una de dos (este script no crea cuentas):
+--   a) Tú la creas: Supabase → Authentication → Users → Add user → Create new user, con su
+--      correo, una contraseña temporal y «Auto Confirm User» marcado. Mejor así: corres esto
+--      antes de que entre y la primera vez ya cae en su panel, sin pasar por «crea tu negocio».
+--   b) Él entra una vez en vendemias.com/login con «Continuar con Google».
 --
 -- Hace, en una sola transacción (si algo falla, no queda nada a medias):
 --   1. La demo vuelve a su dirección: agenda.vendemias.com/zona-gol, título «Zona Gol».
@@ -56,7 +59,7 @@ begin
     -- ── Comprobaciones: nada se crea con datos de mentira ─────────────────────
     select id into v_cliente from auth.users where lower(email) = lower(btrim(v_email));
     if v_cliente is null then
-        raise exception 'No hay ninguna cuenta con el correo «%». Que el cliente entre primero en vendemias.com/login con Google.', v_email;
+        raise exception 'No hay ninguna cuenta con el correo «%». Créala en Supabase → Authentication → Add user (con «Auto Confirm User») o que el cliente entre antes con Google.', v_email;
     end if;
     if v_whatsapp !~ '^51\d{9}$' or v_whatsapp = '51000000000' then raise exception 'Pon el celular del cliente en v_whatsapp, con 51 delante.'; end if;
     if v_yape !~ '^51\d{9}$' or v_yape = '51000000000' then raise exception 'Pon el Yape/Plin DEL CLIENTE en v_yape, con 51 delante.'; end if;
