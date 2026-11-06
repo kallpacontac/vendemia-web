@@ -31,6 +31,7 @@ import CanchasPortada from '@/modules/tu-pagina/publico/CanchasPortada';
 import EstadoHorario from '@/modules/tu-pagina/publico/EstadoHorario';
 import { CartaSoloVer } from '@/modules/tu-pagina/publico/CartaMesa';
 import UnasPortada from '@/modules/tu-pagina/publico/UnasPortada';
+import { tarjetaDe } from '@/modules/tu-pagina/servidor/tarjeta';
 
 type Props = { params: { slug: string }; searchParams?: Record<string, string | undefined> };
 
@@ -54,7 +55,10 @@ export default async function Portada({ params, searchParams }: Props) {
   const plantilla = plantillaValida(p.plantilla) ? p.plantilla : plantillaPorDefecto(tipo);
   const esLuxury = plantilla === 'luxury' && p.secciones.apariencia?.plantillaActiva && p.secciones.reservar;
   const conEscaparate = Boolean(p.secciones.catalogo || p.secciones.reservar);
-  const escTodo = conEscaparate ? await escaparateDe(p.slug, p.secciones) : null;
+  const [escTodo, tarjeta] = await Promise.all([
+    conEscaparate ? escaparateDe(p.slug, p.secciones) : Promise.resolve(null),
+    tarjetaDe(p),
+  ]);
   // Con canchas, las canchas se reservan en la tabla de /reservar, no una a una aquí: en la
   // portada quedan los productos y grupos, y el atajo de reservar.
   const canchas = conCanchas(p.secciones);
@@ -88,11 +92,11 @@ export default async function Portada({ params, searchParams }: Props) {
   // composición: portada, servicios y el selector de horarios real.
   const agendaDisenada = p.secciones.apariencia?.plantillaActiva && tipo === 'agenda' && (plantilla === 'agenda' || plantilla === 'lista');
   if (plantilla === 'unas' && p.secciones.apariencia?.plantillaActiva && p.secciones.reservar) {
-    return <Marco pagina={p} portada><UnasPortada pagina={p} esc={escTodo} reservarHref={`./${p.slug}/reservar${consultaVista(searchParams)}`} /></Marco>;
+    return <Marco pagina={p} portada><UnasPortada pagina={p} esc={escTodo} tarjeta={tarjeta} reservarHref={`./${p.slug}/reservar${consultaVista(searchParams)}`} /></Marco>;
   }
   if (agendaDisenada) {
     const reservarHref = `./${p.slug}/reservar${consultaVista(searchParams)}`;
-    return <Marco pagina={p} portada>
+    return <Marco pagina={p} portada tarjeta={tarjeta}>
       <AgendaPortada pagina={p} editorial={plantilla === 'lista'} reservarHref={reservarHref} />
       <main className="tp-agenda-contenido">
         {estadoHorario}
@@ -145,7 +149,7 @@ export default async function Portada({ params, searchParams }: Props) {
   );
 
   if (canchas && plantilla === 'canchas' && p.secciones.apariencia?.plantillaActiva) return (
-    <Marco pagina={p} portada>
+    <Marco pagina={p} portada tarjeta={tarjeta}>
       <CanchasPortada pagina={p} esc={escTodo}>{estadoHorario}{catalogo}</CanchasPortada>
     </Marco>
   );
@@ -153,7 +157,7 @@ export default async function Portada({ params, searchParams }: Props) {
   // Atención en mesa: desde aquí la carta es para mirar. Pedir y llamar al mozo son de quien
   // escanea el QR de su mesa (/<negocio>/mesa/<token>).
   if (plantilla === 'mesa' && p.secciones.apariencia?.plantillaActiva && p.secciones.catalogo) return (
-    <Marco pagina={p} portada>
+    <Marco pagina={p} portada tarjeta={tarjeta}>
       <Cabecera pagina={p} fotoDestacada={fotoDestacada} servicioDestacado={servicioDestacado} catalogoDisponible={hayProductos} />
       <div className="tp-hoja">
         {estadoHorario}
@@ -170,7 +174,7 @@ export default async function Portada({ params, searchParams }: Props) {
   );
 
   return (
-    <Marco pagina={p} portada>
+    <Marco pagina={p} portada tarjeta={tarjeta}>
       <Cabecera pagina={p} fotoDestacada={fotoDestacada} servicioDestacado={servicioDestacado} catalogoDisponible={hayItems} catalogoProductosDisponible={catalogoLuxuryDestacado} />
       <div className="tp-hoja">
         {estadoHorario}

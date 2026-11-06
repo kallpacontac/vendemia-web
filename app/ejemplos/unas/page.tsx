@@ -4,6 +4,8 @@ import UnasPortada from '@/modules/tu-pagina/publico/UnasPortada';
 import EjemplosNav from '@/modules/tu-pagina/publico/EjemplosNav';
 import type { Escaparate, Item } from '@/modules/tu-pagina/dominio/tienda';
 import type { PaginaPublica } from '@/modules/tu-pagina/servidor/pagina';
+import type { TarjetaPublica } from '@/modules/tu-pagina/dominio/tarjeta';
+import { trazoSello } from '@/modules/fideliza/dominio/sellos';
 
 export const dynamic = 'force-dynamic';
 export const metadata: Metadata = {
@@ -23,6 +25,12 @@ const servicios: Item[] = [
   quedan: null, opciones: [], grupos: [], vigenciaMeses: 0,
 }));
 
+// Cómo se ve la tarjeta de puntos de Fideliza cuando el dueño la enseña en su página.
+const tarjeta: TarjetaPublica = {
+  nombre: 'Club Luna', regla: 'Cada visita suma 1 sello. Con 6: un esmaltado en gel gratis.',
+  premio: 'un esmaltado en gel gratis', meta: 6, trazo: trazoSello('gema'), url: '#tarjeta',
+};
+
 export default function PaginaUnasEjemplo() {
   const hoy = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Lima', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
   const pagina: PaginaPublica = {
@@ -35,5 +43,5 @@ export default function PaginaUnasEjemplo() {
     familias: ['Estudio de uñas'], items: servicios,
     agenda: { horario: {}, paso: 30, equipo: [], bloqueos: [], ocupados: [] },
   };
-  return <Marco pagina={pagina} portada><UnasPortada pagina={pagina} esc={esc} reservarHref="#reserva" demo /><EjemplosNav actual="unas" /></Marco>;
+  return <Marco pagina={pagina} portada><UnasPortada pagina={pagina} esc={esc} tarjeta={tarjeta} reservarHref="#reserva" demo /><EjemplosNav actual="unas" /></Marco>;
 }

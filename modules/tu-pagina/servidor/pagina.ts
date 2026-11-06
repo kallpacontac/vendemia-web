@@ -7,6 +7,7 @@ import type { Proveedor } from '@/modules/tu-pagina/dominio/reclamos';
 import type { AparienciaPagina } from '@/modules/tu-pagina/dominio/apariencia';
 import type { ConfigCanchas } from '@/modules/tu-pagina/dominio/canchas';
 import type { AjustesCarta } from '@/modules/tu-pagina/dominio/mesa';
+import type { ConfigTarjeta } from '@/modules/tu-pagina/dominio/tarjeta';
 
 export interface Secciones {
   catalogo?: boolean;
@@ -22,6 +23,8 @@ export interface Secciones {
   canchas?: ConfigCanchas;
   /** Favoritos, precio de antes, horario y nombre en inglés de cada plato (dominio/mesa.ts). */
   carta?: AjustesCarta;
+  /** La tarjeta de puntos de Fideliza en la página (dominio/tarjeta.ts). */
+  fideliza?: ConfigTarjeta;
 }
 
 export interface PaginaPublica {

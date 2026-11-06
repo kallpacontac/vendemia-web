@@ -1,4 +1,4 @@
-import { ArrowRight, CalendarDays, Heart, MapPin, MessageCircle, Palette, ShieldCheck, Sparkles } from 'lucide-react';
+import { ArrowRight, CalendarDays, Gift, Heart, MapPin, MessageCircle, Palette, ShieldCheck, Sparkles, Stamp } from 'lucide-react';
 import type { CSSProperties } from 'react';
 import type { PaginaPublica } from '@/modules/tu-pagina/servidor/pagina';
 import type { Escaparate as Datos } from '@/modules/tu-pagina/dominio/tienda';
@@ -10,13 +10,17 @@ import Escaparate from './Escaparate';
 import UnasReservaDemo from './UnasReservaDemo';
 import UnasPromocion from './UnasPromocion';
 import BotonWhatsApp from './BotonWhatsApp';
+import TarjetaPuntos from './TarjetaPuntos';
+import type { TarjetaPublica } from '@/modules/tu-pagina/dominio/tarjeta';
 import './unas.css';
 
-export default function UnasPortada({ pagina, esc, reservarHref, demo = false }: {
+export default function UnasPortada({ pagina, esc, reservarHref, demo = false, tarjeta = null }: {
   pagina: PaginaPublica;
   esc: Datos | null;
   reservarHref: string;
   demo?: boolean;
+  /** La tarjeta de puntos de Fideliza, si el dueño la enseña (servidor/tarjeta.ts). */
+  tarjeta?: TarjetaPublica | null;
 }) {
   const apariencia = pagina.secciones.apariencia ?? {};
   const foto = pagina.portada_url || fotoDePlantilla(apariencia, 'agenda', 'unas');
@@ -46,11 +50,13 @@ export default function UnasPortada({ pagina, esc, reservarHref, demo = false }:
           <img src={pagina.logo_url} alt={pagina.titulo} /> : <span>{pagina.titulo}</span>}
       </a>
       <nav aria-label="Navegación principal">
-        <a href="#inicio">Inicio</a><a href="#servicios">Servicios</a><a href="#reserva">Reservar</a><a href="#nosotros">Nosotros</a>
+        <a href="#inicio">Inicio</a><a href="#servicios">Servicios</a><a href="#reserva">Reservar</a>{tarjeta && <a href="#tarjeta">Mi tarjeta</a>}<a href="#nosotros">Nosotros</a>
       </nav>
       <div className="un-nav__acciones">
         {promocion && <UnasPromocion negocio={pagina.titulo} slug={pagina.slug} texto={promocion} imagen={promocionImagen} />}
-        <a href="#servicios" aria-label="Ver servicios"><Heart size={19} aria-hidden="true" /></a>
+        {tarjeta
+          ? <a href="#tarjeta" aria-label={`Tu tarjeta de puntos: ${tarjeta.nombre}`}><Stamp size={19} aria-hidden="true" /></a>
+          : <a href="#servicios" aria-label="Ver servicios"><Heart size={19} aria-hidden="true" /></a>}
         {mostrarWhatsapp && <a href={contacto} aria-label="Contactar a la empresa"><MessageCircle size={19} aria-hidden="true" /></a>}
         <a className="un-nav__reserva" href="#reserva">Reservar cita <ArrowRight size={15} aria-hidden="true" /></a>
       </div>
@@ -62,6 +68,7 @@ export default function UnasPortada({ pagina, esc, reservarHref, demo = false }:
         <h1>{apariencia.tituloBanner?.trim() || 'Uñas que hablan de ti.'}</h1>
         <p>{frase}</p>
         <a className="un-boton" href="#reserva"><CalendarDays size={17} aria-hidden="true" /> Reservar mi cita <ArrowRight size={15} aria-hidden="true" /></a>
+        {tarjeta && <a className="un-hero__club" href="#tarjeta"><Gift size={15} aria-hidden="true" /> {tarjeta.nombre}: junta sellos y gana {tarjeta.premio}</a>}
       </div>
       <div className="un-hero__beneficios" aria-label="Lo que ofrecemos">
         <span><Sparkles size={22} aria-hidden="true" /> Manicure</span>
@@ -85,6 +92,8 @@ export default function UnasPortada({ pagina, esc, reservarHref, demo = false }:
           <div className="un-reserva__vacio"><CalendarDays size={28} aria-hidden="true" /><h3>Pronto podrás reservar aquí</h3><p>Agrega servicios y horarios en tu catálogo para activar la reserva en línea.</p>{mostrarWhatsapp && <a href={contacto}>Consultar por WhatsApp <ArrowRight size={16} aria-hidden="true" /></a>}</div>}
         {!demo && servicios.length > 0 && <a className="un-reserva__enlace" href={reservarHref}>Abrir la agenda completa <ArrowRight size={16} aria-hidden="true" /></a>}
       </section>
+
+      {tarjeta && <TarjetaPuntos tarjeta={tarjeta} negocio={pagina.titulo} demo={demo} />}
 
       <section id="nosotros" className="un-historia">
         <div className="un-historia__foto" style={{ backgroundImage: `url("${detalle}")` }} role="img" aria-label={`Trabajo de ${pagina.titulo}`} />

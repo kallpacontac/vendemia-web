@@ -11,6 +11,8 @@ import { colorO } from '@/modules/tu-pagina/dominio/apariencia';
 import { fotoDePlantilla } from '@/modules/tu-pagina/dominio/fotos';
 import LuxuryPortada from '@/modules/tu-pagina/publico/LuxuryPortada';
 import AnimacionesPlantilla from '@/modules/tu-pagina/publico/AnimacionesPlantilla';
+import TarjetaPuntos from '@/modules/tu-pagina/publico/TarjetaPuntos';
+import type { TarjetaPublica } from '@/modules/tu-pagina/dominio/tarjeta';
 import '@/modules/tu-pagina/estilos/publica.css';
 
 export function estiloDe(p: Pick<PaginaPublica, 'color' | 'secciones'>): React.CSSProperties {
@@ -45,7 +47,11 @@ export function estiloDe(p: Pick<PaginaPublica, 'color' | 'secciones'>): React.C
  * @param portada la página de inicio (/<negocio>). Los enlaces son relativos para valer
  *        igual en tienda.* y en /tu-pagina/; desde una subpágina se sube un nivel.
  */
-export default function Marco({ pagina, children, vista, portada }: { pagina: PaginaPublica; children: React.ReactNode; vista?: TipoPagina; portada?: boolean }) {
+/**
+ * @param tarjeta la tarjeta de puntos de Fideliza (servidor/tarjeta.ts). Sale al final del
+ *        contenido en cualquier plantilla; la de uñas la pinta ella misma, en su sitio.
+ */
+export default function Marco({ pagina, children, vista, portada, tarjeta }: { pagina: PaginaPublica; children: React.ReactNode; vista?: TipoPagina; portada?: boolean; tarjeta?: TarjetaPublica | null }) {
   const tipo = vista ?? tipoPagina(pagina.secciones);
   const plantilla = pagina.secciones.apariencia?.plantillaActiva
     ? (plantillaValida(pagina.plantilla) ? pagina.plantilla : plantillaPorDefecto(tipo))
@@ -57,6 +63,7 @@ export default function Marco({ pagina, children, vista, portada }: { pagina: Pa
       <AnimacionesPlantilla />
       {promocion && !(plantilla === 'restaurante' && portada) && <div className="tp-promocion" role="note"><span>OFERTA ESPECIAL</span><strong>{promocion}</strong></div>}
       {children}
+      {tarjeta && <TarjetaPuntos tarjeta={tarjeta} negocio={pagina.titulo} />}
       {/* El Libro de Reclamaciones va en el pie de TODA la página, también la de inicio (sql/0006). */}
       {pagina.secciones.reclamos && pagina.secciones.proveedor?.ruc && (
         <p className="tp-pie tp-no-imprimir">

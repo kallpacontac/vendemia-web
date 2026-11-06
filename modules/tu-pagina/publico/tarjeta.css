@@ -1,0 +1,55 @@
+/* «Tu tarjeta de puntos» (TarjetaPuntos.tsx). Vale para todas las plantillas: el
+   color sale de --tp-color; la de uñas la viste con sus tonos más abajo. */
+.tpt { --tpt-color: var(--tp-color, #8a6a5c); --tpt-tinta: var(--tp-tinta, #fff); --tpt-fondo: color-mix(in srgb, var(--tpt-color) 8%, #fff);
+  max-width: 1080px; margin: 28px auto; padding: clamp(26px, 5vw, 56px); display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, .95fr); align-items: center; gap: clamp(24px, 5vw, 64px);
+  border-radius: 28px; background: var(--tpt-fondo); color: #1f1b19; box-sizing: border-box; }
+.tpt * { box-sizing: border-box; }
+.tpt__sobre { display: inline-flex; align-items: center; gap: 7px; color: color-mix(in srgb, var(--tpt-color) 80%, #000); font-size: 11px; font-weight: 800; letter-spacing: .15em; }
+.tpt h2 { margin: 12px 0 10px; font-size: clamp(28px, 3.4vw, 42px); line-height: 1.12; letter-spacing: -.04em; }
+.tpt__regla { margin: 0 0 20px; color: #5f5651; font-size: 15px; line-height: 1.6; }
+.tpt__pasos { margin: 0 0 24px; padding: 0; list-style: none; display: grid; gap: 12px; }
+.tpt__pasos li { display: flex; align-items: flex-start; gap: 12px; color: #4b423e; font-size: 14px; line-height: 1.5; }
+.tpt__pasos li > svg { flex: none; width: 34px; height: 34px; padding: 8px; border-radius: 50%; background: #fff; color: var(--tpt-color); box-shadow: 0 2px 8px #0000000f; }
+.tpt__pasos li > span { padding-top: 6px; }
+.tpt__boton { min-height: 48px; display: inline-flex; align-items: center; gap: 10px; padding: 0 22px; border-radius: 999px; background: var(--tpt-color); color: var(--tpt-tinta) !important; font-size: 14px; font-weight: 800; text-decoration: none; }
+.tpt__boton:hover, .tpt__boton:focus-visible { filter: brightness(.92); }
+.tpt__boton[aria-disabled='true'] { cursor: default; }
+.tpt__nota { display: block; max-width: 400px; margin-top: 12px; color: #7a706b; font-size: 12px; line-height: 1.5; }
+
+.tpt__muestra { display: grid; place-items: center; }
+.tpt__tarjeta { width: min(100%, 360px); padding: 22px; border-radius: 22px; background: var(--tpt-color); color: var(--tpt-tinta); box-shadow: 0 22px 50px color-mix(in srgb, var(--tpt-color) 35%, transparent); transform: rotate(-3deg); }
+.tpt__cabeza { display: grid; gap: 2px; margin-bottom: 18px; }
+.tpt__cabeza b { font-size: 18px; letter-spacing: -.02em; }
+.tpt__cabeza span { font-size: 12px; opacity: .8; }
+.tpt__sellos { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+.tpt__sellos--pocos { grid-template-columns: repeat(3, 1fr); padding: 0 6%; }
+.tpt__sellos--muchos { grid-template-columns: repeat(6, 1fr); gap: 7px; }
+.tpt__sello { aspect-ratio: 1; display: grid; place-items: center; border: 2px dashed color-mix(in srgb, var(--tpt-tinta) 45%, transparent); border-radius: 50%; }
+.tpt__sello svg { width: 55%; height: 55%; }
+.tpt__sello--lleno { border-style: solid; border-color: var(--tpt-tinta); background: color-mix(in srgb, var(--tpt-tinta) 22%, transparent); }
+.tpt__sello--premio { border-style: solid; background: var(--tpt-tinta); color: var(--tpt-color); }
+.tpt__barra { height: 14px; border-radius: 99px; background: color-mix(in srgb, var(--tpt-tinta) 25%, transparent); overflow: hidden; }
+.tpt__barra i { display: block; height: 100%; border-radius: inherit; background: var(--tpt-tinta); }
+.tpt__pie { display: flex; justify-content: space-between; gap: 12px; margin-top: 18px; font-size: 12px; font-weight: 700; }
+.tpt__pie span { display: inline-flex; align-items: center; gap: 5px; }
+.tpt__pie span:last-child { opacity: .85; text-align: right; }
+
+@media (max-width: 760px) {
+  .tpt { grid-template-columns: 1fr; margin: 20px 16px; padding: 26px 20px; }
+  .tpt__muestra { order: -1; }
+  .tpt__tarjeta { transform: none; }
+}
+
+/* Estudio de uñas: a sangre, con los tonos de la plantilla. */
+.un .tpt { --tpt-color: #2a211f; --tpt-tinta: #fff; --tpt-fondo: #f4e9e3; max-width: none; margin: 0; border-radius: 0; padding: 80px 8.5%; font-family: inherit; }
+.un .tpt__sobre { color: #b89686; }
+.un .tpt h2 { font-weight: 820; letter-spacing: -.045em; }
+.un .tpt__pasos li > svg { color: #9c7167; }
+.un .tpt__boton { background: #1b1918; font-size: 12px; }
+.un .tpt__boton:hover { background: var(--tp-color); filter: none; }
+.un .tpt__tarjeta { background: linear-gradient(140deg, #3a2b27, #8f6a5e); box-shadow: 0 24px 60px #5a3d3366; }
+.un .tpt__sello--premio { color: #8f6a5e; }
+@media (max-width: 760px) { .un .tpt { padding: 56px 20px; } }
+
+/* Acceso desde la cabecera y la portada de uñas. */
+.un-hero__club { position: relative; z-index: 1; display: inline-flex; align-items: center; gap: 7px; margin-top: 16px; margin-left: 4px; color: #3e302c !important; font-size: 12px; font-weight: 750; text-decoration: underline !important; text-underline-offset: 3px; }

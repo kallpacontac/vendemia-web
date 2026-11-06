@@ -74,6 +74,8 @@ const urlVista = (slug: string, valores: {
 import { Reservas } from '@/modules/tu-pagina/ui/PedidosYReservas';
 import Reclamos from '@/modules/tu-pagina/ui/Reclamos';
 import Avisame from '@/modules/tu-pagina/ui/Avisame';
+import TarjetaEnPagina from '@/modules/tu-pagina/ui/TarjetaEnPagina';
+import type { ConfigTarjeta } from '@/modules/tu-pagina/dominio/tarjeta';
 import { ConfigDeCanchas } from '@/modules/tu-pagina/ui/Canchas';
 import { normalizarCanchas, type ConfigCanchas } from '@/modules/tu-pagina/dominio/canchas';
 import { proveedorCompleto, rucValido, type Proveedor } from '@/modules/tu-pagina/dominio/reclamos';
@@ -88,7 +90,7 @@ interface Pagina {
   whatsapp: string;
   secciones: {
     catalogo?: boolean; reservar?: boolean; envios?: boolean; tipos?: TiposDePagina; apariencia?: AparienciaPagina;
-    reclamos?: boolean; proveedor?: Partial<Proveedor>; canchas?: ConfigCanchas;
+    reclamos?: boolean; proveedor?: Partial<Proveedor>; canchas?: ConfigCanchas; fideliza?: ConfigTarjeta;
   };
   logo_url: string | null;
   portada_url: string | null;
@@ -213,7 +215,8 @@ function MiPagina({ companyId, nombre, pagina, agendaNube, alGuardar }: {
   const [envios, setEnvios] = useState(pagina?.secciones?.envios ?? false);
   const [reclamos, setReclamos] = useState(pagina?.secciones?.reclamos ?? false);
   const [canchas, setCanchas] = useState<ConfigCanchas>(pagina?.secciones?.canchas ?? { desde: '18:00' });
-  const [funcionesAbiertas, setFuncionesAbiertas] = useState(Boolean(pagina?.secciones?.envios || pagina?.secciones?.reclamos || pagina?.secciones?.canchas?.activo));
+  const [tarjeta, setTarjeta] = useState<ConfigTarjeta>(pagina?.secciones?.fideliza ?? {});
+  const [funcionesAbiertas, setFuncionesAbiertas] = useState(Boolean(pagina?.secciones?.envios || pagina?.secciones?.reclamos || pagina?.secciones?.canchas?.activo || pagina?.secciones?.fideliza?.activo));
   const [proveedor, setProveedor] = useState<Proveedor>({
     razon_social: pagina?.secciones?.proveedor?.razon_social ?? '',
     ruc: pagina?.secciones?.proveedor?.ruc ?? '',
@@ -312,6 +315,7 @@ function MiPagina({ companyId, nombre, pagina, agendaNube, alGuardar }: {
             reclamos,
             canchas: normalizarCanchas({ ...canchas, activo: Boolean(reservar && (canchas.activo || plantilla === 'canchas')) }),
             proveedor: { razon_social: proveedor.razon_social.trim(), ruc: proveedor.ruc.replace(/\D/g, ''), direccion: proveedor.direccion.trim() },
+            fideliza: { activo: Boolean(tarjeta.activo && tarjeta.slug), slug: tarjeta.slug ?? '' },
           },
           distritos: distritos.split(/[,\n]/).map((d) => d.trim()).filter(Boolean),
         },
@@ -564,11 +568,12 @@ function MiPagina({ companyId, nombre, pagina, agendaNube, alGuardar }: {
 
         {/* Lo que no todos necesitan: se enciende si se quiere y solo entonces pide sus datos. */}
         <details className="tp-panel-avanzado" open={funcionesAbiertas} onToggle={(e) => setFuncionesAbiertas(e.currentTarget.open)}>
-          <summary>Agregar funciones <small>{reservar ? 'Canchas, envíos y Libro de Reclamaciones' : 'Envíos y Libro de Reclamaciones'}, si los necesitas</small></summary>
+          <summary>Agregar funciones <small>Tarjeta de puntos, {reservar ? 'canchas, envíos y Libro de Reclamaciones' : 'envíos y Libro de Reclamaciones'}, si los necesitas</small></summary>
           <div className="tp-panel-avanzado__contenido">
         <div className="tp-panel-campo">
           <span>Apartados opcionales</span>
           <div className="tp-panel-apartados">
+            <TarjetaEnPagina companyId={companyId} valor={tarjeta} alCambiar={setTarjeta} />
             {reservar && (
               <Apartado activo={Boolean(canchas.activo || plantilla === 'canchas')} bloqueado={plantilla === 'canchas'} alCambiar={(activo) => setCanchas({ ...canchas, activo })} titulo="Canchas por horas" describe="Modalidades y horarios por cancha, con precios de día y de noche. Se activa al elegir la plantilla Fútbol / canchas.">
                 <ConfigDeCanchas companyId={companyId} valor={canchas} alCambiar={setCanchas} />
