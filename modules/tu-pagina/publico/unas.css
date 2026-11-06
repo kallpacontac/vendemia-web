@@ -1,7 +1,7 @@
 .tp[data-plantilla='unas'] { background: #dfd0c8; --tp-fondo: #fbf9f7; --tp-papel: #fff; --tp-texto: #211b1a; }
-.tp[data-plantilla='unas'] > .tp-promocion { max-width: 1440px; margin: auto; padding: 7px 18px; background: #cbb3a8; color: #49342d; font-size: 11px; }
-.tp[data-plantilla='unas'] > .tp-pie { max-width: 1440px; margin: 0 auto; background: #181616; color: #fff; }
-.un { width: min(100%, 1440px); margin: 0 auto; overflow: hidden; background: #fff; color: #1f1b19; font-family: 'Plus Jakarta Sans', Arial, sans-serif; }
+.tp[data-plantilla='unas'] > .tp-promocion { max-width: none; margin: 0; padding: 7px 18px; background: #cbb3a8; color: #49342d; font-size: 11px; }
+.tp[data-plantilla='unas'] > .tp-pie { max-width: none; margin: 0; background: #181616; color: #fff; }
+.un { width: 100%; margin: 0; overflow: hidden; background: #fff; color: #1f1b19; font-family: 'Plus Jakarta Sans', Arial, sans-serif; }
 .un a { text-decoration: none; }
 .un-nav { position: relative; z-index: 2; min-height: 82px; display: flex; align-items: center; justify-content: space-between; gap: 24px; padding: 10px 6.5%; background: #fff; }
 .un-marca { max-width: 230px; display: inline-flex; align-items: center; color: #171313; font-size: clamp(22px, 2vw, 30px); font-weight: 850; letter-spacing: -.075em; line-height: 1; }
