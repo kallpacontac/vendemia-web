@@ -24,7 +24,7 @@ import { rpc, servidor } from '@/modules/fideliza/servidor/supabase';
 
 const SLUG = /^[a-z0-9][a-z0-9-]{1,38}[a-z0-9]$/;
 
-function formulario(n: Negocio, slug: string, placa: string | null, aviso?: string) {
+function formulario(n: Negocio, slug: string, placa: string | null, aviso?: string, nombre = '') {
   const p = n.program!;
   return pagina({
     titulo: `${p.name} · ${n.brand.display_name}`,
@@ -41,7 +41,7 @@ function formulario(n: Negocio, slug: string, placa: string | null, aviso?: stri
   <input type="hidden" name="k" value="${randomBytes(16).toString('base64url')}">
   ${placa ? `<input type="hidden" name="d" value="${esc(placa)}">` : ''}
   <label for="alias">¿Cómo te llamamos? <span class="nota">(opcional)</span></label>
-  <input type="text" id="alias" name="alias" maxlength="40" autocomplete="given-name">
+  <input type="text" id="alias" name="alias" maxlength="40" autocomplete="given-name"${nombre ? ` value="${esc(nombre)}"` : ''}>
   <button class="btn prim" type="submit" id="b">Crear mi tarjeta</button>
   <p class="nota">Sin contraseña. Tu tarjeta queda en este teléfono y puedes guardarla en Google Wallet o en tu pantalla de inicio.</p>
 </form>
@@ -59,13 +59,17 @@ async function negocio(slug: string, evento: string | null) {
 export async function GET(req: Request, { params }: { params: { slug: string } }) {
   const slug = params.slug.toLowerCase();
   if (!SLUG.test(slug)) return noDisponible(null, 404);
-  const placa = new URL(req.url).searchParams.get('d');
+  const consulta = new URL(req.url).searchParams;
+  const placa = consulta.get('d');
+  // ?nombre=: viene de «Crear mi tarjeta» al terminar una reserva en Mi página. Solo rellena
+  // el campo; la tarjeta no se crea hasta que la clienta pulsa el botón.
+  const nombre = (consulta.get('nombre') ?? '').replace(/[\u0000-\u001f\u007f<>]/g, '').trim().slice(0, 40);
   try {
     if (!(await limitar(`ip:${huellaIp(req)}:jv`, 60, 60))) return new Response('Demasiadas peticiones', { status: 429 });
     const n = await negocio(slug, 'join_view');
     if (n.status !== 'ok') return noDisponible(null, 404);
     if (!n.program) return noDisponible(n.brand);
-    return formulario(n, slug, placa && /^[A-Za-z0-9_-]{22,64}$/.test(placa) ? placa : null);
+    return formulario(n, slug, placa && /^[A-Za-z0-9_-]{22,64}$/.test(placa) ? placa : null, undefined, nombre);
   } catch (e) {
     log('join_view_error', { mensaje: e instanceof Error ? e.message.slice(0, 120) : 'x' });
     return noDisponible(null, 503);

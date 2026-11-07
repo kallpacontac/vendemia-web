@@ -88,7 +88,7 @@ export default function UnasPortada({ pagina, esc, reservarHref, demo = false, t
       <section id="reserva" className="un-reserva" aria-label="Reservar una cita">
         <div className="un-reserva__intro"><span className="un-sobretitulo">TU TIEMPO, TU ESTILO ♡</span><h2>Reserva tu momento</h2><p>Selecciona el servicio, el día y la hora que mejor te acomoden. Tu cita se confirma desde la agenda de {pagina.titulo}.</p></div>
         {demo ? <UnasReservaDemo servicios={servicios.map((item) => item.nombre)} hoy={esc?.hoy ?? ''} /> : esc && servicios.length ?
-          <div className="un-reserva__widget"><Escaparate esc={esc} slug={pagina.slug} whatsapp={pagina.whatsapp} puedePedir={false} puedeReservar solo="reservas" disposicion="filas" agendaEstilo="agenda" agendaNombre={pagina.titulo} /></div> :
+          <div className="un-reserva__widget"><Escaparate esc={esc} slug={pagina.slug} whatsapp={pagina.whatsapp} puedePedir={false} puedeReservar solo="reservas" disposicion="filas" agendaEstilo="agenda" agendaNombre={pagina.titulo} tarjeta={tarjeta} /></div> :
           <div className="un-reserva__vacio"><CalendarDays size={28} aria-hidden="true" /><h3>Pronto podrás reservar aquí</h3><p>Agrega servicios y horarios en tu catálogo para activar la reserva en línea.</p>{mostrarWhatsapp && <a href={contacto}>Consultar por WhatsApp <ArrowRight size={16} aria-hidden="true" /></a>}</div>}
         {!demo && servicios.length > 0 && <a className="un-reserva__enlace" href={reservarHref}>Abrir la agenda completa <ArrowRight size={16} aria-hidden="true" /></a>}
       </section>

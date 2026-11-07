@@ -21,7 +21,8 @@
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Check, ChevronLeft, ChevronRight, Clock, MessageCircle, Minus, Plus, Search, ShoppingBag, Trash2, Users, X } from 'lucide-react';
+import { Check, ChevronLeft, ChevronRight, Clock, MessageCircle, Minus, Plus, Search, ShoppingBag, Stamp, Trash2, Users, X } from 'lucide-react';
+import type { TarjetaPublica } from '@/modules/tu-pagina/dominio/tarjeta';
 import { cap, vocabulario } from '@/lib/panel/vocabulario';
 import { fotoEnCirculo } from '@/modules/fideliza/dominio/encuadre';
 import type { Disposicion } from '@/modules/tu-pagina/dominio/plantillas';
@@ -66,6 +67,8 @@ interface Props {
   nombreNegocio?: string;
   apariencia?: AparienciaPagina;
   demoPedido?: boolean;
+  /** La tarjeta de puntos del negocio: al terminar se ofrece crearla, con el nombre ya puesto. */
+  tarjeta?: TarjetaPublica | null;
 }
 
 const ORDEN_TIPOS: TipoItem[] = ['cita', 'grupo', 'producto'];
@@ -109,6 +112,12 @@ function guardar(clave: string, valor: unknown) {
   }
 }
 
+/** El alta de Fideliza con el nombre que ya dio al reservar (lo deja escrito, no lo envía). */
+function conNombre(url: string, nombre: string) {
+  const limpio = nombre.trim().slice(0, 40);
+  return limpio ? `${url}${url.includes('?') ? '&' : '?'}nombre=${encodeURIComponent(limpio)}` : url;
+}
+
 /** Nombre y celular del cliente, recordados en este navegador. */
 export function useCliente() {
   const [cliente, setCliente] = useState({ nombre: '', telefono: '' });
@@ -128,7 +137,7 @@ const MENSAJE_FALLO: Record<string, string> = {
   not_found: 'Esta página ya no recibe reservas en línea. Escríbenos por WhatsApp.',
 };
 
-export default function Escaparate({ esc: todo, slug, whatsapp, puedePedir, puedeReservar, disposicion, solo, plantillaLuxury = false, catalogoLuxuryDestacado = false, vistaServiciosLuxury = 'vertical', agendaEstilo, agendaNombre = '', servicioInicialId = '', plantillaRestaurante = false, pedidoGastronomico = false, nombreNegocio = '', apariencia, demoPedido = false }: Props) {
+export default function Escaparate({ esc: todo, slug, whatsapp, puedePedir, puedeReservar, disposicion, solo, plantillaLuxury = false, catalogoLuxuryDestacado = false, vistaServiciosLuxury = 'vertical', agendaEstilo, agendaNombre = '', servicioInicialId = '', plantillaRestaurante = false, pedidoGastronomico = false, nombreNegocio = '', apariencia, demoPedido = false, tarjeta = null }: Props) {
   const esBarberia = /barber|peluquer|sal[oó]n|estil|cabello|corte/i.test(agendaNombre);
   const esc = useMemo(
     () => {
@@ -194,6 +203,12 @@ export default function Escaparate({ esc: todo, slug, whatsapp, puedePedir, pued
           <MessageCircle size={20} aria-hidden="true" /> Avisar por WhatsApp
         </a><p className="tp-nota">Avísanos para confirmarte. Ya quedó guardado aunque no lo envíes.</p></>}
         {hecho.demo && <p className="tp-nota">Es una demostración: no se guardó ni se envió ningún pedido.</p>}
+        {/* Recién reservó: el mejor momento para sumarse al club. Sin pedir nada más: el nombre ya lo dio. */}
+        {tarjeta && !hecho.demo && <div className="tp-hecho__club">
+          <span className="tp-hecho__club-icono"><Stamp size={22} aria-hidden="true" /></span>
+          <div><b>Súmate al {tarjeta.nombre}</b><span>{tarjeta.regla}</span></div>
+          <a className="tp-boton" href={conNombre(tarjeta.url, leer(CLAVE_CLIENTE, { nombre: '' }).nombre)} target="_blank" rel="noopener">Crear mi tarjeta gratis</a>
+        </div>}
         <button type="button" className="tp-boton tp-boton--suave" onClick={() => setHecho(null)}>
           Volver
         </button>

@@ -102,7 +102,7 @@ export default async function Portada({ params, searchParams }: Props) {
         {estadoHorario}
         {esc && hayItems && <section className="tp-agenda-servicios" aria-label="Servicios disponibles">
           <div className="tp-agenda-seccion-titulo"><span>QUÉ OFRECEMOS</span><h2>Servicios para ti</h2><p>Conoce los detalles y elige el que necesitas.</p></div>
-          <Escaparate esc={esc} slug={p.slug} whatsapp={p.whatsapp} puedePedir={false} puedeReservar disposicion="cuadricula" agendaEstilo={plantilla} agendaNombre={p.titulo} />
+          <Escaparate esc={esc} slug={p.slug} whatsapp={p.whatsapp} puedePedir={false} puedeReservar disposicion="cuadricula" agendaEstilo={plantilla} agendaNombre={p.titulo} tarjeta={tarjeta} />
         </section>}
         {p.secciones.apariencia?.mostrarWhatsapp !== false && <a className="tp-agenda-contacto" href={urlWhatsApp(p.whatsapp, `Hola ${p.titulo}`)} rel="noopener"><MessageCircle size={20} aria-hidden="true" /><span><b>Escríbenos por WhatsApp</b><small>Te respondemos ahí</small></span><span aria-hidden="true">→</span></a>}
       </main>
@@ -132,6 +132,7 @@ export default async function Portada({ params, searchParams }: Props) {
   const catalogo = esc && hayItems && (
     <Escaparate
       esc={esc}
+      tarjeta={tarjeta}
       slug={p.slug}
       whatsapp={p.whatsapp}
       disposicion={p.secciones.apariencia?.plantillaActiva ? disposicionDe(plantilla, tipo) : tipo === 'agenda' ? 'filas' : 'cuadricula'}

@@ -17,6 +17,7 @@ import TablaCanchas from '@/modules/tu-pagina/publico/TablaCanchas';
 import { conCanchas } from '@/modules/tu-pagina/dominio/canchas';
 import { paginaDe } from '@/modules/tu-pagina/servidor/pagina';
 import { escaparateDe } from '@/modules/tu-pagina/servidor/escaparate';
+import { tarjetaDe } from '@/modules/tu-pagina/servidor/tarjeta';
 import { conVista, consultaVista } from '@/modules/tu-pagina/dominio/vista';
 import './unas.css';
 
@@ -32,7 +33,7 @@ export default async function PaginaReservar({ params, searchParams }: Props) {
   const guardada = await paginaDe(params.slug);
   const p = guardada ? conVista(guardada, searchParams) : null;
   if (!p?.secciones.reservar) notFound();
-  const esc = await escaparateDe(p.slug, p.secciones);
+  const [esc, tarjeta] = await Promise.all([escaparateDe(p.slug, p.secciones), tarjetaDe(p)]);
   const reservables = (esc?.items ?? []).filter((i) => i.tipo !== 'producto');
   const soloGrupos = reservables.length > 0 && reservables.every((i) => i.tipo === 'grupo');
   const luxury = p.secciones.apariencia?.plantillaActiva && p.plantilla === 'luxury';
@@ -58,7 +59,7 @@ export default async function PaginaReservar({ params, searchParams }: Props) {
     <div className="un un--reserva-sola">
       <header className="un-nav"><a className="un-marca" href={`../${p.slug}${consultaVista(searchParams)}`}>{p.titulo}</a><a className="un-nav__reserva" href={`../${p.slug}${consultaVista(searchParams)}`}><ChevronLeft size={16} /> Volver al inicio</a></header>
       <section className="un-reserva" aria-label="Reservar una cita"><div className="un-reserva__intro"><span className="un-sobretitulo">TU TIEMPO, TU ESTILO ♡</span><h1>Elige tu momento</h1><p>Selecciona un servicio, un día y un horario disponible para separar tu cita.</p></div>
-        {esc && reservables.length > 0 ? <div className="un-reserva__widget"><Escaparate esc={esc} slug={p.slug} whatsapp={p.whatsapp} disposicion="filas" puedePedir={false} puedeReservar solo="reservas" agendaEstilo="agenda" agendaNombre={p.titulo} servicioInicialId={searchParams?.servicio} /></div> : <div className="un-reserva__vacio"><h2>Pronto podrás reservar aquí</h2><p>El negocio aún no publicó servicios con horarios.</p></div>}
+        {esc && reservables.length > 0 ? <div className="un-reserva__widget"><Escaparate esc={esc} tarjeta={tarjeta} slug={p.slug} whatsapp={p.whatsapp} disposicion="filas" puedePedir={false} puedeReservar solo="reservas" agendaEstilo="agenda" agendaNombre={p.titulo} servicioInicialId={searchParams?.servicio} /></div> : <div className="un-reserva__vacio"><h2>Pronto podrás reservar aquí</h2><p>El negocio aún no publicó servicios con horarios.</p></div>}
       </section>
     </div>
   </Marco>;
@@ -67,7 +68,7 @@ export default async function PaginaReservar({ params, searchParams }: Props) {
     <main className="tp-agenda-reserva-pagina">
       <a className="tp-volver" href={`../${p.slug}${consultaVista(searchParams)}`}><ChevronLeft size={18} aria-hidden="true" /> Volver a {p.titulo}</a>
       <div className="tp-agenda-seccion-titulo"><span>RESERVA EN LÍNEA</span><h1>Elige tu cita</h1><p>Servicio → día → hora → tus datos</p></div>
-      {esc && reservables.length > 0 ? <Escaparate esc={esc} slug={p.slug} whatsapp={p.whatsapp} disposicion="filas" puedePedir={false} puedeReservar solo="reservas" agendaEstilo={p.plantilla as 'agenda' | 'lista'} agendaNombre={p.titulo} servicioInicialId={searchParams?.servicio} /> : <p className="tp-vacio">Por ahora no hay nada para reservar aquí. Escríbenos por WhatsApp.</p>}
+      {esc && reservables.length > 0 ? <Escaparate esc={esc} tarjeta={tarjeta} slug={p.slug} whatsapp={p.whatsapp} disposicion="filas" puedePedir={false} puedeReservar solo="reservas" agendaEstilo={p.plantilla as 'agenda' | 'lista'} agendaNombre={p.titulo} servicioInicialId={searchParams?.servicio} /> : <p className="tp-vacio">Por ahora no hay nada para reservar aquí. Escríbenos por WhatsApp.</p>}
     </main>
   </Marco>;
 
@@ -85,6 +86,7 @@ export default async function PaginaReservar({ params, searchParams }: Props) {
         {esc && reservables.length > 0 ? (
           <Escaparate
             esc={esc}
+            tarjeta={tarjeta}
             slug={p.slug}
             whatsapp={p.whatsapp}
             disposicion="filas"
