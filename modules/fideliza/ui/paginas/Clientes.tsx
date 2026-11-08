@@ -47,7 +47,11 @@ function Lista() {
   const params = useSearchParams();
   const [q, setQ] = useState('');
   const [busqueda, setBusqueda] = useState('');
-  const [filtro, setFiltro] = useState<string>('all');
+  // Números enlaza aquí con ?filtro=never para ver los leads que aún no compran.
+  const [filtro, setFiltro] = useState<string>(() => {
+    const f = params.get('filtro');
+    return FILTROS.some(([v]) => v === f) ? f! : 'all';
+  });
   const [estado, setEstado] = useState<string>('');
   const [pagina, setPagina] = useState(0);
   const [alta, setAlta] = useState<null | { alias: string; phone: string; email: string; verificado: boolean; clave: string; hecho?: { code: string; token: string | null } }>(null);

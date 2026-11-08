@@ -496,6 +496,34 @@ test('19 · tus números: segmentos, regreso y horas en Lima', () => {
   assert.equal(n.semanas.length, 12);
 });
 
+test('19b · tus números: embudo de leads, leads sin compra y ticket', () => {
+  const nm = cargar('modules/fideliza/dominio/numeros.ts');
+  const D = 86_400_000;
+  const ahora = Date.parse('2026-10-30T20:00:00Z');
+  const iso = (d) => new Date(ahora - d * D).toISOString();
+  const altas = [
+    { id: 'a', alias: 'Ana', created_at: iso(20) }, // compra y vuelve
+    { id: 'b', alias: 'Beto', created_at: iso(10) }, // compra una vez
+    { id: 'c', alias: 'Cata', created_at: iso(3) }, // lead sin compra
+    { id: 'd', alias: 'Dani', created_at: iso(80) }, // viejo, sin compra
+  ];
+  const visitas = [
+    { member_id: 'a', created_at: iso(19), amount_cents: 2000 },
+    { member_id: 'a', created_at: iso(5), amount_cents: 3000 },
+    { member_id: 'b', created_at: iso(9), amount_cents: 2400 },
+  ];
+  const n = nm.calcularNumeros(visitas, altas, 30, ahora);
+  assert.deepEqual(n.embudo, { registrados: 3, compraron: 2, volvieron: 1 });
+  assert.deepEqual(n.leads.map((l) => l.alias), ['Cata', 'Dani'], 'los más recientes primero');
+  assert.equal(n.plata.ventas, 7400);
+  assert.equal(n.plata.ticketNuevo, 2200, 'primeras visitas: 20 y 24');
+  assert.equal(n.plata.ticketVuelve, 3000);
+  // Sin importe no se inventa ticket.
+  const sin = nm.calcularNumeros(visitas.map((v) => ({ ...v, amount_cents: 0 })), altas, 30, ahora);
+  assert.equal(sin.plata.ticketNuevo, null);
+  assert.equal(sin.plata.conImporte, 0);
+});
+
 test('21 · cualquier foto llena el círculo, como en Instagram', () => {
   const horizontal = { ancho: 1600, alto: 900 };
   const vertical = { ancho: 900, alto: 1600 };

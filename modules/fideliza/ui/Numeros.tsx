@@ -7,16 +7,21 @@
  * Debajo, cuándo vienen (día × hora) y quién viene y quién dejó de venir.
  *
  * Se calcula en el navegador (dominio/numeros.ts) con las visitas del último
- * año que el panel ya puede leer: sin SQL nuevo.
+ * año que el panel ya puede leer: sin SQL nuevo. Arriba de todo, los leads
+ * (quién creó su tarjeta y si ya compró). Lo que solo sabe el servidor
+ * (quién abrió «Únete», premios, recuperados) sale de loyalty_metrics; si
+ * falla, la pantalla sigue sin esas cifras.
  */
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
-import { ArrowUpRight, CalendarHeart, Repeat2, UserPlus, Users, Wallet } from 'lucide-react';
+import { ArrowUpRight, CalendarHeart, Gift, Megaphone, Repeat2, UserPlus, Users, Wallet } from 'lucide-react';
 import ContadorAnimado from '@/components/panel/ContadorAnimado';
 import '@/components/panel/resumen-negocio.css';
 import { useCargar } from '@/components/panel/useCargar';
 import { delta } from '@/lib/panel/serie';
-import { lecturas } from '@/modules/fideliza/cliente/api';
+import { accion, lecturas } from '@/modules/fideliza/cliente/api';
+import { soles } from '@/modules/fideliza/dominio/formato';
+import type { Metricas } from '@/modules/fideliza/dominio/metricas';
 import { calcularNumeros, DIAS_CORTOS, DIAS_LARGOS, SEGMENTOS, type Numeros as NumerosCalc } from '@/modules/fideliza/dominio/numeros';
 import { Cargando, Fallo } from '@/modules/fideliza/ui/Estados';
 
@@ -36,6 +41,20 @@ function Cambio({ actual, previo, puntos }: { actual: number; previo: number; pu
 }
 
 const fechaCorta = (iso: string) => new Date(`${iso}T12:00:00`).toLocaleDateString('es-PE', { day: 'numeric', month: 'short' });
+const diaLima = (msAtras: number) => new Date(Date.now() - msAtras).toLocaleDateString('sv-SE', { timeZone: 'America/Lima' });
+const hace = (iso: string) => {
+  const d = Math.floor((Date.now() - Date.parse(iso)) / 86_400_000);
+  return d <= 0 ? 'hoy' : d === 1 ? 'ayer' : `hace ${d} días`;
+};
+
+/** Lo que solo sabe el servidor, para el mismo periodo. */
+export interface ExtraNumeros {
+  abrieronUnete: number;
+  premiosGanados: number;
+  premiosCanjeados: number;
+  premiosPorCanjear: number;
+  recuperados: number;
+}
 
 export default function Numeros({ companyId }: { companyId: string }) {
   const [dias, setDias] = useState(30);
@@ -45,16 +64,32 @@ export default function Numeros({ companyId }: { companyId: string }) {
     const [visitas, altas] = await Promise.all([lecturas.visitasDesde(companyId, desde), lecturas.altas(companyId)]);
     return { visitas, altas };
   }, [companyId]);
+  const { datos: m } = useCargar(async () => {
+    try {
+      return await accion<Metricas>('metricas', { companyId, from: diaLima((dias - 1) * 86_400_000), to: diaLima(0) });
+    } catch {
+      return null;
+    }
+  }, [companyId, dias]);
   const n = useMemo(() => (datos ? calcularNumeros(datos.visitas, datos.altas, dias) : null), [datos, dias]);
+  const extra: ExtraNumeros | null = m
+    ? {
+        abrieronUnete: m.funnel.join_views,
+        premiosGanados: m.rewards.issued,
+        premiosCanjeados: m.rewards.redeemed,
+        premiosPorCanjear: m.rewards.available_now,
+        recuperados: m.recovered ?? 0,
+      }
+    : null;
 
   if (cargando && !datos) return <Cargando texto="Calculando tus números…" />;
   if (error) return <Fallo texto={error} reintentar={releer} />;
   if (!n) return null;
-  return <VistaNumeros n={n} dias={dias} setDias={setDias} />;
+  return <VistaNumeros n={n} dias={dias} setDias={setDias} extra={extra} />;
 }
 
 /** Solo la vista: se puede pintar con cualquier `Numeros` (p. ej. de ejemplo). */
-export function VistaNumeros({ n, dias, setDias }: { n: NumerosCalc; dias: number; setDias: (d: number) => void }) {
+export function VistaNumeros({ n, dias, setDias, extra = null }: { n: NumerosCalc; dias: number; setDias: (d: number) => void; extra?: ExtraNumeros | null }) {
 
   const periodo = PERIODOS.find((p) => p.dias === dias)!.nombre.toLowerCase();
   const porMiembro = n.vinieron ? (n.visitas / n.vinieron).toFixed(1).replace('.', ',') : '0';
@@ -73,6 +108,18 @@ export function VistaNumeros({ n, dias, setDias }: { n: NumerosCalc; dias: numbe
   const maxCalor = Math.max(1, ...n.calor.flat());
   const totalSeg = Math.max(1, n.miembros);
 
+  // Embudo de leads: «Abrieron Únete» solo si el servidor lo dio y hay algo que contar.
+  const pasos = [
+    ...(extra && extra.abrieronUnete > 0 ? [{ id: 'abrieron', nombre: 'Abrieron «Únete»', valor: extra.abrieronUnete, nota: 'Escanearon el QR o tocaron la placa' }] : []),
+    { id: 'registrados', nombre: 'Crearon su tarjeta', valor: n.embudo.registrados, nota: 'Leads nuevos del período' },
+    { id: 'compraron', nombre: 'Hicieron su primera compra', valor: n.embudo.compraron, nota: 'Ya pasaron por caja' },
+    { id: 'volvieron', nombre: 'Volvieron', valor: n.embudo.volvieron, nota: 'Dos visitas o más' },
+  ];
+  const baseEmbudo = Math.max(1, ...pasos.map((p) => p.valor));
+  const sinComprar = n.segmentos.sin_visitas;
+  const pctDe = (a: number, b: number) => (b > 0 ? `${Math.round((a / b) * 100)} %` : '—');
+  const diferencia = n.plata.ticketNuevo !== null && n.plata.ticketVuelve !== null ? n.plata.ticketVuelve - n.plata.ticketNuevo : null;
+
   return (
     <section className="fz-numeros" aria-label="Tus números">
       <div className="fz-numeros__cab">
@@ -87,6 +134,51 @@ export function VistaNumeros({ n, dias, setDias }: { n: NumerosCalc; dias: numbe
             </button>
           ))}
         </div>
+      </div>
+
+      <div className="fz-numeros__fila fz-leads">
+        <article className="fz-numeros__card">
+          <div className="negocio-card-head"><h2>Tus leads</h2><span className="negocio-currency">últimos {periodo}</span></div>
+          <p className="fz-numeros__sub">De quien se registró en tu club a quien ya es cliente que vuelve.</p>
+          <ol className="fz-embudo">
+            {pasos.map((p, i) => (
+              <li key={p.id} className={`fz-embudo__paso fz-embudo__paso--${p.id}`}>
+                <div className="fz-embudo__txt">
+                  <b>{p.nombre}</b>
+                  <small>{p.nota}{i > 0 ? ` · ${pctDe(p.valor, pasos[i - 1].valor)} del paso anterior` : ''}</small>
+                </div>
+                <strong><ContadorAnimado valor={p.valor} /></strong>
+                <i style={{ width: `${Math.max(4, (p.valor / baseEmbudo) * 100)}%` }} />
+              </li>
+            ))}
+          </ol>
+        </article>
+
+        <article className="fz-numeros__card">
+          <div className="negocio-card-head"><h2>Se registraron y no vienen</h2><span className="negocio-currency">{sinComprar} en total</span></div>
+          <p className="fz-numeros__sub">Tienen tu tarjeta pero aún no compran. Son los más fáciles de traer.</p>
+          {n.leads.length === 0 ? (
+            <p className="fz-numeros__nota">Nadie pendiente: todos los que crearon su tarjeta ya compraron.</p>
+          ) : (
+            <ul className="fz-leads__lista">
+              {n.leads.map((l) => (
+                <li key={l.id}>
+                  <Link href={`/panel/fideliza/clientes/${l.id}`}>
+                    <span className="fz-leads__ini" aria-hidden="true">{(l.alias || '?').trim().charAt(0).toUpperCase()}</span>
+                    <span className="fz-leads__nom">{l.alias || 'Sin nombre'}</span>
+                    <small>se unió {hace(l.created_at)}</small>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
+          <div className="fz-fila" style={{ marginTop: 12, gap: 8, flexWrap: 'wrap' }}>
+            <Link href="/panel/fideliza/clientes?filtro=never" className="negocio-boton"><Users size={15} /> Ver los {sinComprar}</Link>
+            {sinComprar > 0 && (
+              <Link href="/panel/fideliza/campanas" className="negocio-boton negocio-boton--dark"><Megaphone size={15} /> Invitarlos con un aviso</Link>
+            )}
+          </div>
+        </article>
       </div>
 
       <div className="negocio-overview">
@@ -171,6 +263,42 @@ export function VistaNumeros({ n, dias, setDias }: { n: NumerosCalc; dias: numbe
             )}
           </div>
           <p className="negocio-chart-note">Las últimas 12 semanas, de lunes a domingo. La semana actual aún está en curso.</p>
+        </article>
+      </div>
+
+      <div className="fz-numeros__fila fz-numeros__fila--tres">
+        <article className="fz-numeros__card">
+          <div className="negocio-card-head"><h2>Ventas con tarjeta</h2><Wallet size={17} /></div>
+          <p className="fz-numeros__sub">Lo que la caja anotó con importe, últimos {periodo}.</p>
+          <strong className="fz-numeros__grande">{n.plata.conImporte ? soles(n.plata.ventas) : '—'}</strong>
+          <p className="fz-numeros__nota">{n.plata.conImporte ? `${n.plata.conImporte} compras con importe` : 'Anota el importe en Caja para verlo aquí.'}</p>
+        </article>
+        <article className="fz-numeros__card">
+          <div className="negocio-card-head"><h2>Ticket promedio</h2><Repeat2 size={17} /></div>
+          <p className="fz-numeros__sub">Primera visita frente a quien ya volvió.</p>
+          <div className="fz-ticket">
+            <div><small>Primera vez</small><b>{n.plata.ticketNuevo === null ? '—' : soles(n.plata.ticketNuevo)}</b></div>
+            <div><small>Clientes que vuelven</small><b>{n.plata.ticketVuelve === null ? '—' : soles(n.plata.ticketVuelve)}</b></div>
+          </div>
+          <p className="fz-numeros__nota">
+            {diferencia === null ? 'Hace falta importe en las dos para comparar.' : diferencia > 0 ? <>El que vuelve gasta <b>{soles(diferencia)} más</b> por visita.</> : diferencia < 0 ? <>El que vuelve gasta {soles(-diferencia)} menos por visita.</> : 'Gastan lo mismo por visita.'}
+          </p>
+        </article>
+        <article className="fz-numeros__card">
+          <div className="negocio-card-head"><h2>Premios</h2><Gift size={17} /></div>
+          <p className="fz-numeros__sub">Lo que el club ya entregó, últimos {periodo}.</p>
+          {extra ? (
+            <div className="fz-ticket fz-ticket--tres">
+              <div><small>Ganados</small><b>{extra.premiosGanados}</b></div>
+              <div><small>Canjeados</small><b>{extra.premiosCanjeados}</b></div>
+              <div><small>Por canjear</small><b>{extra.premiosPorCanjear}</b></div>
+            </div>
+          ) : (
+            <p className="fz-numeros__nota">Sin datos de premios por ahora.</p>
+          )}
+          {extra && extra.recuperados > 0 && (
+            <p className="fz-numeros__nota"><b>{extra.recuperados}</b> volvieron tras 60 días o más sin venir.</p>
+          )}
         </article>
       </div>
 

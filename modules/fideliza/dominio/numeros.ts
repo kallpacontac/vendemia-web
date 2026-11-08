@@ -14,9 +14,19 @@
 export interface Visita {
   member_id: string;
   created_at: string;
+  /** Importe registrado en caja, en céntimos. 0 si la caja no lo anotó. */
+  amount_cents?: number;
 }
 export interface Alta {
   id: string;
+  created_at: string;
+  alias?: string | null;
+}
+
+/** Un lead: creó su tarjeta y todavía no compra. */
+export interface Lead {
+  id: string;
+  alias: string | null;
   created_at: string;
 }
 
@@ -75,6 +85,12 @@ export interface Numeros {
   calor: number[][];
   horaPico: { dia: number; hora: number; visitas: number } | null;
   segmentos: Record<Segmento, number>;
+  /** De las tarjetas creadas en el periodo: cuántas ya compraron y cuántas volvieron. */
+  embudo: { registrados: number; compraron: number; volvieron: number };
+  /** Los que crearon su tarjeta y aún no vienen, los más recientes primero (máx. 6). */
+  leads: Lead[];
+  /** Solo lo que la caja anotó con importe. null = ninguna visita con importe. */
+  plata: { ventas: number; conImporte: number; ticketNuevo: number | null; ticketVuelve: number | null };
 }
 
 /**
@@ -153,6 +169,37 @@ export function calcularNumeros(visitas: Visita[], altas: Alta[], dias: number, 
     }),
   );
 
+  // Embudo de las tarjetas creadas en el periodo (sus visitas, de cuando sea).
+  const altasP = altas.filter((a) => en(Date.parse(a.created_at), desde, ahora + 1));
+  const embudo = { registrados: altasP.length, compraron: 0, volvieron: 0 };
+  for (const a of altasP) {
+    const n = porMiembro.get(a.id)?.length ?? 0;
+    if (n >= 1) embudo.compraron++;
+    if (n >= 2) embudo.volvieron++;
+  }
+  const leads = altas
+    .filter((a) => !porMiembro.has(a.id))
+    .sort((a, b) => Date.parse(b.created_at) - Date.parse(a.created_at))
+    .slice(0, 6)
+    .map((a) => ({ id: a.id, alias: a.alias ?? null, created_at: a.created_at }));
+
+  // Ticket: primera visita de la vida del cliente frente a las de quien vuelve.
+  let ventas = 0;
+  let conImporte = 0;
+  const sumaN = [0, 0];
+  const sumaV = [0, 0];
+  for (const v of visitas) {
+    const t = Date.parse(v.created_at);
+    const monto = v.amount_cents ?? 0;
+    if (!en(t, desde, ahora + 1) || monto <= 0) continue;
+    ventas += monto;
+    conImporte++;
+    const s = primeraDe.get(v.member_id) === t ? sumaN : sumaV;
+    s[0] += monto;
+    s[1]++;
+  }
+  const media = (s: number[]) => (s[1] ? Math.round(s[0] / s[1]) : null);
+
   const segmentos = Object.fromEntries(SEGMENTOS.map((s) => [s.id, 0])) as Record<Segmento, number>;
   for (const a of altas) segmentos[segmentoDe(porMiembro.get(a.id) ?? [], ahora)]++;
 
@@ -171,6 +218,9 @@ export function calcularNumeros(visitas: Visita[], altas: Alta[], dias: number, 
     calor,
     horaPico,
     segmentos,
+    embudo,
+    leads,
+    plata: { ventas, conImporte, ticketNuevo: media(sumaN), ticketVuelve: media(sumaV) },
   };
 }
 

@@ -322,7 +322,29 @@
 .fz-segmento i{position:absolute;left:0;bottom:0;height:4px;border-radius:0 4px 4px 0;background:#25261f}
 .fz-segmento--info i{background:#3b82f6}.fz-segmento--ok i{background:#1f9d63}.fz-segmento--alerta i{background:#e8a33d}.fz-segmento--peligro i{background:#d93025}.fz-segmento--neutro i{background:#a3a49e}
 .fz-segmento--alerta{background:#fdf5e9}.fz-segmento--peligro{background:#fdeeee}
-@media(max-width:900px){.fz-numeros__fila{grid-template-columns:minmax(0,1fr)}}
+.fz-numeros__fila+.fz-numeros__fila,.fz-numeros__fila+.negocio-overview,.negocio-overview+.fz-numeros__fila{margin-top:16px}
+.fz-numeros__fila--tres{grid-template-columns:repeat(3,minmax(0,1fr))}
+.fz-numeros__grande{font-size:30px;line-height:1.1;letter-spacing:-.02em}
+.fz-embudo{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.fz-embudo__paso{position:relative;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:11px 12px 14px;border-radius:14px;background:#f4f5f2;overflow:hidden}
+.fz-embudo__txt{display:flex;flex-direction:column;min-width:0}
+.fz-embudo__txt b{font-size:13.5px}
+.fz-embudo__txt small{font-size:11.5px;color:#6b6c66}
+.fz-embudo__paso strong{font-size:22px}
+.fz-embudo__paso i{position:absolute;left:0;bottom:0;height:5px;border-radius:0 5px 5px 0;background:#ff7046}
+.fz-embudo__paso--abrieron i{background:#a3a49e}.fz-embudo__paso--registrados i{background:#3b82f6}.fz-embudo__paso--volvieron i{background:#1f9d63}
+.fz-leads__lista{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.fz-leads__lista a{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:12px;background:#f4f5f2;color:inherit;text-decoration:none}
+.fz-leads__lista a:hover{background:#eceee8}
+.fz-leads__ini{flex:none;display:grid;place-items:center;width:30px;height:30px;border-radius:50%;background:#20211d;color:#fff;font-size:13px;font-weight:700}
+.fz-leads__nom{flex:1;min-width:0;font-size:13.5px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fz-leads__lista small{flex:none;font-size:11.5px;color:#6b6c66}
+.fz-ticket{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.fz-ticket--tres{grid-template-columns:repeat(3,1fr)}
+.fz-ticket div{display:flex;flex-direction:column;padding:10px 12px;border-radius:14px;background:#f4f5f2}
+.fz-ticket small{font-size:11.5px;color:#6b6c66}
+.fz-ticket b{font-size:20px}
+@media(max-width:900px){.fz-numeros__fila,.fz-numeros__fila--tres{grid-template-columns:minmax(0,1fr)}}
 
 /* ── Caja · modo mostrador ── */
 .fz-mo{text-align:center}
