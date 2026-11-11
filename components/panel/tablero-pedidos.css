@@ -99,3 +99,35 @@
 @media (min-width: 768px) and (max-width: 1199px) {
   .tpd__col--plegada .tpd__lista { display: none; }
 }
+
+/* ── Cobrar antes (Mi página 0020): el modo, el pago con importe y «Por cobrar» ── */
+.tpd__modo { margin-left: auto; display: inline-flex; align-items: center; gap: 4px; min-height: 36px; }
+.tpd__ajuste { display: grid; gap: 10px; padding: 12px; border: 1px solid var(--tpd-linea); border-radius: 14px; background: var(--tpd-tarjeta); }
+.tpd__modos { display: grid; gap: 8px; }
+.tpd__modo-opcion { all: unset; box-sizing: border-box; display: grid; gap: 2px; padding: 10px 12px; border: 1px solid var(--tpd-linea); border-radius: 12px; cursor: pointer; font-size: 14px; }
+.tpd__modo-opcion span { color: var(--tpd-suave); font-size: 13px; }
+.tpd__modo-opcion[aria-checked="true"] { border-color: var(--tpd-acento); box-shadow: inset 0 0 0 1px var(--tpd-acento); background: #F1F6F2; }
+.tpd__modo-opcion:focus-visible, .tpd__metodo:focus-visible { outline: 2px solid var(--tpd-acento); outline-offset: 2px; }
+.tpd__adelanto { display: grid; gap: 8px; }
+.tpd__ajuste-nota { margin: 0; font-size: 13px; color: var(--tpd-suave); }
+.tpd__pago { display: grid; gap: 8px; padding-top: 8px; border-top: 1px dashed var(--tpd-linea); }
+.tpd__pago-monto { display: grid; gap: 4px; font-size: 13px; color: var(--tpd-suave); }
+.tpd__pago-monto .input { max-width: 180px; min-height: 40px; font-size: 16px; }
+.tpd__metodos { display: flex; flex-wrap: wrap; gap: 6px; }
+.tpd__metodo { all: unset; box-sizing: border-box; min-height: 36px; padding: 6px 12px; border: 1px solid var(--tpd-linea); border-radius: 999px; font-size: 13px; font-weight: 600; cursor: pointer; }
+.tpd__metodo[aria-pressed="true"] { border-color: var(--tpd-acento); background: var(--tpd-acento); color: #FFFFFF; }
+.tpd__pago-error { color: var(--tpd-tarde); font-size: 12.5px; }
+.tpd__col--por_cobrar .tpd__cabeza b { background: var(--tpd-falta); color: var(--tpd-falta-t); }
+
+@media (min-width: 768px) {
+  .tpd__modos { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  /* «Por cobrar» espera al cliente: arriba y a lo ancho, para no quitarle sitio a la cocina. */
+  .tpd__columnas--con-cobro .tpd__col--por_cobrar { grid-column: 1 / -1; }
+  .tpd__col--por_cobrar .tpd__lista { grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); }
+}
+/* Pantalla muy ancha: las cinco lado a lado. */
+@media (min-width: 1440px) {
+  .tpd__columnas--con-cobro { grid-template-columns: repeat(4, minmax(0, 1fr)) minmax(0, .8fr); }
+  .tpd__columnas--con-cobro .tpd__col--por_cobrar { grid-column: auto; }
+  .tpd__col--por_cobrar .tpd__lista { grid-template-columns: none; max-height: calc(100vh - 250px); overflow-y: auto; }
+}

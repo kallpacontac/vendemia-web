@@ -24,6 +24,7 @@ import { vigenteHoy } from '@/lib/panel/vigencia';
 import { ocupa } from '@/lib/panel/inscripciones';
 import { sumarMin, type DatosAgenda } from '@/modules/tu-pagina/dominio/agenda';
 import { fechaCorta, telefonoBonito, telefonoNormal } from '@/modules/tu-pagina/dominio/envio';
+import { normalizarCobro, type CobroPedidos } from '@/modules/tu-pagina/dominio/cobroPedidos';
 
 /* ── Lo que llega de la base ─────────────────────────────────────────────── */
 
@@ -85,6 +86,8 @@ export interface ComoSeOfrece {
   catalogo?: boolean;
   reservar?: boolean;
   tipos?: TiposDePagina;
+  /** Cómo cobra los pedidos (dominio/cobroPedidos.ts). Se normaliza al armar. */
+  cobroPedidos?: unknown;
 }
 
 /** Una cosa del catálogo, lo justo para decidir su tipo. */
@@ -165,6 +168,8 @@ export interface Escaparate {
   direccion: string;
   hoy: string;
   ahora: string;
+  /** Contra entrega, todo por adelantado o un adelanto. Sin dato, contra entrega. */
+  cobro?: CobroPedidos;
 }
 
 const json = <T>(raw: string | null | undefined, porDefecto: T): T => {
@@ -284,6 +289,7 @@ export function armarEscaparate(c: DatosCrudos, como?: ComoSeOfrece | null): Esc
     direccion: (c.negocio.direccion ?? '').trim(),
     hoy: c.hoy,
     ahora: c.ahora,
+    cobro: normalizarCobro(como?.cobroPedidos),
   };
 }
 
@@ -333,9 +339,16 @@ export interface LineaPedido {
 
 export function mensajePedido(
   codigo: string,
-  p: { lineas: LineaPedido[]; total: number; entrega: 'recojo' | 'delivery'; direccion: string; referencia: string; nombre: string; telefono: string; negocio?: string; enlace?: string; metodoPago?: string; ubicacion?: string; nota?: string },
+  p: { lineas: LineaPedido[]; total: number; entrega: 'recojo' | 'delivery'; direccion: string; referencia: string; nombre: string; telefono: string; negocio?: string; enlace?: string; metodoPago?: string; ubicacion?: string; nota?: string; pagarAntes?: number },
   configuracion?: { detallado?: boolean; introduccion?: string },
 ): string {
+  // Lo que el negocio pide antes de preparar (dominio/cobroPedidos.ts), con el monto guardado en el pedido.
+  const antes = Math.max(0, Number(p.pagarAntes) || 0);
+  const pagoAntes: [string, string] | null = antes <= 0
+    ? null
+    : antes >= p.total
+      ? ['Pago por adelantado', soles(antes)]
+      : ['Adelanto', `${soles(antes)} (resto al recibir: ${soles(Math.round((p.total - antes) * 100) / 100)})`];
   if (configuracion?.detallado) {
     const intro = (configuracion.introduccion?.trim() || 'Hola 👋\nVengo de la carta digital de *{negocio}* y envío aquí mi pedido por favor.')
       .replaceAll('{negocio}', p.negocio?.trim() || 'tu restaurante');
@@ -347,6 +360,7 @@ export function mensajePedido(
     for (const x of p.lineas) l.push(`• ${x.cantidad}x ${x.nombre} (${soles(x.precio * x.cantidad)})${x.opcion ? ` · *Opción:* ${x.opcion}` : ''}`);
     if (p.nota?.trim()) l.push('', `📝 *Nota:* ${p.nota.trim()}`);
     l.push('', `💰 *Total a pagar:* ${soles(p.total)}`);
+    if (pagoAntes) l.push(`💳 *${pagoAntes[0]}:* ${pagoAntes[1]}`);
     return l.join('\n');
   }
   const l = [`Hola, hice un pedido en tu página (${codigo}):`];
@@ -354,6 +368,7 @@ export function mensajePedido(
     l.push(`• ${x.cantidad} × ${x.nombre}${x.opcion ? ` · ${x.opcion}` : ''} — ${soles(x.precio * x.cantidad)}`);
   }
   l.push(`Total: ${soles(p.total)}`);
+  if (pagoAntes) l.push(`${pagoAntes[0]}: ${pagoAntes[1]}`);
   l.push(
     p.entrega === 'delivery'
       ? `Entrega en: ${p.direccion.trim()}${p.referencia.trim() ? ` (${p.referencia.trim()})` : ''}`

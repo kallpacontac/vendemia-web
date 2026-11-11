@@ -8,6 +8,7 @@ import type { AparienciaPagina } from '@/modules/tu-pagina/dominio/apariencia';
 import type { ConfigCanchas } from '@/modules/tu-pagina/dominio/canchas';
 import type { AjustesCarta } from '@/modules/tu-pagina/dominio/mesa';
 import type { ConfigTarjeta } from '@/modules/tu-pagina/dominio/tarjeta';
+import type { CobroPedidos } from '@/modules/tu-pagina/dominio/cobroPedidos';
 
 export interface Secciones {
   catalogo?: boolean;
@@ -25,6 +26,8 @@ export interface Secciones {
   carta?: AjustesCarta;
   /** La tarjeta de puntos de Fideliza en la página (dominio/tarjeta.ts). */
   fideliza?: ConfigTarjeta;
+  /** Cómo cobra los pedidos (dominio/cobroPedidos.ts). Lo guarda pedido_cobro_guardar (sql/0020). */
+  cobroPedidos?: CobroPedidos;
 }
 
 export interface PaginaPublica {

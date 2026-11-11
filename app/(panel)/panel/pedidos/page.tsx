@@ -59,6 +59,7 @@ import { esNegocioGastronomico } from '@/modules/tu-pagina/dominio/plantillas';
 import TableroPedidos from '@/components/panel/TableroPedidos';
 import { esEcommerce } from '@/lib/panel/modo';
 import type { Rubro } from '@/lib/panel/tableroPedidos';
+import { normalizarCobro } from '@/modules/tu-pagina/dominio/cobroPedidos';
 import '@/modules/tu-pagina/estilos/panel.css';
 
 const POR_PAGINA = 12;
@@ -94,6 +95,9 @@ function Pedidos() {
       envios: Boolean(s?.envios),
       catalogo: Boolean(s?.catalogo),
       comida: plantilla === 'restaurante' || plantilla === 'mesa',
+      nube: nube === true,
+      // Cómo cobra los pedidos (Mi página 0020). Se elige en el tablero; hace falta la página y la nube.
+      cobro: data && nube === true ? normalizarCobro((data.secciones as { cobroPedidos?: unknown } | null)?.cobroPedidos) : null,
     };
   }, [companyId]);
   const lo = useLoQueHaceLaPagina(companyId);
@@ -140,7 +144,7 @@ function Pedidos() {
         {/* Hasta saber qué hace la página no se pinta nada: si no, la tabla parpadea antes del tablero. */}
         {!companyId || (!pagina && !errorPagina) ? null : pagina && tablero && activa !== 'envios' ? (
           <>
-            <TableroPedidos companyId={companyId} rubro={rubro} conPagina={pagina.vende} conMesas={lo.mesas} />
+            <TableroPedidos companyId={companyId} rubro={rubro} conPagina={pagina.vende} conMesas={lo.mesas} nube={pagina.nube} cobroInicial={pagina.cobro} />
             {/* Lo de antes de la semana, lo cancelado y buscar por cliente: la tabla de siempre. */}
             <button type="button" className="btn btn-ghost tpd-historial" aria-expanded={historial} onClick={() => setHistorial((v) => !v)}>
               {historial ? 'Ocultar todos los pedidos' : 'Ver todos los pedidos'}

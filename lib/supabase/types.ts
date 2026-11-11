@@ -464,6 +464,8 @@ export interface OrderRow {
   /** Columna del tablero de Pedidos (tu-pagina/sql/0019): '' es Nuevo. No es el cobro. */
   etapa?: string | null;
   etapa_at?: string | null;
+  /** Lo que había que pagar antes de preparar, guardado al nacer (tu-pagina/sql/0020). 0: contra entrega. */
+  pagar_antes?: number | string | null;
   created_at: number | null;
   created_ts: string | null;
   /**

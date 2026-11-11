@@ -162,6 +162,8 @@
 .tp-seccion { margin: 0 0 12px; font-size: 20px; font-weight: 800; letter-spacing: -.01em; }
 .tp-vacio { color: var(--tp-suave); margin: 8px 0; }
 .tp-nota { margin: 10px 0 0; text-align: center; color: var(--tp-suave); font-size: 13px; }
+/* El negocio cobra antes (dominio/cobroPedidos.ts): que se lea antes de pedir, no en letra chica. */
+.tp-nota--pago { margin: 14px 0 0; padding: 10px 12px; text-align: left; color: inherit; font-size: 14px; border: 1px solid var(--tp-borde); border-radius: var(--tp-radio); }
 .tp-reserva-resumen { margin: 18px 0 0; padding: 18px; border: 1px solid var(--tp-borde); border-radius: 16px; background: color-mix(in srgb, var(--tp-color) 4%, var(--tp-papel)); }
 .tp-reserva-resumen__etiqueta { display: block; margin-bottom: 5px; color: var(--tp-suave); font-size: 11px; font-weight: 800; letter-spacing: .09em; }
 .tp-reserva-resumen h4 { margin: 0 0 12px; color: var(--tp-texto); font-size: 18px; line-height: 1.3; }

@@ -83,10 +83,24 @@ export async function POST(req: Request) {
     };
     // Con la agenda en la nube (0004) es un pedido de verdad (orders, con el stock descontado); si no, pedidos_web.
     let r = await rpc<Respuesta>(servidor(), 'agenda_srv_pedir', args);
-    if (r.status === 'no_es_nube') r = await rpc<Respuesta>(servidor(), 'pedido_srv_crear', args);
+    const enNube = r.status !== 'no_es_nube';
+    if (!enNube) r = await rpc<Respuesta>(servidor(), 'pedido_srv_crear', args);
     if (r.status !== 'ok') return responder(r, r.status === 'sin_stock' ? 409 : 400);
     revalidateTag(`tu-pagina:${c.slug.toLowerCase()}`);
-    return responder({ status: 'ok', codigo: r.codigo, total: r.total, lineas: r.lineas });
+    // Si el negocio cobra antes (sql/0020): cuánto, con el monto que guardó el pedido, y a dónde.
+    // Sin la 0020, o si falla, el pedido ya está guardado: la página sigue como siempre.
+    let pago: { pagar: number; metodos: { tipo: string; numero: string; titular: string }[] } | null = null;
+    if (enNube && r.codigo) {
+      try {
+        const p = await rpc<{ status: string; pagar?: number; metodos?: { tipo: string; numero: string; titular: string }[] }>(
+          servidor(), 'pedido_srv_cobro', { p_slug: c.slug, p_codigo: r.codigo },
+        );
+        if (Number(p.pagar) > 0) pago = { pagar: Number(p.pagar), metodos: p.metodos ?? [] };
+      } catch {
+        pago = null;
+      }
+    }
+    return responder({ status: 'ok', codigo: r.codigo, total: r.total, lineas: r.lineas, ...(pago ? { pago } : {}) });
   } catch (e) {
     log('tu_pagina_pedido_error', { mensaje: e instanceof Error ? e.message.slice(0, 120) : 'x' });
     return responder({ status: 'error' }, 503);

@@ -44,6 +44,7 @@ import {
   type TipoItem,
   modoDelTipo,
 } from '@/modules/tu-pagina/dominio/tienda';
+import { CONTRA_ENTREGA, aPagarAntes, avisoAlPedir, metodosAlPedir } from '@/modules/tu-pagina/dominio/cobroPedidos';
 
 interface Props {
   esc: Datos;
@@ -88,9 +89,12 @@ interface Hecho {
   codigo: string;
   mensaje: string;
   demo?: boolean;
+  /** El negocio cobra antes de preparar (dominio/cobroPedidos.ts): cuánto y a dónde. */
+  pago?: { monto: number; metodos: { tipo: string; numero: string; titular: string }[] };
 }
 
 const DIAS_A_LA_VISTA = 14;
+const numeroBonito = (n: string) => n.replace(/^51(?=\d{9}$)/, '').replace(/(\d{3})(?=\d)/g, '$1 ').trim();
 const CLAVE_CLIENTE = 'tu_pagina:cliente';
 
 const nuevoIdem = () =>
@@ -198,10 +202,23 @@ export default function Escaparate({ esc: todo, slug, whatsapp, puedePedir, pued
         <h2 className="tp-h1">{hecho.titulo}</h2>
         <p className="tp-lead">Tu código es</p>
         <div className="tp-codigo">{hecho.codigo}</div>
+        {hecho.pago && (
+          <ol className="tp-pago" aria-label="Cómo confirmar tu pedido">
+            <li>
+              <b>Paga {soles(hecho.pago.monto)}</b>
+              {hecho.pago.metodos[0]
+                ? <span className="tp-pago__numero">{[...new Set(hecho.pago.metodos.map((m) => (m.tipo === 'plin' ? 'Plin' : 'Yape')))].join(' o ')}: {numeroBonito(hecho.pago.metodos[0].numero)}</span>
+                : <span>Por Yape o Plin. Te pasamos el número en el chat.</span>}
+              {hecho.pago.metodos[0]?.titular && <span>A nombre de {hecho.pago.metodos[0].titular}</span>}
+            </li>
+            <li><b>Envía tu pedido y la captura por WhatsApp</b><span>Con tu código {hecho.codigo}.</span></li>
+            <li><b>Preparamos tu pedido</b><span>En cuanto confirmemos el pago.</span></li>
+          </ol>
+        )}
         <p className="tp-resumen">{hecho.mensaje.split(/(\*[^*\n]+\*)/g).map((parte, indice) => parte.startsWith('*') && parte.endsWith('*') ? <strong key={indice}>{parte.slice(1, -1)}</strong> : <span key={indice}>{parte}</span>)}</p>
         {!hecho.demo && <><a className="tp-boton tp-boton--wsp" href={urlWhatsApp(whatsapp, hecho.mensaje)} rel="noopener">
-          <MessageCircle size={20} aria-hidden="true" /> Avisar por WhatsApp
-        </a><p className="tp-nota">Avísanos para confirmarte. Ya quedó guardado aunque no lo envíes.</p></>}
+          <MessageCircle size={20} aria-hidden="true" /> {hecho.pago ? 'Enviar pedido por WhatsApp' : 'Avisar por WhatsApp'}
+        </a><p className="tp-nota">{hecho.pago ? 'Tu pedido ya quedó guardado. Lo preparamos cuando llegue el pago.' : 'Avísanos para confirmarte. Ya quedó guardado aunque no lo envíes.'}</p></>}
         {hecho.demo && <p className="tp-nota">Es una demostración: no se guardó ni se envió ningún pedido.</p>}
         {/* Recién reservó: el mejor momento para sumarse al club. Sin pedir nada más: el nombre ya lo dio. */}
         {tarjeta && !hecho.demo && <div className="tp-hecho__club">
@@ -950,17 +967,23 @@ function Carrito({ lineas, porId, esc, slug, alCambiar, alTerminar, nombreNegoci
     return { ...l, i, opcion: o?.etiqueta ?? '', max: quedan === null ? 99 : quedan };
   });
   const total = detalle.reduce((s, d) => s + (d.i.precio ?? 0) * d.cantidad, 0);
+  // Cómo cobra este negocio (dominio/cobroPedidos.ts): se avisa antes de pedir, no después.
+  const cobro = esc.cobro ?? CONTRA_ENTREGA;
+  const avisoPago = avisoAlPedir(cobro, total);
+  const metodos = metodosAlPedir(cobro, METODOS_PAGO);
 
   const cambiar = (k: number, cantidad: number) =>
     alCambiar(cantidad <= 0 ? lineas.filter((_, j) => j !== k) : lineas.map((l, j) => (j === k ? { ...l, cantidad } : l)));
 
-  const pedidoConfirmado = (codigo: string, guardadas: LineaPedido[], importe: number) => {
+  const pedidoConfirmado = (codigo: string, guardadas: LineaPedido[], importe: number, pago?: Hecho['pago']) => {
     recordar(cliente);
     alTerminar({
-      titulo: demoPedido ? 'Así llegaría tu pedido' : '¡Pedido recibido!',
+      titulo: demoPedido ? 'Así llegaría tu pedido' : pago ? 'Pedido recibido, falta el pago' : '¡Pedido recibido!',
       codigo,
       demo: demoPedido,
+      pago,
       mensaje: mensajePedido(codigo, {
+        pagarAntes: pago?.monto ?? 0,
         lineas: guardadas.map((x) => ({ ...x, precio: Number(x.precio), cantidad: Number(x.cantidad) })),
         total: importe,
         entrega, direccion, referencia,
@@ -984,7 +1007,8 @@ function Carrito({ lineas, porId, esc, slug, alCambiar, alTerminar, nombreNegoci
       setFallo('Pega un enlace válido de Google Maps o deja la ubicación vacía.'); return;
     }
     if (demoPedido) {
-      pedidoConfirmado('PED-EJEMPLO', detalle.map((d) => ({ nombre: d.i.nombre, opcion: d.opcion, precio: d.i.precio ?? 0, cantidad: d.cantidad })), total);
+      const antes = aPagarAntes(cobro, total);
+      pedidoConfirmado('PED-EJEMPLO', detalle.map((d) => ({ nombre: d.i.nombre, opcion: d.opcion, precio: d.i.precio ?? 0, cantidad: d.cantidad })), total, antes > 0 ? { monto: antes, metodos: [] } : undefined);
       return;
     }
     const j = await enviar({
@@ -1002,7 +1026,9 @@ function Carrito({ lineas, porId, esc, slug, alCambiar, alTerminar, nombreNegoci
     });
     if (j.status === 'ok' && typeof j.codigo === 'string') {
       const guardadas = (Array.isArray(j.lineas) ? j.lineas : []) as LineaPedido[];
-      pedidoConfirmado(j.codigo, guardadas, Number(j.total ?? total));
+      // Lo que manda es el monto guardado en el pedido (sql/0020), no la cuenta de esta pantalla.
+      const p = j.pago as { pagar?: number; metodos?: { tipo: string; numero: string; titular: string }[] } | undefined;
+      pedidoConfirmado(j.codigo, guardadas, Number(j.total ?? total), Number(p?.pagar) > 0 ? { monto: Number(p?.pagar), metodos: Array.isArray(p?.metodos) ? p.metodos : [] } : undefined);
       return;
     }
     if (j.errores) setErrores(j.errores as ErroresCliente);
@@ -1066,13 +1092,14 @@ function Carrito({ lineas, porId, esc, slug, alCambiar, alTerminar, nombreNegoci
 
       {(pideMetodoPago || pideNota || (pideUbicacion && entrega === 'delivery')) && <section className="tp-bloque">
         <h2>Detalles para el negocio</h2>
-        {pideMetodoPago && <div className="tp-campo"><label htmlFor="tp-pago">¿Cómo pagarás?</label><select id="tp-pago" value={metodoPago} onChange={(e) => { setMetodoPago(e.target.value); setFallo(''); }}><option value="">Elige una opción</option>{METODOS_PAGO.map((m) => <option key={m}>{m}</option>)}</select></div>}
+        {pideMetodoPago && <div className="tp-campo"><label htmlFor="tp-pago">¿Cómo pagarás?</label><select id="tp-pago" value={metodoPago} onChange={(e) => { setMetodoPago(e.target.value); setFallo(''); }}><option value="">Elige una opción</option>{metodos.map((m) => <option key={m}>{m}</option>)}</select></div>}
         {pideUbicacion && entrega === 'delivery' && <div className="tp-campo"><label htmlFor="tp-ubicacion">Enlace de Google Maps <small>(opcional)</small></label><input id="tp-ubicacion" type="url" value={ubicacion} maxLength={300} placeholder="https://maps.google.com/?q=…" onChange={(e) => setUbicacion(e.target.value)} /></div>}
         {pideNota && <div className="tp-campo"><label htmlFor="tp-nota-pedido">Nota para el pedido <small>(opcional)</small></label><textarea id="tp-nota-pedido" value={nota} maxLength={300} placeholder="Ej. Sin cebolla" onChange={(e) => setNota(e.target.value)} /></div>}
         <p className="tp-nota" style={{ textAlign: 'left' }}>Estos detalles quedan guardados con tu pedido.</p>
       </section>}
 
       <CamposCliente d={cliente} errores={errores} alCambiar={(k, val) => { setCliente((c) => ({ ...c, [k]: val })); setErrores((e) => ({ ...e, [k]: undefined })); }} />
+      {avisoPago && <p className="tp-nota tp-nota--pago">{avisoPago}</p>}
       {fallo && <p className="tp-aviso" role="alert">{fallo}</p>}
       <button type="button" className="tp-boton" disabled={enviando} onClick={() => void pedir()}>
         {enviando ? 'Guardando…' : `${demoPedido ? 'Simular pedido' : 'Hacer pedido'} · ${soles(total)}`}

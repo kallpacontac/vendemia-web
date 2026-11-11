@@ -7,12 +7,20 @@
  * en la nube (pedidos_web). Las columnas siguen la ENTREGA; el cobro va como sello en
  * la tarjeta, porque orders.status lo mezcla todo y 'delivered' cuenta como cobrado
  * (tu-pagina/sql/0019). Nada de aquí escribe: solo decide en qué columna va cada cosa.
+ *
+ * «Por cobrar» va antes de Nuevos y no es una etapa guardada: es un pedido nuevo al que
+ * le falta lo que el negocio pide pagar antes (orders.pagar_antes, sql/0020). Al pagarlo,
+ * o si el dueño decide prepararlo igual, sigue su camino.
  */
 
 import type { Pedido } from '@/lib/supabase/queries';
 
 export type Etapa = 'nuevo' | 'preparando' | 'listo' | 'entregado';
 export const ETAPAS: Etapa[] = ['nuevo', 'preparando', 'listo', 'entregado'];
+
+/** Lo que se ve: las etapas y, delante, lo que espera el pago del cliente. */
+export type Columna = 'por_cobrar' | Etapa;
+export const COLUMNAS: Columna[] = ['por_cobrar', ...ETAPAS];
 
 /** Comida se prepara; una tienda empaca. Lo demás se dice igual. */
 export type Rubro = 'comida' | 'tienda';
@@ -44,7 +52,23 @@ export interface Tarjeta {
   cobro: 'falta' | 'cobrado' | null;
   /** status 'delivered': ya cuenta en la Caja y no vuelve atrás. */
   entregaFirme: boolean;
+  /** Lo que el negocio pedía pagar antes de preparar, guardado al nacer el pedido. 0: contra entrega. */
+  pagarAntes: number;
+  /** Lo ya pagado con importe (adelantos). */
+  pagado: number;
 }
+
+const r2 = (n: number) => Math.round(n * 100) / 100;
+
+/** Cuánto falta de lo que había que pagar antes. 0 si ya está o si no se pedía. */
+export const faltaAntes = (t: Pick<Tarjeta, 'cobro' | 'pagarAntes' | 'pagado'>): number =>
+  t.cobro === 'falta' ? Math.max(0, r2(t.pagarAntes - t.pagado)) : 0;
+
+/** Cuánto falta para cobrarlo entero. */
+export const faltaTotal = (t: Pick<Tarjeta, 'cobro' | 'total' | 'pagado'>): number =>
+  t.cobro === 'falta' ? Math.max(0, r2(t.total - t.pagado)) : 0;
+
+export const columnaDe = (t: Tarjeta): Columna => (t.etapa === 'nuevo' && faltaAntes(t) > 0 ? 'por_cobrar' : t.etapa);
 
 /** Lo que no se entregó en una semana ya no es del día: va al historial. */
 export const DIAS_EN_TABLERO = 7;
@@ -78,8 +102,8 @@ export function anterior(t: Tarjeta): Etapa | null {
   return i > 0 ? ETAPAS[i - 1] : null;
 }
 
-export function titulos(rubro: Rubro): Record<Etapa, string> {
-  return { nuevo: 'Nuevos', preparando: rubro === 'comida' ? 'Preparando' : 'Por empacar', listo: 'Listos', entregado: 'Entregados hoy' };
+export function titulos(rubro: Rubro): Record<Columna, string> {
+  return { por_cobrar: 'Por cobrar', nuevo: 'Nuevos', preparando: rubro === 'comida' ? 'Preparando' : 'Por empacar', listo: 'Listos', entregado: 'Entregados hoy' };
 }
 
 /** Lo que dice el botón que lleva la tarjeta a la siguiente columna. */
@@ -110,11 +134,11 @@ export function enTablero(t: Tarjeta, ahora: Date): boolean {
  * Lo que lleva más tiempo esperando, primero. Entregados: lo último, arriba.
  * En Nuevos manda la hora del pedido: uno devuelto a Nuevos sigue siendo el que más espera.
  */
-export function ordenar(tarjetas: Tarjeta[]): Record<Etapa, Tarjeta[]> {
-  const cols: Record<Etapa, Tarjeta[]> = { nuevo: [], preparando: [], listo: [], entregado: [] };
-  for (const t of tarjetas) cols[t.etapa].push(t);
+export function ordenar(tarjetas: Tarjeta[]): Record<Columna, Tarjeta[]> {
+  const cols: Record<Columna, Tarjeta[]> = { por_cobrar: [], nuevo: [], preparando: [], listo: [], entregado: [] };
+  for (const t of tarjetas) cols[columnaDe(t)].push(t);
   const t0 = (t: Tarjeta) => ((t.etapa === 'nuevo' ? t.creado : t.movido) ?? t.creado)?.getTime() ?? 0;
-  for (const e of ETAPAS) cols[e].sort((a, b) => (e === 'entregado' ? t0(b) - t0(a) : t0(a) - t0(b)));
+  for (const e of COLUMNAS) cols[e].sort((a, b) => (e === 'entregado' ? t0(b) - t0(a) : t0(a) - t0(b)));
   return cols;
 }
 
@@ -138,7 +162,8 @@ const fecha = (v: string | null | undefined): Date | null => {
 const entregaDe = (v: string | null | undefined): Tarjeta['entrega'] =>
   v === 'delivery' ? 'delivery' : v === 'pickup' || v === 'recojo' ? 'recojo' : null;
 
-export function tarjetaDePedido(p: Pedido, cliente: string, faltaCobrar: boolean): Tarjeta | null {
+/** `pagado`: lo pagado con importe. `conCobroPrevio`: falso sin la agenda en la nube (los pagos son del bot). */
+export function tarjetaDePedido(p: Pedido, cliente: string, faltaCobrar: boolean, pagado = 0, conCobroPrevio = true): Tarjeta | null {
   const etapa = etapaDePedido(p.status, p.etapa);
   if (!etapa) return null;
   return {
@@ -158,6 +183,8 @@ export function tarjetaDePedido(p: Pedido, cliente: string, faltaCobrar: boolean
     movido: fecha(p.etapa_at) ?? p.creado,
     cobro: faltaCobrar ? 'falta' : 'cobrado',
     entregaFirme: p.status === 'delivered',
+    pagarAntes: conCobroPrevio ? Number(p.pagar_antes) || 0 : 0,
+    pagado: Number(pagado) || 0,
   };
 }
 
@@ -199,5 +226,7 @@ export function tarjetaDeWeb(w: PedidoWebFila): Tarjeta | null {
     movido: etapa === 'nuevo' ? creado : fecha(w.cambiado_at) ?? creado,
     cobro: null,
     entregaFirme: false,
+    pagarAntes: 0,
+    pagado: 0,
   };
 }
