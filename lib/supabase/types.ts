@@ -461,6 +461,9 @@ export interface OrderRow {
   nota?: string | null;
   ubicacion?: string | null;
   pagara_con?: string | null;
+  /** Columna del tablero de Pedidos (tu-pagina/sql/0019): '' es Nuevo. No es el cobro. */
+  etapa?: string | null;
+  etapa_at?: string | null;
   created_at: number | null;
   created_ts: string | null;
   /**

@@ -54,6 +54,11 @@ import type { ResultadoMarcarPagado } from '@/lib/supabase/commands';
 import { Pedidos as PedidosDeLaPagina } from '@/modules/tu-pagina/ui/PedidosYReservas';
 import Envios from '@/modules/tu-pagina/ui/Envios';
 import DetallesPedido from '@/modules/tu-pagina/ui/DetallesPedido';
+import { useLoQueHaceLaPagina } from '@/modules/tu-pagina/ui/secciones';
+import { esNegocioGastronomico } from '@/modules/tu-pagina/dominio/plantillas';
+import TableroPedidos from '@/components/panel/TableroPedidos';
+import { esEcommerce } from '@/lib/panel/modo';
+import type { Rubro } from '@/lib/panel/tableroPedidos';
 import '@/modules/tu-pagina/estilos/panel.css';
 
 const POR_PAGINA = 12;
@@ -74,27 +79,39 @@ function Pedidos() {
   const params = useSearchParams();
   const codigoEnvio = params.get('envio');
 
-  const { datos: pagina } = useCargar(async () => {
+  const { datos: pagina, error: errorPagina } = useCargar(async () => {
     if (!companyId) return null;
     const [{ data }, { data: nube }] = await Promise.all([
-      supabase().from('tu_pagina').select('titulo, publicada, secciones').eq('company_id', companyId).maybeSingle(),
+      supabase().from('tu_pagina').select('titulo, publicada, secciones, plantilla').eq('company_id', companyId).maybeSingle(),
       supabase().rpc('agenda_en_nube', { p_company: companyId }),
     ]);
     const s = (data?.publicada ? data.secciones : null) as { catalogo?: boolean; envios?: boolean } | null;
+    const plantilla = (data?.plantilla as string | null | undefined) ?? '';
     return {
       titulo: (data?.titulo as string | undefined) ?? '',
       // Con la agenda en la nube el carrito escribe en orders: sale en la primera pestaña.
       vende: Boolean(s?.catalogo) && nube !== true,
       envios: Boolean(s?.envios),
+      catalogo: Boolean(s?.catalogo),
+      comida: plantilla === 'restaurante' || plantilla === 'mesa',
     };
   }, [companyId]);
+  const lo = useLoQueHaceLaPagina(companyId);
+  const nombre = pagina?.titulo || compania?.nombre || '';
 
-  const pestanas: { id: Pestana; nombre: string }[] = [
-    // Siempre: Mia también vende productos en un negocio de citas (catalog.tipo).
-    { id: 'mia', nombre: pagina?.vende ? 'Por WhatsApp' : 'Pedidos' },
-    ...(pagina?.vende ? [{ id: 'pagina' as const, nombre: 'De tu página' }] : []),
-    ...(pagina?.envios ? [{ id: 'envios' as const, nombre: 'Envíos' }] : []),
-  ];
+  // Tablero para quien vive de los pedidos (restaurante, delivery, tienda). Un negocio de
+  // citas que vende algún producto por Mia sigue con la tabla: ahí son pocos y sueltos.
+  const tablero = esEcommerce(compania?.business_mode) || Boolean(pagina?.catalogo);
+  const rubro: Rubro = pagina?.comida || esNegocioGastronomico(nombre) ? 'comida' : 'tienda';
+
+  const pestanas: { id: Pestana; nombre: string }[] = tablero
+    ? [{ id: 'mia', nombre: 'Pedidos' }, ...(pagina?.envios ? [{ id: 'envios' as const, nombre: 'Envíos' }] : [])]
+    : [
+      // Siempre: Mia también vende productos en un negocio de citas (catalog.tipo).
+      { id: 'mia', nombre: pagina?.vende ? 'Por WhatsApp' : 'Pedidos' },
+      ...(pagina?.vende ? [{ id: 'pagina' as const, nombre: 'De tu página' }] : []),
+      ...(pagina?.envios ? [{ id: 'envios' as const, nombre: 'Envíos' }] : []),
+    ];
   const pedida: Pestana | null = codigoEnvio ? 'envios' : (params.get('ver') as Pestana | null);
   const [pestana, setPestana] = useState<Pestana | null>(null);
   useEffect(() => setPestana(null), [pedida]);
@@ -103,7 +120,7 @@ function Pedidos() {
   const activa: Pestana = elegida && (pestanas.some((p) => p.id === elegida) || (elegida === 'envios' && codigoEnvio))
     ? elegida
     : pestanas[0]?.id ?? 'mia';
-  const nombre = pagina?.titulo || compania?.nombre || '';
+  const [historial, setHistorial] = useState(false);
 
   return (
     <main className="main">
@@ -120,7 +137,22 @@ function Pedidos() {
           </div>
         )}
 
-        {!companyId ? null : activa === 'pagina' ? (
+        {/* Hasta saber qué hace la página no se pinta nada: si no, la tabla parpadea antes del tablero. */}
+        {!companyId || (!pagina && !errorPagina) ? null : pagina && tablero && activa !== 'envios' ? (
+          <>
+            <TableroPedidos companyId={companyId} rubro={rubro} conPagina={pagina.vende} conMesas={lo.mesas} />
+            {/* Lo de antes de la semana, lo cancelado y buscar por cliente: la tabla de siempre. */}
+            <button type="button" className="btn btn-ghost tpd-historial" aria-expanded={historial} onClick={() => setHistorial((v) => !v)}>
+              {historial ? 'Ocultar todos los pedidos' : 'Ver todos los pedidos'}
+            </button>
+            {historial && (
+              <>
+                <PedidosDeMia />
+                {pagina.vende && <PedidosDeLaPagina companyId={companyId} nombre={nombre} />}
+              </>
+            )}
+          </>
+        ) : activa === 'pagina' ? (
           <PedidosDeLaPagina companyId={companyId} nombre={nombre} />
         ) : activa === 'envios' ? (
           <Envios companyId={companyId} nombre={nombre} codigo={codigoEnvio} activos={pagina?.envios ?? true} />
