@@ -24,8 +24,10 @@ import { useState } from 'react';
 import { ChevronDown, Wallet } from 'lucide-react';
 import Paginacion, { usePaginacion } from './Paginacion';
 import { useSesion } from './Sesion';
-import { useComando } from './Avisos';
+import { useAvisar, useComando } from './Avisos';
 import { useCargar } from './useCargar';
+import FotoDelPago from './FotoDelPago';
+import { exigeFoto, fotoParaCobro, fotoParaMetodo, type FotoPago } from '@/lib/panel/fotoPago';
 import { soles } from '@/lib/panel/format';
 import { METODO_LABEL, METODOS_CITA, type MetodoPago } from '@/lib/panel/metodosPago';
 import { comprobantes, conSaldo, type VentaLead } from '@/lib/panel/saldo';
@@ -133,14 +135,32 @@ export function RegistrarPago({
   alGuardar: () => void;
 }) {
   const comando = useComando();
+  const avisar = useAvisar();
+  const { companyId, cobroFoto } = useSesion();
   const [monto, setMonto] = useState(sugerido > 0 ? String(sugerido) : '');
   const [metodo, setMetodo] = useState<MetodoPago>('cash');
   const [enviando, setEnviando] = useState(false);
+  /** «Comprobante al cobrar» (Configuración › Negocio): la foto del Yape, si el negocio la usa. */
+  const [foto, setFoto] = useState<FotoPago | null>(null);
+  const [leyendo, setLeyendo] = useState(false);
   const valor = Number(monto.replace(',', '.'));
   const valido = Number.isFinite(valor) && valor > 0;
+  const conFoto = fotoParaMetodo(cobroFoto, metodo);
+  const faltaFoto = exigeFoto(cobroFoto, metodo) && !foto;
+
+  function alFoto(f: FotoPago | null) {
+    setFoto(f);
+    if (!f) return;
+    if (f.monto !== null && f.monto > 0) setMonto(String(sugerido > 0 ? Math.min(f.monto, sugerido) : f.monto));
+    if (f.metodo === 'yape' || f.metodo === 'plin') setMetodo(f.metodo);
+  }
 
   async function guardar() {
-    if (!valido) return;
+    if (!valido || leyendo) return;
+    if (faltaFoto) {
+      avisar(`Este negocio pide la foto del comprobante para cobrar por ${METODO_LABEL[metodo]}.`, 'error');
+      return;
+    }
     setEnviando(true);
     const r = await comando(
       'registrar_pago',
@@ -149,8 +169,10 @@ export function RegistrarPago({
         monto: Math.round(valor * 100) / 100,
         metodo_pago: metodo,
         ...(appointmentId ? { appointment_id: appointmentId } : {}),
+        // Postgres vuelve a comprobarla (datos 0010): repetida o de fuera, no entra.
+        ...(conFoto && foto ? { foto: fotoParaCobro(foto) } : {}),
       },
-      `Pago de ${soles(valor)} registrado.`,
+      `Pago de ${soles(valor)} registrado${conFoto && foto ? ' con su foto' : ''}.`,
       alGuardar,
     );
     setEnviando(false);
@@ -159,6 +181,10 @@ export function RegistrarPago({
 
   return (
     <div className="saldos__form">
+      {conFoto && companyId && (
+        <FotoDelPago companyId={companyId} foto={foto} obligatoria={exigeFoto(cobroFoto, metodo)} alFoto={alFoto} alLeyendo={setLeyendo} />
+      )}
+      {foto && foto.decision !== 'aprobar' && foto.motivo && conFoto && <p className="fp-aviso">Ojo: {foto.motivo}</p>}
       <input
         className="input"
         inputMode="decimal"
@@ -173,7 +199,7 @@ export function RegistrarPago({
           </option>
         ))}
       </select>
-      <button type="button" className="btn btn-primary btn-sm" disabled={!valido || enviando} onClick={() => void guardar()}>
+      <button type="button" className="btn btn-primary btn-sm" disabled={!valido || enviando || leyendo} onClick={() => void guardar()}>
         {enviando ? 'Guardando…' : 'Guardar'}
       </button>
       <button type="button" className="btn btn-ghost btn-sm" onClick={alCerrar}>

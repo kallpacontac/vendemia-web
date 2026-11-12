@@ -6,41 +6,22 @@
  * comprobante validado: exige el adelanto para confirmar una apartada y comprueba que ESA cancha
  * siga libre. «Adelanto» y «Completo» con un toque, y un «¿Seguro?» antes de registrar nada.
  *
- * Foto del pago (opcional): se lee con las mismas reglas que la página, rellena monto y método,
- * y queda guardada con el pago. La misma foto o la misma operación no se registran dos veces.
+ * Foto del pago: según «Comprobante al cobrar» (Configuración › Negocio, datos 0010) no sale,
+ * es opcional u obligatoria para Yape, Plin y transferencia. Se lee con las mismas reglas que la
+ * página, rellena monto y método, y queda guardada con el pago. La misma foto o la misma
+ * operación no se registran dos veces.
  */
 import { useState } from 'react';
-import { Camera, Check, X } from 'lucide-react';
+import { Check } from 'lucide-react';
 import Confirmar from '@/components/panel/Confirmar';
 import ElegirMonto, { METODOS_TODOS } from '@/components/panel/ElegirMonto';
+import FotoDelPago from '@/components/panel/FotoDelPago';
 import { useAvisar } from '@/components/panel/Avisos';
+import { useSesion } from '@/components/panel/Sesion';
 import { supabase } from '@/lib/supabase/client';
-import { achicarImagen } from '@/lib/achicarImagen';
 import { efectoDelPago, faltaDe, fechaCorta, leerMonto, minimoParaConfirmar, NOMBRE_METODO, soles, type Cobro } from '@/lib/panel/cobro-cancha';
+import { exigeFoto, ofreceFoto, type FotoPago } from '@/lib/panel/fotoPago';
 import type { ReservaTablero } from '@/lib/panel/tablero-canchas';
-
-interface Foto {
-  url: string;
-  hash: string;
-  operacion: string;
-  leida: boolean;
-  decision: 'aprobar' | 'revisar' | 'rechazar';
-  motivo: string;
-  monto: number | null;
-  metodo: string;
-  destino: string;
-}
-
-/** Lo que se leyó de la foto, en una línea: «S/ 40 · Yape · a •••701 · op. 12345678». */
-function leido(f: Foto): string {
-  const partes = [
-    f.monto !== null ? soles(f.monto) : '',
-    NOMBRE_METODO[f.metodo] ?? '',
-    f.destino ? `a •••${f.destino.replace(/\D/g, '').slice(-3)}` : '',
-    f.operacion ? `op. ${f.operacion}` : '',
-  ].filter(Boolean);
-  return partes.length ? partes.join(' · ') : 'No se pudo leer nada';
-}
 
 export default function ValidarPago({ companyId, reserva, nombreCancha, adelanto, alValidar }: {
   companyId: string;
@@ -52,52 +33,34 @@ export default function ValidarPago({ companyId, reserva, nombreCancha, adelanto
   alValidar: () => void;
 }) {
   const avisar = useAvisar();
+  const { cobroFoto } = useSesion();
   const cobro: Cobro = { total: reserva.total, pagado: reserva.pagado, adelanto, apartada: reserva.estado === 'esperando_pago' };
   const falta = faltaDe(cobro);
   const minimo = minimoParaConfirmar(cobro);
   const [monto, setMonto] = useState(String(minimo || falta || ''));
   const [metodo, setMetodo] = useState('yape');
-  const [foto, setFoto] = useState<Foto | null>(null);
+  const [foto, setFoto] = useState<FotoPago | null>(null);
   const [leyendo, setLeyendo] = useState(false);
   const [pregunta, setPregunta] = useState<number | null>(null);
   const [enviando, setEnviando] = useState(false);
 
   if (reserva.estado === 'cobrada' || reserva.estado === 'no_vino' || falta <= 0) return null;
 
-  async function subirFoto(archivo: File | undefined) {
-    if (!archivo) return;
-    if (!archivo.type.startsWith('image/')) {
-      avisar('Elige una foto o captura (JPG, PNG o WEBP).', 'error');
-      return;
-    }
-    setLeyendo(true);
-    try {
-      const { data } = await supabase().auth.getSession();
-      const token = data.session?.access_token;
-      if (!token) {
-        avisar('Tu sesión terminó. Vuelve a entrar al panel.', 'error');
-        return;
-      }
-      const form = new FormData();
-      form.append('companyId', companyId);
-      form.append('archivo', await achicarImagen(archivo), 'pago.jpg');
-      const r = await fetch('/api/canchas/evidencia', { method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: form });
-      const j = (await r.json().catch(() => null)) as (Foto & { status: string; mensaje?: string }) | null;
-      if (!r.ok || !j || j.status !== 'ok') {
-        avisar(j?.mensaje ?? 'No pudimos leer la foto. Inténtalo otra vez o escribe el monto a mano.', 'error');
-        return;
-      }
-      setFoto(j);
-      if (j.monto !== null && j.monto > 0) setMonto(String(Math.min(j.monto, falta)));
-      if (j.metodo === 'yape' || j.metodo === 'plin') setMetodo(j.metodo);
-    } catch {
-      avisar('Sin conexión. Revisa tu internet e inténtalo otra vez.', 'error');
-    } finally {
-      setLeyendo(false);
-    }
+  const conFoto = ofreceFoto(cobroFoto);
+  const sinFotoNoVale = exigeFoto(cobroFoto, metodo) && !foto;
+
+  function alFoto(f: FotoPago | null) {
+    setFoto(f);
+    if (!f) return;
+    if (f.monto !== null && f.monto > 0) setMonto(String(Math.min(f.monto, falta)));
+    if (f.metodo === 'yape' || f.metodo === 'plin') setMetodo(f.metodo);
   }
 
   function preguntar() {
+    if (sinFotoNoVale) {
+      avisar(`Este negocio pide la foto del comprobante para cobrar por ${NOMBRE_METODO[metodo] ?? metodo}.`, 'error');
+      return;
+    }
     const r = leerMonto(monto, cobro);
     if ('error' in r) {
       avisar(r.error, 'error');
@@ -134,25 +97,8 @@ export default function ValidarPago({ companyId, reserva, nombreCancha, adelanto
       <b>Validar pago</b>
       <small>{minimo > 0 ? `Con ${soles(minimo)} se confirma. Falta ${soles(falta)} en total.` : `Falta ${soles(falta)}.`}</small>
 
-      {foto ? (
-        <div className={`tc-foto tc-foto--${foto.decision}`}>
-          <a href={foto.url} target="_blank" rel="noopener" aria-label="Abrir la foto del pago">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={foto.url} alt="" />
-          </a>
-          <div>
-            <b>{foto.leida ? `Leído: ${leido(foto)}` : 'Foto guardada'}</b>
-            {foto.motivo && <small>{foto.motivo}</small>}
-            {!foto.motivo && foto.decision === 'aprobar' && <small>Coincide con tu Yape o Plin y es de hace menos de 4 horas.</small>}
-          </div>
-          <button type="button" aria-label="Quitar la foto" onClick={() => setFoto(null)}><X size={16} aria-hidden="true" /></button>
-        </div>
-      ) : (
-        <label className={`tc-foto__boton ${leyendo ? 'is-leyendo' : ''}`}>
-          <Camera size={17} aria-hidden="true" />
-          {leyendo ? 'Leyendo la foto…' : 'Foto del pago (opcional)'}
-          <input type="file" accept="image/*" disabled={leyendo} onChange={(e) => { void subirFoto(e.target.files?.[0]); e.target.value = ''; }} />
-        </label>
+      {conFoto && (
+        <FotoDelPago companyId={companyId} foto={foto} obligatoria={exigeFoto(cobroFoto, metodo)} alFoto={alFoto} alLeyendo={setLeyendo} />
       )}
 
       <ElegirMonto cobro={cobro} monto={monto} metodo={metodo} metodos={METODOS_TODOS} etiquetaMonto="Monto recibido (S/)" alMonto={setMonto} alMetodo={setMetodo} />

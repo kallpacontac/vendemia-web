@@ -1,0 +1,32 @@
+/* «Foto del pago» al cobrar (components/panel/FotoDelPago.tsx). Con los colores del panel. */
+.fp-boton { position: relative; display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 0 14px; border: 1px dashed var(--line-2, #DEDED9); border-radius: 12px; background: var(--bg-card, #fff); color: var(--ink, #0A0A0A); font-weight: 600; font-size: 13.5px; cursor: pointer; flex-basis: 100%; }
+.fp-boton input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
+.fp-boton.is-leyendo { opacity: .7; cursor: progress; }
+.fp-boton--obligatoria { border-color: var(--warm, #B26B00); }
+.fp { display: grid; grid-template-columns: 56px minmax(0, 1fr) auto; align-items: center; gap: 10px; padding: 8px; border-radius: 12px; background: var(--bg-card, #fff); border: 1px solid var(--line, #EAEAE6); flex-basis: 100%; }
+.fp img { width: 56px; height: 72px; object-fit: cover; border-radius: 8px; display: block; }
+.fp > div { display: grid; gap: 2px; min-width: 0; font-size: 13px; }
+.fp small { font-size: 12px; color: var(--ink-soft, #5C5C5C); }
+.fp--aprobar { border-color: var(--new, #0FA968); }
+.fp--revisar { border-color: var(--warm, #B26B00); }
+.fp--revisar small { color: var(--warm, #B26B00); }
+.fp--rechazar { border-color: #B42318; }
+.fp--rechazar small { color: #B42318; font-weight: 600; }
+.fp > button { width: 36px; height: 36px; display: grid; place-items: center; border: 1px solid var(--line, #EAEAE6); border-radius: 50%; background: transparent; color: inherit; cursor: pointer; }
+.fp-aviso { flex-basis: 100%; margin: 0; font-size: 12.5px; color: #B42318; font-weight: 600; }
+
+/* «Cobrada» con foto: el paso entre elegir el método y registrar. */
+.fp-cobrar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: flex-end; flex-basis: 100%; max-width: 420px; margin-left: auto; }
+.fp-cobrar__titulo { flex-basis: 100%; font-size: 12.5px; color: var(--ink-soft, #5C5C5C); text-align: right; }
+
+/* La Caja: las fotos de los cobros del día. */
+.fp-dia { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.fp-dia li { display: grid; grid-template-columns: 44px minmax(0, 1fr) auto; align-items: center; gap: 10px; }
+.fp-dia img { width: 44px; height: 56px; object-fit: cover; border-radius: 8px; display: block; background: var(--bg-soft, #F4F4F0); }
+.fp-dia__dato { display: grid; min-width: 0; font-size: 13px; }
+.fp-dia__dato small { font-size: 12px; color: var(--ink-soft, #5C5C5C); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fp-dia__monto { font-weight: 700; font-variant-numeric: tabular-nums; }
+
+/* Configuración: tres opciones en vez de dos. */
+.opciones--3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+@media (max-width: 720px) { .opciones--3 { grid-template-columns: 1fr; } }

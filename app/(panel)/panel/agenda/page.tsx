@@ -51,6 +51,7 @@ import { construirSemana, lunesDe } from '@/lib/panel/agenda';
 import { cap, vocabulario, type Vocabulario } from '@/lib/panel/vocabulario';
 import { cobroPorApuntar, etiquetaMetodo, type MetodoPago } from '@/lib/panel/metodosPago';
 import { BotonCobrar } from '@/components/panel/BotonCobrar';
+import { fotoParaCobro, type FotoPago } from '@/lib/panel/fotoPago';
 import { RegistrarPago } from '@/components/panel/Saldos';
 import { diaMes, ESTADO_CITA, hora as horaDe, soles } from '@/lib/panel/format';
 import { estadoInscripcion, type EstadoInscripcion, type Saldo, type VentaLead } from '@/lib/panel/saldo';
@@ -1455,7 +1456,7 @@ function PorConfirmar({
     setEnVuelo(null);
   }
 
-  async function cobrar(c: Cita, metodo: MetodoPago) {
+  async function cobrar(c: Cita, metodo: MetodoPago, foto?: FotoPago) {
     setEnVuelo(c.id);
     /**
      * ⚠️ El `result` trae `cambio`. Si ya estaba cobrada no se anuncia nada:
@@ -1466,7 +1467,8 @@ function PorConfirmar({
     const r = await comando<ResultadoMarcarPagado>(
       'marcar_pagado',
       // El método va a la caja del día: sin él, el cobro entra como «sin método».
-      { tipo: 'appointment', id: c.id, metodo_pago: metodo },
+      // La foto del pago, si el negocio la usa (datos 0010): Postgres la vuelve a revisar.
+      { tipo: 'appointment', id: c.id, metodo_pago: metodo, ...(foto ? { foto: fotoParaCobro(foto) } : {}) },
       undefined,
       alCambiar,
     );
@@ -1514,7 +1516,7 @@ function PorConfirmar({
               sello={selloCita(c, pagosCitas.get(c.id), soles)}
               ocupado={enVuelo === c.id}
               alResolver={(vino) => void resolver(c, vino)}
-              alCobrar={(metodo) => void cobrar(c, metodo)}
+              alCobrar={(metodo, foto) => void cobrar(c, metodo, foto)}
             />
           ))}
           <Paginacion pagina={pag.pagina} paginas={pag.paginas} irA={pag.irA} />
@@ -1540,7 +1542,7 @@ function FilaPorConfirmar({
   sello: SelloCita | null;
   ocupado: boolean;
   alResolver: (vino: boolean) => void;
-  alCobrar: (metodo: MetodoPago) => void;
+  alCobrar: (metodo: MetodoPago, foto?: FotoPago) => void;
 }) {
   const cumplido = selloCumplido('appointment', cita.status, cita.cumplido_por);
   const pagado = selloPagado('appointment', cita.status, cita.pagado_por);

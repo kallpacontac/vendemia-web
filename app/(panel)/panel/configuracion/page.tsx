@@ -39,6 +39,7 @@ import {
   ArrowLeft,
   ArrowRight,
   CalendarClock,
+  Camera,
   Check,
   ChevronDown,
   ChevronUp,
@@ -71,6 +72,9 @@ import { esAppointmentFamily, esEcommerce } from '@/lib/panel/modo';
 import { soloLeeLoDelDueno } from '@/lib/panel/roles';
 import { cap, vocabulario } from '@/lib/panel/vocabulario';
 import { PAGO_CADUCA_HORAS } from '@/lib/panel/adelantos';
+import { demoActivo } from '@/lib/panel/demo';
+import { MODOS_FOTO_PAGO, TEXTO_MODO, type ModoFotoPago } from '@/lib/panel/fotoPago';
+import '@/components/panel/foto-del-pago.css';
 import { getCatalogo, getCompania } from '@/lib/supabase/queries';
 import { b01 } from '@/lib/supabase/parse';
 import type { ResultadoUpdateCompany } from '@/lib/supabase/commands';
@@ -244,7 +248,7 @@ export default function ConfiguracionPage() {
 }
 
 function Configuracion() {
-  const { companyId, rol, esAdminPlataforma } = useSesion();
+  const { companyId, rol, esAdminPlataforma, canchas, cobroFoto, recargarCobroFoto } = useSesion();
   // Pagos y teléfonos: tras el corte, solo los cambia el dueño (el bot no los aplica a nadie más).
   const delDueno = soloLeeLoDelDueno(rol);
   const { salud } = useSalud();
@@ -379,7 +383,38 @@ function Configuracion() {
     );
   }, [form, horario, pagos, preguntas, pideEmpleado, original]);
 
-  const hayCambios = Object.keys(patch).length > 0;
+  /**
+   * «Comprobante al cobrar» (datos 0010). NO va en el patch de `update_company`:
+   * vive en `cobro_ajustes`, que el bot no conoce, y se guarda con su propia
+   * función (solo el dueño). Pero cuenta como un cambio más de la barra, para
+   * que guardar siga siendo un solo botón.
+   */
+  const [fotoPago, setFotoPago] = useState<ModoFotoPago | null>(null);
+  const fotoOriginal = cobroFoto && !cobroFoto.sinMigrar ? cobroFoto.modo : null;
+  useEffect(() => {
+    if (fotoPago === null && fotoOriginal !== null) setFotoPago(fotoOriginal);
+  }, [fotoOriginal, fotoPago]);
+  const fotoCambio = fotoPago !== null && fotoOriginal !== null && fotoPago !== fotoOriginal;
+  const nCambios = Object.keys(patch).length + (fotoCambio ? 1 : 0);
+
+  const hayCambios = nCambios > 0;
+
+  /** Guarda «Comprobante al cobrar». true si quedó guardado. */
+  async function guardarFotoPago(modo: ModoFotoPago, solo: boolean): Promise<boolean> {
+    if (demoActivo()) {
+      avisar('Estás en modo demo: no se guarda nada. Sal del modo demo para cambiar algo de verdad.', 'espera');
+      return false;
+    }
+    if (!companyId) return false;
+    const { error } = await supabase().rpc('cobro_foto_guardar', { p_company: companyId, p_modo: modo });
+    if (error) {
+      avisar(error.message, 'error');
+      return false;
+    }
+    recargarCobroFoto();
+    if (solo) avisar(`Comprobante al cobrar: ${TEXTO_MODO[modo].titulo.toLowerCase()}.`, 'ok');
+    return true;
+  }
 
   /**
    * Entrega y la ubicación del pedido: en una tienda, y en un negocio de citas
@@ -415,8 +450,9 @@ function Configuracion() {
   function descartar() {
     const e = datos?.empresa;
     if (!e) return;
-    const n = Object.keys(patch).length;
+    const n = nCambios;
     if (!window.confirm(`Se van a descartar ${n} ${n === 1 ? 'cambio' : 'cambios'} sin guardar. ¿Seguro?`)) return;
+    setFotoPago(fotoOriginal);
     // Vaciar `form` basta: el efecto de carga se dispara solo al verlo en null
     // y vuelve a rellenar horario, pagos, preguntas y la foto original desde
     // `datos.empresa`. Resetear cada uno a mano aquí sería otra lista que
@@ -470,12 +506,21 @@ function Configuracion() {
      */
     const completo = construirPatch(form, horario, pagos, preguntas, pideEmpleado);
 
-    if (Object.keys(patch).length === 0) {
+    if (!hayCambios) {
       avisar('No hay nada que guardar: no cambiaste ningún campo.');
       return;
     }
 
     setGuardando(true);
+    // «Comprobante al cobrar» va aparte (no es de `companies`). Si falla, no se sigue.
+    if (fotoCambio && fotoPago) {
+      const soloFoto = Object.keys(patch).length === 0;
+      const ok = await guardarFotoPago(fotoPago, soloFoto);
+      if (!ok || soloFoto) {
+        setGuardando(false);
+        return;
+      }
+    }
     /**
      * La foto se rehace con lo que se acaba de mandar para que un segundo
      * Guardar seguido no vuelva a mandar lo mismo. `recargar()` trae el espejo,
@@ -617,6 +662,58 @@ function Configuracion() {
                 </div>
               </div>
             </details>
+          </div>
+
+          {/*
+            «Comprobante al cobrar» (datos 0010, pedido de Alvaro el 10-nov-2026).
+            Es distinto de «Comprobantes de pago» del paso 2: aquel dice quién
+            revisa las capturas que manda el CLIENTE por WhatsApp; este, si
+            quien cobra desde el PANEL tiene que adjuntar la foto del pago.
+            Solo el dueño la cambia: «obligatoria» le protege de cobros
+            apuntados sin pruebas, y no puede apagarla otro.
+          */}
+          <div className="sec">
+            <h4>
+              <Camera /> Comprobante al cobrar
+            </h4>
+            <p className="cfg-guide">
+              Al registrar un cobro en la Caja, la Agenda o {vocabulario(form.business_mode, { canchas }).una}{' '}
+              {vocabulario(form.business_mode, { canchas }).reserva}, adjuntar la foto del Yape, Plin o transferencia. Se lee sola y
+              queda guardada con el pago.
+            </p>
+            {rol !== 'dueno' && rol !== null && (
+              <p className="muted" style={{ fontSize: 12.5, marginBottom: 8 }}>
+                Solo la cambia el dueño.
+              </p>
+            )}
+            {cobroFoto?.sinMigrar && (
+              <p className="muted" style={{ fontSize: 12.5, marginBottom: 8 }}>
+                Falta la actualización 0010 en la base de datos. Hasta entonces la foto solo sale en el tablero de canchas.
+              </p>
+            )}
+            {cobroFoto && !cobroFoto.sinMigrar && !cobroFoto.nube && (
+              <p className="muted" style={{ fontSize: 12.5, marginBottom: 8 }}>
+                La agenda de este negocio todavía la lleva el bot: la foto no tiene dónde guardarse con el cobro. Se
+                aplicará cuando la agenda pase a la nube.
+              </p>
+            )}
+            <div className="opciones opciones--3" role="radiogroup" aria-label="Comprobante al cobrar">
+              {MODOS_FOTO_PAGO.map((m) => (
+                <button
+                  key={m}
+                  type="button"
+                  className={`opcion ${fotoPago === m ? 'on' : ''}`}
+                  onClick={() => setFotoPago(m)}
+                  role="radio"
+                  aria-checked={fotoPago === m}
+                  disabled={fotoPago === null || (rol !== 'dueno' && rol !== null)}
+                >
+                  <b>{TEXTO_MODO[m].titulo}</b>
+                  <small>{TEXTO_MODO[m].detalle}</small>
+                  {m === 'apagada' && <span className="opcion__def">por defecto</span>}
+                </button>
+              ))}
+            </div>
           </div>
 
           <div className="nav-btns">
@@ -1214,8 +1311,8 @@ function Configuracion() {
         <div className="guardar-barra" role="status">
           <div className="guardar-barra__in">
             <span className="guardar-barra__txt">
-              <b>{Object.keys(patch).length}</b>{' '}
-              {Object.keys(patch).length === 1 ? 'cambio sin guardar' : 'cambios sin guardar'}
+              <b>{nCambios}</b>{' '}
+              {nCambios === 1 ? 'cambio sin guardar' : 'cambios sin guardar'}
             </span>
             <button className="btn btn-ghost btn-sm" onClick={descartar} disabled={guardando}>
               Descartar

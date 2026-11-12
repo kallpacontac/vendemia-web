@@ -45,6 +45,8 @@ import { useAvisar, useComando } from '@/components/panel/Avisos';
 import { useCargar } from '@/components/panel/useCargar';
 import { useVocabulario } from '@/components/panel/useVocabulario';
 import { BotonCobrar } from '@/components/panel/BotonCobrar';
+import ComprobantesDelDia from '@/components/panel/ComprobantesDelDia';
+import { fotoParaCobro, type FotoPago } from '@/lib/panel/fotoPago';
 import { RegistrarPago, SaldosPendientes } from '@/components/panel/Saldos';
 import { diaMes, hora, isoLocal, soles, telefono } from '@/lib/panel/format';
 import { cobradoSinConstancia, entradasDelDia, suma, type CitaCaja } from '@/lib/panel/dinero';
@@ -183,11 +185,12 @@ export default function Caja() {
     [datos],
   );
 
-  async function cobrar(c: Cita, metodo: MetodoPago) {
+  async function cobrar(c: Cita, metodo: MetodoPago, foto?: FotoPago) {
     setEnVuelo(c.id);
     const r = await comando<ResultadoMarcarPagado>(
       'marcar_pagado',
-      { tipo: 'appointment', id: c.id, metodo_pago: metodo },
+      // La foto del pago, si el negocio la usa (datos 0010): Postgres la vuelve a revisar.
+      { tipo: 'appointment', id: c.id, metodo_pago: metodo, ...(foto ? { foto: fotoParaCobro(foto) } : {}) },
       undefined,
       releer,
     );
@@ -301,7 +304,7 @@ export default function Caja() {
                         <div className="confirmar-sellos">{sello && <Sello s={sello} />}</div>
                         <div className="confirmar-acciones">
                           <BotonPago abierto={pagando === cita.id} alPulsar={() => setPagando(pagando === cita.id ? null : cita.id)} />
-                          <BotonCobrar ocupado={enVuelo === cita.id} alCobrar={(m) => void cobrar(cita, m)} />
+                          <BotonCobrar ocupado={enVuelo === cita.id} alCobrar={(m, foto) => void cobrar(cita, m, foto)} />
                         </div>
                       </div>
                       {pagando === cita.id && (
@@ -376,7 +379,7 @@ export default function Caja() {
                   <div className="confirmar-sellos">{sello && <Sello s={sello} />}</div>
                   <div className="confirmar-acciones">
                     <BotonPago abierto={pagando === cita.id} alPulsar={() => setPagando(pagando === cita.id ? null : cita.id)} />
-                    <BotonCobrar ocupado={enVuelo === cita.id} alCobrar={(m) => void cobrar(cita, m)} />
+                    <BotonCobrar ocupado={enVuelo === cita.id} alCobrar={(m, foto) => void cobrar(cita, m, foto)} />
                   </div>
                 </div>
                 {pagando === cita.id && (
@@ -394,6 +397,8 @@ export default function Caja() {
             ))}
           </div>
         )}
+
+        {companyId && <ComprobantesDelDia companyId={companyId} dia={dia} recarga={datos} />}
 
         <SaldosPendientes key={companyId} alCambiar={releer} />
 

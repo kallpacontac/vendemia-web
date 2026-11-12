@@ -70,19 +70,6 @@
   .tc-buscar input { font-size: 16px; }
 }
 /* Foto del pago en «Validar pago». */
-.tc-foto__boton { position: relative; display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 46px; border: 1px dashed var(--tc-suave); border-radius: 12px; background: var(--tc-tarjeta); color: var(--tc-tinta); font-weight: 600; font-size: 14px; cursor: pointer; }
-.tc-foto__boton input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
-.tc-foto__boton.is-leyendo { opacity: .7; cursor: progress; }
-.tc-foto { display: grid; grid-template-columns: 56px minmax(0, 1fr) auto; align-items: center; gap: 10px; padding: 8px; border-radius: 12px; background: var(--tc-tarjeta); border: 1px solid var(--tc-linea); }
-.tc-foto img { width: 56px; height: 72px; object-fit: cover; border-radius: 8px; display: block; }
-.tc-foto > div { display: grid; gap: 2px; min-width: 0; font-size: 13px; }
-.tc-foto small { font-size: 12px; color: var(--tc-suave); }
-.tc-foto--aprobar { border-color: var(--tc-cobrada-t); }
-.tc-foto--revisar { border-color: var(--tc-cobrar-t); }
-.tc-foto--revisar small { color: var(--tc-cobrar-t); }
-.tc-foto--rechazar { border-color: #B42318; }
-.tc-foto--rechazar small { color: #B42318; font-weight: 600; }
-.tc-foto > button { width: 36px; height: 36px; display: grid; place-items: center; border: 1px solid var(--tc-linea); border-radius: 50%; background: transparent; color: inherit; cursor: pointer; }
 .tc-aviso-rojo { color: #B42318; font-weight: 600; }
 /* Pagos de una reserva, con su n.º de operación. */
 .tc-op { font-variant-numeric: tabular-nums; font-weight: 600; color: var(--tc-tinta) !important; }

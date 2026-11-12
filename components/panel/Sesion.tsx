@@ -19,6 +19,7 @@ import type { Session } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase/client';
 import { misCompanias, soyAdminPlataforma, type CompaniaAccesible } from '@/lib/supabase/queries';
 import { rolDeNegocio, type RolNegocio } from '@/lib/panel/roles';
+import { leerCobroFoto, type CobroFoto } from '@/lib/panel/fotoPago';
 import {
   apuntarActividad,
   motivoDeCaducidad,
@@ -52,6 +53,13 @@ interface Estado {
    * ofrece turnos y turno fijo. Ver lib/panel/vocabulario.ts.
    */
   canchas: boolean;
+  /**
+   * «Comprobante al cobrar» del negocio activo: si al cobrar se ofrece o se
+   * exige la foto del pago. `null` mientras carga. Ver lib/panel/fotoPago.ts.
+   */
+  cobroFoto: CobroFoto | null;
+  /** Volver a leerla: Configuración la llama al guardarla. */
+  recargarCobroFoto: () => void;
   cargando: boolean;
   /**
    * Hay una sesión guardada pero ahora mismo no hay una viva: el token caducó
@@ -127,6 +135,31 @@ export function ProveedorSesion({ children }: { children: React.ReactNode }) {
       vigente = false;
     };
   }, [companyId]);
+
+  /**
+   * «Comprobante al cobrar» (Configuración › Negocio). Una vez por negocio, no
+   * en cada fila de la Caja. Sin la 0010 en la base, la suposición de antes:
+   * foto solo en canchas (leerCobroFoto).
+   */
+  const [cobroRespuesta, setCobroRespuesta] = useState<{ data: unknown; error: { code?: string; message?: string } | null } | null>(null);
+  const [vueltaCobro, setVueltaCobro] = useState(0);
+  useEffect(() => {
+    setCobroRespuesta(null);
+    if (!companyId) return;
+    let vigente = true;
+    void supabase()
+      .rpc('cobro_foto_modo', { p_company: companyId })
+      .then(({ data, error }) => {
+        if (vigente) setCobroRespuesta({ data, error });
+      });
+    return () => {
+      vigente = false;
+    };
+  }, [companyId, vueltaCobro]);
+  const cobroFoto = useMemo<CobroFoto | null>(
+    () => (cobroRespuesta ? leerCobroFoto(cobroRespuesta.data, cobroRespuesta.error, canchas) : null),
+    [cobroRespuesta, canchas],
+  );
 
   /**
    * La sesión de ahora, para los manejadores de eventos y el reloj de la
@@ -383,6 +416,8 @@ export function ProveedorSesion({ children }: { children: React.ReactNode }) {
       rol: rolDeNegocio(compania?.rol),
       esAdminPlataforma,
       canchas,
+      cobroFoto,
+      recargarCobroFoto: () => setVueltaCobro((n) => n + 1),
       cargando,
       reconectando,
       /**
@@ -458,7 +493,7 @@ export function ProveedorSesion({ children }: { children: React.ReactNode }) {
         return true;
       },
     };
-  }, [session, companias, companyId, esAdminPlataforma, canchas, cargando, reconectando, router]);
+  }, [session, companias, companyId, esAdminPlataforma, canchas, cobroFoto, cargando, reconectando, router]);
 
   return <Ctx.Provider value={valor}>{children}</Ctx.Provider>;
 }

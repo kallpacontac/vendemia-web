@@ -3,11 +3,13 @@
  * FOTO DEL PAGO DESDE EL PANEL · el dueño fotografía el Yape y se lee solo
  * ══════════════════════════════════════════════════════════════════════════
  *
- * POST /api/canchas/evidencia (multipart: companyId, archivo) con la sesión del panel.
+ * POST /api/cobros/foto (multipart: companyId, archivo) con la sesión del panel. La antigua
+ * /api/canchas/evidencia sigue apuntando aquí.
  * Guarda la foto en Cloudinary, la lee con la misma IA y las mismas reglas que la página
- * (comprobanteExterno.ts + evaluarLectura) y devuelve lo leído para rellenar «Validar pago».
- * NO registra ningún pago: eso lo hace el dueño al confirmar (cancha_validar_pago, 0018),
- * que vuelve a comprobar foto y operación repetidas con el candado puesto.
+ * (comprobanteExterno.ts + evaluarLectura) y devuelve lo leído para rellenar el cobro.
+ * NO registra ningún pago: eso lo hace quien cobra al confirmar (agenda_registrar_pago,
+ * agenda_marcar_pagado o cancha_validar_pago, datos 0010), que vuelve a comprobar foto y
+ * operación repetidas con el candado puesto.
  *
  * Quién puede: solo el dueño y el administrador de ESE negocio. La sesión se valida contra
  * el servidor de auth (getUser) y el permiso lo decide Postgres (v2_autorizar_agenda, la
@@ -62,9 +64,17 @@ export async function POST(req: Request) {
     });
     const { data: { user } } = await sb.auth.getUser();
     if (!user) return fallo('Tu sesión terminó. Vuelve a entrar al panel.', 401);
-    // Solo dueño y administrador de este negocio (la misma puerta que «Por revisar»).
-    const puerta = await sb.rpc('comprobantes_panel', { p_company: companyId });
-    if (puerta.error) return fallo('Solo el dueño o el administrador pueden registrar pagos.', 403);
+    // Solo dueño y administrador de este negocio, y con «Comprobante al cobrar» encendido en
+    // Configuración (cobro_foto_permiso, datos 0010). Sin la 0010, la puerta de antes: la de
+    // «Por revisar» de canchas.
+    let puerta = await sb.rpc('cobro_foto_permiso', { p_company: companyId });
+    if (puerta.error && (puerta.error.code === 'PGRST202' || /cobro_foto_permiso/.test(puerta.error.message))) {
+      puerta = await sb.rpc('comprobantes_panel', { p_company: companyId });
+    }
+    if (puerta.error) {
+      const apagada = /apagada en Configuraci/.test(puerta.error.message);
+      return fallo(apagada ? puerta.error.message : 'Solo el dueño o el administrador pueden registrar pagos.', 403);
+    }
 
     const imagen = Buffer.from(await archivo.arrayBuffer());
     const tipo = tipoDeImagen(imagen);
