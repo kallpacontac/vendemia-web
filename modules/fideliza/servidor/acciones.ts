@@ -495,12 +495,14 @@ export const ACCIONES = {
       units: z.number().int().min(-100000).max(100000),
       reason: textoCorto(200).min(3),
       idempotencyKey: idem,
+      /** 0017: corregir en una línea que no es la principal. */
+      programId: uuid.nullable().optional(),
     }),
     limite: ['caja', 60],
-    ejecutar: (d, { sb }) =>
+    ejecutar: async (d, { sb }) =>
       rpc(sb, 'loyalty_adjust', {
         p_company: d.companyId,
-        p_member: d.memberId,
+        p_member: await miembroDeLinea(sb, d.companyId, d.memberId, d.programId),
         p_units: d.units,
         p_reason: d.reason,
         p_idempotency_key: d.idempotencyKey,

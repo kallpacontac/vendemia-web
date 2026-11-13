@@ -358,7 +358,8 @@ function Lista() {
         </Vacio>
       ) : (
         <div className="table-card">
-          <table className="table">
+          {/* table--tarjeta + fz-cl: en el teléfono, una tarjeta por cliente (estilos/panel.css). */}
+          <table className="table table--tarjeta fz-cl">
             <thead>
               <tr>
                 <th>Código</th>
@@ -373,13 +374,15 @@ function Lista() {
             <tbody>
               {datos!.rows.map((f) => (
                 <tr key={f.id}>
-                  <td>
+                  <td className="c-dcha">
                     <Link className="fz-mono" href={`/panel/fideliza/clientes/${f.id}`}>
                       {f.public_code}
                     </Link>
                   </td>
-                  <td>
-                    {f.alias ?? <span className="muted">Sin nombre</span>}
+                  <td className="c-quien">
+                    <Link className="fz-cl-nombre" href={`/panel/fideliza/clientes/${f.id}`}>
+                      {f.alias ?? <span className="muted">Sin nombre</span>}
+                    </Link>
                     {f.phone && <div className="muted" style={{ fontSize: 12 }}>{f.phone}</div>}
                     <div style={{ fontSize: 11.5 }} className={f.verified_contact ? '' : 'muted'}>
                       {f.verified_contact ? '✓ Contacto verificado' : 'Contacto sin verificar'}
@@ -387,7 +390,7 @@ function Lista() {
                     {f.status !== 'active' && <span className={`badge-pill ${f.status === 'deleted' ? 'b-mute' : 'b-hot'}`}>{f.status === 'deleted' ? 'Borrado' : 'Suspendido'}</span>}
                   </td>
                   {puedeDar && (
-                    <td>
+                    <td className={f.status === 'active' ? 'fz-cl-acc' : 'c-vacio'}>
                       {f.status === 'active' && lineasDe(f) && (
                         <div className="fz-fila" style={{ gap: 6, flexWrap: 'wrap' }}>
                           {lineasDe(f)!.map((l) => (
@@ -444,7 +447,7 @@ function Lista() {
                       )}
                     </td>
                   )}
-                  <td>
+                  <td className="c-fila fz-cl-saldo">
                     {lineasDe(f)
                       ? f.lines!.map((l) => (
                           <div key={l.program_id} style={{ whiteSpace: 'nowrap' }}>
@@ -456,11 +459,22 @@ function Lista() {
                             </span>
                           </div>
                         ))
-                      : saldoDe(f)}
+                      : <div>{saldoDe(f)}</div>}
                   </td>
-                  <td>{(lineasDe(f) ? f.lines!.reduce((s, l) => s + l.rewards_available, 0) : f.rewards_available) || '—'}</td>
-                  <td>{f.last_op_at ? fechaHora(f.last_op_at) : <span className="muted">Nunca</span>}</td>
-                  <td>{f.wallet_state ? { synced: 'Al día', pending: 'Pendiente', error: 'Error', inactive: 'Inactivo' }[f.wallet_state] ?? f.wallet_state : '—'}</td>
+                  {(() => {
+                    const premios = lineasDe(f) ? f.lines!.reduce((s, l) => s + l.rewards_available, 0) : f.rewards_available;
+                    return (
+                      <td className={premios ? 'fz-cl-dato fz-cl-premios' : 'c-vacio'} data-label="Premios">
+                        {premios || '—'}
+                      </td>
+                    );
+                  })()}
+                  <td className="fz-cl-dato" data-label="Última vez">
+                    {f.last_op_at ? fechaHora(f.last_op_at) : <span className="muted">Nunca</span>}
+                  </td>
+                  <td className={f.wallet_state ? 'fz-cl-dato' : 'c-vacio'} data-label="Wallet">
+                    {f.wallet_state ? { synced: 'Al día', pending: 'Pendiente', error: 'Error', inactive: 'Inactivo' }[f.wallet_state] ?? f.wallet_state : '—'}
+                  </td>
                 </tr>
               ))}
             </tbody>

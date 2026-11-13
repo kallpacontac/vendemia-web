@@ -18,6 +18,12 @@ import { accion, mensaje, nuevaClave, sincronizarEnSegundoPlano, type Linea } fr
 import { urlTarjeta } from '@/modules/fideliza/dominio/config';
 import { aCentimos, fechaHora, soles, unidades, type TipoRegla } from '@/modules/fideliza/dominio/formato';
 
+/** 0018: de qué línea es cada fila del historial («Asistencia», «Compra»). Sin la 0018, no viene. */
+interface DeLinea {
+  line_label?: string;
+  line_main?: boolean;
+}
+
 interface Ficha {
   id: string;
   public_code: string;
@@ -35,7 +41,7 @@ interface Ficha {
   contacts: { kind: 'phone' | 'email'; value?: string; verified_at: string | null; verified_method?: string }[] | null;
   consents: Record<string, { granted: boolean; at: string }>;
   push_devices: number;
-  transactions: {
+  transactions: ({
     id: string;
     kind: string;
     amount_cents: number;
@@ -45,9 +51,10 @@ interface Ficha {
     reason: string | null;
     location_name: string | null;
     created_at: string;
-  }[];
-  ledger: { id: number; kind: string; units: number; balance_after: number; created_at: string }[];
-  all_rewards: { id: string; description: string; status: string; issued_at: string; expires_at: string | null; redeemed_at: string | null }[];
+    program_id: string;
+  } & DeLinea)[];
+  ledger: ({ id: number; kind: string; units: number; balance_after: number; created_at: string } & DeLinea)[];
+  all_rewards: ({ id: string; description: string; status: string; issued_at: string; expires_at: string | null; redeemed_at: string | null } & DeLinea)[];
   /** 0017: las líneas de su tarjeta (la principal primero). El historial de abajo es el de la principal. */
   lines?: Linea[];
   wallet: { state: string; desired_rev: number; synced_rev: number; save_links_issued: number; last_error: string | null; last_synced_at: string | null } | null;
@@ -56,6 +63,17 @@ interface Ficha {
 const TX: Record<string, string> = { purchase: 'Compra', visit: 'Visita', refund: 'Devolución', adjustment: 'Corrección' };
 const LIBRO: Record<string, string> = { earn: 'Suma', reverse: 'Devolución', reward_issue: 'Premio emitido', reward_revoke: 'Premio anulado', adjust: 'Corrección' };
 const PREMIO: Record<string, string> = { available: 'Disponible', redeemed: 'Canjeado', expired: 'Vencido', revoked: 'Anulado' };
+const LIBRO_MES: Record<string, string> = { period_reset: 'Empezó un mes nuevo' };
+
+/** La etiqueta de la línea, solo cuando la tarjeta tiene más de una. */
+function Chip({ x, ver }: { x: DeLinea; ver: boolean }) {
+  if (!ver || !x.line_label) return null;
+  return (
+    <span className={`badge-pill ${x.line_main ? 'b-new' : 'b-hot'}`} style={{ marginRight: 6 }}>
+      {x.line_label}
+    </span>
+  );
+}
 
 export default function FichaCliente() {
   const { memberId } = useParams<{ memberId: string }>();
@@ -64,7 +82,9 @@ export default function FichaCliente() {
   const [enlace, setEnlace] = useState<string | null>(null);
   const [edicion, setEdicion] = useState<null | { alias: string; phone: string; email: string }>(null);
   const [devolucion, setDevolucion] = useState<null | { tx: Ficha['transactions'][number]; importe: string; motivo: string; clave: string }>(null);
-  const [ajuste, setAjuste] = useState<null | { units: string; motivo: string; clave: string }>(null);
+  const [ajuste, setAjuste] = useState<null | { units: string; motivo: string; clave: string; linea: string | null }>(null);
+  /** 0018: qué línea se mira en el historial (null = todas). */
+  const [verLinea, setVerLinea] = useState<string | null>(null);
 
   const { datos: f, cargando, error, releer } = useCargar(
     async () => (companyId ? accion<Ficha>('miembro.ficha', { companyId, memberId }) : null),
@@ -131,9 +151,19 @@ export default function FichaCliente() {
     if (!ajuste) return;
     const n = Number(ajuste.units);
     if (!Number.isInteger(n) || n === 0) return avisar('Cantidad no válida (entero, positivo o negativo).', 'error');
-    const r = await hacer('caja.ajustar', { units: n, reason: ajuste.motivo, idempotencyKey: ajuste.clave }, 'Corrección registrada');
+    const r = await hacer(
+      'caja.ajustar',
+      { units: n, reason: ajuste.motivo, idempotencyKey: ajuste.clave, ...(ajuste.linea ? { programId: ajuste.linea } : {}) },
+      'Corrección registrada',
+    );
     if (r) setAjuste(null);
   }
+
+  // 0017/0018: con varias líneas, el historial se filtra con un toque y cada fila lleva su línea.
+  const varias = (f.lines?.length ?? 0) > 1;
+  const enVista = (x: DeLinea) => !verLinea || x.line_label === verLinea;
+  const reglaDe = (programId: string) => f.lines?.find((l) => l.program_id === programId)?.rule_type ?? f.rule_type;
+  const premiosPorCanjear = varias ? f.lines!.reduce((s, l) => s + l.rewards_available, 0) : f.rewards_available;
 
   /** Le queda algo por devolver: unidades o importe que ninguna devolución anterior compensó. */
   const reembolsable = (t: Ficha['transactions'][number]) => {
@@ -163,16 +193,20 @@ export default function FichaCliente() {
               </span>
             </div>
             <div style={{ textAlign: 'right' }}>
-              <div className="fz-saldo">{f.balance}</div>
-              <div className="muted">{f.rule_type ? unidades(f.balance, f.rule_type).replace(/^[-\d.,\s]+/, '') : ''}</div>
+              {!varias && (
+                <>
+                  <div className="fz-saldo">{f.balance}</div>
+                  <div className="muted">{f.rule_type ? unidades(f.balance, f.rule_type).replace(/^[-\d.,\s]+/, '') : ''}</div>
+                </>
+              )}
               <div className="muted" style={{ fontSize: 12 }}>
-                {f.rewards_available} premio(s) disponible(s)
+                {premiosPorCanjear} premio(s) disponible(s)
               </div>
             </div>
           </div>
-          {f.lines && f.lines.length > 1 && (
+          {varias && (
             <ul className="fz-lista" style={{ marginTop: 10 }}>
-              {f.lines.map((l) => (
+              {f.lines!.map((l) => (
                 <li key={l.program_id}>
                   <span>
                     <b>{l.label}</b>
@@ -266,7 +300,7 @@ export default function FichaCliente() {
               </>
             )}
             {puede('ops.refund') && f.status === 'active' && (
-              <button className="btn btn-ghost btn-sm" onClick={() => setAjuste({ units: '', motivo: '', clave: nuevaClave() })}>
+              <button className="btn btn-ghost btn-sm" onClick={() => setAjuste({ units: '', motivo: '', clave: nuevaClave(), linea: null })}>
                 Corregir saldo
               </button>
             )}
@@ -310,6 +344,25 @@ export default function FichaCliente() {
           {ajuste && (
             <div style={{ marginTop: 14 }}>
               <p className="fz-def">Suma (positivo) o resta (negativo) unidades. Queda en el libro con tu usuario y el motivo.</p>
+              {varias && (
+                <div className="fz-fila" role="radiogroup" aria-label="En qué línea" style={{ gap: 6, marginBottom: 8 }}>
+                  {f.lines!.map((l) => {
+                    const valor = l.main ? null : l.program_id;
+                    return (
+                      <button
+                        key={l.program_id}
+                        type="button"
+                        role="radio"
+                        aria-checked={ajuste.linea === valor}
+                        className={`btn btn-sm ${ajuste.linea === valor ? 'btn-primary' : 'btn-ghost'}`}
+                        onClick={() => setAjuste({ ...ajuste, linea: valor })}
+                      >
+                        {l.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
               <input className="input" inputMode="numeric" placeholder="Ej.: 2 o -1" value={ajuste.units} onChange={(e) => setAjuste({ ...ajuste, units: e.target.value })} style={{ marginBottom: 8 }} />
               <input className="input" placeholder="Motivo" maxLength={200} value={ajuste.motivo} onChange={(e) => setAjuste({ ...ajuste, motivo: e.target.value })} />
               <div className="fz-fila" style={{ marginTop: 8 }}>
@@ -328,7 +381,7 @@ export default function FichaCliente() {
               <p className="fz-def">
                 Devolución de la {TX[devolucion.tx.kind]?.toLowerCase()} del {fechaHora(devolucion.tx.created_at)} ({soles(devolucion.tx.amount_cents)}, {devolucion.tx.units} u.). Deja el importe vacío para devolverla entera.
               </p>
-              {f.rule_type === 'points' && (
+              {reglaDe(devolucion.tx.program_id) === 'points' && (
                 <input className="input" inputMode="decimal" placeholder="Importe devuelto (S/), vacío = todo" value={devolucion.importe} onChange={(e) => setDevolucion({ ...devolucion, importe: e.target.value })} style={{ marginBottom: 8 }} />
               )}
               <input className="input" placeholder="Motivo" maxLength={200} value={devolucion.motivo} onChange={(e) => setDevolucion({ ...devolucion, motivo: e.target.value })} />
@@ -345,9 +398,26 @@ export default function FichaCliente() {
         </div>
       </div>
 
-      <div className="card" style={{ marginTop: 16 }}>
+      {varias && (
+        <div className="fz-fila" role="radiogroup" aria-label="Qué historial ver" style={{ gap: 6, marginTop: 16 }}>
+          {[null, ...f.lines!.map((l) => l.label)].map((v) => (
+            <button
+              key={v ?? 'todo'}
+              type="button"
+              role="radio"
+              aria-checked={verLinea === v}
+              className={`btn btn-sm ${verLinea === v ? 'btn-primary' : 'btn-ghost'}`}
+              onClick={() => setVerLinea(v)}
+            >
+              {v ?? 'Todo'}
+            </button>
+          ))}
+        </div>
+      )}
+
+      <div className="card" style={{ marginTop: varias ? 10 : 16 }}>
         <h3 style={{ fontSize: 15, marginBottom: 8 }}>Operaciones</h3>
-        {!f.transactions.length ? (
+        {!f.transactions.filter(enVista).length ? (
           <p className="muted">Sin operaciones.</p>
         ) : (
           <div className="table-card" style={{ boxShadow: 'none' }}>
@@ -363,10 +433,11 @@ export default function FichaCliente() {
                 </tr>
               </thead>
               <tbody>
-                {f.transactions.map((t) => (
+                {f.transactions.filter(enVista).map((t) => (
                   <tr key={t.id}>
                     <td>{fechaHora(t.created_at)}</td>
                     <td>
+                      <Chip x={t} ver={varias} />
                       {TX[t.kind] ?? t.kind}
                       {t.reason && <div className="muted" style={{ fontSize: 12 }}>{t.reason}</div>}
                       {t.location_name && <div className="muted" style={{ fontSize: 12 }}>{t.location_name}</div>}
@@ -393,25 +464,27 @@ export default function FichaCliente() {
         <div className="card">
           <h3 style={{ fontSize: 15, marginBottom: 8 }}>Libro (últimos movimientos)</h3>
           <ul className="fz-lista">
-            {f.ledger.map((l) => (
+            {f.ledger.filter(enVista).map((l) => (
               <li key={l.id}>
                 <span>
-                  {LIBRO[l.kind] ?? l.kind} <span className="muted">{fechaHora(l.created_at)}</span>
+                  <Chip x={l} ver={varias} />
+                  {LIBRO[l.kind] ?? LIBRO_MES[l.kind] ?? l.kind} <span className="muted">{fechaHora(l.created_at)}</span>
                 </span>
                 <span>
                   {l.units > 0 ? `+${l.units}` : l.units} → <b>{l.balance_after}</b>
                 </span>
               </li>
             ))}
-            {!f.ledger.length && <li className="muted">Sin movimientos.</li>}
+            {!f.ledger.filter(enVista).length && <li className="muted">Sin movimientos.</li>}
           </ul>
         </div>
         <div className="card">
           <h3 style={{ fontSize: 15, marginBottom: 8 }}>Premios</h3>
           <ul className="fz-lista">
-            {f.all_rewards.map((r) => (
+            {f.all_rewards.filter(enVista).map((r) => (
               <li key={r.id}>
                 <span>
+                  <Chip x={r} ver={varias} />
                   {r.description} <span className="muted">{fechaHora(r.issued_at)}</span>
                 </span>
                 <span className={`badge-pill ${r.status === 'available' ? 'b-new' : 'b-mute'}`}>
@@ -420,7 +493,7 @@ export default function FichaCliente() {
                 </span>
               </li>
             ))}
-            {!f.all_rewards.length && <li className="muted">Todavía no ha conseguido premios.</li>}
+            {!f.all_rewards.filter(enVista).length && <li className="muted">Todavía no ha conseguido premios.</li>}
           </ul>
         </div>
       </div>

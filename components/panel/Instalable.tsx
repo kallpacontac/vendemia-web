@@ -28,6 +28,18 @@ let pendiente: EventoInstalar | null = null;
 const oyentes = new Set<() => void>();
 const avisar = () => oyentes.forEach((f) => f());
 
+/**
+ * El aviso de Chrome lo guarda el script del <head> (app/layout.tsx) en
+ * window.__vmInstalar, desde antes de que monte React: si se esperaba al
+ * montar, a veces ya había pasado y no salía el botón «Instalar».
+ */
+type ConInstalar = { __vmInstalar?: EventoInstalar | null };
+export const instalarGuardado = <T,>(): T | null =>
+  typeof window === 'undefined' ? null : (((window as unknown as ConInstalar).__vmInstalar ?? null) as T | null);
+export const soltarInstalarGuardado = () => {
+  if (typeof window !== 'undefined') (window as unknown as ConInstalar).__vmInstalar = null;
+};
+
 /** ¿Hay un «Instalar» de Android esperando? */
 export function useInstalarAndroid(): (() => Promise<boolean>) | null {
   const hay = useSyncExternalStore(
@@ -42,6 +54,7 @@ export function useInstalarAndroid(): (() => Promise<boolean>) | null {
     await e.prompt();
     const r = await e.userChoice;
     pendiente = null;
+    soltarInstalarGuardado(); // Sirve una sola vez.
     avisar();
     return r.outcome === 'accepted';
   };
@@ -101,21 +114,15 @@ export default function Instalable() {
 
     navigator.serviceWorker?.register('/panel-sw.js', { scope: '/panel' }).catch(() => {});
 
-    const alPoder = (e: Event) => {
-      e.preventDefault(); // Que no salga el mini-banner de Chrome: lo ofrece Ajustes.
-      pendiente = e as EventoInstalar;
+    // El script del <head> ya le quitó a Chrome su mini-banner y guardó el aviso
+    // (aunque llegara antes de montar). Aquí solo se recoge.
+    const alPoder = () => {
+      pendiente = instalarGuardado<EventoInstalar>();
       avisar();
     };
-    const alInstalar = () => {
-      pendiente = null;
-      avisar();
-    };
-    window.addEventListener('beforeinstallprompt', alPoder);
-    window.addEventListener('appinstalled', alInstalar);
-    return () => {
-      window.removeEventListener('beforeinstallprompt', alPoder);
-      window.removeEventListener('appinstalled', alInstalar);
-    };
+    alPoder();
+    window.addEventListener('vm:instalar', alPoder);
+    return () => window.removeEventListener('vm:instalar', alPoder);
   }, []);
   return null;
 }

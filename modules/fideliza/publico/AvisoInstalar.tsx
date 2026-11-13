@@ -84,6 +84,8 @@ export default function AvisoInstalar(props: {
   const { slug, plataforma, enApp, instalar, alCambiar } = props;
   const forzado = FORZADO;
   const [variante, setVariante] = useState<Variante | null>(null);
+  /** Sin el «Instalar» de un toque (iPhone, o Chrome que no lo ofreció): tras tocar Instalar, los pasos. */
+  const [pasos, setPasos] = useState(false);
 
   useEffect(() => alCambiar(variante !== null), [variante, alCambiar]);
 
@@ -121,6 +123,12 @@ export default function AvisoInstalar(props: {
 
   if (!variante) return null;
 
+  /** «Listo» tras los pasos: vuelve en 7 días si no la instaló, sin contar como un «Ahora no». */
+  const listo = () => {
+    escribir(slug, { ...leer(slug), hasta: Date.now() + SIETE_DIAS });
+    setPasos(false);
+    setVariante(null);
+  };
   const ahoraNo = () => {
     const m = leer(slug);
     escribir(slug, { ...m, veces: m.veces + 1, hasta: Date.now() + SIETE_DIAS });
@@ -128,7 +136,9 @@ export default function AvisoInstalar(props: {
   };
 
   async function principal() {
-    if (!instalar) return setVariante(null); // Variante forzada sin oferta real de Chrome.
+    // El botón siempre dice «Instalar». Si el navegador no deja hacerlo de un
+    // toque (iPhone nunca; Android si Chrome no lo ofreció), enseña los 2 pasos.
+    if (!instalar) return setPasos(true);
     await instalar.prompt().catch(() => {});
     const r = await instalar.userChoice?.catch(() => null);
     props.alUsarInstalar();
@@ -139,32 +149,38 @@ export default function AvisoInstalar(props: {
     }
   }
 
+  // Si Chrome ofrece instalar mientras se leen los pasos, el botón vuelve a ser de un toque.
+  const enPasos = pasos && !instalar;
+
   return (
     <div className="fz-aviso-app" role="dialog" aria-live="polite" aria-label="Instalar tu tarjeta">
       <div className="fz-aviso-app__tx">
         <b>Instala tu tarjeta</b>
-        {variante === 'instalar' && (
+        {!enPasos && (
           <small>Tenla en tu pantalla de inicio, como una app{props.conAvisos ? ', con avisos de tus premios' : ''}.</small>
         )}
-        {variante === 'ios' && (
+        {enPasos && plataforma === 'ios' && (
           <small>
-            Toca <Share size={13} aria-label="Compartir" /> y luego «Añadir a pantalla de inicio»
-            {props.conAvisos ? ' para recibir avisos de tus premios' : ''}.
+            1. Toca <Share size={13} aria-label="Compartir" /> <b>Compartir</b>, abajo.
+            <br />
+            2. Elige <b>«Añadir a pantalla de inicio»</b>.
           </small>
         )}
-        {variante === 'android-manual' && (
+        {enPasos && plataforma !== 'ios' && (
           <small>
-            En Chrome, toca <EllipsisVertical size={13} aria-label="menú" /> y luego «Instalar app».
+            1. Toca <EllipsisVertical size={13} aria-label="menú" /> arriba a la derecha.
+            <br />
+            2. Elige <b>«Instalar app»</b> o <b>«Agregar a pantalla principal»</b>.
           </small>
         )}
       </div>
-      {variante === 'instalar' ? (
-        <button type="button" className="fz-aviso-app__ir" onClick={() => void principal()}>
-          <Download size={15} aria-hidden="true" /> Instalar
+      {enPasos ? (
+        <button type="button" className="fz-aviso-app__ir" onClick={listo}>
+          Listo
         </button>
       ) : (
-        <button type="button" className="fz-aviso-app__ir" onClick={ahoraNo}>
-          Entendido
+        <button type="button" className="fz-aviso-app__ir" onClick={() => void principal()}>
+          <Download size={15} aria-hidden="true" /> Instalar
         </button>
       )}
       <button type="button" className="fz-aviso-app__x" onClick={ahoraNo} aria-label="Ahora no">

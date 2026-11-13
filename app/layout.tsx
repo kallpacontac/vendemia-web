@@ -111,6 +111,23 @@ const INTRO_GATE = `
 (function(){
   document.documentElement.classList.remove('no-js');
 
+  /* INSTALAR COMO APP (tarjeta de MiaTap y panel). Chrome avisa UNA sola vez de
+     que se puede instalar, y a veces antes de que React monte la pagina: ese
+     aviso se perdia y salia el «hazlo a mano» en vez del boton Instalar.
+     Se guarda aqui, desde el primer instante, y se reemite como vm:instalar.
+     Lo leen modules/fideliza/publico/Tarjeta.tsx y components/panel/Instalable.tsx. */
+  try {
+    window.addEventListener('beforeinstallprompt', function (e) {
+      e.preventDefault();
+      window.__vmInstalar = e;
+      window.dispatchEvent(new Event('vm:instalar'));
+    });
+    window.addEventListener('appinstalled', function () {
+      window.__vmInstalar = null;
+      window.dispatchEvent(new Event('vm:instalar'));
+    });
+  } catch (e) {}
+
   /* ⚠️ TODO LO DE AQUÍ ABAJO ES SOLO DE LA LANDING.
 
      Este script vive en el layout raíz porque tiene que ser bloqueante y correr

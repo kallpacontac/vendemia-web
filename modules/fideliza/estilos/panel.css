@@ -413,3 +413,30 @@
 .fz-linea.activa{border-color:var(--brand);background:var(--brand-soft)}
 .fz-linea.activa b{color:var(--brand-txt)}
 .fz-linea:disabled{opacity:.5;cursor:not-allowed}
+
+/* ── Clientes en el teléfono (13-nov): una tarjeta por cliente ────────────────
+   Sobre .table--tarjeta (app/panel.css). Arriba quién y su código; los contadores
+   en píldoras; «Última vez», premios y Wallet en una línea pequeña; y los botones
+   abajo, a lo ancho y grandes: es lo que se viene a tocar. */
+.fz-cl-nombre{color:inherit;font-weight:600;text-decoration:none}
+.fz-cl .c-dcha{white-space:nowrap}
+@media(max-width:720px){
+  .fz-cl tr{row-gap:8px}
+  .table.fz-cl .c-quien{font-size:15px;line-height:1.35}
+  .table.fz-cl .c-quien>div{font-size:12px!important}
+  /* Los contadores: una píldora por línea. */
+  .table.fz-cl td.fz-cl-saldo{display:flex;flex-wrap:wrap;gap:6px}
+  .fz-cl-saldo>div{background:var(--bg-soft);border-radius:999px;padding:5px 11px;font-size:13px;white-space:nowrap}
+  /* Datos pequeños con su rótulo delante («Última vez 13-nov…»). */
+  .table.fz-cl td.fz-cl-dato{font-size:12.5px;color:var(--ink-soft)}
+  .table.fz-cl td.fz-cl-dato::before{display:inline;content:attr(data-label) ' ';padding:0;text-transform:none;
+    letter-spacing:0;font-size:12px;font-weight:600;color:var(--ink-mute)}
+  .table.fz-cl td.fz-cl-premios{color:var(--brand-txt,var(--ink));font-weight:700}
+  /* La última celda (Wallet) ya no es la de las acciones: sin fondo ni ancho completo. */
+  .table.fz-cl td:last-child{flex-basis:auto;padding-top:0;background:transparent;box-shadow:none}
+  /* Los botones, al final y a lo ancho: dos por fila, el bono debajo. */
+  .table.fz-cl td.fz-cl-acc{order:5;flex-basis:100%;padding-top:4px}
+  .fz-cl-acc>.fz-fila{display:grid!important;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px!important}
+  .fz-cl-acc .btn{justify-content:center;min-height:44px;font-size:14px}
+  .fz-cl-acc .btn-ghost{grid-column:1/-1}
+}

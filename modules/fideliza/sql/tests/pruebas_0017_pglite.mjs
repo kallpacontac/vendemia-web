@@ -131,6 +131,13 @@ insert into memberships values ('m1','${U}','c1','owner',null);`);
   ok('deshacer una compra de la tienda', dev.member.lines[1].balance === 0, JSON.stringify(dev.member.lines[1]));
   void ultimaCompra;
 
+  // Ficha (0018): el historial es el de toda la tarjeta, cada fila con su línea
+  const ficha = await v1(`select loyalty_member_detail('c1', $1)`, [ANA]);
+  const lineasTx = new Set(ficha.transactions.map((x) => x.line_label));
+  ok('ficha: operaciones de Asistencia y de Compra', lineasTx.has('Asistencia') && lineasTx.has('Compra'), JSON.stringify([...lineasTx]));
+  ok('ficha: el libro y los premios también llevan la línea', ficha.ledger.some((x) => x.line_label === 'Compra') && ficha.all_rewards.some((x) => x.line_label === 'Compra' && x.line_main === false));
+  ok('ficha pedida con el miembro de línea = la de la persona', (await v1(`select loyalty_member_detail('c1', $1) ->> 'id'`, [linea])) === ANA);
+
   // Tarjeta pública y Wallet
   const tok = alta.card_token;
   const pub = await v1(`select loyalty_srv_card($1, false)`, [tok]);

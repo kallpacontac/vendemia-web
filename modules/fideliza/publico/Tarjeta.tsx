@@ -9,6 +9,7 @@ import { urlNegocio } from '@/modules/fideliza/dominio/config';
 import { selloValido, trazoSello } from '@/modules/fideliza/dominio/sellos';
 import AvisoActivar from './AvisoActivar';
 import AvisoInstalar, { type EventoInstalar } from './AvisoInstalar';
+import { instalarGuardado, soltarInstalarGuardado } from '@/components/panel/Instalable';
 
 export interface DatosTarjeta {
   status: 'ok' | 'not_found';
@@ -96,7 +97,10 @@ export default function Tarjeta(props: {
   // El «Instalar» de Android llega una sola vez al cargar: se guarda para el aviso y el botón.
   const [instalar, setInstalar] = useState<EventoInstalar | null>(null);
   const [avisoVisible, setAvisoVisible] = useState(false);
-  const soltarInstalar = useCallback(() => setInstalar(null), []);
+  const soltarInstalar = useCallback(() => {
+    soltarInstalarGuardado(); // El aviso de Chrome sirve una sola vez.
+    setInstalar(null);
+  }, []);
   // Abierta desde el icono (ya instalada): no se vuelve a explicar cómo instalarla.
   const [enApp, setEnApp] = useState(false);
 
@@ -213,13 +217,11 @@ export default function Tarjeta(props: {
       window.matchMedia?.('(display-mode: standalone)').matches ||
         (navigator as unknown as { standalone?: boolean }).standalone === true,
     );
-    const alPoder = (e: Event) => {
-      e.preventDefault();
-      setInstalar(e as unknown as EventoInstalar);
-    };
-    const alInstalar = () => setInstalar(null);
-    window.addEventListener('beforeinstallprompt', alPoder);
-    window.addEventListener('appinstalled', alInstalar);
+    // El aviso de Chrome lo guarda el script del <head> (app/layout.tsx) aunque
+    // llegue antes de montar; aquí se recoge, ahora y cuando cambie.
+    const alPoder = () => setInstalar(instalarGuardado<EventoInstalar>());
+    alPoder();
+    window.addEventListener('vm:instalar', alPoder);
     const on = () => setEnLinea(true);
     const off = () => setEnLinea(false);
     setEnLinea(navigator.onLine);
@@ -228,8 +230,7 @@ export default function Tarjeta(props: {
     return () => {
       window.removeEventListener('online', on);
       window.removeEventListener('offline', off);
-      window.removeEventListener('beforeinstallprompt', alPoder);
-      window.removeEventListener('appinstalled', alInstalar);
+      window.removeEventListener('vm:instalar', alPoder);
     };
   }, [token, props.vapid, props.inicial.brand.slug]);
 
@@ -446,7 +447,7 @@ export default function Tarjeta(props: {
             <button
               type="button"
               className="fz-btn"
-              onClick={() => void instalar.prompt().finally(() => setInstalar(null))}
+              onClick={() => void instalar.prompt().finally(soltarInstalar)}
             >
               Instalar mi tarjeta como app
             </button>

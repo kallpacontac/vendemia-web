@@ -66,6 +66,8 @@ export default function BannerApp() {
   const instalar = useInstalarAndroid();
   const [variante, setVariante] = useState<Variante | null>(null);
   const [ocupado, setOcupado] = useState(false);
+  /** iPhone, o Android sin la oferta de Chrome: tras tocar «Instalar», los 2 pasos. */
+  const [pasos, setPasos] = useState(false);
   const [so, setSo] = useState<'ios' | 'android' | 'otra'>('otra');
 
   useEffect(() => {
@@ -131,8 +133,19 @@ export default function BannerApp() {
     setVariante(null);
   };
 
+  /** «Listo» tras los pasos: vuelve en 7 días si no la instaló, sin contar como un «Ahora no». */
+  const listo = () => {
+    escribir({ ...leer(), hasta: Date.now() + SIETE_DIAS });
+    setPasos(false);
+    setVariante(null);
+  };
+
   async function principal() {
-    if (variante === 'instalar' && instalar) {
+    const manual = variante === 'ios' || variante === 'android-manual';
+    // El botón siempre dice «Instalar»: sin el diálogo de Chrome, enseña los pasos.
+    if (manual && !instalar) return setPasos(true);
+    if ((variante === 'instalar' || manual) && instalar) {
+      setPasos(false);
       const ok = await instalar();
       // Instalada o no, lo siguiente que vale la pena es activar los avisos:
       // funcionan igual en el navegador y en la app.
@@ -197,19 +210,29 @@ export default function BannerApp() {
         {variante === 'android-manual' && (
           <>
             <b>Instala Vendemia en tu celular</b>
-            <small>
-              En Chrome, toca <EllipsisVertical size={13} aria-label="menú" /> y luego <b>«Instalar app»</b> o{' '}
-              <b>«Agregar a pantalla principal»</b>.
-            </small>
+            {pasos ? (
+              <small>
+                1. Toca <EllipsisVertical size={13} aria-label="menú" /> arriba a la derecha.
+                <br />
+                2. Elige <b>«Instalar app»</b> o <b>«Agregar a pantalla principal»</b>.
+              </small>
+            ) : (
+              <small>Ábrela desde su icono y recibe tus pagos y reservas al instante.</small>
+            )}
           </>
         )}
         {variante === 'ios' && (
           <>
             <b>Instala Vendemia en tu iPhone</b>
-            <small>
-              Toca <Share size={13} aria-label="Compartir" /> y luego <b>«Añadir a pantalla de inicio»</b>. Así te llegan los avisos de
-              pagos y reservas.
-            </small>
+            {pasos ? (
+              <small>
+                1. Toca <Share size={13} aria-label="Compartir" /> <b>Compartir</b>, abajo.
+                <br />
+                2. Elige <b>«Añadir a pantalla de inicio»</b>.
+              </small>
+            ) : (
+              <small>Así te llegan los avisos de pagos y reservas al instante.</small>
+            )}
           </>
         )}
         {variante === 'activar' && (
@@ -224,9 +247,13 @@ export default function BannerApp() {
           <button type="button" className="btn btn-primary btn-sm" onClick={entendidoEscritorio}>
             Entendido
           </button>
+        ) : (variante === 'ios' || variante === 'android-manual') && pasos && !instalar ? (
+          <button type="button" className="btn btn-primary btn-sm" onClick={listo}>
+            Listo
+          </button>
         ) : variante === 'ios' || variante === 'android-manual' ? (
-          <button type="button" className="btn btn-primary btn-sm" onClick={ahoraNo}>
-            Entendido
+          <button type="button" className="btn btn-primary btn-sm" onClick={() => void principal()}>
+            <Download size={14} /> Instalar
           </button>
         ) : (
           <button type="button" className="btn btn-primary btn-sm" disabled={ocupado} onClick={() => void principal()}>
@@ -234,7 +261,7 @@ export default function BannerApp() {
             {variante === 'instalar' ? 'Instalar' : ocupado ? 'Activando…' : 'Activar'}
           </button>
         )}
-        {variante !== 'ios' && variante !== 'android-manual' && variante !== 'escritorio' && (
+        {variante !== 'escritorio' && !pasos && (
           <button type="button" className="banner-app__no" onClick={ahoraNo}>
             Ahora no
           </button>
