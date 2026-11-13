@@ -443,6 +443,20 @@ export interface AppointmentServiceRow {
   duration_minutes: number | null;
 }
 
+/**
+ * La tarifa de comisión de una línea, copiada al completarse la cita
+ * (modules/datos/sql/0011_venta_congelada.sql). Cambiar luego el % del servicio
+ * o del profesional ya no la mueve.
+ */
+export interface ComisionCongeladaRow {
+  linea_id: string;
+  appointment_id: string;
+  employee_id: string | null;
+  regla: 'fija' | 'servicio' | 'profesional' | 'sin';
+  /** 'fija': importe · 'servicio' / 'profesional': % · 'sin': null. */
+  valor: number | null;
+}
+
 export interface OrderRow {
   id: string;
   company_id: string;

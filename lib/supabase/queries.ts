@@ -51,6 +51,7 @@ import {
 import type {
   AppointmentRow,
   AppointmentServiceRow,
+  ComisionCongeladaRow,
   GastoRow,
   PendingPaymentRow,
   ConsumoMensualRow,
@@ -759,6 +760,43 @@ export async function getServiciosDeCitas(ids: string[]): Promise<AppointmentSer
     );
   }
   return lineas;
+}
+
+/**
+ * La tarifa con la que se congeló cada línea al completarse su cita (0011). Solo
+ * la piden las dos pantallas de comisiones.
+ *
+ * Si la 0011 aún no está aplicada, la tabla no existe: devuelve vacío y la
+ * comisión sale con la tarifa de hoy, como antes. Mismas tandas de 100 que arriba.
+ */
+export async function getComisionesCongeladas(ids: string[]): Promise<ComisionCongeladaRow[]> {
+  if (demoActivo() || ids.length === 0) return [];
+  const sb = supabase();
+  const tandas: string[][] = [];
+  for (let i = 0; i < ids.length; i += 100) tandas.push(ids.slice(i, i + 100));
+  const respuestas = await Promise.all(
+    tandas.map((t) =>
+      sb
+        .from('comisiones_congeladas')
+        .select('linea_id, appointment_id, employee_id, regla, valor')
+        .in('appointment_id', t),
+    ),
+  );
+  const filas: ComisionCongeladaRow[] = [];
+  for (const r of respuestas) {
+    if (r.error) {
+      // 42P01 (Postgres) / PGRST205 (PostgREST): la tabla todavía no existe.
+      if (r.error.code === '42P01' || r.error.code === 'PGRST205') return [];
+      throw r.error;
+    }
+    filas.push(
+      ...((r.data ?? []) as ComisionCongeladaRow[]).map((f) => ({
+        ...f,
+        valor: f.valor === null ? null : Number(f.valor),
+      })),
+    );
+  }
+  return filas;
 }
 
 /**

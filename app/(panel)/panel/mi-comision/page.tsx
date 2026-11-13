@@ -33,6 +33,7 @@ import {
   getCitasDelPeriodo,
   getEquipoFichas,
   getMiNegocio,
+  getComisionesCongeladas,
   getServiciosDeCitas,
 } from '@/lib/supabase/queries';
 
@@ -53,8 +54,9 @@ export default function MiComision() {
     const ficha = negocio?.tu_ficha ?? null;
     // Solo las suyas. Una cita sin asignar no es de nadie: no le cuenta a él.
     const mias = ficha ? citas.filter((c) => c.employee_id === ficha) : [];
-    const lineas = await getServiciosDeCitas(mias.map((c) => c.id));
-    return { ficha, mias, lineas, fichas, catalogo };
+    const ids = mias.map((c) => c.id);
+    const [lineas, congeladas] = await Promise.all([getServiciosDeCitas(ids), getComisionesCongeladas(ids)]);
+    return { ficha, mias, lineas, congeladas, fichas, catalogo };
   }, [companyId, desde, hasta]);
 
   const resumen = useMemo(() => {
@@ -65,6 +67,8 @@ export default function MiComision() {
       datos.lineas,
       datos.catalogo,
       [{ id: datos.ficha, comision_pct: mia?.comision_pct ?? 0 }],
+      new Date(),
+      datos.congeladas,
     );
     return {
       pct: Number(mia?.comision_pct ?? 0),

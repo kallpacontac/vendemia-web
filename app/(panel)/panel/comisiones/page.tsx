@@ -36,6 +36,7 @@ import { calcularComisiones, type Regla } from '@/lib/panel/comisiones';
 import {
   getCatalogo,
   getCitasDelPeriodo,
+  getComisionesCongeladas,
   getServiciosDeCitas,
   getTrabajadores,
 } from '@/lib/supabase/queries';
@@ -91,14 +92,15 @@ export default function Comisiones() {
       getTrabajadores(companyId),
       getCatalogo(companyId),
     ]);
-    const lineas = await getServiciosDeCitas(citas.map((c) => c.id));
-    return { citas, lineas, trabajadores, catalogo };
+    const ids = citas.map((c) => c.id);
+    const [lineas, congeladas] = await Promise.all([getServiciosDeCitas(ids), getComisionesCongeladas(ids)]);
+    return { citas, lineas, congeladas, trabajadores, catalogo };
   }, [companyId, desde, hasta]);
 
   const resumen = useMemo(
     () =>
       datos
-        ? calcularComisiones(datos.citas, datos.lineas, datos.catalogo, datos.trabajadores)
+        ? calcularComisiones(datos.citas, datos.lineas, datos.catalogo, datos.trabajadores, new Date(), datos.congeladas)
         : null,
     [datos],
   );

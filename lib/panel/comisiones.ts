@@ -23,12 +23,19 @@
  * Un 0 explícito en el servicio es «este servicio no paga comisión», y gana a
  * la del profesional. Vacío (null) es «usa la del profesional». No son lo mismo.
  *
+ * ── La tarifa es la del día en que se completó la cita ───────────────────
+ * Desde la 0011 (modules/datos/sql/0011_venta_congelada.sql), al completarse
+ * una cita la base copia la regla de cada línea en `comisiones_congeladas`, y
+ * aquí manda esa copia: subir el % de alguien no cambia lo que ya ganó. La
+ * tarifa de hoy solo se usa para una línea sin copia (la 0011 sin aplicar, o
+ * una cita reasignada a otro y aún sin volver a congelar).
+ *
  * ── Dos límites aceptados, que la pantalla escribe ───────────────────────
  *   · Una cita, un profesional: `appointment_services` no tiene employee_id,
  *     así que todo se le apunta a quien figure en la cita.
  *   · La venta de producto no genera comisión: no se sabe quién vendió.
  */
-import type { AppointmentServiceRow, CatalogRow, EmployeeRow } from '@/lib/supabase/types';
+import type { AppointmentServiceRow, CatalogRow, ComisionCongeladaRow, EmployeeRow } from '@/lib/supabase/types';
 import type { Cita } from '@/lib/supabase/queries';
 
 export type Regla = 'fija' | 'servicio' | 'profesional' | 'sin';
@@ -83,10 +90,22 @@ export function comisionDeLinea(
   return { comision: 0, regla: 'sin', pct: null };
 }
 
+/** La misma cuenta, con la regla que se congeló al completarse la cita. */
+export function comisionCongelada(
+  precio: number,
+  c: Pick<ComisionCongeladaRow, 'regla' | 'valor'>,
+): { comision: number; regla: Regla; pct: number | null } {
+  const v = Number(c.valor ?? 0);
+  if (c.regla === 'fija') return { comision: redondear(v), regla: 'fija', pct: null };
+  if (c.regla === 'sin') return { comision: 0, regla: 'sin', pct: null };
+  return { comision: redondear((precio * v) / 100), regla: c.regla, pct: v };
+}
+
 /**
  * @param citas  las del periodo (getCitasDelPeriodo)
  * @param lineas sus líneas de servicio (getServiciosDeCitas)
  * @param ahora  para decidir qué citas «confirmadas» ya pasaron
+ * @param congeladas la tarifa de cada línea al completarse (getComisionesCongeladas)
  */
 export function calcularComisiones(
   citas: Cita[],
@@ -94,7 +113,9 @@ export function calcularComisiones(
   catalogo: (Tarifa & { id: string })[],
   equipo: Pick<EmployeeRow, 'id' | 'comision_pct'>[],
   ahora: Date = new Date(),
+  congeladas: ComisionCongeladaRow[] = [],
 ): ResumenComisiones {
+  const congeladaDe = new Map(congeladas.map((c) => [c.linea_id, c]));
   const servicio = new Map(catalogo.map((c) => [c.id, c]));
   const pctDe = new Map(equipo.map((p) => [p.id, Number(p.comision_pct ?? 0)]));
   const lineasDe = new Map<string, AppointmentServiceRow[]>();
@@ -127,7 +148,12 @@ export function calcularComisiones(
 
     for (const l of suyas) {
       const precio = Number(l.price ?? 0);
-      const r = comisionDeLinea(precio, servicio.get(l.catalog_item_id ?? ''), pctDe.get(empleado) ?? 0);
+      // La copia vale si se congeló para quien figura hoy en la cita.
+      const c = congeladaDe.get(l.id);
+      const r =
+        c && (c.employee_id ?? '') === empleado
+          ? comisionCongelada(precio, c)
+          : comisionDeLinea(precio, servicio.get(l.catalog_item_id ?? ''), pctDe.get(empleado) ?? 0);
       fila.facturado += precio;
       fila.comision += r.comision;
       if (r.regla === 'sin' && precio > 0) fila.sinTarifa += 1;
