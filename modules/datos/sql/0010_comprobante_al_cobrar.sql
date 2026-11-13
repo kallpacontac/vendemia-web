@@ -29,7 +29,7 @@
 -- Quién: elegir la opción, SOLO el dueño (protege su dinero de un cobro apuntado sin pruebas).
 -- Subir la foto y cobrar, el dueño y el administrador (v2_autorizar_agenda), como hasta ahora.
 --
--- Necesita: datos 0004 y 0005, tu-pagina 0017 y 0018 (todas aplicadas a 10-nov-2026).
+-- Necesita: datos 0004 y 0005, tu-pagina 0011 y 0017. Trae su propia v2_valida_operacion (la de la 0018).
 -- Los negocios con canchas encendidas arrancan en «opcional»: no pierden la foto que ya tenían.
 --
 -- Idempotente. Pruebas: tests/pruebas_0010.sql. Deshacer: scripts/comprobante-al-cobrar-0010-deshacer.sql
@@ -86,6 +86,15 @@ create index if not exists comprobantes_cobro_dia on public.comprobantes_cobro (
 create index if not exists comprobantes_cobro_op on public.comprobantes_cobro (company_id, operacion) where operacion <> '';
 alter table public.comprobantes_cobro enable row level security;
 revoke all on public.comprobantes_cobro from anon, authenticated;
+
+-- ¿Se rechaza una operación repetida en este negocio? Sí, salvo secciones.canchas.validarOperacion
+-- = false. Es la de tu-pagina 0018, repetida aquí tal cual: en producción se corrió una 0018
+-- anterior a este interruptor y la función no existía (12-nov-2026).
+create or replace function public.v2_valida_operacion(p_company text)
+returns boolean language sql stable security definer set search_path = public as $$
+    select coalesce(public.v2_canchas_cfg(p_company) ->> 'validarOperacion', 'true') <> 'false';
+$$;
+revoke execute on function public.v2_valida_operacion(text) from public, anon, authenticated;
 
 -- La regla, en un solo sitio. Devuelve la foto limpia ({url, hash, op}) o null si no hay foto.
 -- Falla si el negocio la exige y no viene, si no es una foto subida por el servidor, o si esa
