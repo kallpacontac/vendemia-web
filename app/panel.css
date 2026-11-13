@@ -2115,3 +2115,8 @@ body{background:var(--bg-app)}
 .consumos-lista li{display:grid;grid-template-columns:1fr auto 28px;gap:10px;align-items:center;font-size:13px;padding:3px 0}
 .consumos-lista li b{font-variant-numeric:tabular-nums}
 .consumos-total{border-top:1px solid var(--line);padding-top:6px!important;font-weight:700}
+/* Mi agenda · el empleado cobra lo que falta (datos 0012), debajo de la fila. */
+.mag-cobro{grid-column:1/-1;display:grid;gap:8px;padding:12px;border-radius:12px;background:var(--bg-input);margin-top:4px}
+.mag-cobro>small{font-size:12.5px;color:var(--ink-soft)}
+.mag-cobro__metodos{display:flex;gap:6px;flex-wrap:wrap}
+.mag-cobro .mag-cobro__ojo{color:#8A4B00}

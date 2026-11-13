@@ -20,10 +20,12 @@ interface FotoDelDia {
   operacion: string;
   metodo: string;
   monto: number | string | null;
-  via: 'registrar_pago' | 'cobrada' | 'cancha' | 'pagina';
+  via: 'registrar_pago' | 'cobrada' | 'cancha' | 'pagina' | 'empleado';
   creado_at: string;
   cliente: string;
   servicio: string;
+  /** Quién cobró, si fue un empleado (datos 0012). Vacío en el resto. */
+  quien?: string;
 }
 
 const DE_DONDE: Record<FotoDelDia['via'], string> = {
@@ -31,7 +33,11 @@ const DE_DONDE: Record<FotoDelDia['via'], string> = {
   cobrada: 'Cobrada',
   cancha: 'Validar pago',
   pagina: 'Subida por el cliente',
+  empleado: 'Cobró un empleado',
 };
+
+/** «Cobró Juan» para lo que apuntó un empleado: es lo que el dueño mira al cuadrar. */
+const deDonde = (f: FotoDelDia) => (f.via === 'empleado' && f.quien ? `Cobró ${f.quien}` : DE_DONDE[f.via] ?? '');
 
 const hora = (iso: string) => {
   const d = new Date(iso);
@@ -63,7 +69,7 @@ export default function ComprobantesDelDia({ companyId, dia, recarga }: { compan
             <span className="fp-dia__dato">
               <b>{f.cliente || 'Cliente'}</b>
               <small>
-                {[hora(f.creado_at), etiquetaMetodo(f.metodo), f.operacion ? `op. ${f.operacion}` : '', DE_DONDE[f.via] ?? '', f.servicio]
+                {[hora(f.creado_at), etiquetaMetodo(f.metodo), f.operacion ? `op. ${f.operacion}` : '', deDonde(f), f.servicio]
                   .filter(Boolean)
                   .join(' · ')}
               </small>

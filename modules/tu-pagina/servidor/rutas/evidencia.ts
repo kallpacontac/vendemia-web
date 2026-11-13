@@ -11,7 +11,8 @@
  * agenda_marcar_pagado o cancha_validar_pago, datos 0010), que vuelve a comprobar foto y
  * operación repetidas con el candado puesto.
  *
- * Quién puede: solo el dueño y el administrador de ESE negocio. La sesión se valida contra
+ * Quién puede: el dueño y el administrador de ESE negocio, y el empleado solo si el negocio
+ * tiene encendido «los empleados cobran» (datos 0012). La sesión se valida contra
  * el servidor de auth (getUser) y el permiso lo decide Postgres (v2_autorizar_agenda, la
  * misma puerta de comprobantes_panel). Las claves de Gemini, Claude y Cloudinary no salen
  * de aquí: el navegador solo recibe la URL de la foto y lo leído.
@@ -72,8 +73,9 @@ export async function POST(req: Request) {
       puerta = await sb.rpc('comprobantes_panel', { p_company: companyId });
     }
     if (puerta.error) {
-      const apagada = /apagada en Configuraci/.test(puerta.error.message);
-      return fallo(apagada ? puerta.error.message : 'Solo el dueño o el administrador pueden registrar pagos.', 403);
+      // Los motivos que escribe la base para que se lean tal cual (0010 y 0012).
+      const dicible = /apagada en Configuraci|empleados no cobran|lleva su bot/.test(puerta.error.message);
+      return fallo(dicible ? puerta.error.message : 'Solo el dueño o el administrador pueden registrar pagos.', 403);
     }
 
     const imagen = Buffer.from(await archivo.arrayBuffer());

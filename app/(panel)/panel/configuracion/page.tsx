@@ -416,6 +416,22 @@ function Configuracion() {
     return true;
   }
 
+  /** «Los empleados cobran» (datos 0012). Solo el equipo de Vendemia; la base lo vuelve a mirar. */
+  async function cambiarEmpleadoCobra(activo: boolean) {
+    if (demoActivo()) {
+      avisar('Estás en modo demo: no se guarda nada. Sal del modo demo para cambiar algo de verdad.', 'espera');
+      return;
+    }
+    if (!companyId) return;
+    const { error } = await supabase().rpc('cobro_empleado_guardar', { p_company: companyId, p_activo: activo });
+    if (error) {
+      avisar(error.message, 'error');
+      return;
+    }
+    recargarCobroFoto();
+    avisar(activo ? 'Los empleados ya pueden cobrar, siempre con foto.' : 'Los empleados ya no cobran.', 'ok');
+  }
+
   /**
    * Entrega y la ubicación del pedido: en una tienda, y en un negocio de citas
    * con al menos un PRODUCTO activo (la cera de la barbería). El bot usa
@@ -714,6 +730,29 @@ function Configuracion() {
                 </button>
               ))}
             </div>
+
+            {/*
+              «Los empleados cobran» (datos 0012, Alvaro 12-nov-2026). Apagado de
+              serie; lo enciende el equipo de Vendemia cuando el dueño lo pide. El
+              dueño lo ve, pero no lo toca: así no se enciende por descuido.
+            */}
+            {cobroFoto && !cobroFoto.sinMigrar && (
+              <div className="cfg-enlace" style={{ marginTop: 12 }}>
+                <div>
+                  <b>Los empleados {cobroFoto.empleadoCobra ? 'cobran' : 'no cobran'}</b>
+                  <small>
+                    {cobroFoto.empleadoCobra
+                      ? 'Desde Mi agenda cobran lo que falta de sus citas, siempre con foto (también en efectivo). Cada cobro sale en la Caja con su nombre.'
+                      : 'El cobro lo apunta la caja. Si quieres que tus empleados cobren (siempre con foto), pídeselo al equipo de Vendemia.'}
+                  </small>
+                </div>
+                {esAdminPlataforma && (
+                  <button type="button" className="btn btn-ghost btn-sm" onClick={() => void cambiarEmpleadoCobra(!cobroFoto.empleadoCobra)}>
+                    {cobroFoto.empleadoCobra ? 'Apagar' : 'Encender'}
+                  </button>
+                )}
+              </div>
+            )}
           </div>
 
           <div className="nav-btns">

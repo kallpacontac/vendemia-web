@@ -30,6 +30,11 @@ export interface CobroFoto {
   nube: boolean;
   /** Sin la 0010 en la base: se adivina como antes (foto solo en canchas). */
   sinMigrar?: boolean;
+  /**
+   * Los empleados cobran lo que falta de sus citas, siempre con foto (datos 0012).
+   * Apagado de serie; lo enciende el equipo de Vendemia a pedido del dueño.
+   */
+  empleadoCobra?: boolean;
 }
 
 /** La foto que el servidor subió y leyó (POST /api/cobros/foto). */
@@ -74,8 +79,8 @@ export function leerCobroFoto(data: unknown, error: { code?: string; message?: s
     const sinFuncion = error.code === 'PGRST202' || /cobro_foto_modo/.test(error.message ?? '');
     return { modo: sinFuncion && canchas ? 'opcional' : 'apagada', nube: true, sinMigrar: sinFuncion };
   }
-  const d = (data ?? {}) as { modo?: unknown; nube?: unknown };
-  return { modo: esModoFotoPago(d.modo) ? d.modo : 'apagada', nube: d.nube === true };
+  const d = (data ?? {}) as { modo?: unknown; nube?: unknown; empleado_cobra?: unknown };
+  return { modo: esModoFotoPago(d.modo) ? d.modo : 'apagada', nube: d.nube === true, empleadoCobra: d.empleado_cobra === true };
 }
 
 /** Lo que se lee en Configuración, en una línea por opción. */

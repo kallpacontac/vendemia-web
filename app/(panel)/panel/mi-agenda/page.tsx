@@ -17,6 +17,10 @@
  *   · Del cliente: el nombre, las notas del salón, las notas de Mia y los
  *     campos propios que el dueño marcó «Lo ve el empleado». Nada de contacto.
  *   · No cobra: marca «vino» o «no vino». El cobro lo apunta la caja.
+ *     Salvo que el negocio lo haya pedido (datos 0012, Alvaro 12-nov-2026): con
+ *     «los empleados cobran» encendido —lo enciende Vendemia, apagado de serie—
+ *     sale «Cobrar S/ X» en lo que tenga saldo. Cobra lo que falta, exacto, y
+ *     siempre con foto, también en efectivo. Postgres lo vuelve a comprobar todo.
  *
  * ── Cómo se ve (Alvaro, 27-oct-2026: «práctica, intuitiva») ──────────────
  *
@@ -42,14 +46,17 @@
  */
 import { Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { Check, ChevronLeft, ChevronRight, X } from 'lucide-react';
+import { Banknote, Check, ChevronLeft, ChevronRight, X } from 'lucide-react';
 import Topbar from '@/components/panel/Topbar';
 import AvisosDelEquipo from '@/components/panel/AvisosDelEquipo';
 import { useSesion } from '@/components/panel/Sesion';
-import { useComando } from '@/components/panel/Avisos';
+import { useAvisar, useComando } from '@/components/panel/Avisos';
+import FotoDelPago from '@/components/panel/FotoDelPago';
+import { supabase } from '@/lib/supabase/client';
+import { fotoParaCobro, type FotoPago } from '@/lib/panel/fotoPago';
 import { useCargar } from '@/components/panel/useCargar';
 import { esRecurrente } from '@/lib/panel/modo';
-import { hora, isoLocal } from '@/lib/panel/format';
+import { hora, isoLocal, soles } from '@/lib/panel/format';
 import { pideRevision, selloCumplido } from '@/lib/panel/confirmacion';
 import { vocabulario } from '@/lib/panel/vocabulario';
 import { claveGrupo, hoyLima, ocupa, reservando } from '@/lib/panel/inscripciones';
@@ -135,7 +142,10 @@ function selloDe(c: Cita, ahora: number, esProxima: boolean): { label: string; c
 
 function MisCitas({ companyId }: { companyId: string }) {
   const comando = useComando();
-  const { compania, canchas } = useSesion();
+  const { compania, canchas, cobroFoto } = useSesion();
+  // ¿Este negocio deja cobrar a sus empleados? (datos 0012). Con la agenda del bot, no.
+  const cobra = Boolean(cobroFoto?.empleadoCobra && cobroFoto.nube);
+  const [cobrando, setCobrando] = useState<string | null>(null);
   const v = vocabulario(compania?.business_mode, { canchas });
   const palabra = v.reserva === 'pedido' ? 'reserva' : v.reserva;
   const palabras = v.reserva === 'pedido' ? 'reservas' : v.reservas;
@@ -164,8 +174,16 @@ function MisCitas({ companyId }: { companyId: string }) {
       getCitasDelPeriodo(companyId, lunes, sumarDias(lunes, 6)),
       getMisClientes(companyId),
     ]);
-    return { lunes, negocio, citas, clientes };
-  }, [companyId, lunes]);
+    // Lo que falta en cada una: solo si cobra, y la base decide cuáles le tocan.
+    let saldos: Record<string, number> = {};
+    if (cobra && citas.length) {
+      const { data, error } = await supabase().rpc('empleado_saldos', { p_company: companyId, p_ids: citas.map((c) => c.id) });
+      if (!error && data) {
+        saldos = Object.fromEntries(Object.entries(data as Record<string, unknown>).map(([k, n]) => [k, Number(n)]));
+      }
+    }
+    return { lunes, negocio, citas, clientes, saldos };
+  }, [companyId, lunes, cobra]);
 
   // Al volver a la app desde WhatsApp u otra: lo de ahora, sin esperar a nada.
   useEffect(() => {
@@ -300,6 +318,14 @@ function MisCitas({ companyId }: { companyId: string }) {
                 negocio={datos?.negocio ?? null}
                 ocupado={enVuelo === c.id}
                 alMarcar={marcar}
+                falta={datos?.saldos[c.id] ?? 0}
+                cobrando={cobrando === c.id}
+                alCobrar={(abrir) => setCobrando(abrir ? c.id : null)}
+                companyId={companyId}
+                alCobrado={() => {
+                  setCobrando(null);
+                  releer();
+                }}
               />
             ))
           )}
@@ -318,6 +344,11 @@ function FilaCita({
   negocio,
   ocupado,
   alMarcar,
+  falta,
+  cobrando,
+  alCobrar,
+  companyId,
+  alCobrado,
 }: {
   filaRef?: React.Ref<HTMLDivElement>;
   c: Cita;
@@ -327,6 +358,12 @@ function FilaCita({
   negocio: MiNegocio | null;
   ocupado: boolean;
   alMarcar: (c: Cita, vino: boolean) => void;
+  /** Lo que le falta pagar; 0 = nada que cobrar, o este negocio no deja cobrar al empleado. */
+  falta: number;
+  cobrando: boolean;
+  alCobrar: (abrir: boolean) => void;
+  companyId: string;
+  alCobrado: () => void;
 }) {
   // Se puede decir si vino de una cita que ya empezó y sigue «confirmada», y
   // corregir lo que cerró el reloj sin que nadie lo mirara (Presunta), como en la
@@ -354,16 +391,115 @@ function FilaCita({
         {quien.deQuien && <small>{quien.deQuien}</small>}
         <NotasDelCliente cliente={cliente} negocio={negocio} />
       </div>
-      {porMarcar && (
+      {(porMarcar || (falta > 0 && !cobrando)) && (
         <div className="mia-acciones">
-          <button type="button" className="btn btn-ghost btn-sm" disabled={ocupado} onClick={() => alMarcar(c, true)}>
-            <Check size={14} /> Vino
-          </button>
-          <button type="button" className="btn btn-ghost btn-sm confirmar-no" disabled={ocupado} onClick={() => alMarcar(c, false)}>
-            <X size={14} /> No vino
-          </button>
+          {porMarcar && (
+            <>
+              <button type="button" className="btn btn-ghost btn-sm" disabled={ocupado} onClick={() => alMarcar(c, true)}>
+                <Check size={14} /> Vino
+              </button>
+              <button type="button" className="btn btn-ghost btn-sm confirmar-no" disabled={ocupado} onClick={() => alMarcar(c, false)}>
+                <X size={14} /> No vino
+              </button>
+            </>
+          )}
+          {falta > 0 && !cobrando && (
+            <button type="button" className="btn btn-ghost btn-sm" onClick={() => alCobrar(true)}>
+              <Banknote size={14} /> Cobrar {soles(falta)}
+            </button>
+          )}
         </div>
       )}
+      {cobrando && falta > 0 && (
+        <CobrarSaldo companyId={companyId} cita={c} falta={falta} alCerrar={() => alCobrar(false)} alListo={alCobrado} />
+      )}
+    </div>
+  );
+}
+
+const METODOS_EMPLEADO = [
+  { id: 'cash', label: 'Efectivo' },
+  { id: 'yape', label: 'Yape' },
+  { id: 'plin', label: 'Plin' },
+] as const;
+
+/**
+ * El empleado cobra lo que falta (datos 0012). Sin campo de importe: es lo que
+ * falta, ni más ni menos, y la base lo vuelve a calcular. La foto es obligatoria
+ * siempre: del Yape o Plin, o del dinero si fue en efectivo. Queda a su nombre
+ * en la Caja («Cobró Juan»).
+ */
+function CobrarSaldo({ companyId, cita, falta, alCerrar, alListo }: {
+  companyId: string;
+  cita: Cita;
+  falta: number;
+  alCerrar: () => void;
+  alListo: () => void;
+}) {
+  const avisar = useAvisar();
+  const [metodo, setMetodo] = useState<'cash' | 'yape' | 'plin'>('cash');
+  const [foto, setFoto] = useState<FotoPago | null>(null);
+  const [leyendo, setLeyendo] = useState(false);
+  const [enviando, setEnviando] = useState(false);
+
+  function alFoto(f: FotoPago | null) {
+    setFoto(f);
+    // Si la foto es de un Yape o un Plin, el método sale de ella.
+    if (f && (f.metodo === 'yape' || f.metodo === 'plin')) setMetodo(f.metodo);
+  }
+
+  async function cobrar() {
+    if (!foto) return;
+    setEnviando(true);
+    const { error } = await supabase().rpc('empleado_cobrar_saldo', {
+      p_company: companyId,
+      p_appointment: cita.id,
+      p_metodo: metodo,
+      p_foto: fotoParaCobro(foto),
+    });
+    setEnviando(false);
+    if (error) {
+      avisar(error.message, 'error');
+      return;
+    }
+    avisar(`Cobro anotado: ${soles(falta)}`, 'ok');
+    alListo();
+  }
+
+  const otroMonto = foto?.monto != null && Math.abs(foto.monto - falta) >= 0.01;
+  return (
+    <div className="mag-cobro">
+      <b>Cobrar {soles(falta)}</b>
+      <small>Es lo que falta. Queda a tu nombre en la caja, con la foto.</small>
+      <div className="mag-cobro__metodos" role="radiogroup" aria-label="Cómo te pagaron">
+        {METODOS_EMPLEADO.map((m) => (
+          <button
+            key={m.id}
+            type="button"
+            role="radio"
+            aria-checked={metodo === m.id}
+            className={`btn btn-sm ${metodo === m.id ? 'btn-primary' : 'btn-ghost'}`}
+            onClick={() => setMetodo(m.id)}
+          >
+            {m.label}
+          </button>
+        ))}
+      </div>
+      <FotoDelPago companyId={companyId} foto={foto} obligatoria alFoto={alFoto} alLeyendo={setLeyendo} />
+      {metodo === 'cash' && !foto && <small>En efectivo, fotografía el dinero o el recibo.</small>}
+      {otroMonto && (
+        <small className="mag-cobro__ojo">
+          La foto dice {soles(foto?.monto ?? 0)}, pero se anotan {soles(falta)}. Si no cuadra, no cobres y avisa a la caja.
+        </small>
+      )}
+      <div className="mia-acciones" style={{ justifyContent: 'flex-start' }}>
+        <button type="button" className="btn btn-primary btn-sm" disabled={!foto || leyendo || enviando} onClick={() => void cobrar()}>
+          <Check size={14} /> {enviando ? 'Anotando…' : `Cobré ${soles(falta)}`}
+        </button>
+        <button type="button" className="btn btn-ghost btn-sm" disabled={enviando} onClick={alCerrar}>
+          Cancelar
+        </button>
+      </div>
     </div>
   );
 }
