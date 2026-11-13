@@ -48,10 +48,13 @@ create table if not exists public.cobro_ajustes (
 alter table public.cobro_ajustes enable row level security;
 revoke all on public.cobro_ajustes from anon, authenticated;
 
--- Canchas: ya tenían la foto en «Validar pago». Que sigan igual.
+-- Canchas: ya tenían la foto en «Validar pago». Que sigan igual. Se compara el texto y no se
+-- convierte a boolean: una página con un valor raro en `reservar` no puede tumbar la migración.
 insert into public.cobro_ajustes (company_id, foto_pago)
-select p.company_id, 'opcional' from public.tu_pagina p
- where public.v2_canchas_cfg(p.company_id) is not null
+select distinct p.company_id, 'opcional' from public.tu_pagina p
+ where p.company_id is not null
+   and lower(coalesce(p.secciones->>'reservar', '')) = 'true'
+   and lower(coalesce(p.secciones#>>'{canchas,activo}', '')) = 'true'
 on conflict (company_id) do nothing;
 
 create or replace function public.v2_foto_pago(p_company text)
