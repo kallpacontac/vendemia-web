@@ -3,18 +3,40 @@
 /**
  * FIDELIZA · CLIENTES — la lista, paginada EN LA BASE (crece con el uso).
  * Los teléfonos solo aparecen a quien puede verlos (propietario y gerente).
+ *
+ * «Dar sello» desde la lista (12-nov-2026, pedido de Alvaro para Kallpa): el
+ * dueño no quiere abrir la cámara. Busca por nombre o número y toca el botón.
+ * Es la misma operación que la caja (caja.registrar, con su clave de
+ * idempotencia) y se puede deshacer.
+ * Con PUNTOS hace falta el importe, así que ahí el botón lleva a la caja.
+ *
+ * Con LÍNEAS (0017, Kallpa): una tarjeta por persona y un botón por línea
+ * («+ Asistencia», «+ Compra»). Cada línea con sus reglas y su contador.
  */
 import { Suspense, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Search } from 'lucide-react';
 import { useFideliza } from '@/modules/fideliza/ui/Contexto';
 import { Cargando, Fallo, Qr, SinPermiso, Vacio } from '@/modules/fideliza/ui/Estados';
 import { useAvisar } from '@/components/panel/Avisos';
 import { useCargar } from '@/components/panel/useCargar';
-import { accion, mensaje, nuevaClave } from '@/modules/fideliza/cliente/api';
+import { accion, ErrorFideliza, lecturas, mensaje, nuevaClave, sincronizarEnSegundoPlano, type Linea, type Nivel } from '@/modules/fideliza/cliente/api';
 import { urlTarjeta } from '@/modules/fideliza/dominio/config';
-import { fechaHora } from '@/modules/fideliza/dominio/formato';
+import { fechaHora, unidades, type TipoRegla } from '@/modules/fideliza/dominio/formato';
+
+/** «2026-11» en hora de Lima: con niveles del mes, quien no vino este mes está en 0. */
+const mesLima = (d: Date) => d.toLocaleDateString('en-CA', { timeZone: 'America/Lima' }).slice(0, 7);
+
+/** El siguiente nivel por alcanzar (o el último si ya llegó), como hace loyalty_goal en la base. */
+const siguienteNivel = (niveles: Nivel[], saldo: number) => niveles.find((n) => n.at > saldo) ?? niveles[niveles.length - 1];
+
+interface Hecho {
+  memberId: string;
+  nombre: string;
+  tx: string | null;
+  texto: string;
+}
 
 interface Fila {
   id: string;
@@ -28,7 +50,12 @@ interface Fila {
   wallet_state: string | null;
   verified_contact: boolean;
   phone: string | null;
+  /** 0017: solo si el negocio tiene líneas. La principal primero. */
+  lines?: Linea[] | null;
 }
+
+/** Las líneas en las que se puede sumar ahora (solo si hay más de una). */
+const lineasDe = (f: Fila) => (f.lines && f.lines.length > 1 ? f.lines.filter((l) => l.status === 'active') : null);
 
 const POR_PAGINA = 25;
 const FILTROS = [
@@ -44,9 +71,42 @@ const FILTROS = [
 function Lista() {
   const { companyId, puede } = useFideliza();
   const avisar = useAvisar();
+  const router = useRouter();
   const params = useSearchParams();
   const [q, setQ] = useState('');
   const [busqueda, setBusqueda] = useState('');
+  // Fila en curso (el botón se apaga mientras tanto) y la última operación, para deshacerla.
+  const [dando, setDando] = useState<string | null>(null);
+  const [hecho, setHecho] = useState<Hecho | null>(null);
+
+  // Busca mientras escribe, sin esperar al Enter: con el nombre a medias ya sale.
+  useEffect(() => {
+    const t = setTimeout(() => {
+      if (q.trim() !== busqueda) {
+        setPagina(0);
+        setBusqueda(q.trim());
+      }
+    }, 350);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [q]);
+
+  // La regla vigente decide el botón: sello, visita o (puntos) ir a la caja por el importe.
+  const { datos: regla } = useCargar(async () => {
+    if (!companyId) return null;
+    const progs = await lecturas.programas(companyId);
+    const p = progs.find((x) => x.status === 'active') ?? null;
+    if (!p?.current_version_id) return null;
+    const v = (await lecturas.versiones(companyId, p.id)).find((x) => x.id === p.current_version_id);
+    if (!v) return null;
+    const niveles = v.period === 'month' && v.tiers?.length ? v.tiers : null;
+    return {
+      tipo: v.rule_type as TipoRegla,
+      meta: v.reward_threshold,
+      niveles,
+      bono: v.bonus_units ? { label: v.bonus_label ?? 'Bono', units: v.bonus_units } : null,
+    };
+  }, [companyId]);
   // Números enlaza aquí con ?filtro=never para ver los leads que aún no compran.
   const [filtro, setFiltro] = useState<string>(() => {
     const f = params.get('filtro');
@@ -93,6 +153,101 @@ function Lista() {
     }
   }
 
+  async function darSello(f: Fila, linea: Linea | null, comoBono = false) {
+    const tipo = (linea?.rule_type ?? regla?.tipo) as TipoRegla | undefined;
+    if (!regla || !tipo || dando) return;
+    if (tipo === 'points' && !comoBono) {
+      const aLinea = linea && !linea.main ? `&linea=${linea.program_id}` : '';
+      router.push(`/panel/fideliza/caja?q=${encodeURIComponent(f.public_code)}${aLinea}`);
+      return;
+    }
+    // La principal se opera con la persona; las demás, diciendo cuál (la base crea su miembro).
+    const enLinea = linea && !linea.main ? { programId: linea.program_id } : {};
+    // Clave nueva por toque. El botón se apaga mientras viaja, así que un doble toque no llega.
+    const clave = nuevaClave();
+    setDando(f.id);
+    try {
+      type Res = {
+        status: string;
+        transaction_id?: string;
+        units?: number;
+        rewards_issued?: number;
+        member: { balance: number; threshold: number | null; rewards: { description: string }[]; lines?: Linea[] };
+      };
+      const r = comoBono
+        ? await accion<Res>('caja.bono', { companyId, memberId: f.id, idempotencyKey: clave, ...enLinea })
+        : await accion<Res>('caja.registrar', {
+            companyId,
+            memberId: f.id,
+            kind: tipo === 'visits' ? 'visit' : 'purchase',
+            amountCents: 0,
+            locationId: null,
+            externalRef: null,
+            idempotencyKey: clave,
+            ...enLinea,
+          });
+      const nombre = f.alias?.trim() || f.public_code;
+      // Se enseña la línea donde se sumó (la tarjeta que vuelve es la de la persona).
+      const l = linea ? r.member.lines?.find((x) => x.program_id === linea.program_id) : undefined;
+      const saldo = l ? l.balance : r.member.balance;
+      const meta = l ? l.threshold : (r.member.threshold ?? regla.meta);
+      const premios = l ? l.rewards : r.member.rewards;
+      const n = r.rewards_issued ?? 0;
+      const premio = n ? ` · ¡Ganó: ${premios.slice(-n).map((x) => x.description).join(' + ')}!` : '';
+      const mes = (l ? l.period === 'month' : !!regla.niveles) ? ' este mes' : '';
+      const bonoLabel = linea?.bonus_label ?? regla.bono?.label;
+      const que = comoBono ? `${bonoLabel} +${r.units ?? 0}` : `${linea ? `${linea.label} ` : ''}+${unidades(r.units ?? 0, tipo)}`;
+      const texto = `${nombre}: ${que} · lleva ${saldo} de ${meta ?? '—'}${mes}${premio}`;
+      // El bono es un ajuste: no se deshace desde aquí (caja.devolver es para compras y visitas).
+      setHecho({ memberId: f.id, nombre, tx: comoBono ? null : (r.transaction_id ?? null), texto });
+      avisar(texto, 'ok');
+      releer();
+      sincronizarEnSegundoPlano(companyId!);
+    } catch (e) {
+      const sinRespuesta = e instanceof ErrorFideliza && (e.status === 0 || e.status >= 500);
+      avisar(sinRespuesta ? 'No llegó la confirmación. Mira el saldo antes de volver a tocar.' : mensaje(e), 'error');
+      releer();
+    } finally {
+      setDando(null);
+    }
+  }
+
+  async function deshacer() {
+    if (!hecho?.tx) return;
+    try {
+      await accion('caja.devolver', {
+        companyId,
+        transactionId: hecho.tx,
+        amountCents: null,
+        reason: 'Deshecho desde Clientes',
+        idempotencyKey: nuevaClave(),
+      });
+      avisar(`Deshecho: a ${hecho.nombre} se le quitó lo último.`, 'ok');
+      setHecho(null);
+      releer();
+      sincronizarEnSegundoPlano(companyId!);
+    } catch (e) {
+      avisar(mensaje(e), 'error');
+    }
+  }
+
+  const puedeDar = puede('ops.record') && !!regla;
+  const esteMes = mesLima(new Date());
+  /** Saldo y meta de la fila. Con niveles del mes: 0 si no vino este mes, y el siguiente nivel. */
+  const saldoDe = (f: Fila) => {
+    if (!regla || regla.tipo === 'points') return <>{f.balance}</>;
+    if (!regla.niveles) return <>{f.balance}<span className="muted"> / {regla.meta}</span></>;
+    const saldo = f.last_op_at && mesLima(new Date(f.last_op_at)) === esteMes ? f.balance : 0;
+    const sig = siguienteNivel(regla.niveles, saldo);
+    return (
+      <>
+        {saldo}
+        <span className="muted"> / {sig.at} este mes</span>
+      </>
+    );
+  };
+  const conLineas = !!datos?.rows.some((f) => lineasDe(f));
+  const verbo = regla?.tipo === 'visits' ? '+ Visita' : regla?.tipo === 'points' ? 'Sumar puntos' : '+ Sello';
   const total = datos?.total ?? 0;
   const paginas = Math.max(1, Math.ceil(total / POR_PAGINA));
 
@@ -102,7 +257,7 @@ function Lista() {
         <div className="search" style={{ flex: 1, minWidth: 220 }}>
           <Search size={16} />
           <input
-            placeholder={puede('contacts.read') ? 'Código, nombre, teléfono o correo' : 'Código o nombre'}
+            placeholder={puede('contacts.read') ? 'Busca por nombre, número, código o correo' : 'Busca por nombre o código'}
             value={q}
             onChange={(e) => setQ(e.target.value)}
             onKeyDown={(e) => {
@@ -178,6 +333,22 @@ function Lista() {
         </div>
       )}
 
+      {hecho && (
+        <div className="fz-panel-aviso fz-panel-aviso--ok fz-fila" role="status" aria-live="polite" style={{ marginBottom: 12, alignItems: 'center' }}>
+          <span style={{ flex: 1 }}>
+            <b>Última:</b> {hecho.texto}
+          </span>
+          {hecho.tx && puede('ops.refund') && (
+            <button className="btn btn-ghost btn-sm" onClick={() => void deshacer()}>
+              Deshacer
+            </button>
+          )}
+          <button className="btn btn-ghost btn-sm" onClick={() => setHecho(null)} aria-label="Cerrar">
+            ✕
+          </button>
+        </div>
+      )}
+
       {error && <Fallo texto={error} reintentar={releer} />}
       {cargando && !datos ? (
         <Cargando texto="Buscando clientes…" />
@@ -192,7 +363,8 @@ function Lista() {
               <tr>
                 <th>Código</th>
                 <th>Cliente</th>
-                <th>Saldo</th>
+                {puedeDar && <th aria-label="Dar sello" />}
+                <th>{regla?.niveles && !conLineas ? 'Este mes' : 'Saldo'}</th>
                 <th>Premios</th>
                 <th>Última vez</th>
                 <th>Wallet</th>
@@ -214,8 +386,79 @@ function Lista() {
                     </div>
                     {f.status !== 'active' && <span className={`badge-pill ${f.status === 'deleted' ? 'b-mute' : 'b-hot'}`}>{f.status === 'deleted' ? 'Borrado' : 'Suspendido'}</span>}
                   </td>
-                  <td>{f.balance}</td>
-                  <td>{f.rewards_available || '—'}</td>
+                  {puedeDar && (
+                    <td>
+                      {f.status === 'active' && lineasDe(f) && (
+                        <div className="fz-fila" style={{ gap: 6, flexWrap: 'wrap' }}>
+                          {lineasDe(f)!.map((l) => (
+                            <button
+                              key={l.program_id}
+                              className={`btn btn-sm ${l.main ? 'btn-primary' : 'btn-dark'}`}
+                              style={{ whiteSpace: 'nowrap' }}
+                              disabled={!!dando}
+                              onClick={() => void darSello(f, l)}
+                              aria-label={`+ ${l.label} a ${f.alias?.trim() || f.public_code}`}
+                            >
+                              {dando === f.id ? '…' : `+ ${l.label}`}
+                            </button>
+                          ))}
+                          {lineasDe(f)!
+                            .filter((l) => l.bonus_units)
+                            .map((l) => (
+                              <button
+                                key={`bono-${l.program_id}`}
+                                className="btn btn-ghost btn-sm"
+                                style={{ whiteSpace: 'nowrap' }}
+                                disabled={!!dando}
+                                onClick={() => void darSello(f, l, true)}
+                                title={`${l.bonus_label}: suma ${l.bonus_units} en ${l.label}`}
+                              >
+                                {l.bonus_label} +{l.bonus_units}
+                              </button>
+                            ))}
+                        </div>
+                      )}
+                      {f.status === 'active' && !lineasDe(f) && (
+                        <div className="fz-fila" style={{ gap: 6, flexWrap: 'nowrap' }}>
+                          <button
+                            className="btn btn-primary btn-sm"
+                            style={{ whiteSpace: 'nowrap' }}
+                            disabled={!!dando}
+                            onClick={() => void darSello(f, null)}
+                            aria-label={`${verbo} a ${f.alias?.trim() || f.public_code}`}
+                          >
+                            {dando === f.id ? '…' : verbo}
+                          </button>
+                          {regla?.bono && (
+                            <button
+                              className="btn btn-ghost btn-sm"
+                              style={{ whiteSpace: 'nowrap' }}
+                              disabled={!!dando}
+                              onClick={() => void darSello(f, null, true)}
+                              title={`${regla.bono.label}: suma ${regla.bono.units}`}
+                            >
+                              {regla.bono.label} +{regla.bono.units}
+                            </button>
+                          )}
+                        </div>
+                      )}
+                    </td>
+                  )}
+                  <td>
+                    {lineasDe(f)
+                      ? f.lines!.map((l) => (
+                          <div key={l.program_id} style={{ whiteSpace: 'nowrap' }}>
+                            <span className="muted">{l.label}:</span> {l.balance}
+                            <span className="muted">
+                              {' '}
+                              / {l.threshold ?? '—'}
+                              {l.period === 'month' ? ' este mes' : ''}
+                            </span>
+                          </div>
+                        ))
+                      : saldoDe(f)}
+                  </td>
+                  <td>{(lineasDe(f) ? f.lines!.reduce((s, l) => s + l.rewards_available, 0) : f.rewards_available) || '—'}</td>
                   <td>{f.last_op_at ? fechaHora(f.last_op_at) : <span className="muted">Nunca</span>}</td>
                   <td>{f.wallet_state ? { synced: 'Al día', pending: 'Pendiente', error: 'Error', inactive: 'Inactivo' }[f.wallet_state] ?? f.wallet_state : '—'}</td>
                 </tr>

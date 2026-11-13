@@ -14,12 +14,27 @@ export interface DatosTarjeta {
   status: 'ok' | 'not_found';
   member: { public_code: string; alias: string | null; status: string; balance: number; rewards_available: number; qr_token: string };
   brand: { slug: string; display_name: string; tagline: string; logo_url: string | null; bg_color: string; support_url: string | null; style?: Partial<Estilo> | null };
-  program: { name: string; description: string; status: string; rule_type: TipoRegla | null; threshold: number | null; reward: string | null } | null;
+  /** Con period 'month' (0015) el saldo es el del mes y threshold/reward son el SIGUIENTE nivel. */
+  program: { name: string; description: string; status: string; rule_type: TipoRegla | null; threshold: number | null; reward: string | null; period?: 'none' | 'month' } | null;
   rewards: { description: string; expires_at: string | null }[];
   movements: { kind: string; units: number; at: string }[];
   wallet: { state: string; pending: boolean; links_issued: number } | null;
   push: { consent: boolean; devices: number };
   contacts: { kind: 'phone' | 'email'; verified: boolean }[];
+  /**
+   * 0017: las líneas de la tarjeta, la principal primero (Kallpa: «Asistencia» y
+   * «Compra»). Con una sola, la tarjeta es la de siempre.
+   */
+  lines?: {
+    label: string;
+    main: boolean;
+    rule_type: TipoRegla | null;
+    balance: number;
+    threshold: number | null;
+    reward: string | null;
+    period: 'none' | 'month';
+    rewards: { description: string; expires_at: string | null }[];
+  }[];
 }
 
 const MOV: Record<string, string> = {
@@ -28,6 +43,7 @@ const MOV: Record<string, string> = {
   reward_issue: 'Premio conseguido',
   reward_revoke: 'Premio anulado',
   adjust: 'Corrección',
+  period_reset: 'Empezó un mes nuevo',
 };
 
 async function pedir<T>(cuerpo: Record<string, unknown>): Promise<T> {
@@ -88,6 +104,9 @@ export default function Tarjeta(props: {
   const umbral = d.program?.threshold ?? 0;
   const progreso = umbral ? Math.max(0, Math.min(d.member.balance, umbral)) : 0;
   const sellos = tipo === 'stamps' && umbral > 0 && umbral <= 12;
+  // 0017: las demás líneas (la principal es la tarjeta de arriba) y todos los premios por canjear.
+  const otras = d.lines && d.lines.length > 1 ? d.lines.filter((l) => !l.main) : [];
+  const premios = [...d.rewards, ...otras.flatMap((l) => l.rewards)];
 
   useEffect(() => {
     if (!props.walletDisponible) return;
@@ -142,7 +161,8 @@ export default function Tarjeta(props: {
         setD(r);
         setLeido(new Date().toISOString());
         if (r.rewards.length > antes.rewards.length) {
-          setFiesta({ tipo: 'ganado', premio: r.rewards[0]?.description ?? r.program?.reward ?? 'Tu premio' });
+          // El más nuevo va al final (orden de emisión).
+          setFiesta({ tipo: 'ganado', premio: r.rewards[r.rewards.length - 1]?.description ?? r.program?.reward ?? 'Tu premio' });
         } else if (r.rewards.length < antes.rewards.length && r.member.balance <= antes.member.balance) {
           const ido = antes.rewards.find((x) => !r.rewards.some((y) => y.description === x.description && y.expires_at === x.expires_at)) ?? antes.rewards[0];
           const vencio = ido?.expires_at && new Date(ido.expires_at).getTime() <= Date.now();
@@ -439,12 +459,12 @@ export default function Tarjeta(props: {
       {walletGuardada && <div className="fz-caja fz-wallet-lista" role="status"><Check aria-hidden="true" /><span>Tu tarjeta ya está en Google Wallet.</span></div>}
 
       <section className="fz-caja fz-centro" aria-label="Tu tarjeta">
-        <div className={d.rewards.length > 0 ? 'fz-aura' : undefined}>
-        {d.rewards.length > 0 && (
+        <div className={premios.length > 0 ? 'fz-aura' : undefined}>
+        {premios.length > 0 && (
           <div className="fz-gano" role="status">
             <span className="fz-gano__icono"><Gift aria-hidden="true" /></span>
-            <small>{d.rewards.length > 1 ? `¡Tienes ${d.rewards.length} premios!` : '¡Ganaste un premio!'}</small>
-            {d.rewards.map((r, i) => (
+            <small>{premios.length > 1 ? `¡Tienes ${premios.length} premios!` : '¡Ganaste un premio!'}</small>
+            {premios.map((r, i) => (
               <b key={i}>
                 {r.description}
                 {r.expires_at && <em>Vence el {fechaHora(r.expires_at)}</em>}
@@ -466,7 +486,10 @@ export default function Tarjeta(props: {
               </span>
               <span>FIDELIDAD</span>
             </div>
-            <div className="fz-carnet__programa">{d.program?.name || 'Tu programa'}</div>
+            <div className="fz-carnet__programa">
+              {d.program?.name || 'Tu programa'}
+              {otras.length > 0 && d.lines?.[0] && <> · {d.lines[0].label}</>}
+            </div>
             <div className="fz-carnet__saludo">{d.member.alias ? `Hola, ${d.member.alias}` : 'Tu tarjeta'}</div>
             <div className="fz-carnet__saldo"><b>{d.member.balance.toLocaleString('es-PE')}</b><span>{d.member.balance === 1 ? UNIDAD[tipo].una : UNIDAD[tipo].varias}</span></div>
             {sellos ? (
@@ -478,7 +501,13 @@ export default function Tarjeta(props: {
                 <i style={{ width: `${(progreso / umbral) * 100}%` }} />
               </div>
             ) : null}
-            {umbral > 0 && <p className="fz-carnet__meta">{progreso} de {umbral} {UNIDAD[tipo].varias} para tu {d.rewards.length > 0 ? 'siguiente' : 'próximo'} premio</p>}
+            {umbral > 0 && (
+              <p className="fz-carnet__meta">
+                {d.program?.period === 'month'
+                  ? `${progreso} de ${umbral} ${UNIDAD[tipo].varias} este mes para tu siguiente nivel`
+                  : `${progreso} de ${umbral} ${UNIDAD[tipo].varias} para tu ${d.rewards.length > 0 ? 'siguiente' : 'próximo'} premio`}
+              </p>
+            )}
             <div className="fz-carnet__qr">
               <div className="fz-qr" aria-label="Código QR para mostrar en caja" dangerouslySetInnerHTML={{ __html: props.qrSvg }} />
               <span>{d.member.public_code}</span>
@@ -486,8 +515,44 @@ export default function Tarjeta(props: {
           </div>
         </div>
         </div>
-        {d.program?.reward && d.rewards.length === 0 && <div className="fz-meta-premio"><Gift aria-hidden="true" /><span>{d.member.balance >= umbral && umbral > 0 ? 'Premio alcanzado' : 'Tu próximo premio'}<b>{d.program.reward}</b></span></div>}
-        <p className="fz-nota">{d.rewards.length > 0 ? 'Enséñalo en caja para canjear tu premio o seguir sumando.' : 'Enséñalo en caja para acumular o canjear.'}</p>
+        {d.program?.reward && (d.rewards.length === 0 || d.program.period === 'month') && (
+          <div className="fz-meta-premio">
+            <Gift aria-hidden="true" />
+            <span>
+              {d.program.period === 'month'
+                ? d.member.balance >= umbral && umbral > 0 ? 'Llegaste al nivel más alto del mes' : 'Tu siguiente nivel este mes'
+                : d.member.balance >= umbral && umbral > 0 ? 'Premio alcanzado' : 'Tu próximo premio'}
+              <b>{d.program.reward}</b>
+            </span>
+          </div>
+        )}
+        {otras.map((l, i) => {
+          const meta = l.threshold ?? 0;
+          const va = meta ? Math.max(0, Math.min(l.balance, meta)) : l.balance;
+          return (
+            <div key={i} className="fz-linea-tarjeta" aria-label={`${l.label}: ${va} de ${meta}`}>
+              <div className="fz-linea-tarjeta__cab">
+                <b>{l.label}</b>
+                <span>
+                  {va} de {meta || '—'}
+                  {l.period === 'month' ? ' este mes' : ''}
+                </span>
+              </div>
+              {meta > 0 && (
+                <div className="fz-barra" role="progressbar" aria-valuemin={0} aria-valuemax={meta} aria-valuenow={va}>
+                  <i style={{ width: `${(va / meta) * 100}%` }} />
+                </div>
+              )}
+              {l.reward && (
+                <small>
+                  {l.period === 'month' ? 'Siguiente nivel: ' : `Con ${meta}: `}
+                  <b>{l.reward}</b>
+                </small>
+              )}
+            </div>
+          );
+        })}
+        <p className="fz-nota">{premios.length > 0 ? 'Enséñalo en caja para canjear tu premio o seguir sumando.' : 'Enséñalo en caja para acumular o canjear.'}</p>
         <p className="fz-mini">
           Leído el {fechaHora(leido)} ·{' '}
           <button type="button" className="fz-link" onClick={() => void actualizar()} disabled={ocupado === 'ver'}>

@@ -100,6 +100,20 @@ export interface Version {
   valid_from: string;
   valid_to: string | null;
   location_ids: string[] | null;
+  /** 0015 · niveles del mes. Con 'month', el saldo es el del mes y `tiers` manda. */
+  period?: 'none' | 'month';
+  tiers?: Nivel[] | null;
+  cooldown_hours?: number | null;
+  bonus_label?: string | null;
+  bonus_units?: number | null;
+}
+
+/** Un nivel del mes: al llegar a `at`, `level` (solo vale el más alto) y `gift_count` × `gift` (se suman). */
+export interface Nivel {
+  at: number;
+  level: string;
+  gift?: string | null;
+  gift_count?: number;
 }
 
 export interface Programa {
@@ -112,6 +126,30 @@ export interface Programa {
   current_version_id: string | null;
   published_at: string | null;
   last_error: string | null;
+  /** 0017: si es una LÍNEA, el programa principal del que cuelga (null = principal). */
+  parent_program_id?: string | null;
+  /** 0017: el nombre corto de la línea en la caja y la tarjeta («Asistencia», «Compra»). */
+  line_label?: string | null;
+}
+
+/** 0017: una línea de la tarjeta de una persona, como la devuelve la base (`lines`). */
+export interface Linea {
+  program_id: string;
+  label: string;
+  main: boolean;
+  status: 'active' | 'paused';
+  /** El miembro de la persona en esta línea; null si aún no se le sumó nada allí. */
+  member_id: string | null;
+  rule_type: 'stamps' | 'points' | 'visits' | null;
+  balance: number;
+  threshold: number | null;
+  reward: string | null;
+  rewards_available: number;
+  period: 'none' | 'month';
+  cooldown_hours: number | null;
+  bonus_label: string | null;
+  bonus_units: number | null;
+  rewards: { id: string; description: string; expires_at: string | null; part?: 'level' | 'gift' | null }[];
 }
 
 export interface ClaseWallet {
@@ -236,8 +274,20 @@ export const lecturas = {
   },
   sucursales: (companyId: string) =>
     lista<Sucursal>(sb().from('loyalty_locations').select('id, name, is_active').eq('company_id', companyId).order('name')),
-  programas: (companyId: string) =>
-    lista<Programa>(sb().from('loyalty_programs').select('*').eq('company_id', companyId).order('created_at', { ascending: false })),
+  /**
+   * Los programas PRINCIPALES. Las líneas de la 0017 (la «Compra» de Kallpa) se leen
+   * con `lineas`: así ninguna pantalla toma una línea por el programa del negocio.
+   * Se filtra aquí y no en la consulta para que funcione igual sin la 0017.
+   */
+  programas: async (companyId: string) =>
+    (await lista<Programa>(sb().from('loyalty_programs').select('*').eq('company_id', companyId).order('created_at', { ascending: false }))).filter(
+      (p) => !p.parent_program_id,
+    ),
+  /** 0017: las líneas que cuelgan del programa principal, de la más antigua a la más nueva. */
+  lineas: async (companyId: string) =>
+    (await lista<Programa>(sb().from('loyalty_programs').select('*').eq('company_id', companyId).order('created_at', { ascending: true }))).filter(
+      (p) => !!p.parent_program_id,
+    ),
   versiones: (companyId: string, programId: string) =>
     lista<Version>(
       sb()

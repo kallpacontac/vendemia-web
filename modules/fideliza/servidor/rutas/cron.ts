@@ -28,9 +28,12 @@ export async function GET(req: Request) {
     const sb = servidor();
     const limpieza = await rpc(sb, 'loyalty_srv_housekeeping', {});
     const campanas = await rpc(sb, 'loyalty_srv_campaign_scan', {});
+    // Niveles del mes (0015): pone a 0 el saldo de quien aún no vino este mes. Si la
+    // migración no está aplicada, no rompe el resto del cron.
+    const mes = await rpc(sb, 'loyalty_srv_period_roll', {}).catch((e: unknown) => ({ omitido: String(e).slice(0, 120) }));
     const cola = await drenar({ lote: 20, tiempoMaxMs: 40_000 });
-    log('cron', { limpieza, campanas, cola });
-    return ok({ limpieza, campanas, cola });
+    log('cron', { limpieza, campanas, mes, cola });
+    return ok({ limpieza, campanas, mes, cola });
   } catch (e) {
     return desdeError(e, 'cron');
   }

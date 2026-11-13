@@ -14,15 +14,20 @@
  *     misma operación («replayed») y no suma dos veces.
  * 3 · SIN CONEXIÓN NO SE OPERA. No hay canje offline: un premio canjeado sin
  *     confirmar podría canjearse otra vez en otra caja.
+ *
+ * LÍNEAS (0017, Kallpa): una tarjeta, varias líneas con sus reglas («Asistencia»,
+ * «Compra»). Quien atiende elige la línea arriba y la caja opera sobre ella; cada
+ * equipo recuerda la suya (la cafetería se queda en «Compra»).
  */
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { Camera, CameraOff, Check, Gift, MonitorSmartphone, Plus, Search, ShoppingBag, Undo2, UserRound } from 'lucide-react';
 import { useFideliza } from '@/modules/fideliza/ui/Contexto';
+import { useSesion } from '@/components/panel/Sesion';
 import { Cargando, Qr, SinPermiso } from '@/modules/fideliza/ui/Estados';
 import { useAvisar } from '@/components/panel/Avisos';
 import { useCargar } from '@/components/panel/useCargar';
-import { accion, ErrorFideliza, lecturas, mensaje, nuevaClave, sincronizarEnSegundoPlano } from '@/modules/fideliza/cliente/api';
+import { accion, ErrorFideliza, lecturas, mensaje, nuevaClave, sincronizarEnSegundoPlano, type Linea } from '@/modules/fideliza/cliente/api';
 import { urlTarjeta } from '@/modules/fideliza/dominio/config';
 import { aCentimos, soles, unidades, type TipoRegla } from '@/modules/fideliza/dominio/formato';
 import { selloValido, trazoSello } from '@/modules/fideliza/dominio/sellos';
@@ -39,7 +44,55 @@ interface MiembroCaja {
   threshold: number | null;
   reward_description: string | null;
   verified_contact: boolean;
-  rewards: { id: string; description: string; expires_at: string | null }[];
+  /** part (0016): 'level' = beneficio del nivel (p. ej. % de membresía), 'gift' = regalo, null = premio de siempre. */
+  rewards: { id: string; description: string; expires_at: string | null; part?: 'level' | 'gift' | null }[];
+  /** 0015: con 'month' el saldo es el del mes y threshold/reward_description son el SIGUIENTE nivel. */
+  period?: 'none' | 'month';
+  bonus_label?: string | null;
+  bonus_units?: number | null;
+  /**
+   * Puesto por el panel (no viene de la base): la tarjeta es de OTRO negocio de quien
+   * atiende. Caso Kallpa: el batido se gana en la academia y se recoge en la cafetería.
+   */
+  negocio?: { id: string; nombre: string };
+  /** 0017: las líneas de la persona, la principal primero. */
+  lines?: Linea[];
+  /** Puesto por el panel: esta vista es de una línea que no es la principal. */
+  programId?: string;
+}
+
+/** En otro negocio solo se entregan regalos y premios de siempre; el beneficio del nivel se usa allí. */
+const entregableFuera = (r: MiembroCaja['rewards'][number]) => r.part !== 'level';
+
+/**
+ * 0017 · La tarjeta vista desde UNA línea. En la principal es la persona tal cual; en
+ * otra, saldo, meta, premios y bono son los de esa línea e `id` es su miembro allí (o
+ * la persona, si aún no tiene: la base lo crea al registrar con `programId`).
+ */
+function vistaDeLinea(x: MiembroCaja, programa: string | null): MiembroCaja {
+  const l = x.negocio || !x.lines || x.lines.length < 2 ? null : x.lines.find((y) => y.program_id === programa && !y.main);
+  if (!l) return x;
+  return {
+    ...x,
+    id: l.member_id ?? x.id,
+    balance: l.balance,
+    rewards_available: l.rewards_available,
+    rule_type: l.rule_type,
+    threshold: l.threshold,
+    reward_description: l.reward,
+    rewards: l.rewards,
+    period: l.period,
+    bonus_label: l.bonus_label,
+    bonus_units: l.bonus_units,
+    programId: l.program_id,
+  };
+}
+
+/** «Compra · » delante del texto cuando la persona tiene más de una línea. */
+function etiquetaDe(x: MiembroCaja): string {
+  if (!x.lines || x.lines.length < 2) return '';
+  const l = x.lines.find((y) => (x.programId ? y.program_id === x.programId : y.main));
+  return l ? `${l.label} · ` : '';
 }
 
 interface Resultado {
@@ -53,7 +106,7 @@ interface Resultado {
   member: MiembroCaja;
 }
 
-type Pendiente = { tipo: 'registrar' | 'canjear'; clave: string; datos: Record<string, unknown> } | null;
+type Pendiente = { tipo: 'registrar' | 'canjear' | 'bono'; clave: string; datos: Record<string, unknown> } | null;
 
 declare global {
   interface Window {
@@ -63,11 +116,17 @@ declare global {
 
 export default function Caja() {
   const { companyId, ajustes, puede } = useFideliza();
+  const { companias } = useSesion();
   const avisar = useAvisar();
   const [q, setQ] = useState('');
   const [buscando, setBuscando] = useState(false);
   const [candidatos, setCandidatos] = useState<MiembroCaja[]>([]);
-  const [m, setM] = useState<MiembroCaja | null>(null);
+  /** La tarjeta de la PERSONA, tal como la devuelve la base. */
+  const [persona, setM] = useState<MiembroCaja | null>(null);
+  /** 0017: la línea en la que se opera (null = la principal). */
+  const [linea, setLinea] = useState<string | null>(null);
+  /** Lo que la caja enseña y opera: la persona vista desde la línea elegida. */
+  const m = persona ? vistaDeLinea(persona, linea) : null;
   const [importe, setImporte] = useState('');
   const [ref, setRef] = useState('');
   const [sucursal, setSucursal] = useState<string>('');
@@ -88,6 +147,17 @@ export default function Caja() {
   const { datos: sucursales } = useCargar(async () => (companyId ? lecturas.sucursales(companyId) : []), [companyId]);
   const activas = (sucursales ?? []).filter((s) => s.is_active);
 
+  // Clientes manda aquí con ?q=VDM-… cuando la regla es de puntos (hace falta el importe).
+  // Se lee de location y no con useSearchParams para no exigir un Suspense a la página.
+  useEffect(() => {
+    if (!companyId) return;
+    const pedido = new URLSearchParams(window.location.search).get('q')?.trim();
+    if (!pedido) return;
+    setQ(pedido);
+    void buscar(pedido);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [companyId]);
+
   useEffect(() => {
     if (!companyId) return;
     try {
@@ -100,6 +170,14 @@ export default function Caja() {
     } catch {
       /* nada */
     }
+    // Clientes manda ?linea= (puntos en una línea); si no, la que usa este equipo.
+    let l = new URLSearchParams(window.location.search).get('linea');
+    try {
+      l ||= localStorage.getItem(`fz:linea:${companyId}`);
+    } catch {
+      /* nada */
+    }
+    setLinea(l || null);
   }, [companyId]);
 
   // ── Escáner ─────────────────────────────────────────────────────────────
@@ -162,7 +240,9 @@ export default function Caja() {
     setBuscando(true);
     setCandidatos([]);
     try {
-      const r = await accion<MiembroCaja[]>('caja.buscar', { companyId, q: texto.trim() });
+      let r = await accion<MiembroCaja[]>('caja.buscar', { companyId, q: texto.trim() });
+      // ¿Es la tarjeta de otro negocio de quien atiende? (la cafetería leyendo la de la academia)
+      if (r.length === 0) r = await buscarEnOtros(texto.trim());
       if (r.length === 1) elegir(r[0]);
       else if (r.length === 0) avisar('No hay ninguna tarjeta con ese código en este negocio.', 'espera');
       else setCandidatos(r);
@@ -173,12 +253,40 @@ export default function Caja() {
     }
   }
 
+  /**
+   * Busca en los OTROS negocios a los que tiene acceso quien atiende (como mucho 5).
+   * Sin permiso allí, la base dice «forbidden» y ese negocio se salta: no se ve nada ajeno.
+   */
+  async function buscarEnOtros(texto: string): Promise<MiembroCaja[]> {
+    const otros = companias.filter((c) => c.id !== companyId).slice(0, 5);
+    for (const c of otros) {
+      try {
+        const r = await accion<MiembroCaja[]>('caja.buscar', { companyId: c.id, q: texto });
+        if (r.length) return r.map((x) => ({ ...x, negocio: { id: c.id, nombre: c.nombre } }));
+      } catch {
+        /* sin acceso o sin club: siguiente */
+      }
+    }
+    return [];
+  }
+
   function elegir(x: MiembroCaja) {
     setM(x);
     setCandidatos([]);
     setImporte('');
     setRef('');
     setPendiente(null);
+  }
+
+  function elegirLinea(id: string | null) {
+    setLinea(id);
+    setImporte('');
+    setPendiente(null);
+    try {
+      localStorage.setItem(`fz:linea:${companyId}`, id ?? '');
+    } catch {
+      /* nada */
+    }
   }
 
   function elegirSucursal(id: string) {
@@ -194,20 +302,24 @@ export default function Caja() {
     setOcupado(true);
     setPendiente(p);
     try {
-      const nombre = p.tipo === 'registrar' ? 'caja.registrar' : 'caja.canjear';
+      const nombre = p.tipo === 'registrar' ? 'caja.registrar' : p.tipo === 'bono' ? 'caja.bono' : 'caja.canjear';
       const r = await accion<Resultado>(nombre, { ...p.datos, idempotencyKey: p.clave });
       setPendiente(null);
-      setM(r.member);
+      const negocio = (p.datos.companyId as string) !== companyId ? m?.negocio : undefined;
+      setM(negocio ? { ...r.member, negocio } : r.member);
       setImporte('');
       setRef('');
-      const tipo = r.member.rule_type;
+      // La base devuelve la tarjeta de la persona: el texto es el de la línea donde se operó.
+      const vm = vistaDeLinea(r.member, linea);
+      const tipo = vm.rule_type;
       const texto =
-        p.tipo === 'canjear'
-          ? `Canjeado: ${r.description ?? 'premio'}. Le quedan ${r.member.rewards_available} premio(s).`
-          : `${r.units ? `+${unidades(r.units, tipo)}` : 'Registrada, sin sumar (por debajo del mínimo)'}. Saldo: ${unidades(r.member.balance, tipo)}.${r.rewards_issued ? ` ¡Premio conseguido! (${r.rewards_issued})` : ''}`;
+        etiquetaDe(vm) +
+        (p.tipo === 'canjear'
+          ? `Canjeado: ${r.description ?? 'premio'}. Le quedan ${vm.rewards_available} premio(s).`
+          : `${r.units ? `+${unidades(r.units, tipo)}` : 'Registrada, sin sumar (por debajo del mínimo)'}. Saldo: ${unidades(vm.balance, tipo)}.${r.rewards_issued ? ` ¡Premio conseguido! (${r.rewards_issued})` : ''}`);
       setUltimo({ texto: r.status === 'replayed' ? `Ya estaba registrado: ${texto}` : texto, tono: 'ok' });
-      if (mostrador) setHecho({ tipo: p.tipo, r });
-      sincronizarEnSegundoPlano(companyId!);
+      if (mostrador) setHecho({ tipo: p.tipo === 'bono' ? 'registrar' : p.tipo, r });
+      sincronizarEnSegundoPlano((p.datos.companyId as string) ?? companyId!);
     } catch (e) {
       const sinRespuesta = e instanceof ErrorFideliza && (e.status === 0 || e.status >= 500);
       if (!sinRespuesta) setPendiente(null);
@@ -234,6 +346,7 @@ export default function Caja() {
         amountCents: centimos,
         locationId: sucursal || null,
         externalRef: ref.trim() || null,
+        ...(m.programId ? { programId: m.programId } : {}),
       },
     });
   }
@@ -244,8 +357,17 @@ export default function Caja() {
     void enviar({
       tipo: 'canjear',
       clave: nuevaClave(),
-      datos: { companyId, memberId: m.id, rewardId, locationId: sucursal || null },
+      // En otro negocio, su caja: sin la sucursal de este (no existe allí).
+      datos: m.negocio
+        ? { companyId: m.negocio.id, memberId: m.id, rewardId, locationId: null }
+        : { companyId, memberId: m.id, rewardId, locationId: sucursal || null },
     });
+  }
+
+  /** El bono de la regla (0015), p. ej. «Reto del BOX +4». No cuenta para la espera. */
+  function bono() {
+    if (!m?.bonus_units) return;
+    void enviar({ tipo: 'bono', clave: nuevaClave(), datos: { companyId, memberId: m.id, ...(m.programId ? { programId: m.programId } : {}) } });
   }
 
   function cambiarMostrador(v: boolean) {
@@ -331,7 +453,7 @@ export default function Caja() {
   // ── Pantallas del mostrador ────────────────────────────────────────────
   if (mostrador && hecho) {
     const r = hecho.r;
-    const x = r.member;
+    const x = vistaDeLinea(r.member, linea);
     const meta = x.threshold ?? 0;
     const gano = hecho.tipo === 'registrar' && (r.rewards_issued ?? 0) > 0;
     return (
@@ -353,17 +475,17 @@ export default function Caja() {
         ) : (
           <div className="fz-mo__fin" role="status">
             <span className="fz-mo__ok"><Check size={34} aria-hidden="true" /></span>
-            <h2>{hecho.tipo === 'canjear' ? 'Premio entregado' : x.rule_type === 'points' ? `+${r.units ?? 0} puntos` : r.units ? 'Sello puesto' : 'Registrado, sin sumar'}</h2>
+            <h2>{etiquetaDe(x)}{hecho.tipo === 'canjear' ? 'Premio entregado' : r.kind === 'adjustment' ? `${x.bonus_label ?? 'Bono'}: +${r.units ?? 0}` : x.rule_type === 'points' ? `+${r.units ?? 0} puntos` : r.units ? (x.rule_type === 'visits' ? 'Visita registrada' : 'Sello puesto') : 'Registrado, sin sumar'}</h2>
             <p>
               {hecho.tipo === 'canjear'
                 ? `A ${nombreDe(x)} le quedan ${x.rewards_available} premio(s).`
                 : meta
-                  ? `${nombreDe(x)} lleva ${x.balance} de ${meta}.${x.rewards_available ? ` Tiene ${x.rewards_available} premio(s) por entregar.` : ''}`
+                  ? `${nombreDe(x)} lleva ${x.balance} de ${meta}${x.period === 'month' ? ' este mes' : ''}.${x.rewards_available ? ` Tiene ${x.rewards_available} premio(s) por entregar.` : ''}`
                   : `${nombreDe(x)} lleva ${x.balance}.`}
             </p>
             {hecho.tipo === 'registrar' && cartilla(x, x.balance)}
             <div className="fz-col2">
-              {hecho.tipo === 'registrar' && r.transaction_id && r.status === 'created' ? (
+              {hecho.tipo === 'registrar' && r.transaction_id && r.status === 'created' && r.kind !== 'adjustment' ? (
                 <button className="fz-gran fz-gran--ghost" disabled={ocupado} onClick={() => void deshacer()}>
                   <Undo2 size={18} /> Deshacer
                 </button>
@@ -452,6 +574,7 @@ export default function Caja() {
               <li key={c.id}>
                 <span>
                   <span className="fz-mono">{c.public_code}</span> {c.alias ?? ''}
+                  {c.negocio && <span className="muted"> · {c.negocio.nombre}</span>}
                 </span>
                 <button className="btn btn-ghost btn-sm" onClick={() => elegir(c)}>
                   Elegir
@@ -509,7 +632,66 @@ export default function Caja() {
         </div>
       )}
 
-      {m && mostrador && m.status === 'active' && (
+      {m?.negocio && (
+        <div className="card">
+          <div className="fz-miembro">
+            <div>
+              <div className="fz-mono" style={{ fontWeight: 800 }}>{m.public_code}</div>
+              <div className="muted">{m.alias ?? 'Sin nombre'}</div>
+            </div>
+            <span className="badge-pill">Tarjeta de {m.negocio.nombre}</span>
+          </div>
+          {m.rewards.filter(entregableFuera).length ? (
+            <ul className="fz-lista" style={{ marginTop: 12 }}>
+              {m.rewards.filter(entregableFuera).map((r) => (
+                <li key={r.id}>
+                  <span><Gift size={16} aria-hidden="true" /> {r.description}</span>
+                  <button className="btn btn-primary btn-sm" disabled={ocupado} onClick={() => canjear(r.id)}>
+                    Entregar
+                  </button>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="fz-def" style={{ marginTop: 12 }}>No tiene nada que recoger aquí.</p>
+          )}
+          {m.rewards.some((r) => !entregableFuera(r)) && (
+            <p className="fz-def">
+              {m.rewards.filter((r) => !entregableFuera(r)).map((r) => r.description).join(' · ')}: se usa en {m.negocio.nombre}.
+            </p>
+          )}
+          <p className="fz-def">Aquí solo se entregan sus premios. Las visitas y los sellos se suman en {m.negocio.nombre}.</p>
+          <button className="btn btn-ghost btn-sm" style={{ marginTop: 6 }} onClick={otroCliente}>Otro cliente</button>
+        </div>
+      )}
+
+      {persona && !persona.negocio && (persona.lines?.length ?? 0) > 1 && (
+        <div className="fz-lineas" role="radiogroup" aria-label="¿Qué se le suma?">
+          {persona.lines!.map((l) => {
+            const activa = l.main ? !m?.programId : m?.programId === l.program_id;
+            return (
+              <button
+                key={l.program_id}
+                type="button"
+                role="radio"
+                aria-checked={activa}
+                className={`fz-linea${activa ? ' activa' : ''}`}
+                disabled={ocupado || l.status !== 'active'}
+                onClick={() => elegirLinea(l.main ? null : l.program_id)}
+              >
+                <b>{l.label}</b>
+                <small>
+                  {l.balance} / {l.threshold ?? '—'}
+                  {l.period === 'month' ? ' este mes' : ''}
+                  {l.rewards_available ? ` · ${l.rewards_available} premio${l.rewards_available === 1 ? '' : 's'}` : ''}
+                </small>
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+      {m && !m.negocio && mostrador && m.status === 'active' && (
         <div className="card fz-mo">
           <div className="fz-mo__quien">
             <span className="fz-mo__avatar"><UserRound size={26} aria-hidden="true" /></span>
@@ -521,7 +703,7 @@ export default function Caja() {
           {cartilla(m, m.balance)}
           {umbral > 0 && (
             <p className="fz-mo__falta">
-              {m.balance >= umbral ? 'Ya llegó a la meta' : <>Le falta{umbral - m.balance === 1 ? '' : 'n'} <b>{umbral - m.balance}</b> para <b>{m.reward_description}</b></>}
+              {m.balance >= umbral ? (m.period === 'month' ? 'Ya llegó al nivel más alto del mes' : 'Ya llegó a la meta') : <>Le falta{umbral - m.balance === 1 ? '' : 'n'} <b>{umbral - m.balance}</b> para <b>{m.reward_description}</b>{m.period === 'month' ? ' (este mes)' : ''}</>}
             </p>
           )}
           {m.rewards_available > 0 && (
@@ -539,6 +721,11 @@ export default function Caja() {
           <button className="fz-gran fz-gran--prim fz-mo__dar" disabled={ocupado || (activas.length > 0 && !sucursal)} onClick={registrar}>
             {ocupado ? 'Un momento…' : verbo(m)}
           </button>
+          {!!m.bonus_units && (
+            <button className="fz-gran fz-gran--sec" style={{ marginTop: 10, width: '100%' }} disabled={ocupado} onClick={bono}>
+              {m.bonus_label} +{m.bonus_units}
+            </button>
+          )}
           {activas.length > 0 && !sucursal && <p className="fz-def">Elige la sucursal arriba para poder operar.</p>}
           {pendiente && !ocupado && (
             <div className="fz-panel-aviso fz-panel-aviso--error" role="alert" style={{ marginTop: 12 }}>
@@ -550,7 +737,7 @@ export default function Caja() {
         </div>
       )}
 
-      {m && !(mostrador && m.status === 'active') && (
+      {m && !m.negocio && !(mostrador && m.status === 'active') && (
         <div className="card">
           <div className="fz-miembro">
             <div>
@@ -571,7 +758,8 @@ export default function Caja() {
                 <i style={{ width: `${Math.max(0, Math.min(1, m.balance / umbral)) * 100}%` }} />
               </div>
               <p className="fz-def">
-                Premio con {umbral}: {m.reward_description}
+                {m.period === 'month' ? `Este mes · siguiente nivel con ${umbral}: ` : `Premio con ${umbral}: `}
+                {m.reward_description}
               </p>
             </>
           )}
@@ -606,6 +794,11 @@ export default function Caja() {
                   <Gift size={20} /> Canjear{m.rewards_available ? ` (${m.rewards_available})` : ''}
                 </button>
               </div>
+              {!!m.bonus_units && (
+                <button className="fz-gran fz-gran--ghost" style={{ marginTop: 10, width: '100%' }} disabled={ocupado} onClick={bono}>
+                  {m.bonus_label} +{m.bonus_units}
+                </button>
+              )}
               {activas.length > 0 && !sucursal && <p className="fz-def">Elige la sucursal arriba para poder operar.</p>}
               {m.rewards.length > 1 && (
                 <ul className="fz-lista" style={{ marginTop: 10 }}>
@@ -634,7 +827,7 @@ export default function Caja() {
             </div>
           )}
           {puede('members.read') && (
-            <Link className="btn btn-ghost btn-sm" style={{ marginTop: 12 }} href={`/panel/fideliza/clientes/${m.id}`}>
+            <Link className="btn btn-ghost btn-sm" style={{ marginTop: 12 }} href={`/panel/fideliza/clientes/${(persona ?? m).id}`}>
               Ver ficha
             </Link>
           )}

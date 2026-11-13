@@ -14,7 +14,7 @@ import { useFideliza } from '@/modules/fideliza/ui/Contexto';
 import { Cargando, Fallo, Qr, SinPermiso } from '@/modules/fideliza/ui/Estados';
 import { useAvisar } from '@/components/panel/Avisos';
 import { useCargar } from '@/components/panel/useCargar';
-import { accion, mensaje, nuevaClave, sincronizarEnSegundoPlano } from '@/modules/fideliza/cliente/api';
+import { accion, mensaje, nuevaClave, sincronizarEnSegundoPlano, type Linea } from '@/modules/fideliza/cliente/api';
 import { urlTarjeta } from '@/modules/fideliza/dominio/config';
 import { aCentimos, fechaHora, soles, unidades, type TipoRegla } from '@/modules/fideliza/dominio/formato';
 
@@ -48,6 +48,8 @@ interface Ficha {
   }[];
   ledger: { id: number; kind: string; units: number; balance_after: number; created_at: string }[];
   all_rewards: { id: string; description: string; status: string; issued_at: string; expires_at: string | null; redeemed_at: string | null }[];
+  /** 0017: las líneas de su tarjeta (la principal primero). El historial de abajo es el de la principal. */
+  lines?: Linea[];
   wallet: { state: string; desired_rev: number; synced_rev: number; save_links_issued: number; last_error: string | null; last_synced_at: string | null } | null;
 }
 
@@ -168,6 +170,23 @@ export default function FichaCliente() {
               </div>
             </div>
           </div>
+          {f.lines && f.lines.length > 1 && (
+            <ul className="fz-lista" style={{ marginTop: 10 }}>
+              {f.lines.map((l) => (
+                <li key={l.program_id}>
+                  <span>
+                    <b>{l.label}</b>
+                    <span className="muted">
+                      {' '}
+                      · {l.balance} / {l.threshold ?? '—'}
+                      {l.period === 'month' ? ' este mes' : ''}
+                    </span>
+                  </span>
+                  <span className="muted">{l.rewards.length ? l.rewards.map((r) => r.description).join(' · ') : 'Sin premios por canjear'}</span>
+                </li>
+              ))}
+            </ul>
+          )}
           <p className="fz-def">
             Alta {fechaHora(f.created_at)} · desde {f.joined_via === 'public' ? 'la página pública' : f.joined_via} · acumulado histórico {f.lifetime_units}
           </p>

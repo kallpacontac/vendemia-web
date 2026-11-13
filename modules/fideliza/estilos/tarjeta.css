@@ -183,3 +183,10 @@
 @keyframes fz-aura-brillo{to{background-position:-250% 0}}
 @keyframes fz-aura-salta{50%{transform:scale(1.1)}}
 @media (prefers-reduced-motion:reduce){.fz-aura{animation:none;box-shadow:0 0 0 2px #FFE9A8,0 0 28px 8px rgba(255,201,60,.8)}.fz-fiesta__caja,.fz-gano__icono{animation:none}}
+
+/* 0017 · Las demás líneas de la tarjeta (Kallpa: «Compra» debajo de «Asistencia») */
+.fz-linea-tarjeta{margin:12px auto 0;max-width:360px;text-align:left;background:#fff;border:1px solid rgba(0,0,0,.08);border-radius:16px;padding:12px 14px;display:grid;gap:6px}
+.fz-linea-tarjeta__cab{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.fz-linea-tarjeta__cab b{font-size:15px}
+.fz-linea-tarjeta__cab span{font-size:13px;opacity:.75}
+.fz-linea-tarjeta small{font-size:12.5px;opacity:.8}

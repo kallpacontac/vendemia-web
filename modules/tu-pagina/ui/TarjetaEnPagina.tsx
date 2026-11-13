@@ -39,10 +39,14 @@ export default function TarjetaEnPagina({ companyId, valor, alCambiar }: {
         const sb = supabase();
         const [ajustes, programas] = await Promise.all([
           sb.from('loyalty_settings').select('slug').eq('company_id', companyId).maybeSingle(),
-          sb.from('loyalty_programs').select('name, status, current_version_id').eq('company_id', companyId).in('status', ['active', 'paused']).limit(1),
+          // Solo el principal: las líneas (Fideliza 0017) también están vivas. Se filtra
+          // abajo y no en la consulta para que funcione igual sin la 0017.
+          sb.from('loyalty_programs').select('*').eq('company_id', companyId).in('status', ['active', 'paused']).order('created_at'),
         ]);
         if (ajustes.error || programas.error) throw ajustes.error ?? programas.error;
-        const p = programas.data?.[0] as { name: string; status: 'active' | 'paused'; current_version_id: string | null } | undefined;
+        const p = (programas.data as { name: string; status: 'active' | 'paused'; current_version_id: string | null; parent_program_id?: string | null }[] | null)?.find(
+          (x) => !x.parent_program_id,
+        );
         const slug = (ajustes.data as { slug?: string } | null)?.slug;
         let club: Club | null = null;
         if (p && slug) {

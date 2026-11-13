@@ -42,8 +42,63 @@ const borrador = z
     reward_valid_days: z.number().int().min(1).max(3650).nullable().optional(),
     valid_to: z.string().datetime({ offset: true }).nullable().optional(),
     location_ids: z.array(uuid).max(50).nullable().optional(),
+    // 0015: niveles del mes, espera entre operaciones y bono. La base vuelve a validarlo.
+    period: z.enum(['none', 'month']).optional(),
+    tiers: z
+      .array(
+        z
+          .object({
+            at: z.number().int().min(1).max(1000),
+            level: textoCorto(80).min(1),
+            gift: textoCorto(60).nullable().optional(),
+            gift_count: z.number().int().min(0).max(10).optional(),
+          })
+          .strict(),
+      )
+      .min(1)
+      .max(6)
+      .nullable()
+      .optional(),
+    cooldown_hours: z.number().int().min(1).max(168).nullable().optional(),
+    bonus_label: textoCorto(40).nullable().optional(),
+    bonus_units: z.number().int().min(1).max(100).nullable().optional(),
   })
   .strict();
+
+/** Lo que devuelven loyalty_record y loyalty_bonus (lo que usa el servidor). */
+interface ResultadoOperacion {
+  status: string;
+  rewards_issued?: number;
+  /** 0017: de qué línea fue (la tarjeta que vuelve es siempre la de la persona). */
+  program_id?: string;
+  member?: {
+    reward_description?: string | null;
+    rewards?: { description: string }[];
+    lines?: { program_id: string; main: boolean; reward: string | null; rewards: { description: string }[] }[];
+  };
+}
+
+/**
+ * Qué se ganó: los últimos premios emitidos EN LA LÍNEA donde se registró. Con
+ * niveles del mes (0015) `reward_description` ya es el SIGUIENTE nivel, no el que
+ * acaba de ganar.
+ */
+function premioGanado(r: ResultadoOperacion): string | null | undefined {
+  const n = r.rewards_issued ?? 0;
+  const linea = r.member?.lines?.find((l) => l.program_id === r.program_id && !l.main);
+  const lista = linea ? linea.rewards : (r.member?.rewards ?? []);
+  if (n > 0 && lista.length >= n) return lista.slice(-n).map((x) => x.description).join(' + ');
+  return linea ? linea.reward : r.member?.reward_description;
+}
+
+/**
+ * 0017: en una línea que no es la principal (la tienda de Kallpa) se opera con el
+ * miembro de la persona EN esa línea, que la base crea la primera vez.
+ */
+async function miembroDeLinea(sb: Parameters<typeof rpc>[0], companyId: string, memberId: string, programId?: string | null) {
+  if (!programId) return memberId;
+  return rpc<string>(sb, 'loyalty_line_member', { p_company: companyId, p_member: memberId, p_program: programId });
+}
 
 const enlace = z
   .object({
@@ -217,6 +272,12 @@ export const ACCIONES = {
     esquema: z.object({ companyId: compania, programId: uuid }),
     ejecutar: (d, { sb }) => rpc(sb, 'loyalty_program_publish', { p_company: d.companyId, p_program: d.programId }),
   }),
+  // 0017: convertir un programa en línea de otro (Kallpa: «Compra» cuelga de «Asistencia»).
+  'programa.linea': accion({
+    esquema: z.object({ companyId: compania, programId: uuid, parentId: uuid.nullable(), label: textoCorto(24).nullable() }),
+    ejecutar: (d, { sb }) =>
+      rpc(sb, 'loyalty_program_line', { p_company: d.companyId, p_program: d.programId, p_parent: d.parentId, p_label: d.label }),
+  }),
   'programa.estado': accion({
     esquema: z.object({ companyId: compania, programId: uuid, status: z.enum(['active', 'paused']) }),
     ejecutar: (d, { sb }) =>
@@ -354,12 +415,14 @@ export const ACCIONES = {
       locationId: uuid.nullable(),
       externalRef: textoCorto(64).nullable(),
       idempotencyKey: idem,
+      /** 0017: la línea (p. ej. «Compra»). Sin ella, la principal. */
+      programId: uuid.nullable().optional(),
     }),
     limite: ['caja', 60],
     ejecutar: async (d, { sb }) => {
-      const r = await rpc<{ status: string; rewards_issued?: number; member?: { reward_description?: string | null } }>(sb, 'loyalty_record', {
+      const r = await rpc<ResultadoOperacion>(sb, 'loyalty_record', {
         p_company: d.companyId,
-        p_member: d.memberId,
+        p_member: await miembroDeLinea(sb, d.companyId, d.memberId, d.programId),
         p_kind: d.kind,
         p_amount_cents: d.amountCents,
         p_location: d.locationId,
@@ -368,7 +431,21 @@ export const ACCIONES = {
         p_source: 'caja',
       });
       // Solo la primera vez: un reintento («replayed») no vuelve a avisar.
-      if (r.status === 'created' && r.rewards_issued) await avisarPremio(d.companyId, d.memberId, 'ganado', r.member?.reward_description);
+      if (r.status === 'created' && r.rewards_issued) await avisarPremio(d.companyId, d.memberId, 'ganado', premioGanado(r));
+      return r;
+    },
+  }),
+  // «Reto del BOX +4» (0015): el bono que define la regla vigente. Lo puede dar el cajero.
+  'caja.bono': accion({
+    esquema: z.object({ companyId: compania, memberId: uuid, idempotencyKey: idem, programId: uuid.nullable().optional() }),
+    limite: ['caja', 60],
+    ejecutar: async (d, { sb }) => {
+      const r = await rpc<ResultadoOperacion>(sb, 'loyalty_bonus', {
+        p_company: d.companyId,
+        p_member: await miembroDeLinea(sb, d.companyId, d.memberId, d.programId),
+        p_idempotency_key: d.idempotencyKey,
+      });
+      if (r.status === 'created' && r.rewards_issued) await avisarPremio(d.companyId, d.memberId, 'ganado', premioGanado(r));
       return r;
     },
   }),

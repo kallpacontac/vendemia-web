@@ -76,6 +76,13 @@ export const MENSAJES: Record<string, string> = {
   not_authenticated: 'Tu sesión caducó. Vuelve a entrar.',
   invalid_name: 'Escribe el nombre del negocio (de 2 a 60 letras).',
   already_has_business: 'Tu cuenta ya tiene un negocio. Si quieres otro, escríbenos y lo damos de alta.',
+  cooldown: 'Ya se le registró hace poco. Este programa pide esperar entre una vez y la siguiente.',
+  period_closed: 'Eso fue de un mes ya cerrado: su saldo ya volvió a 0 y no se puede deshacer.',
+  no_bonus: 'Este programa no tiene bono. Configúralo en Programa.',
+  line_not_found: 'Esa línea no es de este club (o ya no existe). Recarga la página.',
+  invalid_line: 'Una línea tiene que colgar del programa principal del negocio.',
+  line_has_members: 'Esa línea ya tiene clientes: no se puede mover ni soltar.',
+  line_label_taken: 'Ya hay otra línea con ese nombre.',
 };
 
 export function codigoDe(mensaje: string | undefined | null): string | null {
@@ -92,5 +99,10 @@ export const MENSAJES_CAMPO: Record<string, string> = {
 };
 
 export function mensajeDe(codigo: string | null | undefined, detalle?: string | null): string {
+  // La base manda en el detalle desde cuándo vuelve a poder (hora de Lima, «DD/MM HH:MI»).
+  if (codigo === 'cooldown' && detalle && /^\d{2}\/\d{2} \d{2}:\d{2}$/.test(detalle)) {
+    const [dia, hora] = detalle.split(' ');
+    return `Ya se le registró hace poco. Puede volver a sumar desde el ${dia} a las ${hora}.`;
+  }
   return (codigo && detalle && MENSAJES_CAMPO[`${codigo}:${detalle}`]) || (codigo && MENSAJES[codigo]) || 'No se pudo completar. Inténtalo otra vez.';
 }

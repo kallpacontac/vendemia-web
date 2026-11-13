@@ -404,3 +404,12 @@
 .fz-club__wallet-qr{width:110px;height:110px;margin:0 auto 12px;border-radius:12px;background:#fff repeating-conic-gradient(#14110F 0 25%,#fff 0 50%) 0 0/14px 14px;border:8px solid #fff}
 .fz-club__wallet-arte{display:block;width:100%;border-radius:12px}
 @media(max-width:620px){.fz-club__disenos{grid-template-columns:1fr 1fr}}
+
+/* 0017 · Líneas de la tarjeta en la caja («Asistencia» / «Compra») */
+.fz-lineas{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;margin-bottom:12px}
+.fz-linea{display:flex;flex-direction:column;align-items:flex-start;gap:2px;border:2px solid var(--line);background:#fff;border-radius:var(--r-md,14px);padding:12px 14px;cursor:pointer;text-align:left;min-height:56px}
+.fz-linea b{font:800 16px 'Plus Jakarta Sans';color:var(--ink)}
+.fz-linea small{font-size:12.5px;color:var(--ink-soft)}
+.fz-linea.activa{border-color:var(--brand);background:var(--brand-soft)}
+.fz-linea.activa b{color:var(--brand-txt)}
+.fz-linea:disabled{opacity:.5;cursor:not-allowed}

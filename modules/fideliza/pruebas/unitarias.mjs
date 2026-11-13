@@ -130,6 +130,39 @@ test('4c · el pase explica cuánto falta según la regla y el saldo real', () =
   assert.match(o.textModulesData[0].body, /Te faltan 2 puntos para Un café/);
 });
 
+test('4c2 · 0017: con dos líneas, el pase enseña también la segunda (Kallpa: Compra)', () => {
+  const o = payload.cuerpoObjeto(
+    {
+      member: { public_code: 'VDM-A7K9P2', alias: 'Rosa', status: 'active', balance: 5, rewards_available: 0, qr_token: 'vq' + 'x'.repeat(24) },
+      program: { name: 'Club Kallpa', status: 'active', rule_type: 'visits', threshold: 12, reward: '5% de dscto', period: 'month' },
+      brand: marca,
+      lines: [
+        { label: 'Asistencia', main: true, balance: 5, threshold: 12, reward: '5% de dscto', period: 'month', rewards_available: 0 },
+        { label: 'Compra', main: false, balance: 7, threshold: 12, reward: 'Un kekito o un batido', period: 'none', rewards_available: 1 },
+      ],
+    },
+    '3388000000023213846.vf_x',
+    { urlNegocio: 'https://fideliza.vendemias.com/n/kallpa' },
+  );
+  assert.deepEqual(o.secondaryLoyaltyPoints, { label: 'Compra', balance: { int: 7 } });
+  assert.equal(o.textModulesData.length, 2);
+  assert.equal(o.textModulesData[1].header, 'Compra');
+  assert.match(o.textModulesData[1].body, /7\/12 · Tienes 1 premio para canjear/);
+  // Con una sola línea, el pase es el de siempre.
+  const solo = payload.cuerpoObjeto(
+    {
+      member: { public_code: 'VDM-A7K9P2', alias: null, status: 'active', balance: 2, rewards_available: 0, qr_token: 'vq' + 'x'.repeat(24) },
+      program: { name: 'Club', status: 'active', rule_type: 'stamps', threshold: 10, reward: 'Un café' },
+      brand: marca,
+      lines: [{ label: 'Club', main: true, balance: 2, threshold: 10, reward: 'Un café', period: 'none', rewards_available: 0 }],
+    },
+    '3388000000023213846.vf_x',
+    { urlNegocio: 'https://fideliza.vendemias.com/n/x' },
+  );
+  assert.equal(solo.secondaryLoyaltyPoints.label, 'Premios');
+  assert.equal(solo.textModulesData.length, 1);
+});
+
 test('4d · la cartilla de Wallet lleva el avance, nunca quién es el cliente', () => {
   const estilo = { plantilla: 'color', sello: 'corazon' };
   const d = walletArte.datosArteWallet('#CB5C2F', estilo, 'stamps', 10, 7);
@@ -226,6 +259,8 @@ test('9 · el código del panel nunca usa la service_role', () => {
   for (const dir of ['app', 'lib', 'components', 'modules']) {
     for (const f of ficheros(join(raiz, dir), /\.(ts|tsx|js|mjs)$/)) {
       if (f.endsWith('unitarias.mjs')) continue; // este fichero contiene el patrón que busca
+      // Las pruebas de la SQL en PGlite (sql/tests) crean los roles de Supabase para simularlo; no son el panel.
+      if (f.includes(join('sql', 'tests'))) continue;
       if (/service_role|SUPABASE_SERVICE/i.test(readFileSync(f, 'utf8').replace(/\/\/.*|\/\*[\s\S]*?\*\//g, ''))) malos.push(f);
     }
   }

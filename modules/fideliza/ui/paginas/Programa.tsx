@@ -18,7 +18,9 @@ import { esWeb, irACampo, motivoSlug, useValidacion, type Errores } from '@/modu
 import { Cargando, Fallo, SinPermiso } from '@/modules/fideliza/ui/Estados';
 import { useAvisar } from '@/components/panel/Avisos';
 import { useCargar } from '@/components/panel/useCargar';
-import { accion, ErrorFideliza, lecturas, mensaje, sincronizarEnSegundoPlano, type Programa, type Version } from '@/modules/fideliza/cliente/api';
+import { accion, ErrorFideliza, lecturas, mensaje, sincronizarEnSegundoPlano, type Nivel, type Programa, type Version } from '@/modules/fideliza/cliente/api';
+import NivelesDelMes from '@/modules/fideliza/ui/NivelesDelMes';
+import LineasDelClub from '@/modules/fideliza/ui/LineasDelClub';
 import { urlAyuda, urlSuelta } from '@/modules/fideliza/dominio/botones';
 import { urlNegocio } from '@/modules/fideliza/dominio/config';
 import { aCentimos, fecha, fraseRegla, soles, unidades, type TipoRegla } from '@/modules/fideliza/dominio/formato';
@@ -81,6 +83,8 @@ const guia = (label: string) => GUIA.find(([t]) => label === t) ?? GUIA.find(([t
 const CLAVES_REGLA = [
   'rule_type', 'stamps_per_purchase', 'points_per_unit', 'unit_cents', 'rounding', 'min_purchase_cents',
   'reward_threshold', 'reward_description', 'reward_valid_days', 'valid_to', 'location_ids',
+  // 0015: niveles del mes, espera entre operaciones y bono.
+  'period', 'tiers', 'cooldown_hours', 'bonus_label', 'bonus_units',
 ] as const;
 const mismoValor = (k: string, a: unknown, b: unknown) => {
   if (k === 'valid_to') return (a ? new Date(String(a)).getTime() : null) === (b ? new Date(String(b)).getTime() : null);
@@ -218,6 +222,15 @@ function ProgramaPagina() {
   if (!b.reward_threshold) pon('umbral', 3, '«Premio al llegar a»: ¿cuántos hacen falta para el premio? (ej. 10)');
   else if (!enteroEntre(b.reward_threshold, 1, 1_000_000)) pon('umbral', 3, '«Premio al llegar a»: un número entero mayor que 0.');
   if (b.reward_valid_days != null && !enteroEntre(b.reward_valid_days, 1, 3650)) pon('dias', 3, 'Días para canjear: de 1 a 3650, o vacío para que no venza.');
+  if (b.period === 'month') {
+    const ns = b.tiers ?? [];
+    const malo = ns.findIndex((n, i) => !enteroEntre(n.at, 1, 1000) || (i > 0 && n.at <= ns[i - 1].at) || !n.level.trim() || ((n.gift_count ?? 0) > 0 && !(n.gift ?? '').trim()));
+    if (!ns.length) pon('niveles', 3, 'Añade al menos un nivel del mes.');
+    else if (malo >= 0) pon('niveles', 3, `Nivel ${malo + 1}: pon cuántas veces (más que el nivel anterior), qué gana, y el regalo si das alguno.`);
+  }
+  if (b.cooldown_hours != null && !enteroEntre(b.cooldown_hours, 1, 168)) pon('espera', 3, 'Espera entre visitas: de 1 a 168 horas, o vacío.');
+  if ((b.bonus_label ?? '').trim() && !enteroEntre(b.bonus_units, 1, 100)) pon('bono', 3, 'Bono: ¿cuánto suma? (de 1 a 100).');
+  if (b.bonus_units && !(b.bonus_label ?? '').trim()) pon('bono', 3, 'Bono: ponle nombre (ej. «Reto del BOX»).');
   if (!(b.reward_description ?? '').trim()) pon('premio', 3, 'Escribe el premio (ej. «Un corte gratis»).');
   if (b.valid_to && b.valid_to.slice(0, 10) < new Date().toLocaleDateString('en-CA', { timeZone: 'America/Lima' })) {
     pon('fin', 3, 'La fecha de fin ya pasó: con ella nadie acumularía. Cámbiala o déjala vacía.');
@@ -292,6 +305,15 @@ function ProgramaPagina() {
     }
   }
 
+  /** Con niveles del mes, la meta y el premio «de siempre» son los del primer nivel (la base hace lo mismo). */
+  const ponNiveles = (tiers: Nivel[] | null) =>
+    setB((x) => ({
+      ...x,
+      period: tiers ? 'month' : 'none',
+      tiers,
+      ...(tiers?.[0] ? { reward_threshold: tiers[0].at || undefined, reward_description: tiers[0].level } : {}),
+    }));
+
   async function guardarPrograma(): Promise<boolean> {
     // El borrador se guarda aunque la regla esté a medias: lo que falta queda
     // marcado en rojo y se exige al publicar. El nombre sí hace falta ya.
@@ -306,7 +328,11 @@ function ProgramaPagina() {
         ...b,
         min_purchase_cents: textos.min ? aCentimos(textos.min) ?? 0 : 0,
         unit_cents: aCentimos(textos.unidad) ?? 100,
+        // Sin nombre no hay bono; sin bono, tampoco cantidad.
+        bonus_label: (b.bonus_label ?? '').trim() || null,
+        bonus_units: (b.bonus_label ?? '').trim() ? (b.bonus_units ?? null) : null,
       };
+      if (draft.period !== 'month') draft.tiers = null;
       // Solo los campos que la base conoce: el resto de la versión no es borrador.
       const limpio = Object.fromEntries(Object.entries(draft).filter(([k]) => (CLAVES_REGLA as readonly string[]).includes(k)));
       if (ajustes && marca.require_external_ref !== ajustes.require_external_ref) {
@@ -477,6 +503,8 @@ function ProgramaPagina() {
         </div>
       )}
 
+      {p && p.current_version_id && companyId && <LineasDelClub companyId={companyId} principal={p} editable={editable} />}
+
       <div className="fz-pasos" role="tablist">
         {PASOS.map((t, i) => (
           <button key={t} role="tab" aria-selected={paso === i} className={paso === i ? 'active' : i < paso ? 'done' : ''} onClick={() => void irA(i)}>
@@ -611,10 +639,19 @@ function ProgramaPagina() {
             )}
             {b.rule_type !== 'visits' && campo('Compra mínima (S/, opcional)', <input className="input" inputMode="decimal" value={textos.min} disabled={!editable} onChange={(e) => setTextos({ ...textos, min: e.target.value })} placeholder="0" />, 'Por debajo de este importe la compra se registra pero no suma.', 'minimo')}
             <div className="fz-col2">
-              {campo(`Premio al llegar a (${b.rule_type === 'points' ? 'puntos' : b.rule_type === 'visits' ? 'visitas' : 'sellos'})`, <input className="input" type="number" min={1} value={b.reward_threshold ?? ''} disabled={!editable} onChange={(e) => setB({ ...b, reward_threshold: Number(e.target.value) || undefined })} />, undefined, 'umbral')}
+              {b.period !== 'month' && campo(`Premio al llegar a (${b.rule_type === 'points' ? 'puntos' : b.rule_type === 'visits' ? 'visitas' : 'sellos'})`, <input className="input" type="number" min={1} value={b.reward_threshold ?? ''} disabled={!editable} onChange={(e) => setB({ ...b, reward_threshold: Number(e.target.value) || undefined })} />, undefined, 'umbral')}
               {campo('Días para canjear el premio (opcional)', <input className="input" type="number" min={1} max={3650} value={b.reward_valid_days ?? ''} disabled={!editable} onChange={(e) => setB({ ...b, reward_valid_days: e.target.value ? Number(e.target.value) : null })} />, 'Vacío = no vence.', 'dias')}
             </div>
-            {campo('Premio', <input className="input" maxLength={80} value={b.reward_description ?? ''} disabled={!editable} onChange={(e) => setB({ ...b, reward_description: e.target.value })} placeholder="Un corte gratis" />, undefined, 'premio')}
+            {b.period !== 'month' && campo('Premio', <input className="input" maxLength={80} value={b.reward_description ?? ''} disabled={!editable} onChange={(e) => setB({ ...b, reward_description: e.target.value })} placeholder="Un corte gratis" />, undefined, 'premio')}
+            {b.rule_type !== 'points' && (
+              <NivelesDelMes
+                b={b}
+                editable={editable}
+                ponNiveles={ponNiveles}
+                setB={setB}
+                campo={campo}
+              />
+            )}
             {campo('El programa termina el (opcional)', <input className="input" type="date" value={b.valid_to ? b.valid_to.slice(0, 10) : ''} disabled={!editable} onChange={(e) => setB({ ...b, valid_to: e.target.value ? `${e.target.value}T23:59:59-05:00` : null })} />, 'Pasada esa fecha no se acumula hasta que publiques otra regla.', 'fin')}
             {datos!.sucursales.length > 0 &&
               campo(

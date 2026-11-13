@@ -96,8 +96,19 @@ export interface DatosObjeto {
     rewards_available: number;
     qr_token: string;
   };
-  program: { name: string; status: string; rule_type: TipoRegla | null; threshold: number | null; reward: string | null } | null;
+  /** Con period 'month' (0015) el saldo es el del mes y threshold/reward son el SIGUIENTE nivel. */
+  program: { name: string; status: string; rule_type: TipoRegla | null; threshold: number | null; reward: string | null; period?: 'none' | 'month' } | null;
   brand: Marca;
+  /** 0017: las líneas de la tarjeta, la principal primero. Con una sola, el pase es el de siempre. */
+  lines?: { label: string; main: boolean; balance: number; threshold: number | null; reward: string | null; period: 'none' | 'month'; rewards_available: number }[];
+}
+
+/** Una línea en una frase para el pase: «7/12 · con 12: Un kekito o un batido». */
+function fraseLinea(l: NonNullable<DatosObjeto['lines']>[number]): string {
+  const meta = l.threshold ?? 0;
+  const avance = meta ? `${l.balance}/${meta}${l.period === 'month' ? ' este mes' : ''}` : String(l.balance);
+  const premio = l.rewards_available > 0 ? `Tienes ${l.rewards_available} premio${l.rewards_available > 1 ? 's' : ''} para canjear` : l.reward ? `con ${meta}: ${l.reward}` : '';
+  return [avance, premio].filter(Boolean).join(' · ');
 }
 
 export function cuerpoObjeto(d: DatosObjeto, classId: string, opciones: { urlNegocio: string; urlArte?: string }): Record<string, unknown> {
@@ -111,26 +122,39 @@ export function cuerpoObjeto(d: DatosObjeto, classId: string, opciones: { urlNeg
       ? `${'●'.repeat(Math.min(Math.max(d.member.balance, 0), umbral))}${'○'.repeat(Math.max(0, umbral - d.member.balance))} · ${d.member.balance}/${umbral}`
       : `${d.member.balance}/${umbral} ${UNIDAD[tipo].varias}`
     : '';
-  const premio =
-    premios > 0
+  const porMes = d.program?.period === 'month';
+  const premio = porMes
+    ? [
+        premios > 0 ? `Tienes ${premios} premio${premios > 1 ? 's' : ''} para canjear` : '',
+        umbral && faltan > 0 ? `Este mes te faltan ${faltan} ${faltan === 1 ? UNIDAD[tipo].una : UNIDAD[tipo].varias} para ${d.program?.reward ?? 'el siguiente nivel'}` : '',
+      ].filter(Boolean).join(' · ')
+    : premios > 0
       ? `Tienes ${premios} premio${premios > 1 ? 's' : ''} para canjear: ${d.program?.reward ?? ''}`
       : umbral
         ? `Te faltan ${faltan} ${faltan === 1 ? UNIDAD[tipo].una : UNIDAD[tipo].varias} para ${d.program?.reward ?? 'tu premio'}`
         : '';
   const frase = [avance, premio].filter(Boolean).join(' · ');
+  // 0017: con varias líneas, la segunda va en el contador secundario y cada una en su texto.
+  const otras = d.lines && d.lines.length > 1 ? d.lines.filter((l) => !l.main) : [];
+  const premiosTodos = premios + otras.reduce((s, l) => s + l.rewards_available, 0);
   return {
     classId,
     state: activo ? 'ACTIVE' : 'INACTIVE',
     accountId: d.member.public_code,
     accountName: (d.member.status === 'deleted' ? 'Tarjeta dada de baja' : d.member.alias || 'Cliente').slice(0, 40),
     loyaltyPoints: { label: UNIDAD[tipo].corta, balance: { int: d.member.balance } },
-    secondaryLoyaltyPoints: { label: 'Premios', balance: { int: premios } },
+    secondaryLoyaltyPoints: otras[0]
+      ? { label: otras[0].label.slice(0, 20), balance: { int: otras[0].balance } }
+      : { label: 'Premios', balance: { int: premios } },
     // En demo, la clase es compartida: la ilustración específica del programa va en el objeto.
     heroImage: opciones.urlArte ? { sourceUri: { uri: opciones.urlArte }, contentDescription: texto(`Diseño de fidelidad de ${d.brand.display_name}`) } : null,
     barcode: activo
       ? { type: 'QR_CODE', value: d.member.qr_token, alternateText: d.member.public_code }
       : undefined,
-    textModulesData: frase ? [{ id: 'premio', header: premios > 0 ? 'Premio disponible' : 'Tu avance y premio', body: frase.slice(0, 200) }] : [],
+    textModulesData: [
+      ...(frase ? [{ id: 'premio', header: premiosTodos > 0 ? 'Premio disponible' : otras.length ? (d.lines?.[0]?.label ?? 'Tu avance y premio') : 'Tu avance y premio', body: frase.slice(0, 200) }] : []),
+      ...otras.map((l, i) => ({ id: `linea${i + 1}`, header: l.label.slice(0, 40), body: fraseLinea(l).slice(0, 200) })),
+    ],
     linksModuleData: {
       uris: [
         { id: 'negocio', uri: opciones.urlNegocio, description: 'Volver a la página de enlaces' },

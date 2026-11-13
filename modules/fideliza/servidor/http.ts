@@ -44,7 +44,12 @@ export function desdeError(e: unknown, ruta: string) {
         : codigo.endsWith('not_found')
           ? 404
           : 409;
-    return fallo(codigo, status, undefined, e instanceof ErrorRpc && e.detalle && /^[a-z_]{1,40}$/.test(e.detalle) ? e.detalle : undefined);
+    // El detalle solo pasa si es un nombre de campo, o la hora de la espera (0015: «13/11 06:30»).
+    const detalle =
+      e instanceof ErrorRpc && e.detalle && (/^[a-z_]{1,40}$/.test(e.detalle) || (codigo === 'cooldown' && /^\d{2}\/\d{2} \d{2}:\d{2}$/.test(e.detalle)))
+        ? e.detalle
+        : undefined;
+    return fallo(codigo, status, undefined, detalle);
   }
   if (e instanceof ErrorRpc && e.code === 'PGRST301') return fallo('unauthenticated', 401);
   const ref = randomUUID().slice(0, 8);
