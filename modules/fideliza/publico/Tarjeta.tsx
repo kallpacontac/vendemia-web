@@ -234,6 +234,17 @@ export default function Tarjeta(props: {
     };
   }, [token, props.vapid, props.inicial.brand.slug]);
 
+  // Recién creada y el permiso ya lo dio al tocar «Crear mi tarjeta» (/n/<slug>/unirse):
+  // los avisos quedan activados solos, sin otro toque. Una vez por visita.
+  const autoAvisos = useRef(false);
+  useEffect(() => {
+    if (autoAvisos.current || !nueva || !pushPosible || permisoAvisos !== 'granted') return;
+    if (d.member.status !== 'active' || (d.push.consent && d.push.devices > 0)) return;
+    autoAvisos.current = true;
+    void activarAvisos('push-alta-v1');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [nueva, pushPosible, permisoAvisos, d.member.status, d.push.consent, d.push.devices]);
+
   async function actualizar() {
     setOcupado('ver');
     try {

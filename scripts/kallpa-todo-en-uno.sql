@@ -8,6 +8,7 @@
 --   · Sin el negocio suelto «kallpa-tienda»
 --   · Botones: planes, kekitos, tienda virtual y Yape/Plin
 --   · La ficha del cliente con el historial de las dos líneas
+--   · Avisos automáticos: bienvenida, «te extrañamos» a los 7 días, «vuelve» a los 30
 --
 -- Junta, en este orden (cada paso es su propia transacción):
 --   1. modules/fideliza/sql/0017_una_tarjeta_varias_lineas.sql
@@ -15,6 +16,7 @@
 --   3. scripts/kallpa-tienda-quitar.sql
 --   4. scripts/kallpa-botones.sql
 --   5. modules/fideliza/sql/0018_ficha_con_lineas.sql
+--   6. scripts/kallpa-campanas.sql
 --
 -- No hay que rellenar nada: la cuenta de tu papá ya existe, así que v_clave se
 -- queda vacía. Se puede volver a correr entero sin duplicar nada.
@@ -25,7 +27,7 @@
 -- ═══════════════════════════════════════════════════════════════════════════════
 
 -- ═══════════════════════════════════════════════════════════════════════════════
--- PASO 1 DE 5 · Una tarjeta, varias líneas (0017)
+-- PASO 1 DE 6 · Una tarjeta, varias líneas (0017)
 -- ═══════════════════════════════════════════════════════════════════════════════
 begin;
 
@@ -796,7 +798,7 @@ to authenticated;
 commit;
 
 -- ═══════════════════════════════════════════════════════════════════════════════
--- PASO 2 DE 5 · Añadir la línea «Compra» al Club Kallpa
+-- PASO 2 DE 6 · Añadir la línea «Compra» al Club Kallpa
 -- ═══════════════════════════════════════════════════════════════════════════════
 begin;
 
@@ -953,7 +955,7 @@ end $$;
 commit;
 
 -- ═══════════════════════════════════════════════════════════════════════════════
--- PASO 3 DE 5 · Quitar el negocio suelto «kallpa-tienda»
+-- PASO 3 DE 6 · Quitar el negocio suelto «kallpa-tienda»
 -- ═══════════════════════════════════════════════════════════════════════════════
 begin;
 
@@ -993,7 +995,7 @@ end $$;
 commit;
 
 -- ═══════════════════════════════════════════════════════════════════════════════
--- PASO 4 DE 5 · Botones de la página
+-- PASO 4 DE 6 · Botones de la página
 -- ═══════════════════════════════════════════════════════════════════════════════
 begin;
 
@@ -1062,7 +1064,7 @@ end $$;
 commit;
 
 -- ═══════════════════════════════════════════════════════════════════════════════
--- PASO 5 DE 5 · La ficha del cliente con todas sus líneas (0018)
+-- PASO 5 DE 6 · La ficha del cliente con todas sus líneas (0018)
 -- ═══════════════════════════════════════════════════════════════════════════════
 begin;
 
@@ -1134,10 +1136,50 @@ end $$;
 
 commit;
 
+-- ═══════════════════════════════════════════════════════════════════════════════
+-- PASO 6 DE 6 · Avisos automáticos (Campañas)
+-- ═══════════════════════════════════════════════════════════════════════════════
+begin;
+
+do $$
+declare
+    v_negocio constant text := 'kallpa';
+    v_actor text;
+begin
+    if not exists (select 1 from public.loyalty_settings where company_id = v_negocio) then
+        raise exception 'kallpa aún no tiene MiaTap.';
+    end if;
+    -- Actúa el dueño de kallpa, como si lo hiciera desde el panel.
+    select auth_user_id into v_actor from public.memberships where company_id = v_negocio and role = 'owner';
+    if v_actor is null then raise exception 'kallpa no tiene dueño en memberships.'; end if;
+    perform set_config('request.jwt.claim.sub', v_actor, true);
+    perform set_config('request.jwt.claims', jsonb_build_object('sub', v_actor, 'role', 'authenticated')::text, true);
+
+    perform public.loyalty_campaign_save(v_negocio, 'welcome', 'active',
+        '¡Bienvenido al Club Kallpa!',
+        'Cada sesión del mes suma y cada compra en la cafetería también. A las 12 sesiones: 5% de dscto y un batido.',
+        '{}'::jsonb);
+    perform public.loyalty_campaign_save(v_negocio, 'return_reminder', 'active',
+        '¡Te extrañamos en Kallpa!',
+        'Hace una semana que no vienes. Cada sesión te acerca a tu descuento del mes: te esperamos.',
+        jsonb_build_object('cycle_days', 7, 'max_per_30d', 2));
+    perform public.loyalty_campaign_save(v_negocio, 'winback', 'active',
+        'Vuelve a entrenar con nosotros',
+        'Hace un mes que no te vemos. Vuelve a Kallpa y retoma tu racha: cada sesión suma para tu descuento.',
+        jsonb_build_object('inactive_days', 30, 'max_per_30d', 2));
+    perform public.loyalty_campaign_save(v_negocio, 'reward_available', 'paused',
+        'Tienes un premio esperándote',
+        'Enséñalo en Kallpa para canjearlo: tu descuento o tu batido te espera.',
+        '{}'::jsonb);
+    raise notice 'Campañas de kallpa configuradas.';
+end $$;
+
+commit;
+
 notify pgrst, 'reload schema';
 
 -- ═══════════════════════════════════════════════════════════════════════════════
--- COMPROBACIÓN: debe salir kallpa con sus dos líneas y los 5 botones.
+-- COMPROBACIÓN: debe salir kallpa con sus dos líneas, los 5 botones y 3 avisos activos.
 -- ═══════════════════════════════════════════════════════════════════════════════
 select que, nombre, detalle from (
 select 1 as o1, (p.parent_program_id is not null)::int as o2, 'línea' as que, coalesce(p.line_label, p.name) as nombre,
@@ -1151,5 +1193,9 @@ select 2, l.position, 'botón', l.label, l.url
   join public.loyalty_links l on l.profile_id = s.default_profile_id
  where s.company_id = 'kallpa'
 union all
-select 3, 0, '¿sigue kallpa-tienda?', case when exists (select 1 from public.companies where id = 'kallpa-tienda') then 'SÍ (algo falló)' else 'no, bien' end, null
+select 3, array_position(array['welcome', 'reward_available', 'return_reminder', 'winback'], c.template), 'aviso', c.title, c.status
+  from public.loyalty_campaigns c
+ where c.company_id = 'kallpa' and c.template <> 'manual'
+union all
+select 4, 0, '¿sigue kallpa-tienda?', case when exists (select 1 from public.companies where id = 'kallpa-tienda') then 'SÍ (algo falló)' else 'no, bien' end, null
 ) x order by o1, o2;

@@ -3,9 +3,15 @@
  * EL ALTA · fideliza.vendemias.com/n/<slug>/unirse
  * ══════════════════════════════════════════════════════════════════════════
  *
- * Primero el beneficio, luego un solo botón. Sin contraseña, sin teléfono
- * obligatorio, sin casillas: el nombre es opcional y el consentimiento
- * comercial se pide DESPUÉS, en la tarjeta, por separado y sin premarcar.
+ * Primero el beneficio, luego un solo botón. Sin contraseña ni casillas.
+ * 13-nov-2026 (Alvaro): NOMBRE y CELULAR obligatorios, para que el negocio sepa
+ * quién es y pueda encontrarlo por su número en la caja. El celular queda como
+ * contacto sin verificar (srv_card_action 'contact').
+ *
+ * Avisos al registrarse: el toque en «Crear mi tarjeta» pide el permiso de
+ * notificaciones del navegador (la única forma: exige un toque). La tarjeta, al
+ * abrirse con el permiso ya dado, se suscribe sola (Tarjeta.tsx). En iPhone sin
+ * instalar no existe: allí se ofrece después, al instalarla.
  *
  * «Ya tienes una tarjeta aquí» sale solo si la que recuerda este teléfono
  * (localStorage `fz:card:<slug>`) SIGUE EXISTIENDO: tras reiniciar el negocio o
@@ -20,11 +26,23 @@ import { codigoDe, mensajeDe } from '@/modules/fideliza/dominio/errores';
 import { esc, noDisponible, pagina, type Negocio } from '@/modules/fideliza/servidor/html';
 import { huellaIp, limitar, log, NO_CACHE } from '@/modules/fideliza/servidor/http';
 import { rpc, servidor } from '@/modules/fideliza/servidor/supabase';
+import { entorno } from '@/modules/fideliza/servidor/entorno';
 
 
 const SLUG = /^[a-z0-9][a-z0-9-]{1,38}[a-z0-9]$/;
 
-function formulario(n: Negocio, slug: string, placa: string | null, aviso?: string, nombre = '') {
+/**
+ * Celular de Perú (9 dígitos que empiezan por 9) o uno con código de país (10 a 15
+ * dígitos). Más estricto que loyalty_norm_phone, que también aceptaría 8: aquí un
+ * dígito de menos es un error al escribir, no un número de otro país.
+ */
+export function celularValido(v: string): boolean {
+  const d = v.replace(/\D/g, '');
+  return (d.length === 9 && d.startsWith('9')) || (d.length >= 10 && d.length <= 15);
+}
+
+function formulario(n: Negocio, slug: string, placa: string | null, aviso?: string, nombre = '', telefono = '') {
+  const conAvisos = Boolean(entorno.vapidPublica());
   const p = n.program!;
   return pagina({
     titulo: `${p.name} · ${n.brand.display_name}`,
@@ -40,14 +58,24 @@ function formulario(n: Negocio, slug: string, placa: string | null, aviso?: stri
   ${aviso ? `<p class="nota" role="alert"><b>${esc(aviso)}</b></p>` : ''}
   <input type="hidden" name="k" value="${randomBytes(16).toString('base64url')}">
   ${placa ? `<input type="hidden" name="d" value="${esc(placa)}">` : ''}
-  <label for="alias">¿Cómo te llamamos? <span class="nota">(opcional)</span></label>
-  <input type="text" id="alias" name="alias" maxlength="40" autocomplete="given-name"${nombre ? ` value="${esc(nombre)}"` : ''}>
+  <label for="alias">Tu nombre</label>
+  <input type="text" id="alias" name="alias" maxlength="40" minlength="2" required autocomplete="name"${nombre ? ` value="${esc(nombre)}"` : ''}>
+  <label for="tel">Tu celular</label>
+  <input type="tel" id="tel" name="tel" maxlength="20" required inputmode="tel" autocomplete="tel" placeholder="987 654 321" pattern="[+0-9 ()-]{8,20}"${telefono ? ` value="${esc(telefono)}"` : ''}>
   <button class="btn prim" type="submit" id="b">Crear mi tarjeta</button>
-  <p class="nota">Sin contraseña. Tu tarjeta queda en este teléfono y puedes guardarla en Google Wallet o en tu pantalla de inicio.</p>
+  <p class="nota">Sin contraseña. Con tu celular te encuentran en caja.${conAvisos ? ' Te pediremos permiso para avisarte cuando ganes un premio.' : ''} Tu tarjeta queda en este teléfono y puedes guardarla en Google Wallet o en tu pantalla de inicio.</p>
 </form>
 <script>
 try{var kc='fz:card:${esc(slug)}',t=localStorage.getItem(kc);if(t&&/^[A-Za-z0-9_-]{30,64}$/.test(t)){fetch('/api/fideliza/publico/tarjeta',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({accion:'ver',token:t})}).then(function(r){return r.ok?r.json():null}).then(function(d){if(!d)return;if(d.status==='ok'){if(!/[?&]nueva=1(&|$)/.test(location.search)){location.replace('/m/'+t);return;}document.getElementById('ya').hidden=false;document.getElementById('ya-a').href='/m/'+t;}else{localStorage.removeItem(kc);}}).catch(function(){});}}catch(e){}
-document.getElementById('f').addEventListener('submit',function(){var b=document.getElementById('b');b.disabled=true;b.textContent='Creando…';});
+(function(){var f=document.getElementById('f'),b=document.getElementById('b'),pide=${conAvisos ? 'true' : 'false'},ya=false;
+function enviar(){if(ya)return;ya=true;b.disabled=true;b.textContent='Creando…';f.submit();}
+f.addEventListener('submit',function(e){
+  /* Avisos: el permiso se pide en ESTE toque (el navegador lo exige). Diga lo que diga, la tarjeta se crea. */
+  var puede=pide&&'Notification' in window&&'serviceWorker' in navigator&&'PushManager' in window&&Notification.permission==='default';
+  if(!puede){b.disabled=true;b.textContent='Creando…';return;}
+  e.preventDefault();b.disabled=true;b.textContent='Creando…';
+  try{var p=Notification.requestPermission();if(p&&p.then){p.then(enviar,enviar);setTimeout(enviar,20000);}else enviar();}catch(x){enviar();}
+});})();
 </script>`,
   });
 }
@@ -90,14 +118,34 @@ export async function POST(req: Request, { params }: { params: { slug: string } 
     const f = await req.formData();
     const k = String(f.get('k') ?? '');
     const d = String(f.get('d') ?? '');
-    const alias = String(f.get('alias') ?? '').trim().slice(0, 40);
+    const alias = String(f.get('alias') ?? '').replace(/[\u0000-\u001f\u007f<>]/g, '').trim().slice(0, 40);
+    const tel = String(f.get('tel') ?? '').trim().slice(0, 20);
     if (!/^[A-Za-z0-9_-]{16,40}$/.test(k)) return noDisponible(null, 400);
+    // Obligatorios (el navegador ya lo exige; esto cubre al que no lo hace).
+    if (alias.length < 2 || !celularValido(tel)) {
+      n = await negocio(slug, null);
+      if (n.status !== 'ok' || !n.program) return noDisponible(null, 404);
+      return formulario(
+        n,
+        slug,
+        /^[A-Za-z0-9_-]{22,64}$/.test(d) ? d : null,
+        alias.length < 2 ? 'Escribe tu nombre.' : 'Revisa tu celular: 9 dígitos, por ejemplo 987 654 321.',
+        alias,
+        tel,
+      );
+    }
     const r = await rpc<{ card_token: string; public_code: string }>(servidor(), 'loyalty_srv_join', {
       p_slug: slug,
-      p_alias: alias || null,
+      p_alias: alias,
       p_device_token: /^[A-Za-z0-9_-]{22,64}$/.test(d) ? d : null,
       p_creation_key: k,
     });
+    // El celular, como contacto sin verificar. Si fallara, la tarjeta ya existe: se sigue.
+    await rpc(servidor(), 'loyalty_srv_card_action', {
+      p_card_token: r.card_token,
+      p_action: 'contact',
+      p_args: { phone: tel },
+    }).catch((e) => log('join_phone_error', { mensaje: e instanceof Error ? e.message.slice(0, 120) : 'x' }));
     return new Response(null, {
       status: 303,
       headers: { Location: `/m/${r.card_token}?nueva=1`, ...NO_CACHE, 'Referrer-Policy': 'no-referrer' },

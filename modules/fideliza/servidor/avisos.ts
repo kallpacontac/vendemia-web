@@ -26,10 +26,26 @@ function textoAviso(tipo: TipoAviso, premio: string, negocio: string) {
 }
 
 async function enviar(companyId: string, memberId: string, tipo: TipoAviso, premio: string) {
+  return enviarTexto(companyId, memberId, tipo, (negocio) => textoAviso(tipo, premio, negocio), true);
+}
+
+/**
+ * Manda el texto por push y, si `conWallet`, también como mensaje del pase.
+ * Los sellos van sin Wallet: el pase ya enseña el saldo nuevo solo, y Google
+ * limita los mensajes por pase (uno por sello los gastaría).
+ */
+async function enviarTexto(
+  companyId: string,
+  memberId: string,
+  tipo: string,
+  texto: (negocio: string) => { titulo: string; cuerpo: string },
+  conWallet: boolean,
+) {
   const sb = servidor();
   const d = await rpc<DatosAviso>(sb, 'loyalty_srv_aviso_datos', { p_company: companyId, p_member: memberId });
   if (d.status !== 'ok') return;
-  const { titulo, cuerpo } = textoAviso(tipo, premio, d.negocio ?? 'tu negocio');
+  if (!conWallet && !d.subscriptions?.length) return;
+  const { titulo, cuerpo } = texto(d.negocio ?? 'tu negocio');
   const envios: Promise<unknown>[] = [];
   if (d.subscriptions?.length && pushConfigurado()) {
     envios.push(
@@ -40,9 +56,25 @@ async function enviar(companyId: string, memberId: string, tipo: TipoAviso, prem
       ),
     );
   }
-  if (d.wallet_object_id) envios.push(mensajeWallet(d.wallet_object_id, titulo, cuerpo));
+  if (conWallet && d.wallet_object_id) envios.push(mensajeWallet(d.wallet_object_id, titulo, cuerpo));
   const r = await Promise.allSettled(envios);
   for (const x of r) if (x.status === 'rejected') log('aviso_premio_fallo', { tipo, mensaje: String(x.reason).slice(0, 160) });
+}
+
+/**
+ * 13-nov-2026 (Kallpa): el aviso de CADA sello o visita, con lo que lleva y lo que
+ * le falta. Solo push y solo a quien activó los avisos en su tarjeta. Es de la
+ * operación, no una campaña: no cuenta para el tope de avisos al mes.
+ */
+export async function avisarSello(companyId: string, memberId: string, titulo: string, cuerpo: string) {
+  try {
+    await Promise.race([
+      enviarTexto(companyId, memberId, 'sello', (negocio) => ({ titulo: `${titulo} · ${negocio}`, cuerpo }), false),
+      new Promise((listo) => setTimeout(listo, 3500)),
+    ]);
+  } catch (e) {
+    log('aviso_sello_omitido', { mensaje: e instanceof Error ? e.message.slice(0, 160) : 'x' });
+  }
 }
 
 export async function avisarPremio(companyId: string, memberId: string, tipo: TipoAviso, premio: string | null | undefined) {

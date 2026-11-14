@@ -71,7 +71,7 @@ main{width:100%;max-width:440px;padding:0 16px 32px;margin-top:-32px}
 .btn.prim{background:var(--marca);border-color:var(--marca);color:var(--sobre)}
 .btn:focus-visible,input:focus-visible{outline:3px solid #0A0A0A;outline-offset:2px}
 label{display:block;font-weight:600;font-size:14px;margin:14px 0 6px}
-input[type=text]{width:100%;min-height:50px;border:1.5px solid #DEDED9;border-radius:12px;padding:10px 14px;font:16px system-ui,sans-serif}
+input[type=text],input[type=tel]{width:100%;min-height:50px;border:1.5px solid #DEDED9;border-radius:12px;padding:10px 14px;font:16px system-ui,sans-serif}
 .nota{color:var(--suave);font-size:13.5px;margin-top:10px}
 .premio{font-size:18px;font-weight:700;margin:6px 0}
 .placa-pendiente{text-align:center;padding:24px}

@@ -5,7 +5,7 @@ import { estadoConfiguracion } from './entorno';
 import { rpc, servidor } from './supabase';
 import { comprobarLogo } from './logo';
 import { buscarLugares } from './lugares';
-import { avisarPremio } from './avisos';
+import { avisarPremio, avisarSello } from './avisos';
 import { drenar } from './worker';
 import { urlAyuda, urlSuelta } from '../dominio/botones';
 import { IDS_SELLO } from '../dominio/sellos';
@@ -69,13 +69,73 @@ const borrador = z
 interface ResultadoOperacion {
   status: string;
   rewards_issued?: number;
+  units?: number;
   /** 0017: de qué línea fue (la tarjeta que vuelve es siempre la de la persona). */
   program_id?: string;
   member?: {
+    balance?: number;
+    threshold?: number | null;
+    rule_type?: string | null;
+    period?: string | null;
+    bonus_label?: string | null;
     reward_description?: string | null;
     rewards?: { description: string }[];
-    lines?: { program_id: string; main: boolean; reward: string | null; rewards: { description: string }[] }[];
+    lines?: {
+      program_id: string;
+      main: boolean;
+      label: string;
+      balance: number;
+      threshold: number | null;
+      rule_type: string | null;
+      period: string | null;
+      bonus_label?: string | null;
+      reward: string | null;
+      rewards: { description: string }[];
+    }[];
   };
+}
+
+/**
+ * El aviso de un sello o visita: «+1 sello en Compra» / «Llevas 3 de 12. Te faltan
+ * 9 para un kekito o un batido.». Si con eso ganó un premio no sale este: sale el
+ * de «¡Ganaste un premio!». Con niveles del mes, la meta es el SIGUIENTE nivel.
+ */
+function textoSello(r: ResultadoOperacion, bono: boolean): { titulo: string; cuerpo: string } | null {
+  const m = r.member;
+  const u = r.units ?? 0;
+  if (!m || u <= 0 || r.rewards_issued) return null;
+  const lineas = m.lines ?? [];
+  const l = lineas.find((x) => x.program_id === r.program_id) ?? lineas.find((x) => x.main);
+  const regla = l?.rule_type ?? m.rule_type ?? 'stamps';
+  const saldo = l?.balance ?? m.balance ?? 0;
+  const meta = l ? l.threshold : (m.threshold ?? null);
+  const premio = l ? l.reward : m.reward_description;
+  const mes = (l?.period ?? m.period) === 'month';
+  const que =
+    regla === 'visits' ? (u === 1 ? 'visita' : 'visitas') : regla === 'points' ? (u === 1 ? 'punto' : 'puntos') : u === 1 ? 'sello' : 'sellos';
+  const etiqueta = lineas.length > 1 && l ? ` en ${l.label}` : '';
+  const titulo = bono ? `${l?.bonus_label ?? m.bonus_label ?? 'Bono'} +${u}${etiqueta}` : `+${u} ${que}${etiqueta}`;
+  const esteMes = mes ? ' este mes' : '';
+  // «Un kekito o un batido» → «un kekito…» en medio de la frase (sin tocar «BOX» ni «5%»).
+  const queGana = premio ? (/^[A-ZÁÉÍÓÚÑ][a-záéíóúñ]/.test(premio) ? premio[0].toLowerCase() + premio.slice(1) : premio) : 'tu premio';
+  let cuerpo: string;
+  if (meta && saldo < meta) {
+    const f = meta - saldo;
+    cuerpo = `Llevas ${saldo} de ${meta}${esteMes}. Te ${f === 1 ? 'falta' : 'faltan'} ${f} para ${queGana}.`;
+  } else if (meta && mes) {
+    cuerpo = `Llevas ${saldo}${esteMes}: ya tienes el nivel más alto. ¡Sigue así!`;
+  } else {
+    cuerpo = `Llevas ${saldo}${esteMes}.`;
+  }
+  return { titulo, cuerpo };
+}
+
+async function avisarOperacion(companyId: string, memberId: string, r: ResultadoOperacion, bono = false) {
+  // Solo la primera vez: un reintento («replayed») no vuelve a avisar.
+  if (r.status !== 'created') return;
+  if (r.rewards_issued) return avisarPremio(companyId, memberId, 'ganado', premioGanado(r));
+  const t = textoSello(r, bono);
+  if (t) await avisarSello(companyId, memberId, t.titulo, t.cuerpo);
 }
 
 /**
@@ -430,8 +490,7 @@ export const ACCIONES = {
         p_idempotency_key: d.idempotencyKey,
         p_source: 'caja',
       });
-      // Solo la primera vez: un reintento («replayed») no vuelve a avisar.
-      if (r.status === 'created' && r.rewards_issued) await avisarPremio(d.companyId, d.memberId, 'ganado', premioGanado(r));
+      await avisarOperacion(d.companyId, d.memberId, r);
       return r;
     },
   }),
@@ -445,7 +504,7 @@ export const ACCIONES = {
         p_member: await miembroDeLinea(sb, d.companyId, d.memberId, d.programId),
         p_idempotency_key: d.idempotencyKey,
       });
-      if (r.status === 'created' && r.rewards_issued) await avisarPremio(d.companyId, d.memberId, 'ganado', premioGanado(r));
+      await avisarOperacion(d.companyId, d.memberId, r, true);
       return r;
     },
   }),
