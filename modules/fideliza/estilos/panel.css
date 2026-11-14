@@ -440,3 +440,16 @@
   .fz-cl-acc .btn{justify-content:center;min-height:44px;font-size:14px}
   .fz-cl-acc .btn-ghost{grid-column:1/-1}
 }
+
+/* Cumpleaños en la Caja (ui/CumpleCliente.tsx, sql/0019). */
+.fz-cumple{display:flex;align-items:center;gap:8px;margin:10px 0;font-size:14px;text-align:left}
+.fz-cumple--hoy{padding:12px 14px;border-radius:14px;background:#ffe9f1;color:#7a1f45}
+.fz-cumple--hoy svg{flex:none}
+.fz-cumple--dato{color:var(--ink-soft,#6b6b6b)}
+.fz-cumple__cambiar{margin-left:auto;border:0;background:none;color:inherit;font:inherit;font-size:13px;text-decoration:underline;cursor:pointer}
+.fz-cumple--pregunta{display:grid;gap:6px;padding:12px 14px;border:1.5px dashed #f0b3c9;border-radius:14px;background:#fff7fa}
+.fz-cumple--pregunta p{display:flex;align-items:center;gap:6px;margin:0}
+.fz-cumple--pregunta small{color:var(--ink-soft,#6b6b6b)}
+.fz-cumple__campos{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.fz-cumple__campos .input{width:auto;min-width:84px;flex:1}
+.fz-cumple__fallo{color:#b42318}

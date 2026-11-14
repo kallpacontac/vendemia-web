@@ -11,6 +11,7 @@ export const MENSAJES: Record<string, string> = {
   server_key: 'El servidor de Fideliza no está configurado (falta la clave del servidor).',
   not_found: 'No existe o ya no está disponible.',
   invalid_phone: 'Ese teléfono no parece válido.',
+  invalid_birthday: 'Esa fecha de cumpleaños no existe.',
   invalid_email: 'Ese correo no parece válido.',
   invalid_url: 'Ese enlace no es válido (ej. tunegocio.com). Tampoco puede apuntar a otra placa.',
   invalid_settings: 'Revisa los datos del negocio: alguno no es válido.',

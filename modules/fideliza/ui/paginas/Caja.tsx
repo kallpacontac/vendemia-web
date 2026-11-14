@@ -23,6 +23,7 @@ import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { Camera, CameraOff, Check, Gift, MonitorSmartphone, Plus, Search, ShoppingBag, Undo2, UserRound } from 'lucide-react';
 import { useFideliza } from '@/modules/fideliza/ui/Contexto';
+import CumpleCliente from '@/modules/fideliza/ui/CumpleCliente';
 import { useSesion } from '@/components/panel/Sesion';
 import { Cargando, Qr, SinPermiso } from '@/modules/fideliza/ui/Estados';
 import { useAvisar } from '@/components/panel/Avisos';
@@ -700,6 +701,8 @@ export default function Caja() {
               <small className="fz-mono">{m.public_code}</small>
             </div>
           </div>
+          {/* El cumpleaños es de la persona (la base usa su miembro principal). */}
+          <CumpleCliente companyId={companyId} memberId={persona?.id ?? m.id} nombre={nombreDe(m)} />
           {cartilla(m, m.balance)}
           {umbral > 0 && (
             <p className="fz-mo__falta">
@@ -752,6 +755,7 @@ export default function Caja() {
               <div className="muted">{m.rule_type ? unidades(m.balance, m.rule_type).replace(/^[-\d.,\s]+/, '') : ''}</div>
             </div>
           </div>
+          {m.status === 'active' && <CumpleCliente companyId={companyId} memberId={persona?.id ?? m.id} nombre={nombreDe(m)} />}
           {umbral > 0 && (
             <>
               <div className="fz-barra">

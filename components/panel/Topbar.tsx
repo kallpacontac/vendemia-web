@@ -13,6 +13,7 @@ import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Bell } from 'lucide-react';
 import CuentaPanel from './CuentaPanel';
+import CambiarClave from '@/components/panel/CambiarClave';
 import ComboPanel from './ComboPanel';
 import Confirmar from './Confirmar';
 import { useAvisar } from './Avisos';
@@ -175,6 +176,7 @@ function MenuCuenta({ email, pie }: { email: string; pie: string }) {
   const demo = useDemo();
   /** null = cerrado · 'pregunta' = el «¿seguro?» · 'yendo' = cerrando sesiones. */
   const [deTodos, setDeTodos] = useState<null | 'pregunta' | 'yendo'>(null);
+  const [cambiandoClave, setCambiandoClave] = useState(false);
 
   /**
    * Es lo primero que hace el dueño si le roban el equipo, así que tiene que
@@ -192,7 +194,8 @@ function MenuCuenta({ email, pie }: { email: string; pie: string }) {
   return (
     <>
       <CuentaPanel email={email} pie={pie} demo={demo ?? false} alDemo={alternarDemo} alSalir={() => void salir()}
-        alSalirDeTodos={() => setDeTodos('pregunta')} />
+        alSalirDeTodos={() => setDeTodos('pregunta')} alCambiarClave={demo ? undefined : () => setCambiandoClave(true)} />
+      {cambiandoClave && createPortal(<CambiarClave alCerrar={() => setCambiandoClave(false)} />, document.body)}
       {/* En el <body>, no aquí: la cabecera lleva `container-type`, que convierte
           cualquier `position:fixed` de dentro en relativo A ELLA. El cuadro
           saldría encajado en la barra superior en vez de tapar la pantalla. */}

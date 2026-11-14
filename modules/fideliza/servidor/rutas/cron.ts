@@ -13,6 +13,7 @@ import { entorno } from '@/modules/fideliza/servidor/entorno';
 import { desdeError, fallo, log, ok } from '@/modules/fideliza/servidor/http';
 import { rpc, servidor } from '@/modules/fideliza/servidor/supabase';
 import { drenar } from '@/modules/fideliza/servidor/worker';
+import { avisarCumple } from '@/modules/fideliza/servidor/avisos';
 
 
 function autorizado(req: Request): boolean {
@@ -31,9 +32,15 @@ export async function GET(req: Request) {
     // Niveles del mes (0015): pone a 0 el saldo de quien aún no vino este mes. Si la
     // migración no está aplicada, no rompe el resto del cron.
     const mes = await rpc(sb, 'loyalty_srv_period_roll', {}).catch((e: unknown) => ({ omitido: String(e).slice(0, 120) }));
+    // Cumpleaños (0019): quienes cumplen hoy reciben su saludo con el regalo. Corre a las 9:00
+    // de Lima (vercel.json). Sin la migración, se omite sin tocar lo demás.
+    const cumpleaneros = await rpc<{ company_id: string; member_id: string; regalo: string }[]>(sb, 'loyalty_srv_cumple_hoy', {})
+      .catch((e: unknown) => { log('cron_cumple_omitido', { mensaje: String(e).slice(0, 120) }); return []; });
+    for (const c of Array.isArray(cumpleaneros) ? cumpleaneros : []) await avisarCumple(c.company_id, c.member_id, c.regalo);
+    const cumple = Array.isArray(cumpleaneros) ? cumpleaneros.length : 0;
     const cola = await drenar({ lote: 20, tiempoMaxMs: 40_000 });
-    log('cron', { limpieza, campanas, mes, cola });
-    return ok({ limpieza, campanas, mes, cola });
+    log('cron', { limpieza, campanas, mes, cumple, cola });
+    return ok({ limpieza, campanas, mes, cumple, cola });
   } catch (e) {
     return desdeError(e, 'cron');
   }

@@ -87,3 +87,22 @@ export async function avisarPremio(companyId: string, memberId: string, tipo: Ti
     log('aviso_premio_omitido', { tipo, mensaje: e instanceof Error ? e.message.slice(0, 160) : 'x' });
   }
 }
+
+/**
+ * 14-nov-2026 (The 24/7): el saludo de cumpleaños con el regalo del negocio (sql/0019). Lo manda
+ * el cron una vez al año por persona: push (si activó los avisos) y mensaje en su pase de Google
+ * Wallet (si lo guardó). Es de la tarjeta, no una campaña: no cuenta para el tope de avisos.
+ */
+export async function avisarCumple(companyId: string, memberId: string, regalo: string) {
+  try {
+    await Promise.race([
+      enviarTexto(companyId, memberId, 'cumple', (negocio) => ({
+        titulo: `🎂 ¡Feliz cumpleaños! · ${negocio}`,
+        cuerpo: `Hoy te toca: ${regalo.trim().replace(/[.!]+$/, '')}. Enseña tu tarjeta al llegar. ¡Te esperamos!`,
+      }), true),
+      new Promise((listo) => setTimeout(listo, 5000)),
+    ]);
+  } catch (e) {
+    log('aviso_cumple_omitido', { mensaje: e instanceof Error ? e.message.slice(0, 160) : 'x' });
+  }
+}

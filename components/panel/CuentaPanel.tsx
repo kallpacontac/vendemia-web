@@ -1,11 +1,13 @@
 'use client';
 
 import { useEffect, useId, useRef, useState } from 'react';
-import { ChevronDown, FlaskConical, LogOut, ShieldOff } from 'lucide-react';
+import { ChevronDown, FlaskConical, KeyRound, LogOut, ShieldOff } from 'lucide-react';
 
 /** Menú de cuenta compartido: el contenedor no depende de la sesión para poder probarlo. */
-export default function CuentaPanel({ email, pie, demo, alDemo, alSalir, alSalirDeTodos }: {
+export default function CuentaPanel({ email, pie, demo, alDemo, alSalir, alSalirDeTodos, alCambiarClave }: {
   email: string; pie: string; demo: boolean; alDemo: () => void; alSalir: () => void;
+  /** «Cambiar contraseña» (CambiarClave). Sin él, la opción no sale. */
+  alCambiarClave?: () => void;
   /** «Cerrar sesión en todos los dispositivos». Sin él, la opción no sale. */
   alSalirDeTodos?: () => void;
 }) {
@@ -52,6 +54,9 @@ export default function CuentaPanel({ email, pie, demo, alDemo, alSalir, alSalir
         <button type="button" role="menuitem" className="menu-cuenta__item" onClick={() => { cerrar(); alDemo(); }}>
           <FlaskConical size={16} /> {demo ? 'Salir del modo demo' : 'Modo demo'}
         </button>
+        {alCambiarClave && <button type="button" role="menuitem" className="menu-cuenta__item" onClick={() => { cerrar(); alCambiarClave(); }}>
+          <KeyRound size={16} /> Cambiar contraseña
+        </button>}
         <button type="button" role="menuitem" className="menu-cuenta__salir" onClick={() => { cerrar(); alSalir(); }}>
           <LogOut size={16} /> Cerrar sesión
         </button>
