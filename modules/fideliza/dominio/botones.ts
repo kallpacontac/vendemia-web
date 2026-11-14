@@ -12,6 +12,7 @@
  */
 export type TipoBoton =
   | 'whatsapp'
+  | 'reservar'
   | 'yape'
   | 'instagram'
   | 'tiktok'
@@ -39,6 +40,14 @@ export interface DefBoton {
 }
 
 export const BOTONES: DefBoton[] = [
+  {
+    tipo: 'reservar',
+    nombre: 'Reservas',
+    label: 'Reserva ahora',
+    pide: 'Tu página de reservas',
+    placeholder: 'agenda.vendemias.com/tunegocio',
+    ayuda: 'Tu página de Vendemia para separar citas (Mi página), o la que uses.',
+  },
   { tipo: 'whatsapp', nombre: 'WhatsApp', label: 'Escríbenos por WhatsApp', pide: 'Tu número de WhatsApp', placeholder: '987 654 321' },
   {
     tipo: 'yape',
@@ -209,6 +218,8 @@ export function deUrl(url: string | null, kind: 'url' | 'join'): { tipo: TipoBot
   if (/open\.spotify\.com/i.test(u)) return { tipo: 'spotify', valor: u };
   if (/g\.page\/r\/|search\.google\.com\/local\/writereview|\/review\b/i.test(u)) return { tipo: 'resenas', valor: u };
   if (/maps\.app\.goo\.gl|goo\.gl\/maps|google\.[a-z.]+\/maps/i.test(u)) return { tipo: 'maps', valor: u };
+  // La agenda de Mi página (agenda.vendemias.com/<negocio>, con o sin /reservar): «Reserva ahora».
+  if (/^https:\/\/agenda\.vendemias\.com\/[a-z0-9][a-z0-9-]{1,38}[a-z0-9](?:\/reservar)?\/?(?:[?#].*)?$/i.test(u)) return { tipo: 'reservar', valor: u };
   return { tipo: 'enlace', valor: u };
 }
 
