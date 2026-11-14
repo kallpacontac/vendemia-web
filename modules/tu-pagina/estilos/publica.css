@@ -1598,3 +1598,29 @@ button.tp-canchas__casilla { cursor: pointer; }
   .tp[data-plantilla='luxury'] .tp-luxury-reserva-real__panel .tp-galeria { position: sticky; top: 0; height: min(100dvh, 780px); overflow: hidden; }
   .tp[data-plantilla='luxury'] .tp-luxury-reserva-real__panel .tp-galeria img { height: 100%; min-height: 0; }
 }
+
+/* Horas por franjas (ElegirHora en Escaparate): como el mes de un calendario, pero mañana/tarde/noche. */
+.tp-reloj { display: grid; gap: 10px; }
+.tp-reloj__cabecera { display: grid; grid-template-columns: 42px minmax(0, 1fr) 42px; align-items: center; gap: 8px; }
+.tp-reloj__flecha { width: 42px; height: 42px; display: grid; place-items: center; border: 1px solid var(--tp-borde); border-radius: 50%; background: var(--tp-campo); color: var(--tp-texto); cursor: pointer; }
+.tp-reloj__flecha:disabled { opacity: .35; cursor: default; }
+.tp-reloj__titulo { display: grid; justify-items: center; text-align: center; }
+.tp-reloj__titulo b { font-size: 17px; color: var(--tp-texto); }
+.tp-reloj__titulo small { color: var(--tp-suave); font-size: 12.5px; }
+.tp-reloj__franjas { display: grid; grid-template-columns: repeat(auto-fit, minmax(0, 1fr)); gap: 4px; padding: 4px; border-radius: 999px; background: var(--tp-campo); }
+.tp-reloj__franjas button { min-height: 34px; border: 0; border-radius: 999px; background: none; color: var(--tp-suave); font: inherit; font-size: 13px; font-weight: 650; cursor: pointer; }
+.tp-reloj__franjas button small { opacity: .7; font-weight: 600; }
+.tp-reloj__franjas button[aria-pressed='true'] { background: var(--tp-papel, #fff); color: var(--tp-texto); box-shadow: 0 1px 4px rgba(0, 0, 0, .08); }
+.tp-reloj__flecha:focus-visible, .tp-reloj__franjas button:focus-visible { outline: 2px solid var(--tp-color); outline-offset: 2px; }
+/* En la reserva Luxury, con los tonos de las píldoras. */
+.tp[data-plantilla='luxury'] .tp-luxury-reserva-real__panel .tp-reloj__flecha,
+.tp[data-plantilla='luxury'] .tp-hojita--agenda .tp-reloj__flecha { border: 0; background: var(--rv-chip); color: var(--rv-tinta); }
+.tp[data-plantilla='luxury'] .tp-luxury-reserva-real__panel .tp-reloj__franjas,
+.tp[data-plantilla='luxury'] .tp-hojita--agenda .tp-reloj__franjas { background: var(--rv-chip); }
+.tp[data-plantilla='luxury'] .tp-luxury-reserva-real__panel .tp-reloj__franjas button[aria-pressed='true'],
+.tp[data-plantilla='luxury'] .tp-hojita--agenda .tp-reloj__franjas button[aria-pressed='true'] { background: var(--rv-tinta); color: #fff; box-shadow: none; }
+.tp[data-plantilla='luxury'] .tp-luxury-reserva-real__panel .tp-reloj__titulo b,
+.tp[data-plantilla='luxury'] .tp-hojita--agenda .tp-reloj__titulo b { color: var(--rv-tinta); }
+/* La elegida sigue negra aunque el puntero (o el toque, que en el celular se queda) esté encima. */
+.tp[data-plantilla='luxury'] .tp-luxury-reserva-real__panel .tp-opcion[aria-pressed='true']:hover:not(:disabled),
+.tp[data-plantilla='luxury'] .tp-hojita--agenda .tp-opcion[aria-pressed='true']:hover:not(:disabled) { background: var(--rv-tinta); color: #fff; }

@@ -681,6 +681,74 @@ function ResumenCita({ item, esc, inicio, profesional, esBarberia }: {
   );
 }
 
+/** Más de estas horas libres en un día: se eligen por franjas (ElegirHora) y no en una lista larga. */
+const HORAS_SIN_SELECTOR = 6;
+
+/** Mañana, tarde y noche. La madrugada (antes de las 6, pasada la medianoche) cuenta como noche. */
+const FRANJAS_HORA = [
+  { nombre: 'Mañana', hasta: 12 * 60 },
+  { nombre: 'Tarde', hasta: 18 * 60 },
+  { nombre: 'Noche', hasta: Infinity },
+] as const;
+const franjaDe = (hhmm: string) => {
+  const [h, m] = hhmm.split(':').map(Number);
+  const min = h < 6 ? (h + 24) * 60 + m : h * 60 + m;
+  return FRANJAS_HORA.findIndex((f) => min < f.hasta);
+};
+
+/**
+ * Las horas de un día como un selector de calendario, pero de franjas: flechas para pasar de
+ * mañana a tarde y a noche, y las horas de esa franja debajo. Empieza en la franja de la hora
+ * elegida, o en la primera con horas libres.
+ */
+function ElegirHora({ horas, valor, alElegir, etiqueta }: {
+  horas: { inicio: string; hora: string }[];
+  valor: string;
+  alElegir: (inicio: string) => void;
+  etiqueta: string;
+}) {
+  const grupos = FRANJAS_HORA
+    .map((f, i) => ({ nombre: f.nombre, horas: horas.filter((h) => franjaDe(h.hora) === i) }))
+    .filter((g) => g.horas.length > 0);
+  const [i, setI] = useState(() => Math.max(0, grupos.findIndex((g) => g.horas.some((h) => h.inicio === valor))));
+  const n = Math.min(i, grupos.length - 1);
+  const g = grupos[n];
+  if (!g) return null;
+  const libres = g.horas.length;
+  return (
+    <div className="tp-reloj">
+      <div className="tp-reloj__cabecera">
+        <button type="button" className="tp-reloj__flecha" aria-label={n > 0 ? `Ver ${grupos[n - 1].nombre.toLowerCase()}` : 'No hay horas antes'} disabled={n === 0} onClick={() => setI(n - 1)}>
+          <ChevronLeft size={18} aria-hidden="true" />
+        </button>
+        <div className="tp-reloj__titulo" aria-live="polite">
+          <b>{g.nombre}</b>
+          <small>{g.horas[0].hora} – {g.horas[libres - 1].hora} · {libres === 1 ? '1 hora libre' : `${libres} horas libres`}</small>
+        </div>
+        <button type="button" className="tp-reloj__flecha" aria-label={n < grupos.length - 1 ? `Ver ${grupos[n + 1].nombre.toLowerCase()}` : 'No hay horas después'} disabled={n >= grupos.length - 1} onClick={() => setI(n + 1)}>
+          <ChevronRight size={18} aria-hidden="true" />
+        </button>
+      </div>
+      {grupos.length > 1 && (
+        <div className="tp-reloj__franjas" role="group" aria-label="Franjas del día">
+          {grupos.map((x, k) => (
+            <button key={x.nombre} type="button" aria-pressed={k === n} onClick={() => setI(k)}>
+              {x.nombre} <small>{x.horas.length}</small>
+            </button>
+          ))}
+        </div>
+      )}
+      <div className="tp-horas tp-reloj__horas" role="group" aria-labelledby={etiqueta}>
+        {g.horas.map((h) => (
+          <button key={h.inicio} type="button" className="tp-opcion" aria-pressed={valor === h.inicio} onClick={() => alElegir(h.inicio)}>
+            {h.hora}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 /** Elegir viendo la cara. Quien no tiene foto sale con su inicial, en el mismo círculo. */
 function ElegirProfesional({ equipo, valor, alElegir, esBarberia }: {
   equipo: Datos['agenda']['equipo'];
@@ -864,7 +932,10 @@ function Reservar({ item, esc, slug, alTerminar, presentacion, esBarberia = fals
       <div className="tp-campo">
         {presentacion === 'inline' && <span className="tp-luxury-reserva-real__paso">03 / HORA</span>}
         <label id="tp-hora-l">{presentacion === 'inline' ? 'Escoge tu horario' : 'Hora'}</label>
-        {horas.length ? (
+        {horas.length > HORAS_SIN_SELECTOR ? (
+          // Muchas horas: por franjas, como los meses de un calendario (key: vuelve a empezar al cambiar de día).
+          <ElegirHora key={dia} horas={horas} valor={hora} alElegir={setHora} etiqueta="tp-hora-l" />
+        ) : horas.length ? (
           <div className="tp-horas" role="group" aria-labelledby="tp-hora-l">
             {horas.map((h) => (
               <button key={h.inicio} type="button" className="tp-opcion" aria-pressed={hora === h.inicio} onClick={() => setHora(h.inicio)}>
