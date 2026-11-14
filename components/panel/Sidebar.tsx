@@ -11,6 +11,7 @@ import { usePathname } from 'next/navigation';
 import {
   BarChart2,
   CalendarDays,
+  FileText,
   Gift,
   GraduationCap,
   LayoutDashboard,
@@ -74,6 +75,8 @@ const NAV = [
   // Pedidos es del negocio que vende productos: una barbería no crea pedidos.
   { href: '/panel/pedidos', icon: Receipt, label: 'Pedidos', sirveA: esEcommerce },
   { href: '/panel/caja', icon: Wallet, label: 'Caja' },
+  // Boletas y facturas a SUNAT (modules/facturacion). Dueño y administrador.
+  { href: '/panel/comprobantes', icon: FileText, label: 'Boletas y facturas' },
   { href: '/panel/catalogo', icon: Package, label: 'Catálogo' },
   // Tarjetas de cliente, placas NFC/QR y Google Wallet. Tiene sus pestañas
   // dentro (app/(panel)/panel/fideliza/layout.tsx). En el móvil va en «Más».

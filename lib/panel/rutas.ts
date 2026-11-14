@@ -76,6 +76,8 @@ const PANTALLAS: [string, (rol: RolNegocio | null) => boolean][] = [
   ['/panel/mesas', () => true],
   ['/panel/pedidos', con('caja.ver')],
   ['/panel/caja', con('caja.ver')],
+  // Boletas y facturas: quien ve la caja. Emitir lo impone Postgres (factura_rol).
+  ['/panel/comprobantes', con('caja.ver')],
   // El empleado puede VER el catálogo (`catalogo.ver`), pero esta pantalla es la
   // de editarlo: él tiene RUTA_MI_CATALOGO.
   ['/panel/catalogo', (rol) => rol !== 'empleado' && rolPuede(rol, 'catalogo.ver')],

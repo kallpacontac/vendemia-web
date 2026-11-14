@@ -12,7 +12,8 @@
     "publicar": "node scripts/publicar.mjs",
     "test:fideliza": "node --test modules/fideliza/pruebas/unitarias.mjs",
     "aviso-instalar": "node scripts/fideliza-aviso-instalar.mjs",
-    "yape-prueba": "node scripts/yape-notificacion-prueba.mjs"
+    "yape-prueba": "node scripts/yape-notificacion-prueba.mjs",
+    "test:facturacion": "node --test modules/facturacion/pruebas/unitarias.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^1.5.0",
