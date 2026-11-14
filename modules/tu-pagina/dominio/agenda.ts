@@ -35,6 +35,8 @@ export interface Ocupado {
   item?: string;
   /** Apartada sin pagar (pending_payment): cuándo se creó, en segundos. Una cancha la suelta pasado su plazo. */
   apartadaDesde?: number;
+  /** En qué sede (sql/0023). '' = no consta: ocupa en todas (ante la duda, lleno). */
+  sede?: string;
 }
 
 export interface DatosAgenda {
@@ -44,6 +46,20 @@ export interface DatosAgenda {
   equipo: { id: string; nombre: string; horario: Horario; foto?: string }[];
   bloqueos: { empleado: string; inicio: string; fin: string }[];
   ocupados: Ocupado[];
+}
+
+/**
+ * La agenda de UNA sede (pedido de Alvaro, 14-nov-2026: «el aforo debe ser independiente»): su
+ * propio aforo (`capacidad`) en vez del del negocio, y solo lo ocupado en esa sede. Una cita sin
+ * sede (hecha en el panel, o de antes) cuenta en todas: ante la duda, lleno. Sin sede o sin
+ * capacidad propia, la agenda del negocio tal cual. Con equipo, manda el equipo (como siempre).
+ */
+export function agendaDeSede(d: DatosAgenda, sede: { nombre: string; capacidad?: number } | null | undefined): DatosAgenda {
+  if (!sede) return d;
+  const horario = sede.capacidad
+    ? Object.fromEntries(Object.entries(d.horario).map(([k, v]) => [k, v ? { ...v, capacity: sede.capacidad } : v])) as Horario
+    : d.horario;
+  return { ...d, horario, ocupados: d.ocupados.filter((o) => !o.sede || o.sede === sede.nombre) };
 }
 
 export const aMinutos = (hhmm: string): number => {

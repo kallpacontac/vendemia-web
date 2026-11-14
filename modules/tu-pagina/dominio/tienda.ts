@@ -25,7 +25,7 @@ import { ocupa } from '@/lib/panel/inscripciones';
 import { sumarMin, type DatosAgenda } from '@/modules/tu-pagina/dominio/agenda';
 import { fechaCorta, telefonoBonito, telefonoNormal } from '@/modules/tu-pagina/dominio/envio';
 import { normalizarCobro, type CobroPedidos } from '@/modules/tu-pagina/dominio/cobroPedidos';
-import { indicacionesDe, porcentajeAdelanto } from '@/modules/tu-pagina/dominio/adelantoCitas';
+import { indicacionesDe, porcentajeAdelanto, sedesDe, type Sede } from '@/modules/tu-pagina/dominio/adelantoCitas';
 
 /* ── Lo que llega de la base ─────────────────────────────────────────────── */
 
@@ -64,6 +64,8 @@ export interface DatosCrudos {
     catalog_id?: string | null;
     /** created_at (segundos), desde la 0011. */
     creada?: number | null;
+    /** En qué sede, desde la 0025. */
+    sede?: string | null;
     status: AppointmentStatus | null;
     periodo_desde: string | null;
     periodo_hasta: string | null;
@@ -177,6 +179,8 @@ export interface Escaparate {
   adelantoCitas?: number;
   /** «Antes de tu cita»: tolerancia, sede… (secciones.citas.indicaciones). */
   indicacionesCitas?: string[];
+  /** Los locales (secciones.citas.sedes). Con 2 o más, se elige sede al reservar. */
+  sedes?: Sede[];
 }
 
 const json = <T>(raw: string | null | undefined, porDefecto: T): T => {
@@ -223,6 +227,7 @@ export function armarEscaparate(c: DatosCrudos, como?: ComoSeOfrece | null): Esc
         fin: a.slot_end && /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/.test(a.slot_end) ? a.slot_end : sumarMin(a.slot_start, a.slot_minutes || paso),
         empleado: a.employee_id ?? '',
         item: a.catalog_id ?? '',
+        sede: a.sede ?? '',
         ...(a.status === 'pending_payment' && a.creada ? { apartadaDesde: Number(a.creada) } : {}),
       })),
     ...c.web
@@ -299,6 +304,7 @@ export function armarEscaparate(c: DatosCrudos, como?: ComoSeOfrece | null): Esc
     cobro: normalizarCobro(como?.cobroPedidos),
     adelantoCitas: porcentajeAdelanto(como?.citas),
     indicacionesCitas: indicacionesDe(como?.citas),
+    sedes: sedesDe(como?.citas),
   };
 }
 
@@ -389,12 +395,13 @@ export function mensajePedido(
 
 export function mensajeReserva(
   codigo: string,
-  r: { servicio: string; precio: number | null; inicio?: string; grupo?: string; profesional?: string; beneficiario: string; nombre: string; esGrupo: boolean },
+  r: { servicio: string; precio: number | null; inicio?: string; grupo?: string; profesional?: string; beneficiario: string; nombre: string; esGrupo: boolean; sede?: string },
 ): string {
   const l = [r.esGrupo ? `Hola, separé mi cupo en tu página (${codigo}):` : `Hola, separé una cita en tu página (${codigo}):`];
   l.push(`• ${r.servicio}${r.precio !== null ? ` · ${soles(r.precio)}` : ''}`);
   if (r.esGrupo && r.grupo) l.push(`• Horario: ${r.grupo}`);
   if (!r.esGrupo && r.inicio) l.push(`• ${cuandoCita(r.inicio)}`);
+  if (r.sede) l.push(`• Sede: ${r.sede}`);
   if (r.profesional) l.push(`• Con: ${r.profesional}`);
   if (r.beneficiario.trim()) l.push(`• ${r.esGrupo ? 'Alumno' : 'Para'}: ${r.beneficiario.trim()}`);
   l.push(`A nombre de: ${r.nombre.trim()}`);

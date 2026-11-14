@@ -14,7 +14,7 @@
 import { revalidateTag } from 'next/cache';
 import { z } from 'zod';
 import { SLUG } from '@/modules/tu-pagina/dominio/config';
-import { decidir, pasoDelDia, sumarMin } from '@/modules/tu-pagina/dominio/agenda';
+import { agendaDeSede, decidir, pasoDelDia, sumarMin } from '@/modules/tu-pagina/dominio/agenda';
 import { armarEscaparate, validarCliente } from '@/modules/tu-pagina/dominio/tienda';
 import { MAX_TURNOS, canchaLibre, conCanchas, plazoDe } from '@/modules/tu-pagina/dominio/canchas';
 import { huellaIp, limitar, log, rpc, servidor } from '@/modules/tu-pagina/servidor/supabase';
@@ -34,6 +34,8 @@ const Cuerpo = z.object({
   nombre: z.string().max(80),
   telefono: z.string().max(20),
   beneficiario: z.string().max(80).optional(),
+  /** Citas: el nombre de la sede elegida (secciones.citas.sedes). */
+  sede: z.string().max(60).optional(),
 });
 
 const responder = (cuerpo: unknown, status = 200) =>
@@ -80,8 +82,12 @@ export async function POST(req: Request) {
       const profesional = esc.pideProfesional && c.profesional ? c.profesional : null;
       if (profesional && !esc.agenda.equipo.some((e) => e.id === profesional)) return responder({ status: 'datos_invalidos' }, 400);
       if (c.inicio <= sumarMin(esc.ahora, 30)) return responder({ status: 'pasada' }, 409);
+      // Con 2 o más sedes hay que decir en cuál (la página no deja seguir sin elegirla).
+      const sedes = esc.sedes ?? [];
+      if (sedes.length > 1 && !sedes.some((x) => x.nombre === c.sede)) return responder({ status: 'datos_invalidos' }, 400);
       const paso = pasoDelDia(esc.agenda, c.inicio.slice(0, 10));
-      const r = decidir({ ...esc.agenda, paso }, c.inicio, item.duracion, profesional);
+      // Con sedes, el hueco se mira en la de la cita: su aforo y sus citas (agendaDeSede).
+      const r = decidir({ ...agendaDeSede(esc.agenda, sedes.find((x) => x.nombre === c.sede)), paso }, c.inicio, item.duracion, profesional);
       if (!r.ok) return responder({ status: 'lleno' }, 409);
       datos = {
         tipo: 'cita',
@@ -111,7 +117,23 @@ export async function POST(req: Request) {
     if (r.status === 'no_es_nube') r = await rpc<{ status: string; codigo?: string; estado?: string }>(servidor(), 'reserva_srv_crear', args);
     if (r.status !== 'ok') return responder(r, r.status === 'lleno' || r.status === 'pasada' ? 409 : 400);
     revalidateTag(`tu-pagina:${c.slug.toLowerCase()}`);
-    // Apartada: a dónde pagar. Sin la 0017 o sin métodos, la página dice que escriban por WhatsApp.
+    // La sede va aparte (sql/0023): la cita ya existe, así que un fallo aquí no la tumba, solo
+    // queda sin sede y el dueño la ve «sin sede» en la Agenda.
+    // Y es la última palabra del aforo por sede (sql/0025): con el candado del negocio, si otra
+    // reserva acaba de llenar esa sede a esa hora, la base cancela esta y aquí se dice «lleno».
+    if (datos.tipo === 'cita' && c.sede && r.codigo) {
+      const s = await rpc<{ status: string }>(servidor(), 'cita_srv_sede', { p_slug: c.slug, p_codigo: r.codigo, p_telefono: c.telefono, p_sede: c.sede })
+        .catch((e) => { log('tu_pagina_sede_error', { mensaje: e instanceof Error ? e.message.slice(0, 120) : 'x' }); return null; });
+      if (s?.status === 'lleno') return responder({ status: 'lleno' }, 409);
+    }
+    // Apartada: cuánto tiempo tiene para pagar (sql/0024; sin ella, las 24 h de siempre y la
+    // página no enseña plazo) y a dónde pagar (sin la 0017 o sin métodos: por WhatsApp).
+    let plazo: { minutos: number; venceMs: number; vence: string } | undefined;
+    if (r.estado === 'pending_payment' && datos.tipo === 'cita' && r.codigo) {
+      const a = await rpc<{ status: string; plazo?: number; vence_ms?: number; vence?: string }>(servidor(), 'cita_srv_apartar', { p_slug: c.slug, p_codigo: r.codigo, p_telefono: c.telefono })
+        .catch((e) => { log('tu_pagina_plazo_error', { mensaje: e instanceof Error ? e.message.slice(0, 120) : 'x' }); return null; });
+      if (a?.status === 'ok' && a.plazo && a.vence_ms) plazo = { minutos: a.plazo, venceMs: Number(a.vence_ms), vence: String(a.vence ?? '').slice(11, 16) };
+    }
     let metodos: { tipo: string; numero: string; titular: string }[] = [];
     if (r.estado === 'pending_payment') {
       try {
@@ -120,7 +142,7 @@ export async function POST(req: Request) {
         metodos = [];
       }
     }
-    return responder({ status: 'ok', codigo: r.codigo, estado: r.estado, metodos });
+    return responder({ status: 'ok', codigo: r.codigo, estado: r.estado, metodos, plazo });
   } catch (e) {
     log('tu_pagina_reserva_error', { mensaje: e instanceof Error ? e.message.slice(0, 120) : 'x' });
     return responder({ status: 'error' }, 503);

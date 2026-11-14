@@ -36,6 +36,8 @@ import Topbar from '@/components/panel/Topbar';
 import AgendaControles from '@/components/panel/AgendaControles';
 import AvisarCliente from '@/components/panel/AvisarCliente';
 import NuevaCita from '@/components/panel/NuevaCita';
+import { sedesDe } from '@/modules/tu-pagina/dominio/adelantoCitas';
+import { supabase as clienteSupabase } from '@/lib/supabase/client';
 import TableroCanchas from '@/components/panel/TableroCanchas';
 import ComprobantesPorRevisar from '@/components/panel/ComprobantesPorRevisar';
 import Consumos from '@/components/panel/Consumos';
@@ -186,6 +188,13 @@ export default function Agenda() {
   const [aplicando, setAplicando] = useState(false);
   const [aviso, setAviso] = useState<Aviso | null>(null);
 
+  // Las sedes de Mi página (secciones.citas.sedes): con 2 o más, «Nueva cita» pide en cuál.
+  const { datos: sedes } = useCargar(async () => {
+    if (!companyId) return [];
+    const r = await clienteSupabase().from('tu_pagina').select('secciones').eq('company_id', companyId).maybeSingle();
+    return sedesDe((r.data as { secciones?: { citas?: unknown } } | null)?.secciones?.citas);
+  }, [companyId]);
+
   const { datos, cargando, recargar } = useCargar(async () => {
     if (!companyId) return null;
     const [empresa, citas, leads, trabajadores, bloqueos, catalogo] = await Promise.all([
@@ -263,7 +272,7 @@ export default function Agenda() {
         <>
           <p>
             <b>{quienEnUnaLinea(quienDeCita(cita, lead?.name || lead?.phone))}</b>
-            {cita.service ? ` · ${cita.service}` : ''}
+            {cita.service ? ` · ${cita.service}` : ''}{cita.sede ? ` · ${cita.sede}` : ''}
           </p>
           <p>
             {textoSlot(cita.slot_start)} → <b>{textoSlot(slotStart)}</b>
@@ -355,6 +364,8 @@ export default function Agenda() {
             catalogo={datos?.catalogo ?? []}
             trabajadores={datos?.trabajadores ?? []}
             canchas={canchas}
+            companyId={companyId}
+            sedes={sedes ?? []}
             alCerrar={() => setCreando(false)}
             alCambiar={recargar}
           /></div>
@@ -1121,7 +1132,7 @@ function Proximas({
         <>
           <p>
             <b>{quienEnUnaLinea(quienDeCita(c, nombrePorLead.get(c.lead_id)))}</b>
-            {c.service ? ` · ${c.service}` : ''}
+            {c.service ? ` · ${c.service}` : ''}{c.sede ? ` · ${c.sede}` : ''}
           </p>
           {cambiaHora && (
             <p>
@@ -1169,7 +1180,7 @@ function Proximas({
         <>
           <p>
             <b>{quien}</b>
-            {c.service ? ` · ${c.service}` : ''}
+            {c.service ? ` · ${c.service}` : ''}{c.sede ? ` · ${c.sede}` : ''}
           </p>
           <p>{textoSlot(c.slot_start)}</p>
           <p className="muted">
@@ -1224,7 +1235,7 @@ function Proximas({
                   {persona.deQuien && <small className="muted">{persona.deQuien}</small>}
                   <small className="muted">
                     {c.inicio ? `${diaMes(c.inicio)} · ${horaDe(c.inicio)}` : '—'}
-                    {c.service ? ` · ${c.service}` : ''}
+                    {c.service ? ` · ${c.service}` : ''}{c.sede ? ` · ${c.sede}` : ''}
                     {c.employee_id ? ` · ${nombrePorTrabajador.get(c.employee_id) ?? 'sin asignar'}` : ''}
                   </small>
                 </div>
@@ -1558,7 +1569,7 @@ function FilaPorConfirmar({
         {quien.deQuien && <small className="muted">{quien.deQuien}</small>}
         <small className="muted">
           {cita.inicio ? `${diaMes(cita.inicio)} · ${horaDe(cita.inicio)}` : '—'}
-          {cita.service ? ` · ${cita.service}` : ''}
+          {cita.service ? ` · ${cita.service}` : ''}{cita.sede ? ` · ${cita.sede}` : ''}
         </small>
       </div>
 

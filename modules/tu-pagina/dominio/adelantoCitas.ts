@@ -20,7 +20,46 @@ export interface ConfigCitas {
   validacion?: 'manual' | 'automatica';
   /** «Antes de tu cita»: lo que se le dice al terminar de reservar (tolerancia, sede…). */
   indicaciones?: string[];
+  /** Minutos para pagar una cita apartada (10–1440, por defecto 60); menos si la cita es pronto (sql/0024). */
+  plazo?: number;
+  /** Locales del negocio. Con 2 o más, el cliente elige en cuál al reservar (sql/0023). */
+  sedes?: Sede[];
 }
+
+export interface Sede {
+  /** Lo que se guarda en la cita y ve el dueño: «24/7 Premium». Único. */
+  nombre: string;
+  direccion: string;
+  /** Foto (https) de la fachada, opcional. */
+  foto?: string;
+  /** Cuántas citas a la vez atiende ESTA sede (su aforo, independiente de las otras). Sin él, el del negocio. */
+  capacidad?: number;
+}
+
+/** Las sedes válidas: con nombre y dirección, sin repetir nombre, como mucho 6. */
+export function sedesDe(cfg: unknown): Sede[] {
+  const l = (cfg as ConfigCitas | null | undefined)?.sedes;
+  if (!Array.isArray(l)) return [];
+  const vistas = new Set<string>();
+  const out: Sede[] = [];
+  for (const s of l) {
+    const nombre = typeof s?.nombre === 'string' ? s.nombre.trim().slice(0, 60) : '';
+    const direccion = typeof s?.direccion === 'string' ? s.direccion.trim().slice(0, 120) : '';
+    if (!nombre || !direccion || vistas.has(nombre)) continue;
+    vistas.add(nombre);
+    const cap = Number(s.capacidad);
+    out.push({
+      nombre, direccion,
+      ...(typeof s.foto === 'string' && /^https:\/\/\S+$/.test(s.foto) ? { foto: s.foto } : {}),
+      ...(Number.isInteger(cap) && cap >= 1 && cap <= 50 ? { capacidad: cap } : {}),
+    });
+    if (out.length === 6) break;
+  }
+  return out;
+}
+
+/** «Cómo llegar» en Google Maps, buscando la dirección. */
+export const urlMapa = (s: Pick<Sede, 'direccion'>) => `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(s.direccion)}`;
 
 /** Las indicaciones que se enseñan: texto, sin vacías, como mucho 6 de 200 caracteres. */
 export function indicacionesDe(cfg: unknown): string[] {

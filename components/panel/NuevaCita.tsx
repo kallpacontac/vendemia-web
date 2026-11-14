@@ -36,6 +36,8 @@ import { json } from '@/lib/supabase/parse';
 import type { ResultadoCrearCita } from '@/lib/supabase/commands';
 import type { FranjaRecurrente } from '@/lib/supabase/types';
 import type { ItemCatalogo, Lead, Trabajador } from '@/lib/supabase/queries';
+import type { Sede } from '@/modules/tu-pagina/dominio/adelantoCitas';
+import { supabase } from '@/lib/supabase/client';
 
 /** Cuántos clientes se enseñan al buscar. Más es una lista que nadie lee. */
 const TOPE_BUSQUEDA = 6;
@@ -53,11 +55,17 @@ export default function NuevaCita({
   inicial,
   alCerrar,
   alCambiar,
+  companyId,
+  sedes = [],
 }: {
   leads: Lead[];
   catalogo: ItemCatalogo[];
   trabajadores: Trabajador[];
   canchas?: boolean;
+  /** Para guardar la sede (tu-pagina 0025). */
+  companyId?: string | null;
+  /** Las sedes de Mi página. Con 2 o más, hay que decir en cuál es la cita. */
+  sedes?: Sede[];
   /** Lo que ya se sabe al abrirla: la casilla libre que se tocó en el tablero. */
   inicial?: { fecha: string; hora: string; itemId: string };
   alCerrar: () => void;
@@ -75,6 +83,8 @@ export default function NuevaCita({
   const [hora, setHora] = useState(inicial?.hora ?? '');
   const [itemId, setItemId] = useState(inicial?.itemId ?? '');
   const [empId, setEmpId] = useState('');
+  const [sede, setSede] = useState('');
+  const pideSede = !canchas && sedes.length > 1;
   const [turnos, setTurnos] = useState(1);
   const [semanas, setSemanas] = useState(1);
   const [enviando, setEnviando] = useState(false);
@@ -126,6 +136,11 @@ export default function NuevaCita({
       return;
     }
 
+    if (pideSede && !sede) {
+      avisar('Elige la sede: cada una tiene su propio aforo.', 'error');
+      return;
+    }
+
     setEnviando(true);
     const r = await comando<ResultadoCrearCita>(
       'crear_cita',
@@ -142,6 +157,13 @@ export default function NuevaCita({
     setEnviando(false);
     // Si no cabe, useComando ya ha enseñado el motivo del bot y no hay cita.
     if (!r) return;
+    // La sede va aparte (cita_sede_panel): la cita ya existe. No bloquea —quien agenda manda—,
+    // pero avisa si esa sede queda por encima de su aforo a esa hora.
+    if (pideSede && sede && companyId && !r.duplicada && (r as { id?: string }).id) {
+      const s = await supabase().rpc('cita_sede_panel', { p_company: companyId, p_id: (r as { id?: string }).id, p_sede: sede });
+      if (s.error) avisar(`La cita quedó creada, pero no pude guardar la sede: ${s.error.message}`, 'error');
+      else if ((s.data as { sobre_aforo?: boolean } | null)?.sobre_aforo) avisar(`Ojo: ${sede} ya tenía todas sus sillas ocupadas a esa hora. La cita quedó igual.`, 'error');
+    }
 
     const saltadas = r.saltadas ?? [];
     const ficha = `${r.service} · ${r.slot_minutes} min · ${soles(r.precio)}`
@@ -289,6 +311,14 @@ export default function NuevaCita({
               </select>
             </div>
           </>
+        )}
+
+        {pideSede && (
+          <div>
+            <label className="field-label">Sede</label>
+            <ComboPanel etiqueta="Sede" value={sede} alCambiar={setSede}
+              opciones={[{ value: '', label: 'Elige la sede' }, ...sedes.map((x) => ({ value: x.nombre, label: x.capacidad ? `${x.nombre} · ${x.capacidad} a la vez` : x.nombre }))]} />
+          </div>
         )}
 
         {activos.length > 0 && (

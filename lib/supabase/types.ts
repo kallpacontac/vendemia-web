@@ -410,6 +410,8 @@ export interface AppointmentRow {
   beneficiario_edad?: string | null;
   /** Con qué se pagó (0034): yape · plin · bank_transfer · cash · cod. `''` = no consta. */
   metodo_pago?: string | null;
+  /** En qué sede (tu-pagina 0023), si el negocio tiene varias. `''` o sin columna = no consta. */
+  sede?: string | null;
 }
 
 /**

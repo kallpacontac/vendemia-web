@@ -15,6 +15,11 @@ const canchasCfg = s0011.match(/create or replace function public\.v2_canchas_cf
 const s0021 = leer('modules/tu-pagina/sql/0021_adelanto_de_citas.sql').replace(/-- Comprobación:[\s\S]*$/, '');
 const deshacer = leer('scripts/adelanto-citas-0021-deshacer.sql');
 const s0022 = leer('modules/tu-pagina/sql/0022_tarjeta_al_reservar.sql').replace(/-- Comprobación:[\s\S]*$/, '');
+const s0023 = leer('modules/tu-pagina/sql/0023_sede_de_la_cita.sql').replace(/-- Comprobación:[\s\S]*$/, '');
+const s0024 = leer('modules/tu-pagina/sql/0024_plazo_de_cita_apartada.sql').replace(/-- Comprobación:[\s\S]*$/, '');
+const s0025 = leer('modules/tu-pagina/sql/0025_aforo_por_sede.sql').replace(/-- Comprobación:[\s\S]*$/, '');
+const sumarMin = leer('modules/tu-pagina/sql/0002_tienda_y_reservas.sql').match(/create or replace function public\.tu_pagina_sumar_min[\s\S]*?\$\$;/)[0];
+const ocupaHora = leer('modules/datos/sql/0004_agenda_en_nube.sql').match(/create or replace function public\.v2_ocupa_hora[\s\S]*?\$\$;/)[0];
 const normTel = leer('modules/fideliza/sql/0003_operaciones.sql').match(/create or replace function public\.loyalty_norm_phone[\s\S]*?end \$\$;/)[0];
 
 const db = new PGlite();
@@ -149,7 +154,81 @@ ok('0022: tarjeta borrada no cuenta', (await tiene('R-BBBB', '999111222')).tiene
 await ex(`update tu_pagina set secciones = jsonb_set(secciones, '{fideliza,activo}', 'false') where company_id = 'barber'`);
 ok('0022: sin club en la página → club false', (await tiene('R-BBBB', '999111222')).club === false);
 
-// 7 · Deshacer
+// 7 · 0023: la sede de la cita (solo con código + celular, solo una de las configuradas)
+await ex(s0023);
+await ex(`update tu_pagina set secciones = jsonb_set(secciones, '{citas,sedes}', '[{"nombre":"Huallaga 625","direccion":"Jr. Huallaga 625"},{"nombre":"Premium","direccion":"Jr. Huallaga 646"}]') where company_id = 'barber'`);
+const sede = async (cod, tel, x) => (await uno(`select public.cita_srv_sede('barber', $1, $2, $3) as v`, [cod, tel, x])).v;
+ok('0023: sede que no existe → sede_invalida', (await sede('R-BBBB', '999111222', 'Otra')).status === 'sede_invalida');
+ok('0023: otro celular → not_found', (await sede('R-BBBB', '999000000', 'Premium')).status === 'not_found');
+ok('0023: código + celular + sede válida → ok', (await sede('R-BBBB', '999 111 222', 'Premium')).status === 'ok');
+ok('0023: queda guardada en la cita', (await uno(`select sede from appointments where id = 'a2'`)).sede === 'Premium');
+ok('0023: no se cambia una sede ya puesta', (await sede('R-BBBB', '999111222', 'Huallaga 625')).status === 'not_found'
+  && (await uno(`select sede from appointments where id = 'a2'`)).sede === 'Premium');
+ok('0023: las demás citas siguen sin sede', (await uno(`select sede from appointments where id = 'a1'`)).sede === '');
+
+// 8 · 0024: plazo para pagar (no 24 h), más corto si la cita es pronto
+await ex(s0024);
+await ex(`
+insert into appointments values
+  ('a5', 'barber', 'l1', 'pending_payment', '', '', to_char((now() + interval '60 minutes') at time zone 'America/Lima', 'YYYY-MM-DD HH24:MI'), 30, '', 0, 'Corte clásico'),
+  ('a6', 'barber', 'l1', 'pending_payment', '', '', '2030-01-01 10:00', 30, '', 0, 'Corte clásico');
+insert into pagina_idem values ('barber', 'R-EEEE', 'a5'), ('barber', 'R-FFFF', 'a6');`);
+const apartar = async (cod, tel) => (await uno(`select public.cita_srv_apartar('barber', $1, $2) as v`, [cod, tel])).v;
+const venceEn = async (id) => Number((await uno(`select round((created_at + 86400 - extract(epoch from now())) / 60) as m from appointments where id = $1`, [id])).m);
+let ap = await apartar('R-FFFF', '999111222');
+ok('0024: cita lejana → 60 min', ap.status === 'ok' && ap.plazo === 60 && (await venceEn('a6')) === 60, JSON.stringify(ap));
+ap = await apartar('R-EEEE', '999111222');
+// La hora de la cita va al minuto: faltan 59–60 min, así que el tercio es 19 o 20.
+ok('0024: cita en 1 h → ~20 min (un tercio)', ap.status === 'ok' && [19, 20].includes(ap.plazo) && Math.abs((await venceEn('a5')) - ap.plazo) <= 1, JSON.stringify(ap));
+await ex(`update tu_pagina set secciones = jsonb_set(secciones, '{citas,plazo}', '30') where company_id = 'barber'`);
+ok('0024: plazo configurado (30) manda en citas lejanas', (await apartar('R-FFFF', '999111222')).plazo === 30);
+ok('0024: otro celular → not_found', (await apartar('R-FFFF', '999000000')).status === 'not_found');
+await ex(`update appointments set status = 'confirmed' where id = 'a6'`);
+ok('0024: ya confirmada → no_apartada', (await apartar('R-FFFF', '999111222')).status === 'no_apartada');
+
+// 9 · 0025: aforo independiente por sede
+await ex(`alter table companies add column if not exists slot_minutes integer default 30; alter table appointments add column if not exists slot_end text default '';`);
+await ex(sumarMin); await ex(ocupaHora); await ex(s0025);
+await ex(`update tu_pagina set secciones = jsonb_set(secciones, '{citas,sedes}', '[{"nombre":"Huallaga 625","direccion":"Jr. Huallaga 625","capacidad":2},{"nombre":"Premium","direccion":"Jr. Huallaga 646","capacidad":1}]') where company_id = 'barber'`);
+// Tres citas a las 2030-02-01 10:00 en el mismo negocio; las dos primeras ya con sede «Huallaga 625».
+await ex(`
+insert into appointments values
+  ('s1', 'barber', 'l1', 'confirmed', '', '', '2030-02-01 10:00', 30, '', 0, 'Corte', 'Huallaga 625'),
+  ('s2', 'barber', 'l1', 'confirmed', '', '', '2030-02-01 10:00', 30, '', 0, 'Corte', 'Huallaga 625'),
+  ('s3', 'barber', 'l1', 'confirmed', '', '', '2030-02-01 10:00', 30, '', 0, 'Corte', ''),
+  ('s4', 'barber', 'l1', 'confirmed', '', '', '2030-02-01 10:00', 30, '', 0, 'Corte', '');
+update appointments set slot_end = '' where id in ('s1','s2','s3','s4');
+insert into pagina_idem values ('barber', 'R-S003', 's3'), ('barber', 'R-S004', 's4');`);
+const sedeR = async (cod, x) => (await uno(`select public.cita_srv_sede('barber', $1, '999111222', $2) as v`, [cod, x])).v;
+// Premium (aforo 1): s4 sin sede cuenta «ante la duda», así que s3 no cabe; s1 y s2 son de la otra sede.
+let rs = await sedeR('R-S003', 'Premium');
+ok('0025: Premium llena por una cita sin sede (ante la duda) → lleno y cancelada', rs.status === 'lleno' && (await uno(`select status from appointments where id = 's3'`)).status === 'cancelled', JSON.stringify(rs));
+// Ahora s3 está cancelada: s4 sí cabe en Premium (las de Huallaga 625 no cuentan ahí).
+rs = await sedeR('R-S004', 'Premium');
+ok('0025: lo de la otra sede no quita sitio → ok', rs.status === 'ok' && (await uno(`select sede from appointments where id = 's4'`)).sede === 'Premium', JSON.stringify(rs));
+// Huallaga 625 (aforo 2) ya tiene s1 y s2: una tercera allí no cabe.
+await ex(`insert into appointments values ('s5', 'barber', 'l1', 'pending_payment', '', '', '2030-02-01 10:00', 30, '', extract(epoch from now())::bigint, 'Corte', '');
+          update appointments set slot_end = '' where id = 's5'; insert into pagina_idem values ('barber', 'R-S005', 's5');`);
+ok('0025: Huallaga 625 con 2/2 → lleno', (await sedeR('R-S005', 'Huallaga 625')).status === 'lleno');
+// Una a las 10:30 (otra media hora) sí cabe en Huallaga 625.
+await ex(`insert into appointments values ('s6', 'barber', 'l1', 'pending_payment', '', '', '2030-02-01 10:30', 30, '', extract(epoch from now())::bigint, 'Corte', '');
+          update appointments set slot_end = '' where id = 's6'; insert into pagina_idem values ('barber', 'R-S006', 's6');`);
+ok('0025: otra media hora en la misma sede → ok', (await sedeR('R-S006', 'Huallaga 625')).status === 'ok');
+// Una de 60 min a las 09:30 pisa las 10:00 (llena): no cabe aunque empiece en un hueco.
+await ex(`insert into appointments values ('s7', 'barber', 'l1', 'pending_payment', '', '', '2030-02-01 09:30', 60, '', extract(epoch from now())::bigint, 'Corte + barba', '');
+          update appointments set slot_end = '' where id = 's7'; insert into pagina_idem values ('barber', 'R-S007', 's7');`);
+ok('0025: 60 min que pisa la media hora llena → lleno', (await sedeR('R-S007', 'Huallaga 625')).status === 'lleno');
+ok('0025: sede que no existe → sede_invalida', (await sedeR('R-S007', 'Otra')).status === 'sede_invalida');
+// Panel: pone la sede y avisa si se pasa del aforo, sin bloquear.
+const panelR = async (id, x) => (await uno(`select public.cita_sede_panel('barber', $1, $2) as v`, [id, x])).v;
+await ex(`insert into appointments values ('s8', 'barber', 'l1', 'confirmed', '', '', '2030-02-01 10:00', 30, '', 0, 'Corte', ''); update appointments set slot_end = '' where id = 's8';`);
+let rp = await panelR('s8', 'Premium');
+ok('0025 panel: Premium 1/1 → se guarda y avisa sobre_aforo', rp.status === 'ok' && rp.sobre_aforo === true && (await uno(`select sede from appointments where id = 's8'`)).sede === 'Premium', JSON.stringify(rp));
+await ex(`insert into appointments values ('s9', 'barber', 'l1', 'confirmed', '', '', '2030-02-01 12:00', 30, '', 0, 'Corte', ''); update appointments set slot_end = '' where id = 's9';`);
+rp = await panelR('s9', 'Huallaga 625');
+ok('0025 panel: hora libre → sin aviso', rp.status === 'ok' && rp.sobre_aforo === false, JSON.stringify(rp));
+
+// 10 · Deshacer
 await ex(deshacer);
 ok('deshacer: sin v2_citas_cfg', (await uno(`select to_regprocedure('public.v2_citas_cfg(text)') is null as v`)).v);
 ok('deshacer: buscar cita de barber vuelve a no existir', (await uno(`select public.comprobante_srv_buscar('barber', 'R-BBBB', '999111222') as v`)).v.status === 'not_found');

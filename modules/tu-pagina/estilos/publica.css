@@ -1624,3 +1624,66 @@ button.tp-canchas__casilla { cursor: pointer; }
 /* La elegida sigue negra aunque el puntero (o el toque, que en el celular se queda) esté encima. */
 .tp[data-plantilla='luxury'] .tp-luxury-reserva-real__panel .tp-opcion[aria-pressed='true']:hover:not(:disabled),
 .tp[data-plantilla='luxury'] .tp-hojita--agenda .tp-opcion[aria-pressed='true']:hover:not(:disabled) { background: var(--rv-tinta); color: #fff; }
+
+/* ── Sedes (pedido de Alvaro, 14-nov-2026) ─────────────────────────────────────────────────── */
+/* Elegir sede al reservar: una tarjeta por local, la elegida marcada. */
+.tp-sedes-elegir { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 8px; }
+.tp-sede-opcion { position: relative; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 10px; min-height: 64px; padding: 12px 16px; border: 1.5px solid var(--tp-borde); border-radius: 18px; background: var(--tp-campo); color: var(--tp-texto); font: inherit; text-align: left; cursor: pointer; }
+.tp-sede-opcion span { display: grid; gap: 2px; min-width: 0; }
+.tp-sede-opcion b { font-size: 15px; line-height: 1.25; }
+.tp-sede-opcion small { color: var(--tp-suave); font-size: 12.5px; line-height: 1.35; }
+.tp-sede-opcion[aria-checked='true'] { border-color: var(--tp-texto); box-shadow: inset 0 0 0 1px var(--tp-texto); }
+.tp-sede-opcion:focus-visible { outline: 2px solid var(--tp-color); outline-offset: 2px; }
+.tp[data-plantilla='luxury'] .tp-luxury-reserva-real__panel .tp-sede-opcion,
+.tp[data-plantilla='luxury'] .tp-hojita--agenda .tp-sede-opcion { border: 0; border-radius: 22px; background: var(--rv-chip); color: var(--rv-tinta); }
+.tp[data-plantilla='luxury'] .tp-luxury-reserva-real__panel .tp-sede-opcion[aria-checked='true'],
+.tp[data-plantilla='luxury'] .tp-hojita--agenda .tp-sede-opcion[aria-checked='true'] { background: var(--rv-tinta); color: #fff; box-shadow: none; }
+.tp[data-plantilla='luxury'] .tp-luxury-reserva-real__panel .tp-sede-opcion[aria-checked='true'] small,
+.tp[data-plantilla='luxury'] .tp-hojita--agenda .tp-sede-opcion[aria-checked='true'] small { color: rgba(255, 255, 255, .8); }
+/* La sede en el resumen de la cita. */
+.tp-reserva-resumen__sede dd small { display: block; margin-top: 2px; color: var(--tp-suave); font-size: 12.5px; font-weight: 500; }
+.tp-reserva-resumen__falta { color: #b4532a; font-weight: 700; }
+
+/* «Nuestras sedes» en la página. */
+.tp-sedes { margin: 34px 0 10px; text-align: left; }
+.tp-sedes__etiqueta { display: block; color: var(--tp-color); font-size: 12px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; }
+.tp-sedes h2 { margin: 6px 0 16px; font-size: clamp(26px, 4vw, 40px); line-height: 1.1; letter-spacing: -.02em; }
+.tp[data-plantilla='luxury'] .tp-sedes h2 { font-family: Georgia, 'Times New Roman', serif; font-weight: 400; }
+.tp-sedes__lista { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; }
+.tp-sede { display: grid; overflow: hidden; border: 1px solid var(--tp-borde); border-radius: 22px; background: var(--tp-papel, #fff); }
+.tp-sede img { width: 100%; aspect-ratio: 16 / 9; object-fit: cover; display: block; }
+.tp-sede__texto { display: grid; gap: 6px; padding: 18px 20px 20px; }
+.tp-sede h3 { display: flex; align-items: center; gap: 8px; margin: 0; font-size: 18px; color: var(--tp-texto); }
+.tp-sede h3 svg { flex: none; color: var(--tp-color); }
+.tp-sede p { margin: 0; color: var(--tp-suave); font-size: 14.5px; }
+.tp-sede__acciones { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.tp-sede__acciones a { display: inline-flex; align-items: center; gap: 5px; min-height: 40px; padding: 8px 16px; border-radius: 999px; background: var(--tp-campo); color: var(--tp-texto); font-size: 14px; font-weight: 700; text-decoration: none; }
+.tp-sede__acciones a:last-child:not(:first-child) { background: #141414; color: #fff; }
+.tp-sede__acciones a:focus-visible { outline: 2px solid var(--tp-color); outline-offset: 2px; }
+.tp-sedes__nota { margin: 12px 0 0; color: var(--tp-suave); font-size: 13.5px; }
+
+/* El selector de servicio de la reserva Luxury: flecha propia, separada del borde redondo. */
+.tp[data-plantilla='luxury'] .tp-luxury-reserva-real__selector select {
+  appearance: none; -webkit-appearance: none; padding-right: 46px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23141414' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 18px center; background-size: 16px;
+}
+/* Tarjetas de sede parejas: el texto arriba (sin estirarse) y, sin foto, un recuadro del mismo alto. */
+.tp-sede { align-content: start; }
+.tp-sede__texto { align-content: start; }
+.tp-sede__acciones { align-items: center; }
+.tp-sede__acciones a { flex: none; }
+.tp-sede__sinfoto { display: grid; place-items: center; aspect-ratio: 16 / 9; background: var(--tp-campo); color: var(--tp-color); }
+/* La foto de la tarjeta: el <img> (que comprueba que la foto carga) llena el recuadro y no lo
+   estira hasta su alto natural. Sin esto, con fotos cuadradas o verticales cada tarjeta medía
+   distinto y la foto salía alargada (The 24/7, 14-nov-2026). */
+.tp-tarjeta__foto { position: relative; overflow: hidden; }
+.tp-tarjeta__foto img { position: absolute; inset: 0; width: 100%; height: 100%; display: block; object-fit: cover; }
+/* Plazo para pagar una cita apartada (PlazoApartada, sql/0024). */
+.tp-plazo { display: flex; align-items: center; justify-content: center; gap: 8px; max-width: 460px; margin: 14px auto 4px; padding: 11px 16px; border-radius: 999px; background: #141414; color: #fff; font-size: 14.5px; text-align: left; }
+.tp-plazo b { font-variant-numeric: tabular-nums; font-size: 16px; }
+.tp-plazo small { opacity: .75; }
+.tp-plazo--poco { background: #9a3412; }
+.tp-plazo--fin { display: block; border-radius: 16px; background: #fdecea; color: #7a271a; text-align: center; }
+/* Sin sede elegida: aviso en lugar de días y horas (cada sede tiene su aforo). */
+.tp-falta-sede { margin: 14px 0 4px; padding: 14px 16px; border: 1.5px dashed var(--tp-borde); border-radius: 18px; color: var(--tp-suave); font-size: 14px; text-align: center; }

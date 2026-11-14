@@ -19,7 +19,7 @@
 --   · CATÁLOGO con PRECIOS DE REFERENCIA, POR CONFIRMAR con el dueño. Base: su promo de Halloween
 --     (corte+barba S/25, corte+cejas S/20, corte+raya S/20, perfilado S/10) como precio rebajado.
 --     Se cambian en Panel → Catálogo. Fotos: las suyas (public/assets/the247/).
---   · Página agenda.vendemias.com/the247barbershop, plantilla Luxury, publicada, con su logo y
+--   · Página agenda.vendemias.com/the247 (14-nov: antes the247barbershop), plantilla Luxury, publicada, con su logo y
 --     fotos, y la tarjeta de puntos.
 --   · ADELANTO del 50 % para separar (su regla de «Reservas»): la cita queda apartada, el cliente
 --     yapea al 914 440 860 y SUBE LA CAPTURA en la página (obligatoria para confirmar). Validación
@@ -66,7 +66,7 @@ begin
     if exists (select 1 from public.companies where id = v_id) then
         raise exception 'Ya existe el negocio %. Para empezar de cero: scripts/the247-alta-deshacer.sql.', v_id;
     end if;
-    if exists (select 1 from public.tu_pagina where slug = v_id) or exists (select 1 from public.loyalty_settings where slug = v_id) then
+    if exists (select 1 from public.tu_pagina where slug in (v_id, 'the247')) or exists (select 1 from public.loyalty_settings where slug = v_id) then
         raise exception 'La dirección % ya la usa otro negocio (página o Fideliza). No se toca nada.', v_id;
     end if;
     if btrim(v_soporte) <> '' then
@@ -110,7 +110,7 @@ begin
             1, 0,
             'Jr. Huallaga 625 (The 24/7 Barber Shop) y Jr. Huallaga 646 (24/7 Premium), Iquitos',
             'Barbería en Iquitos con dos sedes en Jr. Huallaga: The 24/7 Barber Shop (n.º 625) y 24/7 Barber Shop Premium (n.º 646). Cortes, degradados, barba, cejas, diseños y cortes para niños. Todos los días de 9:00 a 21:00.',
-            'Las citas se separan en agenda.vendemias.com/the247barbershop. Términos de reserva: 50 % de adelanto obligatorio por Yape, y la captura se sube en la misma página. Tolerancia máxima de 10 minutos: pasado ese tiempo la cita se reprograma sin excepción.',
+            'Las citas se separan en agenda.vendemias.com/the247. Términos de reserva: 50 % de adelanto obligatorio por Yape, y la captura se sube en la misma página. Tolerancia máxima de 10 minutos: pasado ese tiempo la cita se reprograma sin excepción.',
             '{"lead_hours_min":2,"lead_hours_max":24}', 0, 1, 0);
 
     -- Nace en la nube: sin esto la página diría «ya no recibe reservas en línea».
@@ -148,7 +148,7 @@ begin
 
     -- ── 4 · La página ───────────────────────────────────────────────────────────
     insert into public.tu_pagina (company_id, slug, titulo, frase, whatsapp, plantilla, color, logo_url, portada_url, publicada, secciones)
-    values (v_id, v_id, v_nombre, 'Dos sedes en Jr. Huallaga, Iquitos. Separa tu cita en línea, todos los días de 9:00 a 21:00.',
+    values (v_id, 'the247', v_nombre, 'Dos sedes en Jr. Huallaga, Iquitos. Separa tu cita en línea, todos los días de 9:00 a 21:00.',
             v_whatsapp, 'luxury', '#D0AB75', v_assets || 'logo.webp', v_assets || 'portada.webp', true,
             jsonb_build_object('reservar', true, 'catalogo', false, 'envios', false,
                 'citas', jsonb_build_object('adelanto', 50, 'comprobante', 'pagina', 'validacion', 'manual'),
@@ -180,7 +180,7 @@ begin
     if v_otros is not null then
         raise notice 'Ojo: el cliente también está en: %. Si lo creó sin querer al entrar, bórralo aparte.', v_otros;
     end if;
-    raise notice 'Listo: agenda.vendemias.com/% · fideliza.vendemias.com/n/%/unirse', v_id, v_id;
+    raise notice 'Listo: agenda.vendemias.com/the247 · fideliza.vendemias.com/n/%/unirse', v_id;
 end $$;
 
 commit;

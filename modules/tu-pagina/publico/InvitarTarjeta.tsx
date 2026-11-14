@@ -19,15 +19,19 @@ export function tituloInvitacion(premio: string): string {
   return p ? `¿Quieres ${p.charAt(0).toLowerCase()}${p.slice(1)}?` : '¿Tu próxima visita gratis?';
 }
 
-export function textoInvitacion(t: Pick<TarjetaPublica, 'meta' | 'premio'>): string {
+export function textoInvitacion(t: Pick<TarjetaPublica, 'meta' | 'premio'>, sedes = 0): string {
   const premio = t.premio.trim().replace(/[.!]+$/, '') || 'tu premio';
-  return t.meta > 0
+  const base = t.meta > 0
     ? `Crea tu tarjeta ahora: cada visita suma un sello y al completar ${t.meta} te llevas ${premio}.`
     : `Crea tu tarjeta ahora: cada visita suma puntos para ${premio}.`;
+  // Una sola tarjeta para todos los locales: los sellos de cualquier sede suman en la misma.
+  return sedes > 1 ? `${base} Vale en ${sedes === 2 ? 'nuestras dos sedes' : `nuestras ${sedes} sedes`}.` : base;
 }
 
-export default function InvitarTarjeta({ tarjeta, href, alCerrar, alCrear }: {
+export default function InvitarTarjeta({ tarjeta, href, alCerrar, alCrear, sedes = 0 }: {
   tarjeta: TarjetaPublica;
+  /** Cuántos locales tiene el negocio: con 2 o más se dice que la tarjeta vale en todos. */
+  sedes?: number;
   /** El alta de Fideliza, con el nombre del cliente ya escrito. */
   href: string;
   alCerrar: () => void;
@@ -59,7 +63,7 @@ export default function InvitarTarjeta({ tarjeta, href, alCerrar, alCrear }: {
         <div className="tp-invitar__contenido">
           <span className="tp-invitar__club">{tarjeta.nombre}</span>
           <h2 id="tp-invitar-t">{tituloInvitacion(tarjeta.premio)}</h2>
-          <p id="tp-invitar-d">{textoInvitacion(tarjeta)}</p>
+          <p id="tp-invitar-d">{textoInvitacion(tarjeta, sedes)}</p>
           {casillas > 0 && (
             <ol className="tp-invitar__sellos" aria-label={`${tarjeta.meta} sellos para el premio`}>
               {Array.from({ length: casillas }, (_, i) => (

@@ -21,14 +21,14 @@
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Check, ChevronLeft, ChevronRight, Clock, MessageCircle, Minus, Plus, Search, ShoppingBag, Stamp, Trash2, Users, X } from 'lucide-react';
+import { Check, ChevronLeft, ChevronRight, Clock, MapPin, MessageCircle, Minus, Plus, Search, ShoppingBag, Stamp, Trash2, Users, X } from 'lucide-react';
 import type { TarjetaPublica } from '@/modules/tu-pagina/dominio/tarjeta';
 import { cap, vocabulario } from '@/lib/panel/vocabulario';
 import { fotoEnCirculo } from '@/modules/fideliza/dominio/encuadre';
 import type { Disposicion } from '@/modules/tu-pagina/dominio/plantillas';
 import type { AparienciaPagina } from '@/modules/tu-pagina/dominio/apariencia';
 import { fotoProductoRestaurante, fotoServicioLuxury } from '@/modules/tu-pagina/dominio/fotos';
-import { abreEl, horasLibres, sumarDias, sumarMin } from '@/modules/tu-pagina/dominio/agenda';
+import { abreEl, agendaDeSede, horasLibres, sumarDias, sumarMin } from '@/modules/tu-pagina/dominio/agenda';
 import { fechaCorta, urlWhatsApp } from '@/modules/tu-pagina/dominio/envio';
 import {
   METODOS_PAGO,
@@ -45,7 +45,7 @@ import {
   modoDelTipo,
 } from '@/modules/tu-pagina/dominio/tienda';
 import { CONTRA_ENTREGA, aPagarAntes, avisoAlPedir, metodosAlPedir } from '@/modules/tu-pagina/dominio/cobroPedidos';
-import { montoAdelanto } from '@/modules/tu-pagina/dominio/adelantoCitas';
+import { montoAdelanto, type Sede } from '@/modules/tu-pagina/dominio/adelantoCitas';
 import SubirComprobante from '@/modules/tu-pagina/publico/SubirComprobante';
 import InvitarTarjeta from '@/modules/tu-pagina/publico/InvitarTarjeta';
 
@@ -98,7 +98,9 @@ interface Hecho {
    * Cita apartada con adelanto (dominio/adelantoCitas.ts): se paga y se sube la captura AQUÍ,
    * sin WhatsApp. `telefono` es el de la reserva: sin él no se encuentra al subir.
    */
-  apartada?: { monto: number; porcentaje: number; telefono: string; metodos: { tipo: string; numero: string; titular: string }[] };
+  apartada?: { monto: number; porcentaje: number; telefono: string; metodos: { tipo: string; numero: string; titular: string }[];
+    /** Hasta cuándo queda apartada (sql/0024). Sin él, no se enseña plazo. */
+    plazo?: { minutos: number; venceMs: number; vence: string } };
   /** «Antes de tu cita» (secciones.citas.indicaciones): solo en citas. */
   indicaciones?: string[];
 }
@@ -214,6 +216,7 @@ export default function Escaparate({ esc: todo, slug, whatsapp, puedePedir, pued
         <h2 className="tp-h1">{hecho.titulo}</h2>
         <p className="tp-lead">Tu código es</p>
         <div className="tp-codigo">{hecho.codigo}</div>
+        {hecho.apartada?.plazo && <PlazoApartada plazo={hecho.apartada.plazo} />}
         {hecho.apartada && (
           <ol className="tp-pago" aria-label="Cómo confirmar tu cita">
             <li>
@@ -232,7 +235,7 @@ export default function Escaparate({ esc: todo, slug, whatsapp, puedePedir, pued
           // Un respiro para que lea «Recibimos tu comprobante» antes de la invitación. Si no se
           // sabe (sin la 0022), se invita igual: es mejor que no ofrecerla nunca.
           alSubir={({ tieneTarjeta }) => { if (tarjeta && tieneTarjeta !== true) window.setTimeout(() => setInvitar(true), 1200); }} />}
-        {invitar && tarjeta && <InvitarTarjeta tarjeta={tarjeta} href={conNombre(tarjeta.url, leer(CLAVE_CLIENTE, { nombre: '' }).nombre)} alCerrar={() => setInvitar(false)} />}
+        {invitar && tarjeta && <InvitarTarjeta tarjeta={tarjeta} sedes={esc.sedes?.length ?? 0} href={conNombre(tarjeta.url, leer(CLAVE_CLIENTE, { nombre: '' }).nombre)} alCerrar={() => setInvitar(false)} />}
         {hecho.pago && (
           <ol className="tp-pago" aria-label="Cómo confirmar tu pedido">
             <li>
@@ -253,7 +256,7 @@ export default function Escaparate({ esc: todo, slug, whatsapp, puedePedir, pued
           </section>
         )}
         <p className="tp-resumen">{hecho.mensaje.split(/(\*[^*\n]+\*)/g).map((parte, indice) => parte.startsWith('*') && parte.endsWith('*') ? <strong key={indice}>{parte.slice(1, -1)}</strong> : <span key={indice}>{parte}</span>)}</p>
-        {!hecho.demo && hecho.apartada && <p className="tp-nota">Tu hora queda apartada mientras pagas. Si no llega la captura, se libera para otra persona. ¿Dudas? <a href={urlWhatsApp(whatsapp, hecho.mensaje)} rel="noopener">Escríbenos por WhatsApp</a>.</p>}
+        {!hecho.demo && hecho.apartada && <p className="tp-nota">{hecho.apartada.plazo ? `Tu hora queda apartada hasta las ${hecho.apartada.plazo.vence}.` : 'Tu hora queda apartada mientras pagas.'} Si no llega la captura, se libera para otra persona. ¿Dudas? <a href={urlWhatsApp(whatsapp, hecho.mensaje)} rel="noopener">Escríbenos por WhatsApp</a>.</p>}
         {!hecho.demo && !hecho.apartada && <><a className="tp-boton tp-boton--wsp" href={urlWhatsApp(whatsapp, hecho.mensaje)} rel="noopener">
           <MessageCircle size={20} aria-hidden="true" /> {hecho.pago ? 'Enviar pedido por WhatsApp' : 'Avisar por WhatsApp'}
         </a><p className="tp-nota">{hecho.pago ? 'Tu pedido ya quedó guardado. Lo preparamos cuando llegue el pago.' : 'Avísanos para confirmarte. Ya quedó guardado aunque no lo envíes.'}</p></>}
@@ -655,13 +658,16 @@ export function CamposCliente({ d, errores, alCambiar, extra }: {
   );
 }
 
-function ResumenCita({ item, esc, inicio, profesional, esBarberia }: {
+function ResumenCita({ item, esc, inicio, profesional, esBarberia, sede = '' }: {
   item: Item;
   esc: Datos;
   inicio: string;
   profesional: string;
   esBarberia: boolean;
+  /** La elegida (nombre). Con sedes, sale en vez de la dirección general. */
+  sede?: string;
 }) {
+  const laSede = (esc.sedes ?? []).find((x) => x.nombre === sede);
   const nombreProfesional = esc.agenda.equipo.find((persona) => persona.id === profesional)?.nombre
     ?? (esBarberia ? 'Cualquiera' : 'El primero libre');
   return (
@@ -673,11 +679,36 @@ function ResumenCita({ item, esc, inicio, profesional, esBarberia }: {
         <div><dt>Hora</dt><dd>{inicio.slice(11, 16)} – {sumarMin(inicio, item.duracion).slice(11, 16)}</dd></div>
         <div><dt>Duración</dt><dd>{item.duracion} min</dd></div>
         {esc.pideProfesional && <div><dt>{esBarberia ? 'Barbero' : 'Profesional'}</dt><dd>{nombreProfesional}</dd></div>}
-        {esc.direccion && <div><dt>Dirección</dt><dd>{esc.direccion}</dd></div>}
+        {(esc.sedes?.length ?? 0) > 0
+          ? <div className="tp-reserva-resumen__sede"><dt>Sede</dt><dd>{laSede ? <>{laSede.nombre}<small>{laSede.direccion}</small></> : <span className="tp-reserva-resumen__falta">Elige una sede arriba</span>}</dd></div>
+          : esc.direccion && <div><dt>Dirección</dt><dd>{esc.direccion}</dd></div>}
         {item.precio !== null && <div className="tp-reserva-resumen__precio"><dt>Precio</dt><dd>{soles(item.precio)}</dd></div>}
         {montoAdelanto(item.precio, esc.adelantoCitas ?? 0) > 0 && <div><dt>Adelanto ({esc.adelantoCitas} %)</dt><dd>{soles(montoAdelanto(item.precio, esc.adelantoCitas ?? 0))}</dd></div>}
       </dl>
     </section>
+  );
+}
+
+/**
+ * Cuánto le queda para pagar una cita apartada (sql/0024), con cuenta atrás. Al vencer, lo dice:
+ * la hora pudo haberse liberado. Si ya subió la captura, el plazo deja de importar (lo revisa el
+ * negocio), pero esto no lo sabe: por eso habla de «pagar y subir la captura».
+ */
+function PlazoApartada({ plazo }: { plazo: { minutos: number; venceMs: number; vence: string } }) {
+  const [ahora, setAhora] = useState(() => Date.now());
+  useEffect(() => {
+    const t = window.setInterval(() => setAhora(Date.now()), 1000);
+    return () => window.clearInterval(t);
+  }, []);
+  const resta = Math.max(0, Math.floor((plazo.venceMs - ahora) / 1000));
+  const mm = Math.floor(resta / 60);
+  const ss = String(resta % 60).padStart(2, '0');
+  if (!resta) return <p className="tp-plazo tp-plazo--fin" role="status"><b>Se acabó el tiempo para pagar.</b> Si ya subiste tu captura, la revisamos igual. Si no, tu hora pudo liberarse: vuelve a reservar o escríbenos.</p>;
+  return (
+    <p className={`tp-plazo${resta < 300 ? ' tp-plazo--poco' : ''}`} role="timer" aria-live="off">
+      <Clock size={18} aria-hidden="true" />
+      <span>Tienes <b>{mm}:{ss}</b> para pagar y subir tu captura <small>(hasta las {plazo.vence})</small></span>
+    </p>
   );
 }
 
@@ -749,6 +780,24 @@ function ElegirHora({ horas, valor, alElegir, etiqueta }: {
   );
 }
 
+/** Dónde: con 2 o más sedes, una tarjeta por local (nombre y dirección). Obligatoria. */
+function ElegirSede({ sedes, valor, alElegir }: { sedes: Sede[]; valor: string; alElegir: (nombre: string) => void }) {
+  return (
+    <div className="tp-campo">
+      <label id="tp-sede-l">¿En qué sede?</label>
+      <div className="tp-sedes-elegir" role="radiogroup" aria-labelledby="tp-sede-l">
+        {sedes.map((s) => (
+          <button key={s.nombre} type="button" role="radio" aria-checked={valor === s.nombre} className="tp-sede-opcion" onClick={() => alElegir(s.nombre)}>
+            <MapPin size={18} aria-hidden="true" />
+            <span><b>{s.nombre}</b><small>{s.direccion}</small></span>
+            {valor === s.nombre && <Check size={18} aria-hidden="true" className="tp-sede-opcion__check" />}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 /** Elegir viendo la cara. Quien no tiene foto sale con su inicial, en el mismo círculo. */
 function ElegirProfesional({ equipo, valor, alElegir, esBarberia }: {
   equipo: Datos['agenda']['equipo'];
@@ -805,6 +854,17 @@ export function useEnviar(ruta: string) {
 function Reservar({ item, esc, slug, alTerminar, presentacion, esBarberia = false }: { item: Item; esc: Datos; slug: string; alTerminar: (h: Hecho) => void; presentacion?: 'inline' | 'agenda'; esBarberia?: boolean }) {
   const { cliente, setCliente, recordar } = useCliente();
   const [profesional, setProfesional] = useState<string>('');
+  // Con una sola sede no se pregunta; con 2 o más, es obligatoria (sql/0023 la guarda en la cita).
+  const sedes = esc.sedes ?? [];
+  const [sede, setSede] = useState(sedes.length === 1 ? sedes[0].nombre : '');
+  const eligeSede = sedes.length > 1;
+  // «Reservar aquí» desde «Nuestras sedes» llega con ?sede=: ya elegida.
+  useEffect(() => {
+    if (!eligeSede) return;
+    const pedida = new URLSearchParams(window.location.search).get('sede');
+    if (pedida && sedes.some((x) => x.nombre === pedida)) setSede(pedida);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const [tomadas, setTomadas] = useState<Set<string>>(new Set());
   const [errores, setErrores] = useState<ErroresCliente>({});
   const [fallo, setFallo] = useState('');
@@ -815,14 +875,19 @@ function Reservar({ item, esc, slug, alTerminar, presentacion, esBarberia = fals
     ? `Para confirmar tu cita pagas un adelanto de ${soles(adelanto)} (${esc.adelantoCitas} %) por Yape y subes la captura aquí mismo.`
     : 'Después de separar tu horario, podrás avisar al negocio por WhatsApp.';
 
+  // Cada sede con su propio aforo y sus propias citas (agendaDeSede): lo libre en una no depende de la otra.
+  const sedeElegida = sedes.find((x) => x.nombre === sede);
+  const agenda = useMemo(() => agendaDeSede(esc.agenda, sedeElegida), [esc.agenda, sedeElegida]);
+  // Sin sede elegida (y habiendo varias) todavía no hay horarios que enseñar.
+  const faltaSede = eligeSede && !sedeElegida;
   const dias = useMemo(
     () => Array.from({ length: DIAS_A_LA_VISTA }, (_, i) => sumarDias(esc.hoy, i)).filter((f) => abreEl(esc.agenda, f)),
     [esc.hoy, esc.agenda],
   );
   const horasDe = useCallback(
-    (f: string) =>
-      horasLibres(esc.agenda, f, item.duracion, profesional || null, esc.ahora).filter((h) => !tomadas.has(h.inicio)),
-    [esc.agenda, esc.ahora, item.duracion, profesional, tomadas],
+    (f: string) => faltaSede ? [] :
+      horasLibres(agenda, f, item.duracion, profesional || null, esc.ahora).filter((h) => !tomadas.has(h.inicio)),
+    [agenda, faltaSede, esc.ahora, item.duracion, profesional, tomadas],
   );
   const [dia, setDia] = useState('');
   const [hora, setHora] = useState('');
@@ -831,7 +896,7 @@ function Reservar({ item, esc, slug, alTerminar, presentacion, esBarberia = fals
     if (!dia || !horasDe(dia).length) setDia(dias.find((f) => horasDe(f).length > 0) ?? dias[0] ?? '');
     setHora('');
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [profesional]);
+  }, [profesional, sede]);
   const horas = dia ? horasDe(dia) : [];
   const diasVisibles = dias.slice(paginaDias * 6, paginaDias * 6 + 6);
   const moverDias = (pagina: number) => {
@@ -852,10 +917,16 @@ function Reservar({ item, esc, slug, alTerminar, presentacion, esBarberia = fals
     setErrores(e);
     setFallo('');
     if (Object.keys(e).length || !inicio) return;
+    if (eligeSede && !sede) {
+      setFallo('Elige la sede donde quieres atenderte.');
+      document.getElementById('tp-sede-l')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return;
+    }
     const j = await enviar({
       slug,
       item: item.id,
       inicio,
+      sede: sede || undefined,
       profesional: profesional || undefined,
       nombre: cliente.nombre,
       telefono: cliente.telefono,
@@ -865,7 +936,8 @@ function Reservar({ item, esc, slug, alTerminar, presentacion, esBarberia = fals
       recordar(cliente);
       const pro = esc.agenda.equipo.find((x) => x.id === profesional)?.nombre;
       const apartada = j.estado === 'pending_payment' && adelanto > 0
-        ? { monto: adelanto, porcentaje: esc.adelantoCitas ?? 0, telefono: cliente.telefono, metodos: Array.isArray(j.metodos) ? (j.metodos as NonNullable<Hecho['apartada']>['metodos']) : [] }
+        ? { monto: adelanto, porcentaje: esc.adelantoCitas ?? 0, telefono: cliente.telefono, metodos: Array.isArray(j.metodos) ? (j.metodos as NonNullable<Hecho['apartada']>['metodos']) : [],
+            plazo: j.plazo && typeof j.plazo === 'object' ? (j.plazo as NonNullable<Hecho['apartada']>['plazo']) : undefined }
         : undefined;
       alTerminar({
         titulo: apartada ? 'Tu cita está apartada: falta el adelanto' : '¡Tu cita está separada!',
@@ -873,7 +945,7 @@ function Reservar({ item, esc, slug, alTerminar, presentacion, esBarberia = fals
         indicaciones: esc.indicacionesCitas,
         codigo: j.codigo,
         mensaje: mensajeReserva(j.codigo, {
-          servicio: item.nombre, precio: item.precio, inicio, profesional: pro, beneficiario: '', nombre: cliente.nombre, esGrupo: false,
+          servicio: item.nombre, precio: item.precio, inicio, profesional: pro, beneficiario: '', nombre: cliente.nombre, esGrupo: false, sede: sede || undefined,
         }),
       });
       return;
@@ -889,10 +961,12 @@ function Reservar({ item, esc, slug, alTerminar, presentacion, esBarberia = fals
   if (presentacion === 'agenda') return <>
     <div className="tp-agenda-widget__calendario">
       <span className="tp-agenda-widget__paso">{esc.pideProfesional ? `2 · ${esBarberia ? 'BARBERO' : 'PROFESIONAL'} Y DÍA` : '2 · DÍA'}</span>
+      {eligeSede && <ElegirSede sedes={sedes} valor={sede} alElegir={(x) => { setSede(x); setFallo(''); }} />}
       {esc.pideProfesional && <ElegirProfesional equipo={esc.agenda.equipo} valor={profesional} alElegir={setProfesional} esBarberia={esBarberia} />}
-      <div className="tp-agenda-widget__cabecera"><h3>Elige un día</h3><div><button type="button" aria-label="Días anteriores" disabled={paginaDias === 0} onClick={() => moverDias(paginaDias - 1)}><ChevronLeft size={18} aria-hidden="true" /></button><button type="button" aria-label="Días siguientes" disabled={(paginaDias + 1) * 6 >= dias.length} onClick={() => moverDias(paginaDias + 1)}><ChevronRight size={18} aria-hidden="true" /></button></div></div>
+      {faltaSede && <p className="tp-falta-sede">Elige primero la sede: cada una tiene sus propios horarios.</p>}
+      {!faltaSede && <><div className="tp-agenda-widget__cabecera"><h3>Elige un día</h3><div><button type="button" aria-label="Días anteriores" disabled={paginaDias === 0} onClick={() => moverDias(paginaDias - 1)}><ChevronLeft size={18} aria-hidden="true" /></button><button type="button" aria-label="Días siguientes" disabled={(paginaDias + 1) * 6 >= dias.length} onClick={() => moverDias(paginaDias + 1)}><ChevronRight size={18} aria-hidden="true" /></button></div></div>
       <div className="tp-agenda-widget__dias" role="group" aria-label="Días disponibles">{diasVisibles.map((f) => { const libres = horasDe(f).length; return <button key={f} type="button" disabled={!libres} aria-pressed={dia === f} onClick={() => { setDia(f); setHora(''); }}><small>{ETIQUETA_DIA(f, esc.hoy)}</small><b>{fechaCorta(f).split(' ').slice(1).join(' ')}</b></button>; })}</div>
-      <p>{dia ? `Seleccionado: ${fechaCorta(dia)}` : 'Selecciona un día para ver horarios'}</p>
+      <p>{dia ? `Seleccionado: ${fechaCorta(dia)}` : 'Selecciona un día para ver horarios'}</p></>}
     </div>
     <div className="tp-agenda-widget__horas">
       <span className="tp-agenda-widget__paso">3 · HORA</span>
@@ -903,7 +977,7 @@ function Reservar({ item, esc, slug, alTerminar, presentacion, esBarberia = fals
       <span className="tp-agenda-widget__paso">4 · TUS DATOS</span>
       <h3>Revisa y separa tu cita</h3>
       <CamposCliente d={cliente} errores={errores} alCambiar={(k, val) => { setCliente((c) => ({ ...c, [k]: val })); setErrores((e) => ({ ...e, [k]: undefined })); }} />
-      <ResumenCita item={item} esc={esc} inicio={inicio} profesional={profesional} esBarberia={esBarberia} />
+      <ResumenCita item={item} esc={esc} inicio={inicio} profesional={profesional} esBarberia={esBarberia} sede={sede} />
       {fallo && <p className="tp-aviso" role="alert">{fallo}</p>}
       <button type="button" className="tp-boton" disabled={enviando} onClick={() => void confirmar()}>{enviando ? 'Separando…' : 'Separar mi cita'}</button>
       <p className="tp-nota">{notaAntes}</p>
@@ -913,7 +987,10 @@ function Reservar({ item, esc, slug, alTerminar, presentacion, esBarberia = fals
 
   return (
     <Detalle item={item}>
+      {eligeSede && <ElegirSede sedes={sedes} valor={sede} alElegir={(x) => { setSede(x); setFallo(''); }} />}
       {esc.pideProfesional && <ElegirProfesional equipo={esc.agenda.equipo} valor={profesional} alElegir={setProfesional} esBarberia={esBarberia} />}
+      {faltaSede && <p className="tp-vacio tp-falta-sede">Elige primero la sede: cada una tiene sus propios horarios.</p>}
+      {!faltaSede && <>
       <div className="tp-campo">
         {presentacion === 'inline' && <span className="tp-luxury-reserva-real__paso">02 / DÍA</span>}
         <label id="tp-dia-l">{presentacion === 'inline' ? 'Elige un día' : 'Día'}</label>
@@ -944,9 +1021,10 @@ function Reservar({ item, esc, slug, alTerminar, presentacion, esBarberia = fals
             ))}
           </div>
         ) : (
-          <p className="tp-vacio">No quedan horas este día. Prueba otro.</p>
+          <p className="tp-vacio">No quedan horas este día{sedeElegida ? ` en ${sedeElegida.nombre}` : ''}. Prueba otro{eligeSede ? ' día u otra sede' : ''}.</p>
         )}
       </div>
+      </>}
       {inicio && (
         <>
           <CamposCliente
@@ -954,7 +1032,7 @@ function Reservar({ item, esc, slug, alTerminar, presentacion, esBarberia = fals
             errores={errores}
             alCambiar={(k, val) => { setCliente((c) => ({ ...c, [k]: val })); setErrores((e) => ({ ...e, [k]: undefined })); }}
           />
-          <ResumenCita item={item} esc={esc} inicio={inicio} profesional={profesional} esBarberia={esBarberia} />
+          <ResumenCita item={item} esc={esc} inicio={inicio} profesional={profesional} esBarberia={esBarberia} sede={sede} />
           {fallo && <p className="tp-aviso" role="alert">{fallo}</p>}
           <button type="button" className="tp-boton" disabled={enviando} onClick={() => void confirmar()}>
             {enviando ? 'Separando…' : 'Separar mi cita'}
