@@ -17,27 +17,35 @@ type Resultado = 'confirmada' | 'parcial' | 'a_cuenta' | 'cobrada' | 'revisar';
 
 const achicar = achicarImagen;
 
-function textoOk(r: Resultado, d: { pagado?: number; total?: number; falta?: number; minimo?: number }): { titulo: string; detalle: string } {
+/** Una cancha o una cita (sql/0021): cambian el sustantivo y dónde se paga el resto. */
+export type QueSeReserva = 'cancha' | 'cita';
+const PALABRAS: Record<QueSeReserva, { la: string; resto: string; despedida: string }> = {
+  cancha: { la: 'tu cancha', resto: 'en la cancha', despedida: 'Nos vemos en la cancha.' },
+  cita: { la: 'tu cita', resto: 'en el local', despedida: 'Te esperamos.' },
+};
+
+function textoOk(r: Resultado, d: { pagado?: number; total?: number; falta?: number; minimo?: number }, que: QueSeReserva = 'cancha'): { titulo: string; detalle: string } {
   const falta = d.falta ?? 0;
+  const w = PALABRAS[que];
   switch (r) {
     case 'confirmada':
-      return { titulo: '¡Pago validado! Tu reserva está confirmada', detalle: falta > 0 ? `Te queda ${soles(falta)} por pagar en la cancha.` : 'Ya está pagada completa.' };
+      return { titulo: '¡Pago validado! Tu reserva está confirmada', detalle: falta > 0 ? `Te queda ${soles(falta)} por pagar ${w.resto}.` : 'Ya está pagada completa.' };
     case 'cobrada':
-      return { titulo: 'Pago validado. Tu reserva está pagada completa', detalle: 'Nos vemos en la cancha.' };
+      return { titulo: 'Pago validado. Tu reserva está pagada completa', detalle: w.despedida };
     case 'a_cuenta':
-      return { titulo: 'Pago validado', detalle: `Te queda ${soles(falta)} por pagar en la cancha.` };
+      return { titulo: 'Pago validado', detalle: `Te queda ${soles(falta)} por pagar ${w.resto}.` };
     case 'parcial':
       return {
         titulo: `Recibimos ${soles(d.pagado ?? 0)}. Te faltan ${soles(Math.max((d.minimo ?? 0) - (d.pagado ?? 0), 0))} para confirmar`,
-        detalle: `El adelanto es ${soles(d.minimo ?? 0)}. Yapea ${soles(Math.max((d.minimo ?? 0) - (d.pagado ?? 0), 0))} más al mismo número y sube esa captura aquí. Tu cancha sigue apartada mientras tanto.`,
+        detalle: `El adelanto es ${soles(d.minimo ?? 0)}. Yapea ${soles(Math.max((d.minimo ?? 0) - (d.pagado ?? 0), 0))} más al mismo número y sube esa captura aquí. ${w.la.charAt(0).toUpperCase() + w.la.slice(1)} sigue apartada mientras tanto.`,
       };
     default:
-      return { titulo: 'Recibimos tu comprobante', detalle: 'El negocio lo revisa y te confirma. Mientras tanto, tu cancha sigue apartada.' };
+      return { titulo: 'Recibimos tu comprobante', detalle: `El negocio lo revisa y te confirma. Mientras tanto, ${w.la} sigue apartada.` };
   }
 }
 
-export default function SubirComprobante({ slug, codigo, telefono, ejemplo = false, faltaEjemplo = 0, alValidar }: {
-  slug: string; codigo: string; telefono: string; ejemplo?: boolean; faltaEjemplo?: number; alValidar?: () => void;
+export default function SubirComprobante({ slug, codigo, telefono, ejemplo = false, faltaEjemplo = 0, alValidar, que = 'cancha' }: {
+  slug: string; codigo: string; telefono: string; ejemplo?: boolean; faltaEjemplo?: number; alValidar?: () => void; que?: QueSeReserva;
 }) {
   const [enviando, setEnviando] = useState(false);
   const [fallo, setFallo] = useState('');
@@ -78,7 +86,7 @@ export default function SubirComprobante({ slug, codigo, telefono, ejemplo = fal
     }
   }
 
-  const ok = listo && textoOk(listo.resultado, listo);
+  const ok = listo && textoOk(listo.resultado, listo, que);
   const terminado = listo && listo.resultado !== 'parcial';
 
   return (

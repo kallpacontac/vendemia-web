@@ -25,6 +25,7 @@ import { ocupa } from '@/lib/panel/inscripciones';
 import { sumarMin, type DatosAgenda } from '@/modules/tu-pagina/dominio/agenda';
 import { fechaCorta, telefonoBonito, telefonoNormal } from '@/modules/tu-pagina/dominio/envio';
 import { normalizarCobro, type CobroPedidos } from '@/modules/tu-pagina/dominio/cobroPedidos';
+import { porcentajeAdelanto } from '@/modules/tu-pagina/dominio/adelantoCitas';
 
 /* ── Lo que llega de la base ─────────────────────────────────────────────── */
 
@@ -88,6 +89,8 @@ export interface ComoSeOfrece {
   tipos?: TiposDePagina;
   /** Cómo cobra los pedidos (dominio/cobroPedidos.ts). Se normaliza al armar. */
   cobroPedidos?: unknown;
+  /** Adelanto para separar citas (dominio/adelantoCitas.ts). Se normaliza al armar. */
+  citas?: unknown;
 }
 
 /** Una cosa del catálogo, lo justo para decidir su tipo. */
@@ -170,6 +173,8 @@ export interface Escaparate {
   ahora: string;
   /** Contra entrega, todo por adelantado o un adelanto. Sin dato, contra entrega. */
   cobro?: CobroPedidos;
+  /** % del precio que se paga antes para confirmar una cita (dominio/adelantoCitas.ts). 0 = nada. */
+  adelantoCitas?: number;
 }
 
 const json = <T>(raw: string | null | undefined, porDefecto: T): T => {
@@ -290,6 +295,7 @@ export function armarEscaparate(c: DatosCrudos, como?: ComoSeOfrece | null): Esc
     hoy: c.hoy,
     ahora: c.ahora,
     cobro: normalizarCobro(como?.cobroPedidos),
+    adelantoCitas: porcentajeAdelanto(como?.citas),
   };
 }
 

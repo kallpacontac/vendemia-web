@@ -360,6 +360,9 @@ export default function Agenda() {
           /></div>
         )}
 
+        {/* Citas con adelanto (sql/0021): la captura que subió el cliente, arriba de todo para que no se pierda. */}
+        {!canchas && companyId && <ComprobantesPorRevisar companyId={companyId} recarga={datos?.citas} alCambiar={recargar} enDonde="en el local" />}
+
         {/* El mensaje para el cliente de lo que se acaba de mover arrastrando. */}
         {aviso && <AvisarCliente {...aviso} alCerrar={() => setAviso(null)} />}
 

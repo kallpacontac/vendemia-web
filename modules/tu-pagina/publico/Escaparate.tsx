@@ -45,6 +45,8 @@ import {
   modoDelTipo,
 } from '@/modules/tu-pagina/dominio/tienda';
 import { CONTRA_ENTREGA, aPagarAntes, avisoAlPedir, metodosAlPedir } from '@/modules/tu-pagina/dominio/cobroPedidos';
+import { montoAdelanto } from '@/modules/tu-pagina/dominio/adelantoCitas';
+import SubirComprobante from '@/modules/tu-pagina/publico/SubirComprobante';
 
 interface Props {
   esc: Datos;
@@ -91,6 +93,11 @@ interface Hecho {
   demo?: boolean;
   /** El negocio cobra antes de preparar (dominio/cobroPedidos.ts): cuánto y a dónde. */
   pago?: { monto: number; metodos: { tipo: string; numero: string; titular: string }[] };
+  /**
+   * Cita apartada con adelanto (dominio/adelantoCitas.ts): se paga y se sube la captura AQUÍ,
+   * sin WhatsApp. `telefono` es el de la reserva: sin él no se encuentra al subir.
+   */
+  apartada?: { monto: number; porcentaje: number; telefono: string; metodos: { tipo: string; numero: string; titular: string }[] };
 }
 
 const DIAS_A_LA_VISTA = 14;
@@ -202,6 +209,21 @@ export default function Escaparate({ esc: todo, slug, whatsapp, puedePedir, pued
         <h2 className="tp-h1">{hecho.titulo}</h2>
         <p className="tp-lead">Tu código es</p>
         <div className="tp-codigo">{hecho.codigo}</div>
+        {hecho.apartada && (
+          <ol className="tp-pago" aria-label="Cómo confirmar tu cita">
+            <li>
+              <b>Paga el adelanto: {soles(hecho.apartada.monto)}</b>
+              {hecho.apartada.metodos[0]
+                ? <span className="tp-pago__numero">{[...new Set(hecho.apartada.metodos.map((m) => (m.tipo === 'plin' ? 'Plin' : 'Yape')))].join(' o ')}: {numeroBonito(hecho.apartada.metodos[0].numero)}</span>
+                : <span>Por Yape o Plin.</span>}
+              {hecho.apartada.metodos[0]?.titular && <span>A nombre de {hecho.apartada.metodos[0].titular}</span>}
+              <span>Es el {hecho.apartada.porcentaje} % del precio. El resto lo pagas en el local.</span>
+            </li>
+            <li><b>Sube aquí la captura del pago</b><span>Sin la captura tu cita no se confirma.</span></li>
+            <li><b>Te confirmamos</b><span>En cuanto revisemos el pago.</span></li>
+          </ol>
+        )}
+        {hecho.apartada && !hecho.demo && <SubirComprobante slug={slug} codigo={hecho.codigo} telefono={hecho.apartada.telefono} que="cita" />}
         {hecho.pago && (
           <ol className="tp-pago" aria-label="Cómo confirmar tu pedido">
             <li>
@@ -216,7 +238,8 @@ export default function Escaparate({ esc: todo, slug, whatsapp, puedePedir, pued
           </ol>
         )}
         <p className="tp-resumen">{hecho.mensaje.split(/(\*[^*\n]+\*)/g).map((parte, indice) => parte.startsWith('*') && parte.endsWith('*') ? <strong key={indice}>{parte.slice(1, -1)}</strong> : <span key={indice}>{parte}</span>)}</p>
-        {!hecho.demo && <><a className="tp-boton tp-boton--wsp" href={urlWhatsApp(whatsapp, hecho.mensaje)} rel="noopener">
+        {!hecho.demo && hecho.apartada && <p className="tp-nota">Tu hora queda apartada mientras pagas. Si no llega la captura, se libera para otra persona. ¿Dudas? <a href={urlWhatsApp(whatsapp, hecho.mensaje)} rel="noopener">Escríbenos por WhatsApp</a>.</p>}
+        {!hecho.demo && !hecho.apartada && <><a className="tp-boton tp-boton--wsp" href={urlWhatsApp(whatsapp, hecho.mensaje)} rel="noopener">
           <MessageCircle size={20} aria-hidden="true" /> {hecho.pago ? 'Enviar pedido por WhatsApp' : 'Avisar por WhatsApp'}
         </a><p className="tp-nota">{hecho.pago ? 'Tu pedido ya quedó guardado. Lo preparamos cuando llegue el pago.' : 'Avísanos para confirmarte. Ya quedó guardado aunque no lo envíes.'}</p></>}
         {hecho.demo && <p className="tp-nota">Es una demostración: no se guardó ni se envió ningún pedido.</p>}
@@ -637,6 +660,7 @@ function ResumenCita({ item, esc, inicio, profesional, esBarberia }: {
         {esc.pideProfesional && <div><dt>{esBarberia ? 'Barbero' : 'Profesional'}</dt><dd>{nombreProfesional}</dd></div>}
         {esc.direccion && <div><dt>Dirección</dt><dd>{esc.direccion}</dd></div>}
         {item.precio !== null && <div className="tp-reserva-resumen__precio"><dt>Precio</dt><dd>{soles(item.precio)}</dd></div>}
+        {montoAdelanto(item.precio, esc.adelantoCitas ?? 0) > 0 && <div><dt>Adelanto ({esc.adelantoCitas} %)</dt><dd>{soles(montoAdelanto(item.precio, esc.adelantoCitas ?? 0))}</dd></div>}
       </dl>
     </section>
   );
@@ -702,6 +726,11 @@ function Reservar({ item, esc, slug, alTerminar, presentacion, esBarberia = fals
   const [errores, setErrores] = useState<ErroresCliente>({});
   const [fallo, setFallo] = useState('');
   const { enviar, enviando } = useEnviar('/api/tu-pagina/publico/reserva');
+  // Lo que se paga antes para confirmar (0 = nada). Postgres decide si la cita nace apartada.
+  const adelanto = montoAdelanto(item.precio, esc.adelantoCitas ?? 0);
+  const notaAntes = adelanto > 0
+    ? `Para confirmar tu cita pagas un adelanto de ${soles(adelanto)} (${esc.adelantoCitas} %) por Yape y subes la captura aquí mismo.`
+    : 'Después de separar tu horario, podrás avisar al negocio por WhatsApp.';
 
   const dias = useMemo(
     () => Array.from({ length: DIAS_A_LA_VISTA }, (_, i) => sumarDias(esc.hoy, i)).filter((f) => abreEl(esc.agenda, f)),
@@ -752,8 +781,12 @@ function Reservar({ item, esc, slug, alTerminar, presentacion, esBarberia = fals
     if (j.status === 'ok' && typeof j.codigo === 'string') {
       recordar(cliente);
       const pro = esc.agenda.equipo.find((x) => x.id === profesional)?.nombre;
+      const apartada = j.estado === 'pending_payment' && adelanto > 0
+        ? { monto: adelanto, porcentaje: esc.adelantoCitas ?? 0, telefono: cliente.telefono, metodos: Array.isArray(j.metodos) ? (j.metodos as NonNullable<Hecho['apartada']>['metodos']) : [] }
+        : undefined;
       alTerminar({
-        titulo: '¡Tu cita está separada!',
+        titulo: apartada ? 'Tu cita está apartada: falta el adelanto' : '¡Tu cita está separada!',
+        apartada,
         codigo: j.codigo,
         mensaje: mensajeReserva(j.codigo, {
           servicio: item.nombre, precio: item.precio, inicio, profesional: pro, beneficiario: '', nombre: cliente.nombre, esGrupo: false,
@@ -789,7 +822,7 @@ function Reservar({ item, esc, slug, alTerminar, presentacion, esBarberia = fals
       <ResumenCita item={item} esc={esc} inicio={inicio} profesional={profesional} esBarberia={esBarberia} />
       {fallo && <p className="tp-aviso" role="alert">{fallo}</p>}
       <button type="button" className="tp-boton" disabled={enviando} onClick={() => void confirmar()}>{enviando ? 'Separando…' : 'Separar mi cita'}</button>
-      <p className="tp-nota">Después de separar tu horario, podrás avisar al negocio por WhatsApp.</p>
+      <p className="tp-nota">{notaAntes}</p>
     </div>}
     {!inicio && fallo && <p className="tp-aviso" role="alert">{fallo}</p>}
   </>;
@@ -839,7 +872,7 @@ function Reservar({ item, esc, slug, alTerminar, presentacion, esBarberia = fals
           <button type="button" className="tp-boton" disabled={enviando} onClick={() => void confirmar()}>
             {enviando ? 'Separando…' : 'Separar mi cita'}
           </button>
-          <p className="tp-nota">Después de separar tu horario, podrás avisar al negocio por WhatsApp.</p>
+          <p className="tp-nota">{notaAntes}</p>
         </>
       )}
       {!inicio && fallo && <p className="tp-aviso" role="alert">{fallo}</p>}

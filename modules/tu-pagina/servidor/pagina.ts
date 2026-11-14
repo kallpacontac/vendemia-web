@@ -9,6 +9,7 @@ import type { ConfigCanchas } from '@/modules/tu-pagina/dominio/canchas';
 import type { AjustesCarta } from '@/modules/tu-pagina/dominio/mesa';
 import type { ConfigTarjeta } from '@/modules/tu-pagina/dominio/tarjeta';
 import type { CobroPedidos } from '@/modules/tu-pagina/dominio/cobroPedidos';
+import type { ConfigCitas } from '@/modules/tu-pagina/dominio/adelantoCitas';
 
 export interface Secciones {
   catalogo?: boolean;
@@ -28,6 +29,8 @@ export interface Secciones {
   fideliza?: ConfigTarjeta;
   /** Cómo cobra los pedidos (dominio/cobroPedidos.ts). Lo guarda pedido_cobro_guardar (sql/0020). */
   cobroPedidos?: CobroPedidos;
+  /** Adelanto y comprobante para separar citas (dominio/adelantoCitas.ts, sql/0021). */
+  citas?: ConfigCitas;
 }
 
 export interface PaginaPublica {

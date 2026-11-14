@@ -2,7 +2,7 @@
 
 /**
  * Los comprobantes subidos en la página que tiene que mirar una persona. Sale encima del tablero
- * de canchas solo si hay alguno. Aprobar registra el pago y confirma la reserva, con la misma
+ * de canchas, o arriba de la Agenda en un negocio de citas con adelanto (sql/0021), solo si hay alguno. Aprobar registra el pago y confirma la reserva, con la misma
  * comprobación de la cancha que la validación automática. Antes de aplicar nada, un «¿Seguro?»
  * dice quién, cuánto y qué le pasará a la reserva.
  */
@@ -29,14 +29,20 @@ export interface PorRevisar {
   motivo: string;
   /** Leído de la captura. Sin la 0018, no viene. */
   operacion?: string;
+  /** Lo que confirma ESTA reserva (fijo en canchas, % del precio en citas). Sin la 0021, no viene. */
+  adelanto?: number;
+  /** Sigue sin confirmar. Sin la 0021, no viene: se deduce de lo pagado. */
+  apartada?: boolean;
 }
 
 type Accion = 'aprobar' | 'rechazar';
 
 /** La que pinta: sin red, para poder verla y probarla con datos de mentira. */
-export function ComprobantesPorRevisarVista({ datos, adelanto, alRevisar }: {
+export function ComprobantesPorRevisarVista({ datos, adelanto, alRevisar, enDonde = 'en la cancha' }: {
   datos: PorRevisar[];
   adelanto: number;
+  /** Dónde se cobra el resto: «en la cancha» o «en el local». */
+  enDonde?: string;
   /** Devuelve true si se aplicó. */
   alRevisar: (c: PorRevisar, accion: Accion, monto: number | null, metodo: string) => Promise<boolean>;
 }) {
@@ -51,8 +57,9 @@ export function ComprobantesPorRevisarVista({ datos, adelanto, alRevisar }: {
   const cobroDe = (c: PorRevisar): Cobro => {
     const total = Number(c.total) || 0;
     const pagado = Number(c.pagado) || 0;
-    // Apartada mientras lo pagado no llegue al adelanto: la lista no trae el estado de la cita.
-    return { total, pagado, adelanto, apartada: adelanto > 0 && pagado < Math.min(adelanto, total) };
+    const suyo = c.adelanto === undefined || c.adelanto === null ? adelanto : Number(c.adelanto) || 0;
+    // Sin la 0021 la lista no trae el estado: apartada mientras lo pagado no llegue al adelanto.
+    return { total, pagado, adelanto: suyo, apartada: typeof c.apartada === 'boolean' ? c.apartada : suyo > 0 && pagado < Math.min(suyo, total) };
   };
   const montoDe = (c: PorRevisar) => montos[c.id] ?? (c.monto === null ? '' : String(c.monto));
   const metodoDe = (c: PorRevisar) => metodos[c.id] ?? (METODOS_COMPROBANTE.includes(c.metodo) ? c.metodo : 'yape');
@@ -118,7 +125,7 @@ export function ComprobantesPorRevisarVista({ datos, adelanto, alRevisar }: {
           detalle={<>
             <p><b>{pregunta.c.cliente}</b> · {pregunta.c.servicio} · {fechaCorta(pregunta.c.slot)}</p>
             <p>Se registra <b>{soles(pregunta.monto ?? 0)}</b> por <b>{NOMBRE_METODO[pregunta.metodo] ?? pregunta.metodo}</b>{pregunta.c.operacion ? <>, operación <b>{pregunta.c.operacion}</b></> : null}.</p>
-            <p>{efectoDelPago(cobroDe(pregunta.c), pregunta.monto ?? 0)}</p>
+            <p>{efectoDelPago(cobroDe(pregunta.c), pregunta.monto ?? 0, enDonde)}</p>
             <p className="muted">Antes de aprobar, comprueba en tu app de Yape o Plin que el dinero llegó.</p>
           </>}
         />
@@ -133,7 +140,7 @@ export function ComprobantesPorRevisarVista({ datos, adelanto, alRevisar }: {
           alConfirmar={() => void aplicar()}
           detalle={<>
             <p><b>{pregunta.c.cliente}</b> · {pregunta.c.servicio} · {fechaCorta(pregunta.c.slot)}</p>
-            <p>No se registra ningún pago. La cancha sigue apartada hasta que venza su plazo.</p>
+            <p>No se registra ningún pago. La reserva sigue apartada hasta que venza su plazo.</p>
             <p className="muted">El cliente no recibe aviso automático: escríbele para que suba otra captura.</p>
           </>}
         />
@@ -142,7 +149,7 @@ export function ComprobantesPorRevisarVista({ datos, adelanto, alRevisar }: {
   );
 }
 
-export default function ComprobantesPorRevisar({ companyId, recarga, alCambiar }: { companyId: string; recarga: unknown; alCambiar: () => void }) {
+export default function ComprobantesPorRevisar({ companyId, recarga, alCambiar, enDonde }: { companyId: string; recarga: unknown; alCambiar: () => void; enDonde?: string }) {
   const avisar = useAvisar();
 
   // Sin la 0017 la función no existe: la pantalla sigue sin esta tarjeta.
@@ -171,5 +178,5 @@ export default function ComprobantesPorRevisar({ companyId, recarga, alCambiar }
     return true;
   }
 
-  return <ComprobantesPorRevisarVista datos={datos.lista} adelanto={datos.adelanto} alRevisar={revisar} />;
+  return <ComprobantesPorRevisarVista datos={datos.lista} adelanto={datos.adelanto} alRevisar={revisar} enDonde={enDonde} />;
 }

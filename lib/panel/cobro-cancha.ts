@@ -36,15 +36,15 @@ export function opcionesDeMonto(c: Cobro): { clave: 'adelanto' | 'completo'; eti
   return opciones;
 }
 
-/** Qué pasará con la reserva si se registra `monto`. Frase para el «¿Seguro?». */
-export function efectoDelPago(c: Cobro, monto: number): string {
+/** Qué pasará con la reserva si se registra `monto`. Frase para el «¿Seguro?». `donde`: dónde se paga el resto. */
+export function efectoDelPago(c: Cobro, monto: number, donde = 'en la cancha'): string {
   const quedara = faltaDe(c) - monto;
   if (quedara <= 0) return 'La reserva quedará confirmada y pagada completa.';
   const minimo = minimoParaConfirmar(c);
   if (c.apartada && minimo > 0 && monto < minimo) {
     return `No alcanza el adelanto: faltarán ${soles(minimo - monto)} para confirmarla y seguirá apartada.`;
   }
-  return `${c.apartada ? 'La reserva quedará confirmada. ' : ''}Faltarán ${soles(quedara)} por cobrar en la cancha.`;
+  return `${c.apartada ? 'La reserva quedará confirmada. ' : ''}Faltarán ${soles(quedara)} por cobrar ${donde}.`;
 }
 
 /** El monto escrito, o un mensaje claro si no vale. */
