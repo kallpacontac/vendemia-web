@@ -24,7 +24,8 @@
 --   · ADELANTO del 50 % para separar (su regla de «Reservas»): la cita queda apartada, el cliente
 --     yapea al 914 440 860 y SUBE LA CAPTURA en la página (obligatoria para confirmar). Validación
 --     A MANO, sin IA: el dueño la aprueba en Agenda → «Comprobantes por revisar».
---     Tolerancia de 5 minutos: va en la descripción; no hay regla automática para eso.
+--     Tolerancia de 10 minutos: en las reglas y en «Antes de tu cita»; sin regla automática.
+--     Fotos de catálogo, videos e indicaciones: scripts/the247-ajustes.sql (córrelo después).
 --   · FIDELIZA «Club 24/7»: 6 cortes = 1 corte clásico gratis. Publicado, sin tarjetas de prueba.
 --     Alta pública: fideliza.vendemias.com/n/the247barbershop/unirse
 --
@@ -109,7 +110,7 @@ begin
             1, 0,
             'Jr. Huallaga 625 (The 24/7 Barber Shop) y Jr. Huallaga 646 (24/7 Premium), Iquitos',
             'Barbería en Iquitos con dos sedes en Jr. Huallaga: The 24/7 Barber Shop (n.º 625) y 24/7 Barber Shop Premium (n.º 646). Cortes, degradados, barba, cejas, diseños y cortes para niños. Todos los días de 9:00 a 21:00.',
-            'Las citas se separan en agenda.vendemias.com/the247barbershop. Términos de reserva: 50 % de adelanto obligatorio por Yape, y la captura se sube en la misma página. Tolerancia máxima de 5 minutos: pasado ese tiempo la cita se reprograma sin excepción.',
+            'Las citas se separan en agenda.vendemias.com/the247barbershop. Términos de reserva: 50 % de adelanto obligatorio por Yape, y la captura se sube en la misma página. Tolerancia máxima de 10 minutos: pasado ese tiempo la cita se reprograma sin excepción.',
             '{"lead_hours_min":2,"lead_hours_max":24}', 0, 1, 0);
 
     -- Nace en la nube: sin esto la página diría «ya no recibe reservas en línea».
@@ -151,7 +152,7 @@ begin
             v_whatsapp, 'luxury', '#D0AB75', v_assets || 'logo.webp', v_assets || 'portada.webp', true,
             jsonb_build_object('reservar', true, 'catalogo', false, 'envios', false,
                 'citas', jsonb_build_object('adelanto', 50, 'comprobante', 'pagina', 'validacion', 'manual'),
-                'fideliza', jsonb_build_object('activo', true, 'slug', v_id),
+                'fideliza', jsonb_build_object('activo', true, 'slug', v_id, 'foto', v_assets || 'invitacion.webp'),
                 'apariencia', jsonb_build_object('plantillaActiva', true, 'fotoPlantilla', 'barberia', 'mostrarWhatsapp', true,
                     'mostrarHorario', true, 'vistaServiciosLuxury', 'vertical',
                     'tituloBanner', 'Tu estilo, a toda hora',

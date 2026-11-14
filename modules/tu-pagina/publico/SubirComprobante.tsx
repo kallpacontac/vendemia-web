@@ -44,8 +44,10 @@ function textoOk(r: Resultado, d: { pagado?: number; total?: number; falta?: num
   }
 }
 
-export default function SubirComprobante({ slug, codigo, telefono, ejemplo = false, faltaEjemplo = 0, alValidar, que = 'cancha' }: {
+export default function SubirComprobante({ slug, codigo, telefono, ejemplo = false, faltaEjemplo = 0, alValidar, que = 'cancha', alSubir }: {
   slug: string; codigo: string; telefono: string; ejemplo?: boolean; faltaEjemplo?: number; alValidar?: () => void; que?: QueSeReserva;
+  /** La captura quedó guardada (no «parcial»). `tieneTarjeta`: undefined = no se sabe (sql/0022). */
+  alSubir?: (d: { tieneTarjeta?: boolean }) => void;
 }) {
   const [enviando, setEnviando] = useState(false);
   const [fallo, setFallo] = useState('');
@@ -74,9 +76,12 @@ export default function SubirComprobante({ slug, codigo, telefono, ejemplo = fal
       form.append('web', '');
       form.append('archivo', await achicar(archivo), 'comprobante.jpg');
       const r = await fetch('/api/tu-pagina/publico/comprobante', { method: 'POST', body: form });
-      const j = (await r.json().catch(() => ({}))) as { status?: string; resultado?: string; motivo?: string; mensaje?: string; pagado?: number; total?: number; falta?: number; minimo?: number; operacion?: string };
+      const j = (await r.json().catch(() => ({}))) as { status?: string; resultado?: string; motivo?: string; mensaje?: string; pagado?: number; total?: number; falta?: number; minimo?: number; operacion?: string; tieneTarjeta?: boolean };
       if (j.status === 'ok' && j.resultado === 'rechazado') setFallo(j.motivo || MENSAJES.noComprobante);
-      else if (j.status === 'ok' && j.resultado) setListo({ ...j, resultado: j.resultado as Resultado });
+      else if (j.status === 'ok' && j.resultado) {
+        setListo({ ...j, resultado: j.resultado as Resultado });
+        if (j.resultado !== 'parcial') alSubir?.({ tieneTarjeta: typeof j.tieneTarjeta === 'boolean' ? j.tieneTarjeta : undefined });
+      }
       else setFallo(j.mensaje || MENSAJES.noGuardado);
     } catch {
       setFallo(MENSAJES.sinRed);

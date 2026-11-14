@@ -18,6 +18,15 @@ export interface ConfigCitas {
   comprobante?: 'pagina';
   /** 'manual' (por defecto): la revisa el dueño. 'automatica': la lee la IA como en canchas. */
   validacion?: 'manual' | 'automatica';
+  /** «Antes de tu cita»: lo que se le dice al terminar de reservar (tolerancia, sede…). */
+  indicaciones?: string[];
+}
+
+/** Las indicaciones que se enseñan: texto, sin vacías, como mucho 6 de 200 caracteres. */
+export function indicacionesDe(cfg: unknown): string[] {
+  const l = (cfg as ConfigCitas | null | undefined)?.indicaciones;
+  if (!Array.isArray(l)) return [];
+  return l.filter((t): t is string => typeof t === 'string' && t.trim().length > 0).slice(0, 6).map((t) => t.trim().slice(0, 200));
 }
 
 /** El porcentaje vigente, o 0 si no hay adelanto. */

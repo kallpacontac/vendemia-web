@@ -47,6 +47,7 @@ import {
 import { CONTRA_ENTREGA, aPagarAntes, avisoAlPedir, metodosAlPedir } from '@/modules/tu-pagina/dominio/cobroPedidos';
 import { montoAdelanto } from '@/modules/tu-pagina/dominio/adelantoCitas';
 import SubirComprobante from '@/modules/tu-pagina/publico/SubirComprobante';
+import InvitarTarjeta from '@/modules/tu-pagina/publico/InvitarTarjeta';
 
 interface Props {
   esc: Datos;
@@ -98,6 +99,8 @@ interface Hecho {
    * sin WhatsApp. `telefono` es el de la reserva: sin él no se encuentra al subir.
    */
   apartada?: { monto: number; porcentaje: number; telefono: string; metodos: { tipo: string; numero: string; titular: string }[] };
+  /** «Antes de tu cita» (secciones.citas.indicaciones): solo en citas. */
+  indicaciones?: string[];
 }
 
 const DIAS_A_LA_VISTA = 14;
@@ -171,6 +174,8 @@ export default function Escaparate({ esc: todo, slug, whatsapp, puedePedir, pued
   const [abierto, setAbierto] = useState<string | null>(null);
   const [verCarrito, setVerCarrito] = useState(false);
   const [hecho, setHecho] = useState<Hecho | null>(null);
+  // Tras subir el comprobante, si ese celular no tiene tarjeta en el club (sql/0022).
+  const [invitar, setInvitar] = useState(false);
   const claveCarrito = `tu_pagina:carrito:${slug}`;
   const [carrito, setCarrito] = useState<EnCarrito[]>([]);
 
@@ -223,7 +228,11 @@ export default function Escaparate({ esc: todo, slug, whatsapp, puedePedir, pued
             <li><b>Te confirmamos</b><span>En cuanto revisemos el pago.</span></li>
           </ol>
         )}
-        {hecho.apartada && !hecho.demo && <SubirComprobante slug={slug} codigo={hecho.codigo} telefono={hecho.apartada.telefono} que="cita" />}
+        {hecho.apartada && !hecho.demo && <SubirComprobante slug={slug} codigo={hecho.codigo} telefono={hecho.apartada.telefono} que="cita"
+          // Un respiro para que lea «Recibimos tu comprobante» antes de la invitación. Si no se
+          // sabe (sin la 0022), se invita igual: es mejor que no ofrecerla nunca.
+          alSubir={({ tieneTarjeta }) => { if (tarjeta && tieneTarjeta !== true) window.setTimeout(() => setInvitar(true), 1200); }} />}
+        {invitar && tarjeta && <InvitarTarjeta tarjeta={tarjeta} href={conNombre(tarjeta.url, leer(CLAVE_CLIENTE, { nombre: '' }).nombre)} alCerrar={() => setInvitar(false)} />}
         {hecho.pago && (
           <ol className="tp-pago" aria-label="Cómo confirmar tu pedido">
             <li>
@@ -236,6 +245,12 @@ export default function Escaparate({ esc: todo, slug, whatsapp, puedePedir, pued
             <li><b>Envía tu pedido y la captura por WhatsApp</b><span>Con tu código {hecho.codigo}.</span></li>
             <li><b>Preparamos tu pedido</b><span>En cuanto confirmemos el pago.</span></li>
           </ol>
+        )}
+        {!hecho.demo && Boolean(hecho.indicaciones?.length) && (
+          <section className="tp-indicaciones" aria-labelledby="tp-indicaciones-t">
+            <h3 id="tp-indicaciones-t">Antes de tu cita</h3>
+            <ul>{hecho.indicaciones!.map((t) => <li key={t}>{t}</li>)}</ul>
+          </section>
         )}
         <p className="tp-resumen">{hecho.mensaje.split(/(\*[^*\n]+\*)/g).map((parte, indice) => parte.startsWith('*') && parte.endsWith('*') ? <strong key={indice}>{parte.slice(1, -1)}</strong> : <span key={indice}>{parte}</span>)}</p>
         {!hecho.demo && hecho.apartada && <p className="tp-nota">Tu hora queda apartada mientras pagas. Si no llega la captura, se libera para otra persona. ¿Dudas? <a href={urlWhatsApp(whatsapp, hecho.mensaje)} rel="noopener">Escríbenos por WhatsApp</a>.</p>}
@@ -787,6 +802,7 @@ function Reservar({ item, esc, slug, alTerminar, presentacion, esBarberia = fals
       alTerminar({
         titulo: apartada ? 'Tu cita está apartada: falta el adelanto' : '¡Tu cita está separada!',
         apartada,
+        indicaciones: esc.indicacionesCitas,
         codigo: j.codigo,
         mensaje: mensajeReserva(j.codigo, {
           servicio: item.nombre, precio: item.precio, inicio, profesional: pro, beneficiario: '', nombre: cliente.nombre, esGrupo: false,

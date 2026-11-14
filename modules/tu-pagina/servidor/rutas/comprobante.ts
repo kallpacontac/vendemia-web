@@ -100,7 +100,14 @@ export async function POST(req: Request) {
     if (r.status === 'repetida') return fallo(MENSAJES.repetida, 409);
     if (r.status === 'operacion_repetida') return fallo(MENSAJES.operacionRepetida(r.operacion ?? ''), 409);
     if (r.status !== 'ok') return fallo(MOTIVO_BUSQUEDA[r.status] ?? MENSAJES.noGuardado, 409);
-    return responder({ status: 'ok', resultado: r.resultado, motivo: r.resultado === 'rechazado' ? r.motivo : undefined, pagado: r.pagado, total: r.total, falta: r.falta, minimo: r.minimo, operacion: lectura?.operacion || undefined });
+    // ¿Ya tiene la tarjeta de puntos? Para invitarlo si no (sql/0022). Sin la 0022 o si falla,
+    // no se sabe (undefined) y la página decide sola; nunca tumba el comprobante ya guardado.
+    let tieneTarjeta: boolean | undefined;
+    if (r.resultado !== 'rechazado') {
+      const t = await rpc<{ status: string; club?: boolean; tiene?: boolean }>(db, 'tu_pagina_srv_tiene_tarjeta', args).catch(() => null);
+      if (t?.status === 'ok' && t.club) tieneTarjeta = Boolean(t.tiene);
+    }
+    return responder({ status: 'ok', resultado: r.resultado, motivo: r.resultado === 'rechazado' ? r.motivo : undefined, pagado: r.pagado, total: r.total, falta: r.falta, minimo: r.minimo, operacion: lectura?.operacion || undefined, tieneTarjeta });
   } catch (e) {
     log('tu_pagina_comprobante_error', { tipo: e instanceof Error ? e.name : 'x' });
     return fallo(MENSAJES.noGuardado, 503);

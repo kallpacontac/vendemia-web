@@ -32,6 +32,8 @@ import EstadoHorario from '@/modules/tu-pagina/publico/EstadoHorario';
 import { CartaSoloVer } from '@/modules/tu-pagina/publico/CartaMesa';
 import UnasPortada from '@/modules/tu-pagina/publico/UnasPortada';
 import { tarjetaDe } from '@/modules/tu-pagina/servidor/tarjeta';
+import VideosNegocio from '@/modules/tu-pagina/publico/VideosNegocio';
+import { videosDe } from '@/modules/tu-pagina/dominio/apariencia';
 
 type Props = { params: { slug: string }; searchParams?: Record<string, string | undefined> };
 
@@ -87,6 +89,8 @@ export default async function Portada({ params, searchParams }: Props) {
   const reservables = p.secciones.reservar ? (escTodo?.items ?? []).filter((i) => i.tipo !== 'producto') : [];
   const soloGrupos = reservables.length > 0 && reservables.every((i) => i.tipo === 'grupo');
   const reservaGrande = !envioPrimero && tipo !== 'tienda' && !esLuxury;
+  // «En video», después del catálogo (secciones.apariencia.videos). Sin videos, nada.
+  const videos = <VideosNegocio videos={videosDe(p.secciones.apariencia)} titulo={p.secciones.apariencia?.tituloVideos?.trim() || `Así se vive ${p.titulo}`} />;
 
   // Las demos de agenda y la página del negocio comparten ahora la misma
   // composición: portada, servicios y el selector de horarios real.
@@ -182,6 +186,7 @@ export default async function Portada({ params, searchParams }: Props) {
         {/* Enlaces relativos a propósito: valen igual en tienda o agenda (host/<negocio>) y en /tu-pagina/<negocio>. */}
         {envioPrimero && <div className="tp-acciones">{envio}</div>}
         {esLuxury && catalogo}
+        {esLuxury && videos}
         {reservaGrande && reservar && <div className="tp-acciones">{reservar}</div>}
         <nav className={`tp-acciones${hayItems || envioPrimero ? ' tp-acciones--fila' : ''}`} aria-label="Qué quieres hacer">
           {!reservaGrande && !esLuxury && reservar}
@@ -196,6 +201,7 @@ export default async function Portada({ params, searchParams }: Props) {
           </a>}
         </nav>
         {!esLuxury && catalogo}
+        {!esLuxury && videos}
       </div>
     </Marco>
   );

@@ -25,7 +25,7 @@ import { ocupa } from '@/lib/panel/inscripciones';
 import { sumarMin, type DatosAgenda } from '@/modules/tu-pagina/dominio/agenda';
 import { fechaCorta, telefonoBonito, telefonoNormal } from '@/modules/tu-pagina/dominio/envio';
 import { normalizarCobro, type CobroPedidos } from '@/modules/tu-pagina/dominio/cobroPedidos';
-import { porcentajeAdelanto } from '@/modules/tu-pagina/dominio/adelantoCitas';
+import { indicacionesDe, porcentajeAdelanto } from '@/modules/tu-pagina/dominio/adelantoCitas';
 
 /* ── Lo que llega de la base ─────────────────────────────────────────────── */
 
@@ -175,6 +175,8 @@ export interface Escaparate {
   cobro?: CobroPedidos;
   /** % del precio que se paga antes para confirmar una cita (dominio/adelantoCitas.ts). 0 = nada. */
   adelantoCitas?: number;
+  /** «Antes de tu cita»: tolerancia, sede… (secciones.citas.indicaciones). */
+  indicacionesCitas?: string[];
 }
 
 const json = <T>(raw: string | null | undefined, porDefecto: T): T => {
@@ -296,6 +298,7 @@ export function armarEscaparate(c: DatosCrudos, como?: ComoSeOfrece | null): Esc
     ahora: c.ahora,
     cobro: normalizarCobro(como?.cobroPedidos),
     adelantoCitas: porcentajeAdelanto(como?.citas),
+    indicacionesCitas: indicacionesDe(como?.citas),
   };
 }
 

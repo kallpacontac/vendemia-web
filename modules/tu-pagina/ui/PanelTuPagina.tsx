@@ -315,7 +315,8 @@ function MiPagina({ companyId, nombre, pagina, agendaNube, alGuardar }: {
             reclamos,
             canchas: normalizarCanchas({ ...canchas, activo: Boolean(reservar && (canchas.activo || plantilla === 'canchas')) }),
             proveedor: { razon_social: proveedor.razon_social.trim(), ruc: proveedor.ruc.replace(/\D/g, ''), direccion: proveedor.direccion.trim() },
-            fideliza: { activo: Boolean(tarjeta.activo && tarjeta.slug), slug: tarjeta.slug ?? '' },
+            // Con lo demás que traiga (la foto de la invitación): guardar reemplaza la clave entera.
+            fideliza: { ...tarjeta, activo: Boolean(tarjeta.activo && tarjeta.slug), slug: tarjeta.slug ?? '' },
           },
           distritos: distritos.split(/[,\n]/).map((d) => d.trim()).filter(Boolean),
         },

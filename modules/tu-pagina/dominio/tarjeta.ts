@@ -11,6 +11,8 @@ export interface ConfigTarjeta {
   activo?: boolean;
   /** loyalty_settings.slug del negocio: el de fideliza.vendemias.com/n/<slug>. */
   slug?: string;
+  /** Foto (https) de fondo de la invitación a crear la tarjeta tras reservar. Opcional. */
+  foto?: string;
 }
 
 /** Lo que la página necesita para pintar la sección. Sin datos de ningún cliente. */
@@ -26,6 +28,8 @@ export interface TarjetaPublica {
   trazo: string;
   /** A dónde lleva «Crear mi tarjeta». */
   url: string;
+  /** Fondo de la invitación tras reservar (secciones.fideliza.foto), si el negocio puso una. */
+  foto?: string;
 }
 
 export const tarjetaActiva = (c: ConfigTarjeta | undefined): c is Required<ConfigTarjeta> =>

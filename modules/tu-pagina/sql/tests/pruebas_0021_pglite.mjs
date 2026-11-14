@@ -1,5 +1,5 @@
 /**
- * Prueba de modules/tu-pagina/sql/0021_adelanto_de_citas.sql contra un Postgres de verdad (PGlite),
+ * Prueba de modules/tu-pagina/sql/0021_adelanto_de_citas.sql y 0022_tarjeta_al_reservar.sql contra un Postgres de verdad (PGlite),
  * con tablas mínimas. Lo que no es de la 0021 (v2_hueco, v2_cancha_motivo, loyalty_srv_check…),
  * simulado; v2_canchas_cfg es la real de la 0011.
  *
@@ -14,6 +14,8 @@ const s0011 = leer('modules/tu-pagina/sql/0011_canchas_y_avisame.sql');
 const canchasCfg = s0011.match(/create or replace function public\.v2_canchas_cfg[\s\S]*?\$\$;/)[0];
 const s0021 = leer('modules/tu-pagina/sql/0021_adelanto_de_citas.sql').replace(/-- Comprobación:[\s\S]*$/, '');
 const deshacer = leer('scripts/adelanto-citas-0021-deshacer.sql');
+const s0022 = leer('modules/tu-pagina/sql/0022_tarjeta_al_reservar.sql').replace(/-- Comprobación:[\s\S]*$/, '');
+const normTel = leer('modules/fideliza/sql/0003_operaciones.sql').match(/create or replace function public\.loyalty_norm_phone[\s\S]*?end \$\$;/)[0];
 
 const db = new PGlite();
 const q = (s, p) => db.query(s, p);
@@ -122,7 +124,32 @@ ok('cancha: con S/ 40 se confirma (como antes)', r.resultado === 'confirmada' &&
 const panel = (await uno(`select public.comprobantes_panel('barber') as v`)).v;
 ok('panel: trae adelanto y apartada', panel.length === 1 && Number(panel[0].adelanto) === 12.5 && panel[0].apartada === true && Number(panel[0].total) === 25, JSON.stringify(panel));
 
-// 6 · Deshacer
+// 6 · 0022: ¿ya tiene tarjeta? (solo con código + celular de la reserva)
+await ex(`
+create function public.loyalty_err(c text) returns void language plpgsql as $$ begin raise exception '%', c; end $$;
+create table loyalty_settings (company_id text, slug text);
+create table loyalty_members (company_id text, id uuid, status text);
+create table loyalty_contacts (company_id text, member_id uuid, kind text, value text);
+insert into loyalty_settings values ('barber', 'club-barber');
+insert into loyalty_members values ('barber', '00000000-0000-4000-8000-0000000000aa', 'active');
+update tu_pagina set secciones = secciones || '{"fideliza":{"activo":true,"slug":"club-barber"}}' where company_id = 'barber';
+`);
+await ex(normTel);
+await ex(s0022);
+const tiene = async (cod, tel) => (await uno(`select public.tu_pagina_srv_tiene_tarjeta('barber', $1, $2) as v`, [cod, tel])).v;
+let t = await tiene('R-BBBB', '999 111 222');
+ok('0022: sin tarjeta con ese celular → tiene false', t.status === 'ok' && t.club === true && t.tiene === false, JSON.stringify(t));
+await ex(`insert into loyalty_contacts values ('barber', '00000000-0000-4000-8000-0000000000aa', 'phone', '+51999111222')`);
+t = await tiene('R-BBBB', '+51 999 111 222');
+ok('0022: con tarjeta → tiene true', t.tiene === true, JSON.stringify(t));
+t = await tiene('R-BBBB', '999000000');
+ok('0022: otro celular → not_found (no sirve para espiar números)', t.status === 'not_found');
+await ex(`update loyalty_members set status = 'deleted'`);
+ok('0022: tarjeta borrada no cuenta', (await tiene('R-BBBB', '999111222')).tiene === false);
+await ex(`update tu_pagina set secciones = jsonb_set(secciones, '{fideliza,activo}', 'false') where company_id = 'barber'`);
+ok('0022: sin club en la página → club false', (await tiene('R-BBBB', '999111222')).club === false);
+
+// 7 · Deshacer
 await ex(deshacer);
 ok('deshacer: sin v2_citas_cfg', (await uno(`select to_regprocedure('public.v2_citas_cfg(text)') is null as v`)).v);
 ok('deshacer: buscar cita de barber vuelve a no existir', (await uno(`select public.comprobante_srv_buscar('barber', 'R-BBBB', '999111222') as v`)).v.status === 'not_found');

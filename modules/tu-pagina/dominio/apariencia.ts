@@ -34,6 +34,31 @@ export interface AparienciaPagina {
   pedirMetodoPago?: boolean;
   pedirNotaPedido?: boolean;
   pedirUbicacion?: boolean;
+  /** Videos del negocio (verticales, mp4) en la sección «En video», después del catálogo. */
+  videos?: VideoPagina[];
+  /** Título de esa sección. Sin él: «Así se vive <negocio>». */
+  tituloVideos?: string;
+}
+
+export interface VideoPagina {
+  /** https, mp4 o webm. */
+  url: string;
+  /** Imagen (https) mientras carga o sin reproducir. */
+  poster?: string;
+  titulo?: string;
+}
+
+/** Los videos que se pueden enseñar: https, como mucho 4, con lo demás saneado. */
+export function videosDe(a: AparienciaPagina | undefined): VideoPagina[] {
+  if (!Array.isArray(a?.videos)) return [];
+  return a.videos
+    .filter((v): v is VideoPagina => Boolean(v) && typeof v.url === 'string' && /^https:\/\/\S+\.(mp4|webm)(\?\S*)?$/i.test(v.url))
+    .slice(0, 4)
+    .map((v) => ({
+      url: v.url,
+      ...(typeof v.poster === 'string' && /^https:\/\/\S+$/i.test(v.poster) ? { poster: v.poster } : {}),
+      ...(typeof v.titulo === 'string' && v.titulo.trim() ? { titulo: v.titulo.trim().slice(0, 80) } : {}),
+    }));
 }
 
 export const esHex = (v: unknown): v is string => typeof v === 'string' && /^#[0-9a-fA-F]{6}$/.test(v);

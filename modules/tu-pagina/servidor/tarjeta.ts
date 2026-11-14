@@ -32,6 +32,7 @@ export async function tarjetaDe(p: Pick<PaginaPublica, 'slug' | 'secciones'>): P
           meta: conCasillas ? n.program.threshold : 0,
           trazo: trazoSello(sello),
           url: urlUnirse(c.slug),
+          ...(typeof c.foto === 'string' && /^https:\/\/\S+$/.test(c.foto) ? { foto: c.foto } : {}),
         };
       } catch (e) {
         log('tu_pagina_tarjeta_error', { mensaje: e instanceof Error ? e.message.slice(0, 120) : 'x' });
