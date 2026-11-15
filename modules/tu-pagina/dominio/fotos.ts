@@ -15,12 +15,20 @@ export const FOTOS_SERVICIOS_LUXURY = {
   corte: '/assets/luxury-ejemplo/corte.webp',
   barba: '/assets/luxury-ejemplo/barba.webp',
   peinado: '/assets/luxury-ejemplo/peinado.webp',
+  mascarilla: '/assets/luxury-ejemplo/mascarilla.webp',
+  rayitos: '/assets/luxury-ejemplo/rayitos.webp',
+  tinte: '/assets/luxury-ejemplo/tinte-completo.webp',
+  ondulacion: '/assets/luxury-ejemplo/ondulacion.webp',
 } as const;
 
 export function fotoServicioLuxury(nombre: string, indice: number): string {
   const n = nombre.toLocaleLowerCase('es');
+  if (/mascarilla|vaporizador/.test(n)) return FOTOS_SERVICIOS_LUXURY.mascarilla;
+  if (/rayitos|mechas|reflejos/.test(n)) return FOTOS_SERVICIOS_LUXURY.rayitos;
+  if (/ondulaci[oó]n|permanente/.test(n)) return FOTOS_SERVICIOS_LUXURY.ondulacion;
+  if (/tinte|coloraci[oó]n|color/.test(n)) return FOTOS_SERVICIOS_LUXURY.tinte;
   if (/barba|afeitado|perfilado/.test(n)) return FOTOS_SERVICIOS_LUXURY.barba;
-  if (/peinado|brushing|color|tinte|salón|salon|maquillaje/.test(n)) return FOTOS_SERVICIOS_LUXURY.peinado;
+  if (/peinado|brushing|salón|salon|maquillaje/.test(n)) return FOTOS_SERVICIOS_LUXURY.peinado;
   if (/corte|cabello|peluquería|peluqueria/.test(n)) return FOTOS_SERVICIOS_LUXURY.corte;
   return [FOTOS_SERVICIOS_LUXURY.corte, FOTOS_SERVICIOS_LUXURY.barba, FOTOS_SERVICIOS_LUXURY.peinado][indice % 3];
 }
