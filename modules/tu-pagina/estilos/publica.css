@@ -1691,3 +1691,13 @@ button.tp-canchas__casilla { cursor: pointer; }
 @media (max-width: 700px) {
   .tp-luxury-hero.tp-luxury-hero--con-movil { background-image: var(--tp-portada-movil) !important; background-position: center top !important; }
 }
+/* Luxury: portada alterna elegida al azar en cada carga (apariencia.portadasLuxuryAlternas). */
+.tp-luxury-hero[data-alterna='1'] { background-image: var(--tp-alterna-1) !important; }
+.tp-luxury-hero[data-alterna='2'] { background-image: var(--tp-alterna-2) !important; }
+.tp-luxury-hero[data-alterna='3'] { background-image: var(--tp-alterna-3) !important; }
+@media (max-width: 700px) {
+  .tp-luxury-hero[data-alterna] { background-position: center top !important; }
+  .tp-luxury-hero[data-alterna='1'] { background-image: var(--tp-alterna-1-movil) !important; }
+  .tp-luxury-hero[data-alterna='2'] { background-image: var(--tp-alterna-2-movil) !important; }
+  .tp-luxury-hero[data-alterna='3'] { background-image: var(--tp-alterna-3-movil) !important; }
+}

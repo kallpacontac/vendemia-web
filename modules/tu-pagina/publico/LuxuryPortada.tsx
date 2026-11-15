@@ -17,6 +17,8 @@ type Props = {
   portadaSecundaria?: string;
   /** La portada en el celular (vertical, cara arriba). Sin ella, la misma de la compu. */
   portadaMovil?: string;
+  /** Otras portadas: en cada carga sale una al azar (la principal o una de estas). */
+  alternas?: { compu: string; movil?: string }[];
   servicio?: ServicioDestacado;
   inicioHref: string;
   reservarHref: string;
@@ -25,7 +27,7 @@ type Props = {
 };
 
 /** El desplazamiento vertical mueve lateralmente las dos escenas, también en móvil. */
-export default function LuxuryPortada({ titulo, frase, etiqueta, logo, portada, portadaSecundaria, portadaMovil, servicio, inicioHref, reservarHref, catalogoDisponible, catalogoProductosDisponible = false }: Props) {
+export default function LuxuryPortada({ titulo, frase, etiqueta, logo, portada, portadaSecundaria, portadaMovil, alternas = [], servicio, inicioHref, reservarHref, catalogoDisponible, catalogoProductosDisponible = false }: Props) {
   const marco = useRef<HTMLDivElement>(null);
   const fijo = useRef<HTMLDivElement>(null);
   const pista = useRef<HTMLDivElement>(null);
@@ -93,11 +95,22 @@ export default function LuxuryPortada({ titulo, frase, etiqueta, logo, portada, 
     backgroundImage: foto && foto !== respaldo ? `url("${foto}"), url("${respaldo}")` : `url("${respaldo}")`,
   });
 
+  // Portadas alternas: cada una en su variable CSS; el script de abajo elige una al azar antes de
+  // pintar (sin parpadeo y sin depender de la caché de la página). data-alterna lo pone el script,
+  // no React; por eso suppressHydrationWarning.
+  const variables: Record<string, string> = {};
+  alternas.forEach((x, i) => {
+    variables[`--tp-alterna-${i + 1}`] = `url("${x.compu}")`;
+    variables[`--tp-alterna-${i + 1}-movil`] = `url("${x.movil ?? x.compu}")`;
+  });
+
   return <div className="tp-luxury-motion" ref={marco} data-escena={escena}>
     <div className="tp-luxury-motion__fijo" ref={fijo}>
       <div className="tp-luxury-motion__pista" ref={pista}>
-        <section className={`tp-luxury-hero${!portada || portada === PORTADA_LUXURY ? ' tp-luxury-hero--foto-ejemplo' : ''}${portadaMovil ? ' tp-luxury-hero--con-movil' : ''}`} aria-label={`Bienvenidos a ${titulo}`}
-          style={{ ...fondo(portada, PORTADA_LUXURY), ...(portadaMovil ? { ['--tp-portada-movil' as string]: `url("${portadaMovil}")` } : {}) }}>
+        <section suppressHydrationWarning className={`tp-luxury-hero${!portada || portada === PORTADA_LUXURY ? ' tp-luxury-hero--foto-ejemplo' : ''}${portadaMovil ? ' tp-luxury-hero--con-movil' : ''}`} aria-label={`Bienvenidos a ${titulo}`}
+          style={{ ...fondo(portada, PORTADA_LUXURY), ...(portadaMovil ? { ['--tp-portada-movil' as string]: `url("${portadaMovil}")` } : {}), ...variables }}>
+          {alternas.length > 0 && <script suppressHydrationWarning dangerouslySetInnerHTML={{ __html:
+            `(function(s){var i=Math.floor(Math.random()*${alternas.length + 1});if(i)s.setAttribute('data-alterna',String(i))})(document.currentScript.parentElement)` }} />}
           <nav className="tp-luxury-nav" aria-label="Navegación de la página">
             <a className="tp-luxury-brand" href={inicioHref} aria-label={`${titulo}, inicio`}>
               {logo && <span className="tp-luxury-brand__logo" style={{ backgroundImage: `url("${logo}")` }} aria-hidden="true" />}

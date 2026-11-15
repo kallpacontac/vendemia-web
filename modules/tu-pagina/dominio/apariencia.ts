@@ -27,6 +27,8 @@ export interface AparienciaPagina {
   portadaLuxurySecundaria?: string;
   /** Luxury: la portada en el celular (vertical). Sin ella, la misma que en la compu. */
   portadaLuxuryMovil?: string;
+  /** Luxury: otras portadas. En cada visita sale una al azar: la principal o una de estas. */
+  portadasLuxuryAlternas?: { compu: string; movil?: string }[];
   /** Estudio de uñas: contenido e imagen de la sección inferior. */
   tituloSeccionUnas?: string;
   textoSeccionUnas?: string;

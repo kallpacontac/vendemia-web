@@ -96,6 +96,10 @@ export function Cabecera({ pagina, fotoDestacada, servicioDestacado, catalogoDis
       portada={fotoPortada || undefined}
       portadaSecundaria={a.portadaLuxurySecundaria}
       portadaMovil={a.portadaLuxuryMovil && /^https:\/\/\S+$/.test(a.portadaLuxuryMovil) ? a.portadaLuxuryMovil : undefined}
+      alternas={(Array.isArray(a.portadasLuxuryAlternas) ? a.portadasLuxuryAlternas : [])
+        .filter((x) => x && typeof x.compu === 'string' && /^https:\/\/[^\s"()]+$/.test(x.compu))
+        .map((x) => ({ compu: x.compu, movil: typeof x.movil === 'string' && /^https:\/\/[^\s"()]+$/.test(x.movil) ? x.movil : undefined }))
+        .slice(0, 3)}
       servicio={servicioDestacado}
       inicioHref={`./${pagina.slug}`}
       reservarHref={`./${pagina.slug}/reservar`}
