@@ -1687,3 +1687,7 @@ button.tp-canchas__casilla { cursor: pointer; }
 .tp-plazo--fin { display: block; border-radius: 16px; background: #fdecea; color: #7a271a; text-align: center; }
 /* Sin sede elegida: aviso en lugar de días y horas (cada sede tiene su aforo). */
 .tp-falta-sede { margin: 14px 0 4px; padding: 14px 16px; border: 1.5px dashed var(--tp-borde); border-radius: 18px; color: var(--tp-suave); font-size: 14px; text-align: center; }
+/* Luxury: portada propia del celular (apariencia.portadaLuxuryMovil). Gana al fondo en línea. */
+@media (max-width: 700px) {
+  .tp-luxury-hero.tp-luxury-hero--con-movil { background-image: var(--tp-portada-movil) !important; background-position: center top !important; }
+}

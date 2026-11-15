@@ -25,6 +25,8 @@ export interface AparienciaPagina {
   fotoPlantilla?: string;
   /** Foto opcional del segundo banner de Luxury; sin ella se usa la de la plantilla. */
   portadaLuxurySecundaria?: string;
+  /** Luxury: la portada en el celular (vertical). Sin ella, la misma que en la compu. */
+  portadaLuxuryMovil?: string;
   /** Estudio de uñas: contenido e imagen de la sección inferior. */
   tituloSeccionUnas?: string;
   textoSeccionUnas?: string;

@@ -15,6 +15,8 @@ type Props = {
   logo?: string;
   portada?: string;
   portadaSecundaria?: string;
+  /** La portada en el celular (vertical, cara arriba). Sin ella, la misma de la compu. */
+  portadaMovil?: string;
   servicio?: ServicioDestacado;
   inicioHref: string;
   reservarHref: string;
@@ -23,7 +25,7 @@ type Props = {
 };
 
 /** El desplazamiento vertical mueve lateralmente las dos escenas, también en móvil. */
-export default function LuxuryPortada({ titulo, frase, etiqueta, logo, portada, portadaSecundaria, servicio, inicioHref, reservarHref, catalogoDisponible, catalogoProductosDisponible = false }: Props) {
+export default function LuxuryPortada({ titulo, frase, etiqueta, logo, portada, portadaSecundaria, portadaMovil, servicio, inicioHref, reservarHref, catalogoDisponible, catalogoProductosDisponible = false }: Props) {
   const marco = useRef<HTMLDivElement>(null);
   const fijo = useRef<HTMLDivElement>(null);
   const pista = useRef<HTMLDivElement>(null);
@@ -94,7 +96,8 @@ export default function LuxuryPortada({ titulo, frase, etiqueta, logo, portada, 
   return <div className="tp-luxury-motion" ref={marco} data-escena={escena}>
     <div className="tp-luxury-motion__fijo" ref={fijo}>
       <div className="tp-luxury-motion__pista" ref={pista}>
-        <section className={`tp-luxury-hero${!portada || portada === PORTADA_LUXURY ? ' tp-luxury-hero--foto-ejemplo' : ''}`} aria-label={`Bienvenidos a ${titulo}`} style={fondo(portada, PORTADA_LUXURY)}>
+        <section className={`tp-luxury-hero${!portada || portada === PORTADA_LUXURY ? ' tp-luxury-hero--foto-ejemplo' : ''}${portadaMovil ? ' tp-luxury-hero--con-movil' : ''}`} aria-label={`Bienvenidos a ${titulo}`}
+          style={{ ...fondo(portada, PORTADA_LUXURY), ...(portadaMovil ? { ['--tp-portada-movil' as string]: `url("${portadaMovil}")` } : {}) }}>
           <nav className="tp-luxury-nav" aria-label="Navegación de la página">
             <a className="tp-luxury-brand" href={inicioHref} aria-label={`${titulo}, inicio`}>
               {logo && <span className="tp-luxury-brand__logo" style={{ backgroundImage: `url("${logo}")` }} aria-hidden="true" />}

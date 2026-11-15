@@ -95,6 +95,7 @@ export function Cabecera({ pagina, fotoDestacada, servicioDestacado, catalogoDis
       logo={fotoEnCirculo(pagina.logo_url) || undefined}
       portada={fotoPortada || undefined}
       portadaSecundaria={a.portadaLuxurySecundaria}
+      portadaMovil={a.portadaLuxuryMovil && /^https:\/\/\S+$/.test(a.portadaLuxuryMovil) ? a.portadaLuxuryMovil : undefined}
       servicio={servicioDestacado}
       inicioHref={`./${pagina.slug}`}
       reservarHref={`./${pagina.slug}/reservar`}
