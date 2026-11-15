@@ -181,3 +181,8 @@
   .tc-revisar__item { grid-template-columns: 72px minmax(0, 1fr); grid-template-areas: 'foto datos' 'acciones acciones'; }
   .tc-revisar__foto { height: 112px; }
 }
+/* «¿Seguro?» de un comprobante: qué se aprueba, en grande (el cliente puede pagar el adelanto o todo). */
+.tc-tipo-pago { display: inline-block; margin: 2px 0 4px; padding: 5px 12px; border-radius: 999px; font-weight: 700; font-size: 14.5px; font-variant-numeric: tabular-nums; }
+.tc-tipo-pago--completo, .tc-tipo-pago--resto { background: #e6f4ea; color: #1e6b34; }
+.tc-tipo-pago--adelanto { background: #e8effc; color: #1f4fa3; }
+.tc-tipo-pago--parcial { background: #fdf0e1; color: #8a4b00; }

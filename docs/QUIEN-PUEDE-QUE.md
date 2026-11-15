@@ -52,7 +52,7 @@ hacerlo · **❓** = sin decidir.
 | Ver la agenda de todo el negocio | — (solo la suya y «Sin asignar») | ✅ | ✅ | Base (0044) |
 | Marcar «vino / no vino» | ✅ suyas y sin asignar | ✅ | ✅ | Base |
 | Añadir lo que consumió el cliente a su cita | ✅ | ✅ | ✅ | Base |
-| Crear una cita a quien llega sin reserva | ✅ **solo en su agenda**, al precio del catálogo | ✅ | ✅ | Construir |
+| Crear una cita a quien llega sin reserva | ✅ **solo en su agenda**, al precio del catálogo | ✅ | ✅ | Hecho (tu-pagina 0026, «Llegó sin cita» en Mi agenda) |
 | Mover o cancelar una cita | — | ✅ | ✅ | Base |
 | Asignar una cita a un empleado | — | ✅ | ✅ | Base |
 | Avisos al celular de **su** agenda | ✅ | ✅ | ✅ | falta aplicar la avisos 0004 |

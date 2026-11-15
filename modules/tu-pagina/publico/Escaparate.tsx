@@ -99,6 +99,8 @@ interface Hecho {
    * sin WhatsApp. `telefono` es el de la reserva: sin él no se encuentra al subir.
    */
   apartada?: { monto: number; porcentaje: number; telefono: string; metodos: { tipo: string; numero: string; titular: string }[];
+    /** El precio completo: el cliente puede pagarlo todo de una vez en lugar del adelanto. */
+    total?: number;
     /** Hasta cuándo queda apartada (sql/0024). Sin él, no se enseña plazo. */
     plazo?: { minutos: number; venceMs: number; vence: string } };
   /** «Antes de tu cita» (secciones.citas.indicaciones): solo en citas. */
@@ -226,6 +228,9 @@ export default function Escaparate({ esc: todo, slug, whatsapp, puedePedir, pued
                 : <span>Por Yape o Plin.</span>}
               {hecho.apartada.metodos[0]?.titular && <span>A nombre de {hecho.apartada.metodos[0].titular}</span>}
               <span>Es el {hecho.apartada.porcentaje} % del precio. El resto lo pagas en el local.</span>
+              {(hecho.apartada.total ?? 0) > hecho.apartada.monto && (
+                <span>¿Prefieres pagar todo de una vez? Paga {soles(hecho.apartada.total ?? 0)} y no pagas nada en el local.</span>
+              )}
             </li>
             <li><b>Sube aquí la captura del pago</b><span>Sin la captura tu cita no se confirma.</span></li>
             <li><b>Te confirmamos</b><span>En cuanto revisemos el pago.</span></li>
@@ -936,7 +941,7 @@ function Reservar({ item, esc, slug, alTerminar, presentacion, esBarberia = fals
       recordar(cliente);
       const pro = esc.agenda.equipo.find((x) => x.id === profesional)?.nombre;
       const apartada = j.estado === 'pending_payment' && adelanto > 0
-        ? { monto: adelanto, porcentaje: esc.adelantoCitas ?? 0, telefono: cliente.telefono, metodos: Array.isArray(j.metodos) ? (j.metodos as NonNullable<Hecho['apartada']>['metodos']) : [],
+        ? { monto: adelanto, total: item.precio ?? undefined, porcentaje: esc.adelantoCitas ?? 0, telefono: cliente.telefono, metodos: Array.isArray(j.metodos) ? (j.metodos as NonNullable<Hecho['apartada']>['metodos']) : [],
             plazo: j.plazo && typeof j.plazo === 'object' ? (j.plazo as NonNullable<Hecho['apartada']>['plazo']) : undefined }
         : undefined;
       alTerminar({

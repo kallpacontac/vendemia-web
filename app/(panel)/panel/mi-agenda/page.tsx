@@ -46,7 +46,7 @@
  */
 import { Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { Banknote, Check, ChevronLeft, ChevronRight, X } from 'lucide-react';
+import { Banknote, Check, ChevronLeft, ChevronRight, UserPlus, X } from 'lucide-react';
 import Topbar from '@/components/panel/Topbar';
 import AvisosDelEquipo from '@/components/panel/AvisosDelEquipo';
 import { useSesion } from '@/components/panel/Sesion';
@@ -146,6 +146,7 @@ function MisCitas({ companyId }: { companyId: string }) {
   // ¿Este negocio deja cobrar a sus empleados? (datos 0012). Con la agenda del bot, no.
   const cobra = Boolean(cobroFoto?.empleadoCobra && cobroFoto.nube);
   const [cobrando, setCobrando] = useState<string | null>(null);
+  const [sinCita, setSinCita] = useState(false);
   const v = vocabulario(compania?.business_mode, { canchas });
   const palabra = v.reserva === 'pedido' ? 'reserva' : v.reserva;
   const palabras = v.reserva === 'pedido' ? 'reservas' : v.reservas;
@@ -301,7 +302,23 @@ function MisCitas({ companyId }: { companyId: string }) {
                   : `${delDia.length} ${delDia.length === 1 ? palabra : palabras}`}
               </span>
             )}
+            {/* Quien llega sin cita: solo hoy y con ficha (tu-pagina 0026). Así ocupa su silla. */}
+            {datos && ficha && dia === hoy && (
+              <button type="button" className="btn btn-primary btn-sm" onClick={() => setSinCita(true)}>
+                <UserPlus size={14} /> Llegó sin cita
+              </button>
+            )}
           </div>
+          {sinCita && (
+            <LlegoSinCita
+              companyId={companyId}
+              alCerrar={() => setSinCita(false)}
+              alListo={() => {
+                setSinCita(false);
+                releer();
+              }}
+            />
+          )}
           {cargando && !datos ? (
             <p className="vacio">Cargando tu agenda…</p>
           ) : delDia.length === 0 ? (
@@ -389,6 +406,7 @@ function FilaCita({
         <b>{c.service || 'Sin servicio indicado'}</b>
         <small>{quien.nombre}</small>
         {quien.deQuien && <small>{quien.deQuien}</small>}
+        {c.sede && <small>{c.sede}</small>}
         <NotasDelCliente cliente={cliente} negocio={negocio} />
       </div>
       {(porMarcar || (falta > 0 && !cobrando)) && (
@@ -500,6 +518,137 @@ function CobrarSaldo({ companyId, cita, falta, alCerrar, alListo }: {
           Cancelar
         </button>
       </div>
+    </div>
+  );
+}
+
+interface DatosSinCita {
+  ficha: string | null;
+  servicios: { id: string; nombre: string; minutos: number }[];
+  sedes: string[];
+}
+
+const SEDE_GUARDADA = 'mag-sede';
+const ahoraHHMM = () => {
+  const d = new Date();
+  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+};
+
+/**
+ * «Llegó sin cita» (tu-pagina 0026): el barbero anota en SU agenda al cliente que tiene en la
+ * silla, para que ocupe su sitio y la página no venda esa hora. Hoy, a su nombre, al precio del
+ * catálogo: eso lo vuelve a decidir la base. La sede se recuerda en este celular (el barbero
+ * suele estar siempre en la misma). Si la sede ya estaba llena, se crea igual y se avisa.
+ */
+function LlegoSinCita({ companyId, alCerrar, alListo }: { companyId: string; alCerrar: () => void; alListo: () => void }) {
+  const avisar = useAvisar();
+  const { datos, error } = useCargar(async () => {
+    const { data, error: e } = await supabase().rpc('mi_agenda_sin_cita_datos', { p_company: companyId });
+    if (e) throw e;
+    return data as DatosSinCita;
+  }, [companyId]);
+  const [nombre, setNombre] = useState('');
+  const [tel, setTel] = useState('');
+  const [servicio, setServicio] = useState('');
+  const [sede, setSede] = useState(() => {
+    try {
+      return localStorage.getItem(SEDE_GUARDADA) ?? '';
+    } catch {
+      return '';
+    }
+  });
+  const [horaInicio, setHoraInicio] = useState(ahoraHHMM);
+  const [enviando, setEnviando] = useState(false);
+
+  const sedes = datos?.sedes ?? [];
+  const pideSede = sedes.length > 1;
+  const sedeValida = !pideSede || sedes.includes(sede);
+
+  async function guardar(e: React.FormEvent) {
+    e.preventDefault();
+    if (!nombre.trim()) return avisar('Escribe el nombre del cliente.', 'error');
+    if (tel.replace(/\D/g, '').length < 9) return avisar('Escribe su celular: con él le llegan sus avisos y su tarjeta.', 'error');
+    if (!servicio) return avisar('Elige el servicio.', 'error');
+    if (!sedeValida) return avisar('Elige en qué sede estás.', 'error');
+    setEnviando(true);
+    const { data, error: e2 } = await supabase().rpc('mi_agenda_sin_cita', {
+      p_company: companyId,
+      p_datos: {
+        nombre: nombre.trim(),
+        telefono: tel.replace(/\D/g, ''),
+        catalog_item_id: servicio,
+        sede: pideSede ? sede : '',
+        slot_start: `${isoLocal(new Date())} ${horaInicio}`,
+      },
+    });
+    setEnviando(false);
+    if (e2) return avisar(e2.message, 'error');
+    try {
+      if (pideSede) localStorage.setItem(SEDE_GUARDADA, sede);
+    } catch {
+      /* sin almacenamiento: la próxima vez la vuelve a elegir */
+    }
+    const r = data as { servicio?: string; slot_start?: string; aviso?: string | null };
+    avisar(`Anotado: ${r.servicio ?? 'la cita'} a las ${(r.slot_start ?? '').slice(11, 16)}.`, 'ok');
+    if (r.aviso) avisar(r.aviso, 'error');
+    alListo();
+  }
+
+  return (
+    <div className="modal-fondo" role="presentation" onClick={(e) => { if (e.target === e.currentTarget && !enviando) alCerrar(); }}>
+      <form className="modal" role="dialog" aria-modal="true" aria-label="Llegó sin cita" onSubmit={guardar}>
+        <div className="modal__cab">
+          <UserPlus size={16} />
+          <b>Llegó sin cita</b>
+        </div>
+        <div className="modal__cuerpo" style={{ display: 'grid', gap: 10 }}>
+          {error && <p className="vacio">No se pudo abrir: {error}</p>}
+          {!datos && !error && <p className="vacio">Cargando…</p>}
+          {datos && (
+            <>
+              <p className="muted" style={{ margin: 0 }}>Queda en tu agenda, hoy, al precio de la carta.</p>
+              <label className="field-label" style={{ display: 'grid', gap: 4 }}>
+                Nombre
+                <input className="input" value={nombre} onChange={(e) => setNombre(e.target.value)} autoComplete="off" autoFocus />
+              </label>
+              <label className="field-label" style={{ display: 'grid', gap: 4 }}>
+                Celular
+                <input className="input" inputMode="tel" placeholder="9…" value={tel} onChange={(e) => setTel(e.target.value)} autoComplete="off" />
+              </label>
+              <label className="field-label" style={{ display: 'grid', gap: 4 }}>
+                Servicio
+                <select className="input" value={servicio} onChange={(e) => setServicio(e.target.value)}>
+                  <option value="">Elige el servicio</option>
+                  {datos.servicios.map((x) => (
+                    <option key={x.id} value={x.id}>
+                      {x.nombre} · {duracion(x.minutos)}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              {pideSede && (
+                <label className="field-label" style={{ display: 'grid', gap: 4 }}>
+                  Sede
+                  <select className="input" value={sedeValida ? sede : ''} onChange={(e) => setSede(e.target.value)}>
+                    <option value="">¿En qué sede estás?</option>
+                    {sedes.map((x) => (
+                      <option key={x} value={x}>{x}</option>
+                    ))}
+                  </select>
+                </label>
+              )}
+              <label className="field-label" style={{ display: 'grid', gap: 4 }}>
+                Empieza
+                <input className="input" type="time" value={horaInicio} onChange={(e) => setHoraInicio(e.target.value)} />
+              </label>
+            </>
+          )}
+        </div>
+        <div className="modal__pie">
+          <button type="button" className="btn btn-ghost" onClick={alCerrar} disabled={enviando}>Cancelar</button>
+          <button type="submit" className="btn btn-primary" disabled={!datos || enviando}>{enviando ? 'Anotando…' : 'Anotar'}</button>
+        </div>
+      </form>
     </div>
   );
 }

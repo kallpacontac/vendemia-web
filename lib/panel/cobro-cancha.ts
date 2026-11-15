@@ -47,6 +47,17 @@ export function efectoDelPago(c: Cobro, monto: number, donde = 'en la cancha'): 
   return `${c.apartada ? 'La reserva quedará confirmada. ' : ''}Faltarán ${soles(quedara)} por cobrar ${donde}.`;
 }
 
+/**
+ * Qué es este pago, para el «¿Seguro?»: todo de una vez, lo que faltaba (ya había pagado algo),
+ * el adelanto que confirma la reserva, o un pago que no llega ni a eso.
+ */
+export function tipoDePago(c: Cobro, monto: number): 'completo' | 'resto' | 'adelanto' | 'parcial' {
+  if (monto >= faltaDe(c) - 0.005) return c.pagado > 0 ? 'resto' : 'completo';
+  const minimo = minimoParaConfirmar(c);
+  if (c.apartada && minimo > 0 && monto >= minimo - 0.005) return 'adelanto';
+  return 'parcial';
+}
+
 /** El monto escrito, o un mensaje claro si no vale. */
 export function leerMonto(texto: string, c: Cobro): { monto: number } | { error: string } {
   const n = Number(texto.replace(',', '.').trim());

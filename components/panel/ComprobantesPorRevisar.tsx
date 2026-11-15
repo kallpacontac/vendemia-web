@@ -9,11 +9,12 @@
 import { useState } from 'react';
 import { Check, ExternalLink, X } from 'lucide-react';
 import Confirmar from '@/components/panel/Confirmar';
+import './tablero-canchas.css';
 import ElegirMonto, { METODOS_COMPROBANTE } from '@/components/panel/ElegirMonto';
 import { useAvisar } from '@/components/panel/Avisos';
 import { useCargar } from '@/components/panel/useCargar';
 import { supabase } from '@/lib/supabase/client';
-import { efectoDelPago, fechaCorta, leerMonto, NOMBRE_METODO, soles, type Cobro } from '@/lib/panel/cobro-cancha';
+import { efectoDelPago, fechaCorta, leerMonto, NOMBRE_METODO, soles, tipoDePago, type Cobro } from '@/lib/panel/cobro-cancha';
 
 export interface PorRevisar {
   id: string;
@@ -36,6 +37,15 @@ export interface PorRevisar {
 }
 
 type Accion = 'aprobar' | 'rechazar';
+
+/** El cliente puede pagar el adelanto o todo: el «¿Seguro?» lo dice en grande. */
+const TITULO_APROBAR = {
+  completo: '¿Aprobar el pago completo?',
+  resto: '¿Aprobar lo que faltaba?',
+  adelanto: '¿Aprobar el adelanto?',
+  parcial: '¿Aprobar un pago parcial?',
+} as const;
+const ETIQUETA_PAGO = { completo: 'Pago completo', resto: 'Lo que faltaba', adelanto: 'Adelanto', parcial: 'Pago parcial' } as const;
 
 /** La que pinta: sin red, para poder verla y probarla con datos de mentira. */
 export function ComprobantesPorRevisarVista({ datos, adelanto, alRevisar, enDonde = 'en la cancha' }: {
@@ -117,13 +127,16 @@ export function ComprobantesPorRevisarVista({ datos, adelanto, alRevisar, enDond
 
       {pregunta && pregunta.accion === 'aprobar' && (
         <Confirmar
-          titulo="¿Aprobar este pago?"
-          textoConfirmar={`Sí, registrar ${soles(pregunta.monto ?? 0)}`}
+          titulo={TITULO_APROBAR[tipoDePago(cobroDe(pregunta.c), pregunta.monto ?? 0)]}
+          textoConfirmar={`Sí, aprobar ${soles(pregunta.monto ?? 0)}`}
           ocupado={ocupado}
           alCerrar={cerrar}
           alConfirmar={() => void aplicar()}
           detalle={<>
             <p><b>{pregunta.c.cliente}</b> · {pregunta.c.servicio} · {fechaCorta(pregunta.c.slot)}</p>
+            <p className={`tc-tipo-pago tc-tipo-pago--${tipoDePago(cobroDe(pregunta.c), pregunta.monto ?? 0)}`}>
+              {ETIQUETA_PAGO[tipoDePago(cobroDe(pregunta.c), pregunta.monto ?? 0)]} · {soles(pregunta.monto ?? 0)} de {soles(Number(pregunta.c.total) || 0)}
+            </p>
             <p>Se registra <b>{soles(pregunta.monto ?? 0)}</b> por <b>{NOMBRE_METODO[pregunta.metodo] ?? pregunta.metodo}</b>{pregunta.c.operacion ? <>, operación <b>{pregunta.c.operacion}</b></> : null}.</p>
             <p>{efectoDelPago(cobroDe(pregunta.c), pregunta.monto ?? 0, enDonde)}</p>
             <p className="muted">Antes de aprobar, comprueba en tu app de Yape o Plin que el dinero llegó.</p>
