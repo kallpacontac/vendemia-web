@@ -40,6 +40,7 @@ import { sedesDe } from '@/modules/tu-pagina/dominio/adelantoCitas';
 import { supabase as clienteSupabase } from '@/lib/supabase/client';
 import TableroCanchas from '@/components/panel/TableroCanchas';
 import ComprobantesPorRevisar from '@/components/panel/ComprobantesPorRevisar';
+import AdelantosPorReprogramar from '@/components/panel/AdelantosPorReprogramar';
 import Consumos from '@/components/panel/Consumos';
 import TurnosFijos from '@/components/panel/TurnosFijos';
 import FaltanSeguido from '@/components/panel/FaltanSeguido';
@@ -373,6 +374,9 @@ export default function Agenda() {
 
         {/* Citas con adelanto (sql/0021): la captura que subió el cliente, arriba de todo para que no se pierda. */}
         {!canchas && companyId && <ComprobantesPorRevisar companyId={companyId} recarga={datos?.citas} alCambiar={recargar} enDonde="en el local" />}
+
+        {/* Quien no vino o canceló con adelanto pagado (sql/0027): su dinero sigue a su favor. */}
+        {!canchas && companyId && <AdelantosPorReprogramar companyId={companyId} sedes={sedes ?? []} recarga={datos?.citas} alCambiar={recargar} />}
 
         {/* El mensaje para el cliente de lo que se acaba de mover arrastrando. */}
         {aviso && <AvisarCliente {...aviso} alCerrar={() => setAviso(null)} />}
@@ -1464,7 +1468,12 @@ function PorConfirmar({
     await comando(
       'marcar_cumplido',
       { tipo: 'appointment', id: c.id, vino },
-      vino ? 'Anotado: vino' : 'Anotado: no vino',
+      vino
+        ? 'Anotado: vino'
+        // Con adelanto (sql/0027): la hora ya quedó libre y el dinero, a su favor, arriba de la Agenda.
+        : (pagosCitas.get(c.id)?.pagado ?? 0) > 0
+          ? 'Anotado: no vino. La hora queda libre y su adelanto, en «Adelantos por reprogramar».'
+          : 'Anotado: no vino. La hora queda libre.',
       alCambiar,
     );
     setEnVuelo(null);
