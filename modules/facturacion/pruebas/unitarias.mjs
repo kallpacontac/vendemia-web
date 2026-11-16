@@ -18,7 +18,7 @@ const cargar = (p) => jiti(join(raiz, p));
 const { calcular, calcularLinea } = cargar('modules/facturacion/dominio/montos.ts');
 const { montoEnLetras } = cargar('modules/facturacion/dominio/letras.ts');
 const { rucValido, erroresCliente, erroresLineas } = cargar('modules/facturacion/dominio/validar.ts');
-const { cuerpoLucode } = cargar('modules/facturacion/proveedores/lucode.ts');
+const { cuerpoLucode, traducir: traducirLucode } = cargar('modules/facturacion/proveedores/lucode.ts');
 const { cuerpoApisPeru } = cargar('modules/facturacion/proveedores/apisperu.ts');
 const { ticketHtml, textoQr } = cargar('modules/facturacion/dominio/impreso.ts');
 
@@ -162,4 +162,25 @@ test('régimen: de Ajustes manda la tasa de hoy (mype); de un comprobante, la su
   assert.equal(regimenDe({ igv_tipo: 'gravado', igv_porcentaje: '15.00' }).porcentaje, 15);
   const exo = regimenDe({ igv_tipo: 'exonerado', igv_porcentaje: 18, igv_tasa_hoy: 0, leyenda_amazonia: '2002' });
   assert.deepEqual(exo, { tipo: 'exonerado', porcentaje: 0, leyendaAmazonia: '2002' });
+});
+
+test('Lucode: factura lleva vencimiento (contado = mismo día); boleta no', () => {
+  const f = cuerpoLucode(doc(G18, 'factura', { tipoDoc: 'ruc', numDoc: '20100070970', nombre: 'SUPERMERCADOS PERUANOS', direccion: '' }));
+  assert.equal(f.fecha_de_vencimiento, '2026-11-11');
+  assert.equal(cuerpoLucode(doc(G18)).fecha_de_vencimiento, undefined);
+});
+
+test('Lucode: respuestas de su documentación', () => {
+  const r = (status, cuerpo) => traducirLucode({ ok: status < 300, status, cuerpo, texto: JSON.stringify(cuerpo) });
+  // Resumen diario: sin «success», estado PENDIENTE → la baja quedó pedida, no es un error.
+  const rc = r(200, { message: 'El resumen diario fue recepcionado correctamente por SUNAT', payload: { estado: 'PENDIENTE', hash: 'h', xml: 'x', cdr: null } });
+  assert.equal(rc.estado, 'pendiente');
+  assert.equal(r(200, { success: true, message: 'ok', payload: { estado: 'ACEPTADO', hash: 'H', pdf: { ticket: 'https://t' } } }).pdfUrl, 'https://t');
+  assert.equal(r(200, { success: true, message: 'x', payload: { estado: 'RECHAZADO' } }).estado, 'rechazado');
+  assert.equal(r(400, { success: false, message: 'ERROR: Documento B001-123 fue emitido anteriormente' }), 'ya_emitido');
+  const v = r(400, { success: false, message: 'JSON no estructurado correctamente (Validación capa 01)', payload: { documento: ['El campo documento es requerido.'] } });
+  assert.equal(v.estado, 'error');
+  assert.match(v.mensaje, /documento: El campo documento es requerido/);
+  assert.equal(r(400, { success: false, message: 'Factura F001-123 no se encuentra registrado.' }).estado, 'error');
+  assert.equal(r(401, { message: 'Acceso no autorizado.' }).estado, 'error');
 });

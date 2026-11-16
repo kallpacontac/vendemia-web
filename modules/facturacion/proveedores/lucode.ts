@@ -12,8 +12,12 @@
  * porcentaje como texto y el total con 2. Calcula el IGV él mismo; nosotros le
  * mandamos el total que ya cuadra con lo cobrado (dominio/montos.ts).
  *
- * Leído de su documentación el 11-nov-2026. Sin probar contra su sandbox: lo
- * marcado «VERIFICAR» son huecos o contradicciones de sus páginas.
+ * Leído de su documentación el 11-nov-2026 y repasado página por página el
+ * 16-nov-2026 (docs.apisunat.pe/facturacion/factura-electronica y hermanas):
+ * campos, boleta sin DNI, exonerado con leyendas, 10,5 % como "10.50",
+ * status, voided, plazos (3 días factura, 5 boleta) y el texto «emitido
+ * anteriormente» coinciden. Sin probar contra su sandbox: lo marcado
+ * «VERIFICAR» son huecos o contradicciones de sus páginas.
  */
 import { CODIGO_DOC_CLIENTE } from '../dominio/catalogos';
 import type { ComprobanteListo, EstadoComprobante, Respuesta } from '../dominio/tipos';
@@ -45,6 +49,9 @@ export function cuerpoLucode(d: ComprobanteListo) {
     serie: d.serie,
     numero: d.numero,
     fecha_de_emision: d.fecha,
+    // Su tabla de factura la marca obligatoria (*) aunque su ejemplo no la trae. Al contado
+    // vence el mismo día. VERIFICAR en el sandbox que no la rechace.
+    ...(d.tipo === 'factura' ? { fecha_de_vencimiento: d.fecha } : {}),
     hora_de_emision: d.hora,
     moneda: d.moneda,
     tipo_operacion: '0101',
@@ -85,11 +92,15 @@ function detalle(c: Cuerpo | null): string {
   return msgs.length ? ` (${msgs.slice(0, 4).join('; ')})` : '';
 }
 
-function traducir(r: Awaited<ReturnType<typeof llamar>>): Respuesta | 'ya_emitido' {
+/** Exportado para las pruebas. */
+export function traducir(r: Awaited<ReturnType<typeof llamar>>): Respuesta | 'ya_emitido' {
   if (r.status === 0) return sinRespuesta(r.texto);
   if (r.status === 401) return tokenInvalido('Lucode');
   const c = r.cuerpo as Cuerpo | null;
-  if (c?.success && c.payload) {
+  // Su respuesta del resumen diario trae payload.estado pero NO «success»: un 2xx con estado
+  // también es éxito (si no, una baja de boleta recibida se tomaba por fallida).
+  const exito = c?.success === true || (r.status >= 200 && r.status < 300 && c?.success !== false);
+  if (exito && c?.payload && typeof c.payload.estado === 'string') {
     const p = c.payload;
     return {
       estado: estadoDe(p.estado),
@@ -132,7 +143,9 @@ export const lucode: Proveedor = {
   },
 
   async anular(d, baja: PedidoBaja, cred) {
-    // VERIFICAR: su página de resumen diario dice /api/test/daily-summary; la de configuración, /api/v3/.
+    // VERIFICAR: dos de sus páginas (configuración y «Anular boleta») dicen /api/v3/daily-summary con
+    // accion_resumen: 'anular'; la de «Resumen diario» dice /api/test/daily-summary con
+    // tipo_operacion: 'anulacion'. Seguimos a las dos que coinciden.
     const r =
       d.tipo === 'factura'
         ? await post(cred, '/api/v3/voided', {
@@ -153,7 +166,8 @@ export const lucode: Proveedor = {
   },
 
   async consultarBaja(d, cred) {
-    // VERIFICAR: no documentan cómo consultar una baja. Preguntamos por el comprobante.
+    // VERIFICAR: no documentan cómo consultar una baja (/status solo acepta factura, boleta, notas y
+    // guías; la baja responde PENDIENTE sin ticket). Preguntamos por el comprobante.
     const t = await this.consultar(d, cred);
     if (t.estado === 'anulado') return t;
     if (t.estado === 'error') return { ...t, estado: 'anulando' };

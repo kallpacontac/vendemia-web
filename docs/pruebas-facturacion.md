@@ -14,10 +14,10 @@ Nada de esto se probó todavía contra los proveedores: el código sigue su docu
 - [ ] Ajustes: proveedor Lucode, ambiente Pruebas, pegar el token, guardar.
 - [ ] Boleta sin documento, 1 línea de S/35 → **Aceptado**, con hash y enlace al PDF.
 - [ ] Boleta con DNI, 2 líneas con decimales (S/12,50 × 3) → Aceptado. ¿El total de Lucode coincide al céntimo?
-- [ ] Factura a un RUC real → Aceptado.
+- [ ] Factura a un RUC real → Aceptado. Mandamos `fecha_de_vencimiento` = fecha de emisión (su tabla la pide; su ejemplo no la trae). Si la rechaza, quitarla en `proveedores/lucode.ts`.
 - [ ] Ajustes › IGV «Restaurante u hotel MYPE» → debe decir «Hoy sale con 10,5 %» y que el 1 de enero de 2027 pasa a 15 %. Emitir → Aceptado. ¿Su PDF dice IGV 10,5 %? (Ninguna fuente oficial dice cómo va en el XML; mandamos un solo porcentaje, IGV + IPM.)
 - [ ] Exonerado Amazonía (servicios) → Aceptado y la leyenda sale en su PDF.
-- [ ] Anular la boleta → «Anulando» o «Anulado». Si se queda en «Anulando», pulsar Consultar. ⚠️ Su documentación no dice cómo consultar una baja.
+- [ ] Anular la boleta → «Anulando» (su resumen responde PENDIENTE). Pulsar Consultar más tarde. ⚠️ Su documentación no dice cómo consultar una baja: anotar qué `estado` devuelve /status para la boleta anulada.
 - [ ] Anular la factura → igual.
 - [ ] Pedirle a Lucode su **número de resolución de PSE** y que confirme cuál es la ruta del resumen diario (`/api/v3/daily-summary` o `/api/test/...`).
 
