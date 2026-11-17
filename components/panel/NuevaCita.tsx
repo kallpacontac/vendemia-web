@@ -35,7 +35,7 @@ import { soles, telefono as comoTelefono } from '@/lib/panel/format';
 import { json } from '@/lib/supabase/parse';
 import type { ResultadoCrearCita } from '@/lib/supabase/commands';
 import type { FranjaRecurrente } from '@/lib/supabase/types';
-import type { ItemCatalogo, Lead, Trabajador } from '@/lib/supabase/queries';
+import type { Cita, ItemCatalogo, Lead, Trabajador } from '@/lib/supabase/queries';
 import type { Sede } from '@/modules/tu-pagina/dominio/adelantoCitas';
 import { supabase } from '@/lib/supabase/client';
 
@@ -43,6 +43,36 @@ import { supabase } from '@/lib/supabase/client';
 const TOPE_BUSQUEDA = 6;
 
 const soloDigitos = (s: string) => s.replace(/\D/g, '');
+
+/** La hora de Lima ahora, en minutos desde medianoche. */
+function minutosLima(): number {
+  const [h, m] = new Date().toLocaleTimeString('en-GB', { timeZone: 'America/Lima', hour: '2-digit', minute: '2-digit' }).split(':').map(Number);
+  return h * 60 + m;
+}
+const hhmm = (min: number) => `${String(Math.floor(min / 60)).padStart(2, '0')}:${String(min % 60).padStart(2, '0')}`;
+/** «Ahora» para agendar: el próximo múltiplo de 5 minutos (la base no acepta una hora que ya pasó). */
+const ahoraAgendable = () => Math.floor(minutosLima() / 5) * 5 + 5;
+const sumarMin = (slot: string, min: number) => {
+  const m = /^(\d{4}-\d{2}-\d{2}) (\d{2}):(\d{2})$/.exec(slot);
+  return m ? `${m[1]} ${hhmm(Number(m[2]) * 60 + Number(m[3]) + min)}` : slot;
+};
+
+/**
+ * El primer hueco de HOY en una sede desde ahora: cuenta las citas en pie que se cruzan (las sin sede
+ * cuentan en todas, como en la base) contra sus sillas. Es una ayuda: la base vuelve a comprobar
+ * horario y aforo al agendar, y si no cabe lo dice.
+ */
+function proximoLibre(citas: Cita[], hoy: string, sede: string, sillas: number, minutos: number): string | null {
+  const vivas = citas.filter((c) => c.slot_start?.startsWith(hoy) && c.status !== 'cancelled' && c.status !== 'no_show'
+    && (!c.sede || c.sede === sede));
+  for (let t = ahoraAgendable(); t + minutos <= 23 * 60; t += 5) {
+    const ini = `${hoy} ${hhmm(t)}`;
+    const fin = `${hoy} ${hhmm(t + minutos)}`;
+    const ocupadas = vivas.filter((c) => c.slot_start < fin && (c.slot_end || sumarMin(c.slot_start, c.slot_minutes ?? 30)) > ini).length;
+    if (ocupadas < sillas) return hhmm(t);
+  }
+  return null;
+}
 
 /** «Repetir cada semana»: 1 = solo esta vez. */
 const SEMANAS = [1, 4, 8, 12];
@@ -57,6 +87,8 @@ export default function NuevaCita({
   alCambiar,
   companyId,
   sedes = [],
+  citas = [],
+  alCreada,
 }: {
   leads: Lead[];
   catalogo: ItemCatalogo[];
@@ -66,10 +98,17 @@ export default function NuevaCita({
   companyId?: string | null;
   /** Las sedes de Mi página. Con 2 o más, hay que decir en cuál es la cita. */
   sedes?: Sede[];
+  /** Las citas ya cargadas en la Agenda: para sugerir el próximo cupo libre de cada sede. */
+  citas?: Cita[];
   /** Lo que ya se sabe al abrirla: la casilla libre que se tocó en el tablero. */
   inicial?: { fecha: string; hora: string; itemId: string };
   alCerrar: () => void;
   alCambiar: () => void;
+  /**
+   * Con esto, al agendar el formulario se cierra y la Agenda enseña la cita creada (resaltada) y el
+   * mensaje para el cliente. Pedido de Alvaro (17-nov): «no veo lo que agendé».
+   */
+  alCreada?: (c: { id: string; sede: string; resumen: string; aviso: { titulo: string; mensaje: string; waLink: string; nota?: string } | null }) => void;
 }) {
   const comando = useComando();
   const avisar = useAvisar();
@@ -80,7 +119,8 @@ export default function NuevaCita({
   const [tel, setTel] = useState('');
   const [nombre, setNombre] = useState('');
   const [fecha, setFecha] = useState(inicial?.fecha ?? hoyLima());
-  const [hora, setHora] = useState(inicial?.hora ?? '');
+  // Por defecto, AHORA: casi siempre es el que acaba de entrar por la puerta.
+  const [hora, setHora] = useState(inicial?.hora ?? (canchas ? '' : hhmm(ahoraAgendable())));
   const [itemId, setItemId] = useState(inicial?.itemId ?? '');
   const [empId, setEmpId] = useState('');
   const [sede, setSede] = useState('');
@@ -106,6 +146,16 @@ export default function NuevaCita({
   );
   const turno = servicios.find((s) => s.id === itemId)?.duration_minutes || 60;
   const activos = useMemo(() => trabajadores.filter((t) => t.activo), [trabajadores]);
+
+  /** Hoy: «Ahora» y el próximo cupo libre de cada sede con sillas conocidas. */
+  const hoy = hoyLima();
+  const minutosServicio = servicios.find((x) => x.id === itemId)?.duration_minutes || 30;
+  const sugerencias = useMemo(() => {
+    if (canchas) return [];
+    return sedes
+      .filter((x) => (x.capacidad ?? 0) > 0)
+      .map((x) => ({ sede: x.nombre, hora: proximoLibre(citas, hoy, x.nombre, x.capacidad ?? 0, minutosServicio) }));
+  }, [canchas, sedes, citas, hoy, minutosServicio]);
 
   const encontrados = useMemo(() => {
     const q = busqueda.trim().toLowerCase();
@@ -162,16 +212,35 @@ export default function NuevaCita({
       const s = await supabase().rpc('cita_sede_panel', { p_company: companyId, p_id: (r as { id?: string }).id, p_sede: sede });
       if (s.error) avisar(`La cita quedó creada, pero no pude guardar la sede: ${s.error.message}`, 'error');
       else if ((s.data as { sobre_aforo?: boolean } | null)?.sobre_aforo) avisar(`Ojo: ${sede} ya tenía todas sus sillas ocupadas a esa hora. La cita quedó igual.`, 'error');
+      alCambiar();
+    }
+
+    const sinTelefono = Boolean((r as { sin_telefono?: boolean }).sin_telefono);
+    if (alCreada && !canchas && !r.fija_id) {
+      const quien = lead && !nuevo ? lead.name || comoTelefono(lead.phone) : nombreEnviar || (telEnviar ? comoTelefono(telEnviar) : 'Cliente');
+      const resumen = `${quien} · ${r.service} · ${hora}${pideSede && sede ? ` · ${sede.split(' · ')[0]}` : ''}`;
+      alCreada({
+        id: (r as { id?: string }).id ?? '',
+        sede: pideSede ? sede : '',
+        resumen,
+        aviso: sinTelefono ? null : {
+          titulo: r.duplicada ? 'Ese cliente ya tenía esta cita' : `Agendada: ${resumen}`,
+          mensaje: r.mensaje,
+          waLink: r.wa_link,
+          nota: r.duplicada ? 'No se ha creado una segunda: esta es la que ya tenía.' : `${r.service} · ${r.slot_minutes} min · ${soles(r.precio)}`,
+        },
+      });
+      return;
     }
 
     // Sin teléfono no hay a quién escribirle: basta con el aviso.
-    if ((r as { sin_telefono?: boolean }).sin_telefono && !r.fija_id) {
+    if (sinTelefono && !r.fija_id) {
       avisar(`Cita creada: ${r.service} · ${soles(r.precio)}${nombreEnviar ? ` · ${nombreEnviar}` : ''}.`, 'ok');
       setBusqueda('');
       setLead(null);
       setTel('');
       setNombre('');
-      setHora('');
+      setHora(hhmm(ahoraAgendable()));
       return;
     }
 
@@ -197,7 +266,7 @@ export default function NuevaCita({
     setLead(null);
     setTel('');
     setNombre('');
-    setHora('');
+    setHora(canchas ? '' : hhmm(ahoraAgendable()));
   }
 
   return (
@@ -299,6 +368,21 @@ export default function NuevaCita({
             onChange={(e) => setHora(e.target.value)}
           />
         </div>
+
+        {!canchas && (
+          <div className="full" style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: -4 }}>
+            <button type="button" className="btn btn-ghost btn-sm" onClick={() => { setFecha(hoy); setHora(hhmm(ahoraAgendable())); }}>
+              Ahora · {hhmm(ahoraAgendable())}
+            </button>
+            {sugerencias.map((x) => (
+              <button key={x.sede} type="button" className="btn btn-ghost btn-sm" disabled={!x.hora}
+                title={x.hora ? `Primer cupo libre hoy en ${x.sede}` : `${x.sede} no tiene cupo libre hoy`}
+                onClick={() => { if (!x.hora) return; setFecha(hoy); setHora(x.hora); setSede(x.sede); }}>
+                {x.sede.split(' · ')[0]} · {x.hora ? `libre ${x.hora}` : 'lleno hoy'}
+              </button>
+            ))}
+          </div>
+        )}
 
         <div>
           <label className="field-label">{canchas ? 'Cancha' : 'Servicio'}</label>

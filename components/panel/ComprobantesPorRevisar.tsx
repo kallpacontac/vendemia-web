@@ -8,13 +8,14 @@
  */
 import { useState } from 'react';
 import { Check, ChevronDown, ExternalLink, X } from 'lucide-react';
+import AvisarCliente from '@/components/panel/AvisarCliente';
 import Confirmar from '@/components/panel/Confirmar';
 import './tablero-canchas.css';
 import ElegirMonto, { METODOS_COMPROBANTE } from '@/components/panel/ElegirMonto';
 import { useAvisar } from '@/components/panel/Avisos';
 import { useCargar } from '@/components/panel/useCargar';
 import { supabase } from '@/lib/supabase/client';
-import { efectoDelPago, fechaCorta, leerMonto, NOMBRE_METODO, soles, tipoDePago, type Cobro } from '@/lib/panel/cobro-cancha';
+import { efectoDelPago, faltaDe, fechaCorta, leerMonto, NOMBRE_METODO, soles, tipoDePago, type Cobro } from '@/lib/panel/cobro-cancha';
 
 export interface PorRevisar {
   id: string;
@@ -38,6 +39,42 @@ export interface PorRevisar {
 
 type Accion = 'aprobar' | 'rechazar';
 
+/** El mensaje para el cliente tras revisar su pago (AvisarCliente): nadie le escribe solo. */
+export interface AvisoPago { titulo: string; mensaje: string; waLink: string; nota?: string }
+
+/** wa.me del cliente: 9 dígitos que empiezan por 9 → con el 51 de Perú. Sin número, sin enlace. */
+function waDe(telefono: string, texto: string): string {
+  const d = (telefono ?? '').replace(/\D/g, '');
+  if (d.length < 8) return '';
+  const n = /^9\d{8}$/.test(d) ? `51${d}` : d;
+  return `https://wa.me/${n}?text=${encodeURIComponent(texto)}`;
+}
+
+/** Lo que se le dice al cliente según lo que se aprobó (adelanto, todo, lo que faltaba o una parte). */
+export function avisoDelPago(c: PorRevisar, cobro: Cobro, accion: Accion, monto: number, enDonde: string): AvisoPago {
+  const nombre = (c.cliente ?? '').trim().split(/\s+/)[0];
+  const hola = `Hola${nombre && !/^\d/.test(nombre) ? ` ${nombre}` : ''}!`;
+  const cuando = fechaCorta(c.slot).replace(' · ', ' a las ');
+  const cita = `tu cita de ${c.servicio} del ${cuando}`;
+  if (accion === 'rechazar') {
+    const mensaje = `${hola} No pudimos validar la captura de tu pago para ${cita}. ¿Nos envías otra captura o el número de operación? Así te la dejamos confirmada.`;
+    return { titulo: `${c.cliente}: comprobante rechazado`, mensaje, waLink: waDe(c.telefono, mensaje) };
+  }
+  const queda = Math.max(faltaDe(cobro) - monto, 0);
+  const tipo = tipoDePago(cobro, monto);
+  const mensaje = queda <= 0.005
+    ? `${hola} Recibimos tu pago de ${soles(monto)}. ${cita[0].toUpperCase()}${cita.slice(1)} está confirmada y pagada: no pagas nada ${enDonde}. ¡Te esperamos!`
+    : tipo === 'adelanto'
+      ? `${hola} Recibimos tu adelanto de ${soles(monto)}. ${cita[0].toUpperCase()}${cita.slice(1)} está confirmada. El resto, ${soles(queda)}, lo pagas ${enDonde}. ¡Te esperamos!`
+      : `${hola} Recibimos ${soles(monto)} a cuenta de ${cita}. Te faltan ${soles(queda)}.`;
+  return {
+    titulo: `${c.cliente}: pago aprobado`,
+    mensaje,
+    waLink: waDe(c.telefono, mensaje),
+    nota: queda > 0.005 ? `Le faltan ${soles(queda)} por pagar ${enDonde}.` : 'Ya está pagada completa.',
+  };
+}
+
 /** El cliente puede pagar el adelanto o todo: el «¿Seguro?» lo dice en grande. */
 const TITULO_APROBAR = {
   completo: '¿Aprobar el pago completo?',
@@ -48,21 +85,23 @@ const TITULO_APROBAR = {
 const ETIQUETA_PAGO = { completo: 'Pago completo', resto: 'Lo que faltaba', adelanto: 'Adelanto', parcial: 'Pago parcial' } as const;
 
 /** La que pinta: sin red, para poder verla y probarla con datos de mentira. */
-export function ComprobantesPorRevisarVista({ datos, adelanto, alRevisar, enDonde = 'en la cancha' }: {
+export function ComprobantesPorRevisarVista({ datos, adelanto, alRevisar, alAvisar, enDonde = 'en la cancha' }: {
   datos: PorRevisar[];
   adelanto: number;
   /** Dónde se cobra el resto: «en la cancha» o «en el local». */
   enDonde?: string;
   /** Devuelve true si se aplicó. */
   alRevisar: (c: PorRevisar, accion: Accion, monto: number | null, metodo: string) => Promise<boolean>;
+  /** Tras aprobar o rechazar: el mensaje para el cliente con su enlace de WhatsApp. */
+  alAvisar?: (a: AvisoPago) => void;
 }) {
   const avisar = useAvisar();
   const [montos, setMontos] = useState<Record<string, string>>({});
   const [metodos, setMetodos] = useState<Record<string, string>>({});
   const [pregunta, setPregunta] = useState<{ c: PorRevisar; accion: Accion; monto: number | null; metodo: string } | null>(null);
   const [ocupado, setOcupado] = useState(false);
-  /** Abierta de entrada; se pliega con el botón del título para que no tape la agenda. */
-  const [abierta, setAbierta] = useState(true);
+  /** Minimizada de entrada (Alvaro, 17-nov): el título dice cuántos hay; «Ver» la abre. */
+  const [abierta, setAbierta] = useState(false);
 
   if (!datos.length) return null;
 
@@ -92,9 +131,14 @@ export function ComprobantesPorRevisarVista({ datos, adelanto, alRevisar, enDond
   async function aplicar() {
     if (!pregunta) return;
     setOcupado(true);
+    // El cobro de ANTES de aplicar: es el que dice si fue adelanto, todo o una parte.
+    const aviso = avisoDelPago(pregunta.c, cobroDe(pregunta.c), pregunta.accion, pregunta.monto ?? 0, enDonde);
     const ok = await alRevisar(pregunta.c, pregunta.accion, pregunta.monto, pregunta.metodo);
     setOcupado(false);
-    if (ok) setPregunta(null);
+    if (ok) {
+      setPregunta(null);
+      alAvisar?.(aviso);
+    }
   }
 
   const cerrar = () => { if (!ocupado) setPregunta(null); };
@@ -162,7 +206,7 @@ export function ComprobantesPorRevisarVista({ datos, adelanto, alRevisar, enDond
           detalle={<>
             <p><b>{pregunta.c.cliente}</b> · {pregunta.c.servicio} · {fechaCorta(pregunta.c.slot)}</p>
             <p>No se registra ningún pago. La reserva sigue apartada hasta que venza su plazo.</p>
-            <p className="muted">El cliente no recibe aviso automático: escríbele para que suba otra captura.</p>
+            <p className="muted">El cliente no recibe aviso automático: al rechazar te doy el mensaje para pedirle otra captura.</p>
           </>}
         />
       )}
@@ -172,6 +216,8 @@ export function ComprobantesPorRevisarVista({ datos, adelanto, alRevisar, enDond
 
 export default function ComprobantesPorRevisar({ companyId, recarga, alCambiar, enDonde }: { companyId: string; recarga: unknown; alCambiar: () => void; enDonde?: string }) {
   const avisar = useAvisar();
+  /** El mensaje para el cliente del último pago revisado: se queda aunque la lista quede vacía. */
+  const [aviso, setAviso] = useState<AvisoPago | null>(null);
 
   // Sin la 0017 la función no existe: la pantalla sigue sin esta tarjeta.
   const { datos, recargar } = useCargar(async () => {
@@ -183,7 +229,8 @@ export default function ComprobantesPorRevisar({ companyId, recarga, alCambiar, 
     return { lista: lista.error ? [] : ((lista.data ?? []) as PorRevisar[]), adelanto };
   }, [companyId, recarga]);
 
-  if (!datos?.lista.length) return null;
+  const avisoCliente = aviso && <AvisarCliente {...aviso} alCerrar={() => setAviso(null)} />;
+  if (!datos?.lista.length) return avisoCliente || null;
 
   async function revisar(c: PorRevisar, accion: Accion, monto: number | null, metodo: string): Promise<boolean> {
     const { data, error } = await supabase().rpc('comprobante_revisar', {
@@ -199,5 +246,10 @@ export default function ComprobantesPorRevisar({ companyId, recarga, alCambiar, 
     return true;
   }
 
-  return <ComprobantesPorRevisarVista datos={datos.lista} adelanto={datos.adelanto} alRevisar={revisar} enDonde={enDonde} />;
+  return (
+    <>
+      {avisoCliente}
+      <ComprobantesPorRevisarVista datos={datos.lista} adelanto={datos.adelanto} alRevisar={revisar} alAvisar={setAviso} enDonde={enDonde} />
+    </>
+  );
 }

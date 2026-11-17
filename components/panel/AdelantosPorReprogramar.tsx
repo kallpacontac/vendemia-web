@@ -14,7 +14,7 @@
  *   · Al terminar, el mensaje para el cliente (AvisarCliente): nadie le escribe solo.
  */
 import { useState } from 'react';
-import { CalendarClock, X } from 'lucide-react';
+import { CalendarClock, ChevronDown, X } from 'lucide-react';
 import AvisarCliente from '@/components/panel/AvisarCliente';
 import { useAvisar } from '@/components/panel/Avisos';
 import { useCargar } from '@/components/panel/useCargar';
@@ -53,6 +53,8 @@ export default function AdelantosPorReprogramar({ companyId, sedes, recarga, alC
   const avisar = useAvisar();
   const [abierta, setAbierta] = useState<SinUsar | null>(null);
   const [hecho, setHecho] = useState<Hecho | null>(null);
+  /** Minimizada de entrada, como «Comprobantes por revisar»: el título dice cuántos hay. */
+  const [desplegada, setDesplegada] = useState(false);
 
   // Sin la 0027 la función no existe: la Agenda sigue sin esta tarjeta.
   const { datos, recargar } = useCargar(async () => {
@@ -68,9 +70,15 @@ export default function AdelantosPorReprogramar({ companyId, sedes, recarga, alC
       {hecho && <AvisarCliente {...hecho} alCerrar={() => setHecho(null)} />}
       {lista.length > 0 && (
         <section className="tc-revisar" aria-label="Adelantos por reprogramar">
-          <h3>{lista.length === 1 ? '1 adelanto por reprogramar' : `${lista.length} adelantos por reprogramar`}</h3>
-          <small className="muted">No vinieron o cancelaron, pero ya pagaron: su dinero sigue a su favor. Dales otra hora cuando te escriban.</small>
-          {lista.map((c) => (
+          <button type="button" className="tc-revisar__cab" aria-expanded={desplegada} onClick={() => setDesplegada((a) => !a)}>
+            <b className="tc-revisar__titulo">{lista.length === 1 ? '1 adelanto por reprogramar' : `${lista.length} adelantos por reprogramar`}</b>
+            <span className="tc-revisar__plegar">
+              {desplegada ? 'Minimizar' : 'Ver'}
+              <ChevronDown size={16} aria-hidden="true" style={{ transform: desplegada ? 'rotate(180deg)' : undefined }} />
+            </span>
+          </button>
+          {desplegada && <small className="muted">No vinieron o cancelaron, pero ya pagaron: su dinero sigue a su favor. Dales otra hora cuando te escriban.</small>}
+          {desplegada && lista.map((c) => (
             <article key={c.id} className="tc-repro">
               <div className="tc-revisar__datos">
                 <b>{c.cliente}</b>

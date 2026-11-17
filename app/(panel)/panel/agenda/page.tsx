@@ -187,6 +187,9 @@ export default function Agenda() {
   const [porConfirmar, setPorConfirmar] = useState<Pendiente | null>(null);
   const [aplicando, setAplicando] = useState(false);
   const [aviso, setAviso] = useState<Aviso | null>(null);
+  /** La cita recién agendada: sale resaltada en «Próximas». */
+  const [recien, setRecien] = useState<string | null>(null);
+  const avisarAgenda = useAvisar();
 
   // Las sedes de Mi página (secciones.citas.sedes): con 2 o más, «Nueva cita» pide en cuál y
   // arriba sale «Todas · sede A · sede B» para ver una sola (SelectorSede, la misma elección que en Caja).
@@ -375,6 +378,19 @@ export default function Agenda() {
             canchas={canchas}
             companyId={companyId}
             sedes={sedes}
+            citas={datos?.citas ?? []}
+            alCreada={({ id, sede: suSede, resumen, aviso: suAviso }) => {
+              // Que se VEA lo agendado: se cierra el formulario, se va a «Próximas» con su sede (o todas)
+              // y la cita sale resaltada; el mensaje para el cliente, arriba.
+              setCreando(false);
+              if (fSede && suSede !== fSede) setFSede(suSede);
+              setTab('proximas');
+              setRecien(id);
+              if (suAviso) setAviso(suAviso);
+              avisarAgenda(`Agendada: ${resumen}`, 'ok');
+              recargar();
+              window.setTimeout(() => document.getElementById(`cita-${id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 700);
+            }}
             alCerrar={() => setCreando(false)}
             alCambiar={recargar}
           /></div>
@@ -431,6 +447,7 @@ export default function Agenda() {
             nombrePorLead={new Map((datos?.leads ?? []).map((l) => [l.id, l.name || l.phone]))}
             pagosCitas={datos?.pagosCitas ?? new Map()}
             trabajadores={datos?.trabajadores ?? []}
+            resaltar={recien}
             alCambiar={recargar}
           />
         )}
@@ -1053,10 +1070,13 @@ function Proximas({
   nombrePorLead,
   pagosCitas,
   trabajadores,
+  resaltar,
   alCambiar,
 }: {
   v: Vocabulario;
   companyId: string | null;
+  /** La cita recién agendada: se pinta para que se vea dónde quedó. */
+  resaltar?: string | null;
   /** Con canchas: el catálogo, para cargar consumos (gaseosas, pelota) a la reserva. Vacío = sin consumos. */
   catalogo: ItemCatalogo[];
   citas: Cita[];
@@ -1240,9 +1260,11 @@ function Proximas({
           const asignado = trabajadores.find((t) => t.id === c.employee_id);
           const opciones = asignado && !asignado.activo ? [asignado, ...activos] : activos;
           return (
-            <div key={c.id}>
+            <div key={c.id} id={`cita-${c.id}`}
+              style={resaltar === c.id ? { background: '#EAF7EE', boxShadow: 'inset 4px 0 0 #1F9D55', borderRadius: 10, scrollMarginTop: 80 } : undefined}>
               <div className="confirmar-fila">
                 <div className="confirmar-quien">
+                  {resaltar === c.id && <small style={{ color: '#1F7A45', fontWeight: 700 }}>✓ Recién agendada</small>}
                   <b>{persona.nombre}</b>
                   {persona.deQuien && <small className="muted">{persona.deQuien}</small>}
                   <small className="muted">
