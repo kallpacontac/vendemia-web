@@ -9,6 +9,7 @@ import { avisarPremio, avisarSello } from './avisos';
 import { drenar } from './worker';
 import { urlAyuda, urlSuelta } from '../dominio/botones';
 import { IDS_SELLO } from '../dominio/sellos';
+import { MAX_TRABAJOS } from '../dominio/portafolio';
 
 /**
  * ══════════════════════════════════════════════════════════════════════════
@@ -277,6 +278,26 @@ export const ACCIONES = {
           place_nombre: textoCorto(120).optional(),
           historia: z.enum(['instagram', 'tiktok', '']).optional(),
           sello: z.enum(IDS_SELLO).optional(),
+          // Trabajos con foto (dominio/portafolio.ts). El tope de tamaño lo pone sql/0020.
+          portafolio: z
+            .object({
+              titulo: textoCorto(40).optional(),
+              posicion: z.enum(['arriba', 'abajo']).optional(),
+              trabajos: z
+                .array(
+                  z
+                    .object({
+                      titulo: textoCorto(40).min(1),
+                      etiqueta: textoCorto(40).optional(),
+                      url: urlHttps.or(z.literal('')).optional(),
+                      imagen: urlHttps.or(z.literal('')).optional(),
+                    })
+                    .strict(),
+                )
+                .max(MAX_TRABAJOS),
+            })
+            .strict()
+            .optional(),
         })
         .strict(),
     }),

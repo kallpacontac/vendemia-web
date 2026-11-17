@@ -45,6 +45,7 @@ tocar ese repositorio. No chocan: todo usa el prefijo `loyalty_`.
 | `0016_premio_tipo_en_caja.sql` | La caja recibe el tipo de cada premio (`part`: level/gift). Así la caja de OTRO negocio del mismo equipo (la cafetería de Kallpa leyendo la tarjeta de la academia) entrega los batidos pero no el descuento de membresía |
 | `0017_una_tarjeta_varias_lineas.sql` | Una tarjeta, varias LÍNEAS con sus reglas (Kallpa: «Asistencia» por niveles del mes + «Compra» de 12 sellos). La línea es un programa colgado del principal (`parent_program_id`); la persona tiene un miembro por línea (`parent_member_id`) que se crea al sumarle allí. La tarjeta, Clientes, la caja y el Wallet traen `lines`. Incluye lo de 0016. Prueba: `tests/pruebas_0017_pglite.mjs`. Deshacer: `scripts/fideliza-0017-deshacer.sql` |
 | `0018_ficha_con_lineas.sql` | La ficha del cliente trae operaciones, libro y premios de TODAS sus líneas, cada fila con `line_label`; en el panel se filtran con un toque (Todo · Asistencia · Compra). Prueba: en `tests/pruebas_0017_pglite.mjs`. Deshacer: `scripts/fideliza-0018-deshacer.sql` |
+| `0020_portafolio.sql` | Sube el tope de `page_style` a 12 000 caracteres para el **portafolio** de la página de enlaces (trabajos con foto) y hace que cambiar solo el portafolio no resincronice Google Wallet |
 
 **Aplicar:** SQL Editor de Supabase, en orden (0001 → 0018), cada fichero entero. Primero en
 staging, y allí pegar `tests/pruebas.sql` (no deja nada escrito: acaba en

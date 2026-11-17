@@ -3,6 +3,11 @@ import { unstable_cache } from 'next/cache';
 import { rpc, servidor, log } from '@/modules/tu-pagina/servidor/supabase';
 import { SLUG } from '@/modules/tu-pagina/dominio/config';
 import { armarEscaparate, type DatosCrudos, type Escaparate, type ComoSeOfrece } from '@/modules/tu-pagina/dominio/tienda';
+import { sumarDias } from '@/modules/tu-pagina/dominio/agenda';
+import { ocupadoCacheado } from '@/modules/agenda-google/servidor/google';
+
+/** Hasta dónde se mira el Google Calendar del negocio (la agenda ofrece menos días). */
+export const DIAS_GOOGLE = 62;
 
 /** Lo crudo, recién leído de la base. Las rutas que reservan lo usan sin caché. */
 export async function datosFrescos(slug: string): Promise<DatosCrudos | null> {
@@ -35,5 +40,12 @@ export async function escaparateDe(slug: string, como?: ComoSeOfrece): Promise<E
     ['tu-pagina-datos', s],
     { tags: [`tu-pagina:${s}`], revalidate: 15 },
   )();
-  return d ? armarEscaparate(d, como) : null;
+  if (!d) return null;
+  const esc = armarEscaparate(d, como);
+  // Con su Google Calendar conectado (sql/0028), lo ocupado allí no se ofrece.
+  if (como?.reservar) {
+    const google = await ocupadoCacheado(s, esc.hoy, sumarDias(esc.hoy, DIAS_GOOGLE));
+    if (google.length) esc.agenda = { ...esc.agenda, ocupados: [...esc.agenda.ocupados, ...google] };
+  }
+  return esc;
 }

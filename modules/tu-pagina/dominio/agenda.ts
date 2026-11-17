@@ -37,6 +37,12 @@ export interface Ocupado {
   apartadaDesde?: number;
   /** En qué sede (sql/0023). '' = no consta: ocupa en todas (ante la duda, lleno). */
   sede?: string;
+  /**
+   * Ocupa la franja ENTERA, haya el aforo que haya: lo ocupado en el Google
+   * Calendar del negocio (modules/agenda-google). Si el dueño está en otra cosa,
+   * ese rato no se ofrece.
+   */
+  todo?: boolean;
 }
 
 export interface DatosAgenda {
@@ -135,6 +141,7 @@ export function decidir(d: DatosAgenda, inicio: string, duracion: number, emplea
   const fin = sumarMin(inicio, duracion);
   let capacidad = Infinity;
   let maxOcupado = 0;
+  if (d.ocupados.some((o) => o.todo && pisa(o, inicio, fin))) return { ok: false, capacidad: 0, libres: 0 };
   for (let t = inicio; t < fin; t = sumarMin(t, paso)) {
     const t1 = sumarMin(t, paso);
     capacidad = Math.min(capacidad, aforo(d, t, paso, null));

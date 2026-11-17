@@ -19,7 +19,9 @@ import { armarEscaparate, validarCliente } from '@/modules/tu-pagina/dominio/tie
 import { MAX_TURNOS, canchaLibre, conCanchas, plazoDe } from '@/modules/tu-pagina/dominio/canchas';
 import { huellaIp, limitar, log, rpc, servidor } from '@/modules/tu-pagina/servidor/supabase';
 import { paginaDe } from '@/modules/tu-pagina/servidor/pagina';
-import { datosFrescos } from '@/modules/tu-pagina/servidor/escaparate';
+import { datosFrescos, DIAS_GOOGLE } from '@/modules/tu-pagina/servidor/escaparate';
+import { crearEvento, ocupadoDe } from '@/modules/agenda-google/servidor/google';
+import { sumarDias } from '@/modules/tu-pagina/dominio/agenda';
 
 const Cuerpo = z.object({
   slug: z.string().regex(SLUG),
@@ -85,6 +87,9 @@ export async function POST(req: Request) {
       // Con 2 o más sedes hay que decir en cuál (la página no deja seguir sin elegirla).
       const sedes = esc.sedes ?? [];
       if (sedes.length > 1 && !sedes.some((x) => x.nombre === c.sede)) return responder({ status: 'datos_invalidos' }, 400);
+      // Lo ocupado en su Google Calendar, sin caché: es la última palabra antes de guardar.
+      const google = await ocupadoDe(c.slug.toLowerCase(), esc.hoy, sumarDias(esc.hoy, DIAS_GOOGLE));
+      if (google.length) esc.agenda = { ...esc.agenda, ocupados: [...esc.agenda.ocupados, ...google] };
       const paso = pasoDelDia(esc.agenda, c.inicio.slice(0, 10));
       // Con sedes, el hueco se mira en la de la cita: su aforo y sus citas (agendaDeSede).
       const r = decidir({ ...agendaDeSede(esc.agenda, sedes.find((x) => x.nombre === c.sede)), paso }, c.inicio, item.duracion, profesional);
@@ -142,7 +147,21 @@ export async function POST(req: Request) {
         metodos = [];
       }
     }
-    return responder({ status: 'ok', codigo: r.codigo, estado: r.estado, metodos, plazo });
+    // Y la cita, en su Google Calendar (con Meet si lo encendió). Un fallo aquí no tumba la reserva.
+    let meet: string | undefined;
+    if (datos.tipo === 'cita' && r.codigo) {
+      const ev = await crearEvento(c.slug.toLowerCase(), {
+        codigo: r.codigo,
+        inicio: String(datos.slot_start),
+        fin: String(datos.slot_end),
+        servicio: item.nombre,
+        nombre: c.nombre.trim(),
+        telefono: c.telefono,
+        apartada: r.estado === 'pending_payment',
+      });
+      meet = ev?.meet;
+    }
+    return responder({ status: 'ok', codigo: r.codigo, estado: r.estado, metodos, plazo, meet });
   } catch (e) {
     log('tu_pagina_reserva_error', { mensaje: e instanceof Error ? e.message.slice(0, 120) : 'x' });
     return responder({ status: 'error' }, 503);

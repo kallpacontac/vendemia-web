@@ -634,3 +634,41 @@ test('secciones: pocas arriba, ninguna página perdida y a cada quien lo suyo', 
   assert.equal(abierta('/panel/fideliza/placas/abc'), 'Enlaces y QR');
   assert.equal(abierta('/panel/fideliza/enlaces'), 'Enlaces y QR');
 });
+
+test('página pública: agenda y portafolio se abren en su sitio y su script se interpreta', () => {
+  const datos = {
+    nombre: 'Vendemia',
+    color: '#FF4900',
+    estilo: {
+      plantilla: 'clasica',
+      portafolio: {
+        titulo: 'Mira lo que hicimos',
+        posicion: 'abajo',
+        trabajos: [
+          { titulo: '<b>Mancha</b>', etiqueta: 'Burgers', url: 'https://mancha.pe', imagen: 'https://res.cloudinary.com/x/image/upload/v1/a.jpg' },
+          { titulo: 'Sin enlace', url: 'javascript:alert(1)', imagen: 'http://inseguro.com/a.jpg' },
+          { titulo: '' },
+        ],
+      },
+    },
+    redes: [],
+    botones: [
+      { tipo: 'whatsapp', label: 'WhatsApp', url: 'https://wa.me/51947144701', destacado: true },
+      { tipo: 'reservar', label: 'Agenda', url: 'https://agenda.vendemias.com/vendemia/reservar' },
+      { tipo: 'reservar', label: 'Otra agenda', url: 'https://calendly.com/alguien' },
+    ],
+  };
+  const html = pagina.htmlPagina(datos);
+  assert.equal(pagina.slugAgenda('https://agenda.vendemias.com/The-247?x=1'), 'the-247');
+  assert.equal(pagina.slugAgenda('https://calendly.com/alguien'), '');
+  assert.ok(html.includes('data-agenda="vendemia"'), 'la agenda de Mi página se abre en su sitio');
+  assert.equal((html.match(/data-xp="agenda"/g) ?? []).length, 1, 'una agenda ajena sigue siendo un enlace');
+  assert.ok(html.includes('2 trabajos'), 'los trabajos sin nombre no cuentan');
+  assert.ok(html.includes('&lt;b&gt;Mancha&lt;/b&gt;'));
+  assert.ok(!html.includes('javascript:') && !html.includes('http://inseguro.com'));
+  assert.ok(html.indexOf('data-xp="portafolio"') > html.indexOf('data-agenda="vendemia"'), '«abajo» va después de los botones');
+  for (const js of html.split('<script>').slice(1).map((x) => x.split('</script>')[0])) assert.doesNotThrow(() => new Function(js));
+  const vista = pagina.htmlPagina(datos, { vista: true });
+  assert.ok(!vista.includes('<script>'), 'la vista previa del panel no lleva el motor');
+  assert.ok(vista.includes('<details class="xp"'), 'pero el portafolio se abre igual (sin JavaScript)');
+});

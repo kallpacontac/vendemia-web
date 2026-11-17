@@ -29,6 +29,7 @@ import { useCargar } from '@/components/panel/useCargar';
 import { accion, ErrorFideliza, lecturas, mensaje } from '@/modules/fideliza/cliente/api';
 import { subirImagenMarca } from '@/modules/fideliza/cliente/imagenMarca';
 import EncuadrarFoto from '@/modules/fideliza/ui/EncuadrarFoto';
+import EditorPortafolio from '@/modules/fideliza/ui/EditorPortafolio';
 import { FIDELIZA_URL } from '@/modules/fideliza/dominio/config';
 import {
   BOTONES,
@@ -228,6 +229,11 @@ export default function MiPagina() {
     else if (!esWeb(aUrl(b.tipo, b.valor))) errores[`boton-${b.clave}-dato`] = `«${nombreBoton}»: «${b.valor.trim()}» no parece válido (ej. ${defDe(b.tipo).placeholder}).`;
   }
   if (estilo.fondo && !esWeb(estilo.fondo)) errores.fondo = 'La foto de fondo no parece una dirección web (ej. tunegocio.com/foto.jpg).';
+  (estilo.portafolio?.trabajos ?? []).forEach((t, i) => {
+    const algo = Boolean(t.titulo.trim() || t.etiqueta?.trim() || t.url?.trim() || t.imagen);
+    if (algo && !t.titulo.trim()) errores[`pf-${i}-titulo`] = `Trabajo ${i + 1}: escribe su nombre, o quítalo.`;
+    if (t.url?.trim() && !esWeb(t.url)) errores[`pf-${i}-url`] = `Trabajo ${i + 1}: «${t.url.trim()}» no parece una dirección web.`;
+  });
   const v = useValidacion(errores);
 
   if (!puede('program.read')) return <SinPermiso que="tu página" />;
@@ -374,13 +380,21 @@ export default function MiPagina() {
       });
       let sinEstilo = false;
       try {
-        await accion('estilo.guardar', { companyId, estilo: { ...estilo, fondo: estilo.fondo ? urlSuelta(estilo.fondo) : '', categoria: estilo.categoria?.trim() ?? '' } });
+        // El portafolio sin trabajos vacíos y con las URL completas (https://).
+        const trabajos = (estilo.portafolio?.trabajos ?? [])
+          .filter((t) => t.titulo.trim())
+          .map((t) => ({ titulo: t.titulo.trim(), etiqueta: t.etiqueta?.trim() ?? '', url: t.url?.trim() ? urlSuelta(t.url) : '', imagen: t.imagen ?? '' }));
+        const portafolio = trabajos.length ? { titulo: estilo.portafolio?.titulo?.trim() ?? '', posicion: estilo.portafolio?.posicion ?? 'arriba', trabajos } : undefined;
+        await accion('estilo.guardar', { companyId, estilo: { ...estilo, fondo: estilo.fondo ? urlSuelta(estilo.fondo) : '', categoria: estilo.categoria?.trim() ?? '', portafolio } });
         if (estilo.fondo) setEstilo((x) => ({ ...x, fondo: urlSuelta(x.fondo ?? '') }));
       } catch (e) {
         // Una instalación anterior puede no tener el RPC de sql/0008. Cualquier
         // otro fallo se conserva para no diagnosticar una migración inexistente.
         const detalle = mensaje(e);
         if (/loyalty_page_style_save|schema cache|could not find the function/i.test(detalle)) sinEstilo = true;
+        // Antes de sql/0020 el estilo cabe en 2 000 caracteres: unos 3 trabajos con foto.
+        else if ((/invalid_settings/i.test(detalle) || (e instanceof ErrorFideliza && e.codigo === 'invalid_settings')) && (estilo.portafolio?.trabajos?.length ?? 0) > 0)
+          throw new Error('El portafolio todavía no cabe entero: falta aplicar sql/0020_portafolio.sql. Mientras tanto, deja 3 trabajos como mucho.');
         else throw e;
       }
       const perfilId = await accion<string>('perfil.guardar', {
@@ -768,6 +782,9 @@ export default function MiPagina() {
               </div>
             )}
           </section>
+
+          {/* ── 6 · Portafolio ── */}
+          <EditorPortafolio valor={estilo.portafolio} alCambiar={(portafolio) => setEstilo((e) => ({ ...e, portafolio }))} editable={editable} companyId={companyId ?? null} v={v} />
 
           {/* ── Avanzado ── */}
           <details className="card fz-avanzado">

@@ -35,6 +35,7 @@ import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'rea
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import AvisosCelular from '@/components/panel/AvisosCelular';
+import GoogleCalendar from '@/components/panel/GoogleCalendar';
 import {
   ArrowLeft,
   ArrowRight,
@@ -1337,6 +1338,8 @@ function Configuracion() {
         {/* Fuera del asistente: no es configuración del bot sino de ESTE
             celular, y se guarda sola (no pasa por la barra de guardar). */}
         <AvisosCelular />
+        {/* Su Google Calendar en la agenda de su página (sql/0028): solo dueño o administrador. */}
+        {(rol === 'dueno' || rol === 'admin' || esAdminPlataforma) && <GoogleCalendar />}
       </div>
 
       {/*

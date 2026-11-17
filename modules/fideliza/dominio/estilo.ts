@@ -12,6 +12,7 @@
  * la tarjeta de Google Wallet.
  */
 import type { Sello } from './sellos';
+import type { Portafolio } from './portafolio';
 
 export type Plantilla = 'clasica' | 'oscura' | 'vidrio' | 'foto' | 'marco' | 'color';
 export type PlantillaTarjeta = 'viva' | 'organica' | 'nocturna';
@@ -45,6 +46,8 @@ export interface Estilo {
   historia?: RedHistoria | '';
   /** Icono del sello de la tarjeta de puntos (Google Wallet). */
   sello?: Sello;
+  /** Trabajos con foto que se abren en su sitio (dominio/portafolio.ts). */
+  portafolio?: Portafolio;
 }
 
 export const PLANTILLAS: { id: Plantilla; nombre: string; describe: string }[] = [

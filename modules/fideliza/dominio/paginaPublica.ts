@@ -15,6 +15,8 @@
 import { fotoEnCirculo } from './encuadre';
 import { icono } from './iconos';
 import { colorValido, esOscuro, mezcla, resolverEstilo, tintaSobre, type Estilo } from './estilo';
+import { cuantosTrabajos, resolverPortafolio } from './portafolio';
+import { cssExpandir, SCRIPT_EXPANDIR } from './paginaExpandir';
 
 export interface BotonPagina {
   tipo: string;
@@ -54,12 +56,21 @@ function numeroPagoMovil(url: string): string {
 }
 
 /**
+ * El negocio de un botón «Reserva ahora» que apunta a la agenda de Mi página
+ * (agenda.vendemias.com/<negocio>, con o sin /reservar). Con él, el botón se
+ * abre en su sitio con calendario y horas (paginaExpandir.ts). '' = otro sitio.
+ */
+export function slugAgenda(url: string): string {
+  return /^https:\/\/agenda\.vendemias\.com\/([a-z0-9][a-z0-9-]{1,38}[a-z0-9])(?:\/reservar)?\/?(?:[?#].*)?$/i.exec(url)?.[1]?.toLowerCase() ?? '';
+}
+
+/**
  * Cloudinary conserva el original de 1000 px para Google Wallet, pero la
  * página pública no necesita descargarlo entero. Estas variantes quedan
  * cacheadas en su CDN y se sirven en WebP/AVIF cuando el navegador lo admite.
  * Las URL de otros proveedores se dejan intactas.
  */
-export function imagenPagina(url: string | null | undefined, uso: 'avatar' | 'fondo'): string {
+export function imagenPagina(url: string | null | undefined, uso: 'avatar' | 'fondo' | 'trabajo'): string {
   const segura = https(url);
   if (!segura) return '';
   try {
@@ -68,7 +79,7 @@ export function imagenPagina(url: string | null | undefined, uso: 'avatar' | 'fo
     const i = u.pathname.indexOf(marca);
     if (u.hostname !== 'res.cloudinary.com' || i < 0) return segura;
     if (uso === 'avatar') return fotoEnCirculo(segura);
-    const transformacion = 'c_limit,w_1200/f_auto,q_auto:good';
+    const transformacion = uso === 'trabajo' ? 'c_fill,g_auto,w_560,h_700/f_auto,q_auto' : 'c_limit,w_1200/f_auto,q_auto:good';
     u.pathname = `${u.pathname.slice(0, i + marca.length)}${transformacion}/${u.pathname.slice(i + marca.length)}`;
     return u.toString();
   } catch {
@@ -238,6 +249,11 @@ export function htmlPagina(d: DatosPagina, o: { vista?: boolean; indexable?: boo
       }
       // El alta de la tarjeta lleva el slug: si el teléfono ya tiene una, el script la abre directa.
       const alta = b.tipo === 'tarjeta' ? /\/n\/([a-z0-9][a-z0-9-]{1,38}[a-z0-9])\/unirse(?:[?#]|$)/.exec(b.url)?.[1] : undefined;
+      // «Reserva ahora» a la agenda de Mi página: se abre aquí mismo (sin JavaScript, navega).
+      const agenda = b.tipo === 'reservar' ? slugAgenda(b.url) : '';
+      if (agenda) {
+        return `<div class="xp" data-xp="agenda" data-agenda="${agenda}"><a class="${cls} ${tarjeta ? 'bt--tarjeta' : 'bt--pildora'} xp__bt" href="${esc(b.url)}" rel="noopener" aria-expanded="false">${contenido}</a><div class="xp__cuerpo" hidden></div></div>`;
+      }
       return `<a class="${cls} ${tarjeta ? 'bt--tarjeta' : 'bt--pildora'}" href="${esc(b.url)}" rel="noopener"${alta ? ` data-fz-alta="${alta}"` : ''}>${contenido}</a>`;
     })
     .join('');
@@ -302,6 +318,42 @@ export function htmlPagina(d: DatosPagina, o: { vista?: boolean; indexable?: boo
 })();
 </script>`
     : '';
+
+  // ── El portafolio: una tarjeta más que se abre con los trabajos (dominio/portafolio.ts) ──
+  const pf = resolverPortafolio(d.estilo?.portafolio);
+  const portafolio = pf
+    ? `<details class="xp" data-xp="portafolio"><summary class="bt ${tarjeta ? 'bt--tarjeta' : 'bt--pildora'} xp__bt" aria-expanded="false">${
+        tarjeta
+          ? `<span class="tile">${icono('portafolio')}</span><span class="tx"><b>${esc(pf.titulo)}</b><small>${cuantosTrabajos(pf.trabajos.length)}</small></span><span class="fl">${icono('flecha')}</span>`
+          : `<span class="ic">${icono('portafolio')}</span><span class="tx"><b>${esc(pf.titulo)}</b><small>${cuantosTrabajos(pf.trabajos.length)}</small></span>`
+      }</summary><div class="xp__cuerpo"><div class="pf">${pf.trabajos
+        .map((t) => {
+          const img = imagenPagina(t.imagen, 'trabajo');
+          const dentro = `${img ? `<img src="${esc(img)}" alt="" loading="lazy" decoding="async" width="280" height="350">` : `<span class="pf__ini" aria-hidden="true">${esc(t.titulo.slice(0, 1).toUpperCase())}</span>`}<span class="pf__tx"><b>${esc(t.titulo)}</b>${t.etiqueta ? `<small>${esc(t.etiqueta)}</small>` : ''}</span>`;
+          return t.url
+            ? `<a class="pf__it" href="${esc(t.url)}" target="_blank" rel="noopener">${dentro}<span class="pf__ir" aria-hidden="true">${icono('flecha')}</span></a>`
+            : `<div class="pf__it">${dentro}</div>`;
+        })
+        .join('')}</div>${pf.trabajos.length > 1 ? '<p class="pf__pie">Desliza para ver más →</p>' : ''}</div></details>`
+    : '';
+  const hayExpandibles = Boolean(portafolio) || botones.includes('class="xp"');
+  const oscuroPanel = e.plantilla === 'oscura';
+  const cssXp = hayExpandibles || !o.vista
+    ? cssExpandir(
+        {
+          acc: destBg,
+          accInk: tintaSobre(destBg),
+          bg: oscuroPanel ? '#16171A' : '#FFFFFF',
+          ink: oscuroPanel ? '#F4F4F2' : '#14110F',
+          muted: oscuroPanel ? '#A3A3A0' : '#66625E',
+          linea: oscuroPanel ? 'rgba(255,255,255,.12)' : '#E7E3DD',
+          suave: oscuroPanel ? 'rgba(255,255,255,.06)' : '#F5F3EE',
+          radio: e.forma === 'recto' ? '8px' : '20px',
+        },
+        !o.vista,
+      )
+    : '';
+  const scriptExpandir = hayExpandibles && !o.vista ? SCRIPT_EXPANDIR : '';
 
   const tienePagoMovil = d.botones.some((b) => b.tipo === 'yape' && Boolean(numeroPagoMovil(b.url)));
   const modalRadio = e.forma === 'recto' ? '12px' : '24px';
@@ -417,6 +469,7 @@ h1{font-size:${serif ? '28px' : '24px'};font-weight:${serif ? '500' : '800'};mar
 .pago-cerrar:focus-visible,.pago-copiar:focus-visible,.pago-abrir:focus-visible{outline:3px solid #C83D1F;outline-offset:3px}
 @media(max-width:520px){.pago-modal{width:calc(100% - 24px);margin:auto auto 12px;padding:22px}.pago-modal h2{font-size:23px}.pago-numero{font-size:27px}}
 ${fondoVidrio}
+${cssXp}
 .pie{margin-top:auto;padding-top:28px;text-align:center;font-size:11.5px;color:${p.muted};opacity:.8;text-decoration:none}
 .pie:hover{opacity:1;text-decoration:underline}
 .vacio{text-align:center;color:${p.muted};font-size:14px;margin-top:20px}
@@ -425,8 +478,8 @@ ${o.vista ? 'a{pointer-events:none}.pago-abrir{pointer-events:none}' : ''}
 </style></head><body><main class="pg">
 <div class="portada"></div>
 <header class="cab">${avatar}<h1>${esc(d.nombre || 'Tu negocio')}</h1>${e.categoria ? `<p class="cat">${esc(e.categoria)}</p>` : ''}${d.bio ? `<p class="bio">${esc(d.bio)}</p>` : ''}${e.redes === 'arriba' ? redes : ''}</header>
-<section class="lista">${botones || (o.vista ? '<p class="vacio">Aquí aparecerán tus botones</p>' : '')}</section>
+<section class="lista">${pf?.posicion === 'arriba' ? portafolio : ''}${botones || (o.vista && !portafolio ? '<p class="vacio">Aquí aparecerán tus botones</p>' : '')}${pf?.posicion === 'abajo' ? portafolio : ''}</section>
 ${e.redes === 'abajo' ? redes : ''}
 <a class="pie" href="https://vendemias.com" rel="noopener" aria-label="Visitar Vendemia">Creado con Vendemia</a>
-</main>${modalPago}${scriptPago}${scriptMiTarjeta}</body></html>`;
+</main>${modalPago}${scriptPago}${scriptMiTarjeta}${scriptExpandir}</body></html>`;
 }
