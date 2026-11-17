@@ -514,7 +514,7 @@ export default function Caja() {
             Sucursal
           </label>
           <select id="suc" className="select" value={sucursal} onChange={(e) => elegirSucursal(e.target.value)}>
-            <option value="">— Elige la sucursal —</option>
+            <option value="">Sin sucursal (opcional)</option>
             {activas.map((s) => (
               <option key={s.id} value={s.id}>
                 {s.name}
@@ -712,7 +712,7 @@ export default function Caja() {
           {m.rewards_available > 0 && (
             <div className="fz-mo__aviso-premio">
               <Gift size={20} aria-hidden="true" /> <span>Tiene {m.rewards_available === 1 ? 'un premio' : `${m.rewards_available} premios`}: <b>{m.rewards[0]?.description ?? m.reward_description}</b></span>
-              <button className="btn btn-sm" disabled={ocupado || (activas.length > 0 && !sucursal)} onClick={() => canjear(m.rewards[0]?.id ?? null)}>Entregar</button>
+              <button className="btn btn-sm" disabled={ocupado} onClick={() => canjear(m.rewards[0]?.id ?? null)}>Entregar</button>
             </div>
           )}
           {m.rule_type === 'points' && (
@@ -721,7 +721,7 @@ export default function Caja() {
           {ajustes?.require_external_ref && (
             <input className="input" maxLength={64} value={ref} onChange={(e) => setRef(e.target.value)} placeholder="N.º de comprobante" aria-label="Número de comprobante" style={{ marginBottom: 10 }} />
           )}
-          <button className="fz-gran fz-gran--prim fz-mo__dar" disabled={ocupado || (activas.length > 0 && !sucursal)} onClick={registrar}>
+          <button className="fz-gran fz-gran--prim fz-mo__dar" disabled={ocupado} onClick={registrar}>
             {ocupado ? 'Un momento…' : verbo(m)}
           </button>
           {!!m.bonus_units && (
@@ -729,7 +729,7 @@ export default function Caja() {
               {m.bonus_label} +{m.bonus_units}
             </button>
           )}
-          {activas.length > 0 && !sucursal && <p className="fz-def">Elige la sucursal arriba para poder operar.</p>}
+          
           {pendiente && !ocupado && (
             <div className="fz-panel-aviso fz-panel-aviso--error" role="alert" style={{ marginTop: 12 }}>
               <span style={{ flex: 1 }}>No llegó la confirmación. Nada se ha dado por hecho.</span>
@@ -787,12 +787,12 @@ export default function Caja() {
                 <small>Si se pone, la misma venta no se puede registrar dos veces.</small>
               </div>
               <div className="fz-col2">
-                <button className="fz-gran fz-gran--prim" disabled={ocupado || (activas.length > 0 && !sucursal)} onClick={registrar}>
+                <button className="fz-gran fz-gran--prim" disabled={ocupado} onClick={registrar}>
                   <ShoppingBag size={20} /> {m.rule_type === 'visits' ? 'Registrar visita' : 'Registrar compra'}
                 </button>
                 <button
                   className="fz-gran fz-gran--sec"
-                  disabled={ocupado || m.rewards_available === 0 || (activas.length > 0 && !sucursal)}
+                  disabled={ocupado || m.rewards_available === 0}
                   onClick={() => canjear(m.rewards[0]?.id ?? null)}
                 >
                   <Gift size={20} /> Canjear{m.rewards_available ? ` (${m.rewards_available})` : ''}
@@ -803,7 +803,7 @@ export default function Caja() {
                   {m.bonus_label} +{m.bonus_units}
                 </button>
               )}
-              {activas.length > 0 && !sucursal && <p className="fz-def">Elige la sucursal arriba para poder operar.</p>}
+              
               {m.rewards.length > 1 && (
                 <ul className="fz-lista" style={{ marginTop: 10 }}>
                   {m.rewards.map((r) => (

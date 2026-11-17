@@ -16,6 +16,7 @@
 import { useState } from 'react';
 import { CalendarClock, ChevronDown, X } from 'lucide-react';
 import AvisarCliente from '@/components/panel/AvisarCliente';
+import { sedeCorta } from '@/components/panel/SelectorSede';
 import { useAvisar } from '@/components/panel/Avisos';
 import { useCargar } from '@/components/panel/useCargar';
 import { supabase } from '@/lib/supabase/client';
@@ -82,7 +83,7 @@ export default function AdelantosPorReprogramar({ companyId, sedes, recarga, alC
             <article key={c.id} className="tc-repro">
               <div className="tc-revisar__datos">
                 <b>{c.cliente}</b>
-                <small>{c.servicio} · {fechaCorta(c.slot)}{c.sede ? ` · ${c.sede}` : ''}</small>
+                <small>{c.servicio} · {fechaCorta(c.slot)}{c.sede ? ` · ${sedeCorta(c.sede)}` : ''}</small>
                 <small>{c.estado === 'cancelled' ? 'Cancelada' : 'No vino'} · pagó <b>{soles(Number(c.pagado) || 0)}</b> de {soles(Number(c.total) || 0)}</small>
               </div>
               <button type="button" className="tc__accion" onClick={() => setAbierta(c)}>

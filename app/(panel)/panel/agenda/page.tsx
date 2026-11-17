@@ -36,7 +36,7 @@ import Topbar from '@/components/panel/Topbar';
 import AgendaControles from '@/components/panel/AgendaControles';
 import AvisarCliente from '@/components/panel/AvisarCliente';
 import NuevaCita from '@/components/panel/NuevaCita';
-import SelectorSede, { esDeSede, useSedeElegida, useSedes } from '@/components/panel/SelectorSede';
+import SelectorSede, { esDeSede, sedeCorta, useSedeElegida, useSedes } from '@/components/panel/SelectorSede';
 import TableroCanchas from '@/components/panel/TableroCanchas';
 import ComprobantesPorRevisar from '@/components/panel/ComprobantesPorRevisar';
 import AdelantosPorReprogramar from '@/components/panel/AdelantosPorReprogramar';
@@ -280,7 +280,7 @@ export default function Agenda() {
         <>
           <p>
             <b>{quienEnUnaLinea(quienDeCita(cita, lead?.name || lead?.phone))}</b>
-            {cita.service ? ` · ${cita.service}` : ''}{cita.sede ? ` · ${cita.sede}` : ''}
+            {cita.service ? ` · ${cita.service}` : ''}{cita.sede ? ` · ${sedeCorta(cita.sede)}` : ''}
           </p>
           <p>
             {textoSlot(cita.slot_start)} → <b>{textoSlot(slotStart)}</b>
@@ -1166,7 +1166,7 @@ function Proximas({
         <>
           <p>
             <b>{quienEnUnaLinea(quienDeCita(c, nombrePorLead.get(c.lead_id)))}</b>
-            {c.service ? ` · ${c.service}` : ''}{c.sede ? ` · ${c.sede}` : ''}
+            {c.service ? ` · ${c.service}` : ''}{c.sede ? ` · ${sedeCorta(c.sede)}` : ''}
           </p>
           {cambiaHora && (
             <p>
@@ -1214,7 +1214,7 @@ function Proximas({
         <>
           <p>
             <b>{quien}</b>
-            {c.service ? ` · ${c.service}` : ''}{c.sede ? ` · ${c.sede}` : ''}
+            {c.service ? ` · ${c.service}` : ''}{c.sede ? ` · ${sedeCorta(c.sede)}` : ''}
           </p>
           <p>{textoSlot(c.slot_start)}</p>
           <p className="muted">
@@ -1263,7 +1263,7 @@ function Proximas({
           const opciones = asignado && !asignado.activo ? [asignado, ...activos] : activos;
           return (
             <div key={c.id} id={`cita-${c.id}`}
-              style={resaltar === c.id ? { background: '#EAF7EE', boxShadow: 'inset 4px 0 0 #1F9D55', borderRadius: 10, scrollMarginTop: 80 } : undefined}>
+              style={resaltar === c.id ? { background: '#EAF7EE', borderLeft: '4px solid #1F9D55', paddingLeft: 8, scrollMarginTop: 80 } : undefined}>
               <div className="confirmar-fila">
                 <div className="confirmar-quien">
                   {resaltar === c.id && <small style={{ color: '#1F7A45', fontWeight: 700 }}>✓ Recién agendada</small>}
@@ -1271,7 +1271,7 @@ function Proximas({
                   {persona.deQuien && <small className="muted">{persona.deQuien}</small>}
                   <small className="muted">
                     {c.inicio ? `${diaMes(c.inicio)} · ${horaDe(c.inicio)}` : '—'}
-                    {c.service ? ` · ${c.service}` : ''}{c.sede ? ` · ${c.sede}` : ''}
+                    {c.service ? ` · ${c.service}` : ''}{c.sede ? ` · ${sedeCorta(c.sede)}` : ''}
                     {c.employee_id ? ` · ${nombrePorTrabajador.get(c.employee_id) ?? 'sin asignar'}` : ''}
                   </small>
                 </div>
@@ -1610,7 +1610,7 @@ function FilaPorConfirmar({
         {quien.deQuien && <small className="muted">{quien.deQuien}</small>}
         <small className="muted">
           {cita.inicio ? `${diaMes(cita.inicio)} · ${horaDe(cita.inicio)}` : '—'}
-          {cita.service ? ` · ${cita.service}` : ''}{cita.sede ? ` · ${cita.sede}` : ''}
+          {cita.service ? ` · ${cita.service}` : ''}{cita.sede ? ` · ${sedeCorta(cita.sede)}` : ''}
         </small>
       </div>
 

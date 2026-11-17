@@ -52,6 +52,9 @@ export function useSedeElegida(companyId: string | null | undefined, sedes: Sede
   return [sedes.length >= 2 ? valida : '', elegir];
 }
 
+/** «Huallaga 646 · 24/7 Premium» → «Huallaga 646»: en una línea con fecha y servicio, el nombre entero no cabe. */
+export const sedeCorta = (s: string | null | undefined) => (s ?? '').split(' · ')[0].trim();
+
 /** ¿Esta cita es de la sede elegida? Con '' (todas), siempre. */
 export const esDeSede = (c: { sede?: string | null }, sede: string) => !sede || (c.sede ?? '') === sede;
 
