@@ -109,6 +109,8 @@ const NAV = [
 // En una academia, Alumnos va antes que Caja: es lo que se mira a diario.
 const FIJAS_MOVIL = ['/panel', '/panel/mesas', RUTA_MI_AGENDA, RUTA_MI_COMISION, '/panel/mensajes', '/panel/agenda', '/panel/pedidos', '/panel/alumnos', '/panel/caja'];
 const MAX_FIJAS_MOVIL = 4;
+/** Barbería o salón: lo que se usa en el mostrador (el barbero, su agenda y su comisión). */
+const FIJAS_MOVIL_CITA = [RUTA_MI_AGENDA, RUTA_MI_COMISION, '/panel/agenda', '/panel/caja', '/panel/fideliza', '/panel/catalogo'];
 
 type Entrada = (typeof NAV)[number];
 
@@ -156,9 +158,11 @@ export default function Sidebar({
     return n.sirveA(modo);
   });
 
+  // Negocio de citas: en la barra del teléfono, lo del mostrador (Agenda, Caja, Fideliza, Catálogo).
+  const fijasMovil = esCita(modo) ? FIJAS_MOVIL_CITA : FIJAS_MOVIL;
   const fijas = new Set(
     nav
-      .filter((n) => FIJAS_MOVIL.includes(n.href) && (n.href !== '/panel/mesas' || pagina.mesasFija))
+      .filter((n) => fijasMovil.includes(n.href) && (n.href !== '/panel/mesas' || pagina.mesasFija))
       .slice(0, MAX_FIJAS_MOVIL)
       .map((n) => n.href),
   );
@@ -171,7 +175,8 @@ export default function Sidebar({
 
   const rutaOperacion = esEcommerce(modo) ? '/panel/pedidos' : '/panel/agenda';
   const rail = nav.filter((n) =>
-    [...(pagina.mesasFija ? ['/panel/mesas'] : []), '/panel', RUTA_MI_AGENDA, RUTA_MI_COMISION, RUTA_MI_CATALOGO, '/panel/asistente', '/panel/mensajes', rutaOperacion, '/panel/leads', '/panel/caja', '/panel/configuracion'].includes(n.href),
+    [...(pagina.mesasFija ? ['/panel/mesas'] : []), '/panel', RUTA_MI_AGENDA, RUTA_MI_COMISION, RUTA_MI_CATALOGO, '/panel/asistente', '/panel/mensajes', rutaOperacion, '/panel/leads', '/panel/caja',
+      ...(esCita(modo) ? ['/panel/fideliza', '/panel/catalogo', '/panel/metricas'] : []), '/panel/configuracion'].includes(n.href),
   );
   const railExtra = nav.filter((n) => !rail.some((r) => r.href === n.href));
   const railExtraActiva = railExtra.some((n) => esActivo(n.href));

@@ -116,7 +116,23 @@ function NavegacionPanel() {
 
   const operacion = esEcommerce(modo) ? '/panel/pedidos' : '/panel/agenda';
   const operacionLabel = esEcommerce(modo) ? 'Pedidos' : esRecurrente(modo) ? 'Clases' : 'Agenda';
-  const tabs = [
+  /**
+   * Negocio de citas (barbería, salón): primero lo que se usa todo el día en el mostrador —Agenda,
+   * Caja, Fideliza, Catálogo— y Reportes a la vista; lo demás, después (The 24/7, 17-nov: «que se
+   * prioricen los botones de lo que van a utilizar»). En una tablet las pestañas no caben todas y
+   * «Reportes» quedaba cortado a la derecha.
+   */
+  const tabsCita = [
+    { href: operacion, label: operacionLabel, rutas: [operacion] },
+    { href: '/panel/caja', label: 'Caja', rutas: ['/panel/caja', '/panel/equipo', '/panel/comisiones'] },
+    { href: '/panel/fideliza', label: 'Fideliza', rutas: ['/panel/fideliza'] },
+    { href: '/panel/catalogo', label: 'Catálogo', rutas: ['/panel/catalogo'] },
+    { href: '/panel/metricas', label: 'Reportes', rutas: ['/panel/metricas'] },
+    { href: '/panel', label: 'Resumen', rutas: ['/panel'] },
+    { href: '/panel/leads', label: 'Clientes', rutas: ['/panel/leads', '/panel/retargeting'] },
+    { href: '/panel/mensajes', label: 'Actividad', rutas: ['/panel/mensajes'] },
+  ];
+  const tabsTodos = [
     { href: '/panel', label: 'Resumen', rutas: ['/panel'] },
     { href: '/panel/mensajes', label: 'Actividad', rutas: ['/panel/mensajes'] },
     { href: operacion, label: operacionLabel, rutas: [operacion] },
@@ -124,6 +140,7 @@ function NavegacionPanel() {
     { href: '/panel/caja', label: 'Gestión', rutas: ['/panel/caja', '/panel/catalogo', '/panel/equipo', '/panel/comisiones'] },
     { href: '/panel/metricas', label: 'Reportes', rutas: ['/panel/metricas'] },
   ];
+  const tabs = esCita(modo) ? tabsCita : tabsTodos;
   const activa = (rutas: string[]) => rutas.some((r) => (r === '/panel' ? ruta === r : ruta.startsWith(r)));
   /**
    * Las pestañas, según el rol (fase 4 del plan de roles; antes del corte no
