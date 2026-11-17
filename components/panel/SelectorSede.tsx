@@ -81,7 +81,7 @@ export default function SelectorSede({ sedes, valor, alCambiar, cuenta, etiqueta
   const opciones = ['', ...sedes.map((s) => s.nombre)];
   return (
     <div className="chip-tabs selector-sede" role="tablist" aria-label="Ver sede"
-      style={{ display: 'grid', gridTemplateColumns: `repeat(${opciones.length}, minmax(0, 1fr))`, width: '100%', maxWidth: 560, margin: '10px 0' }}>
+      style={{ display: 'grid', gridTemplateColumns: `repeat(${opciones.length}, minmax(0, 1fr))`, width: '100%', maxWidth: 760, margin: '10px 0' }}>
       {opciones.map((s) => (
         <button key={s || 'todas'} type="button" role="tab" aria-selected={valor === s} className={valor === s ? 'active' : ''}
           onClick={() => alCambiar(s)} style={{ display: 'grid', justifyItems: 'center', gap: 1, minWidth: 0, padding: '7px 8px', lineHeight: 1.2, ...(valor === s ? { color: '#fff' } : {}) }}>

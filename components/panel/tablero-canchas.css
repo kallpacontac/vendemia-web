@@ -140,7 +140,7 @@
 .tc__detalle dd { margin: 0; font-weight: 600; text-align: right; }
 .tc__accion { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; min-height: 46px; border: 0; border-radius: 12px; background: var(--tc-tinta); color: #fff; font: inherit; font-weight: 600; cursor: pointer; text-decoration: none; }
 .tc__accion--suave { background: transparent; color: var(--tc-tinta); border: 1px solid var(--tc-linea); }
-.tc-revisar { display: grid; gap: 10px; padding: 14px; border-radius: 14px; background: #FFF7EA; border: 1px solid #F0D9B0; color: var(--ink, #14211A); }
+.tc-revisar { display: grid; gap: 10px; padding: 14px; margin: 0 0 16px; border-radius: 14px; background: #FFF7EA; border: 1px solid #F0D9B0; color: var(--ink, #14211A); }
 .tc-revisar, .tc-revisar * { box-sizing: border-box; }
 .tc-revisar h3, .tc-revisar__titulo { margin: 0; font-size: 15px; font-weight: 700; }
 .tc-revisar__cab { display: flex; align-items: center; justify-content: space-between; gap: 10px; width: 100%; padding: 0; border: 0; background: none; color: inherit; font: inherit; text-align: left; cursor: pointer; }
