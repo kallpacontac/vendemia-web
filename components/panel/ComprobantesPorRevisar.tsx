@@ -7,7 +7,7 @@
  * dice quién, cuánto y qué le pasará a la reserva.
  */
 import { useState } from 'react';
-import { Check, ExternalLink, X } from 'lucide-react';
+import { Check, ChevronDown, ExternalLink, X } from 'lucide-react';
 import Confirmar from '@/components/panel/Confirmar';
 import './tablero-canchas.css';
 import ElegirMonto, { METODOS_COMPROBANTE } from '@/components/panel/ElegirMonto';
@@ -61,6 +61,8 @@ export function ComprobantesPorRevisarVista({ datos, adelanto, alRevisar, enDond
   const [metodos, setMetodos] = useState<Record<string, string>>({});
   const [pregunta, setPregunta] = useState<{ c: PorRevisar; accion: Accion; monto: number | null; metodo: string } | null>(null);
   const [ocupado, setOcupado] = useState(false);
+  /** Abierta de entrada; se pliega con el botón del título para que no tape la agenda. */
+  const [abierta, setAbierta] = useState(true);
 
   if (!datos.length) return null;
 
@@ -99,8 +101,14 @@ export function ComprobantesPorRevisarVista({ datos, adelanto, alRevisar, enDond
 
   return (
     <section className="tc-revisar" aria-label="Comprobantes por revisar">
-      <h3>{datos.length === 1 ? '1 comprobante por revisar' : `${datos.length} comprobantes por revisar`}</h3>
-      {datos.map((c) => (
+      <button type="button" className="tc-revisar__cab" aria-expanded={abierta} onClick={() => setAbierta((a) => !a)}>
+        <b className="tc-revisar__titulo">{datos.length === 1 ? '1 comprobante por revisar' : `${datos.length} comprobantes por revisar`}</b>
+        <span className="tc-revisar__plegar">
+          {abierta ? 'Minimizar' : 'Ver'}
+          <ChevronDown size={16} aria-hidden="true" style={{ transform: abierta ? 'rotate(180deg)' : undefined }} />
+        </span>
+      </button>
+      {abierta && datos.map((c) => (
         <article key={c.id} className="tc-revisar__item">
           {c.url && <a className="tc-revisar__foto" href={c.url} target="_blank" rel="noopener" aria-label={`Abrir el comprobante de ${c.cliente}`}>
             {/* eslint-disable-next-line @next/next/no-img-element */}

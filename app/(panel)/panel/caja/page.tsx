@@ -38,6 +38,7 @@ import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { Plus, Trash2, Wallet } from 'lucide-react';
 import CajaResumen from '@/components/panel/CajaResumen';
+import SelectorSede, { sedesDeCitas, useSedeElegida, useSedes } from '@/components/panel/SelectorSede';
 import QuienCita from '@/components/panel/QuienCita';
 import Topbar from '@/components/panel/Topbar';
 import { useSesion } from '@/components/panel/Sesion';
@@ -79,21 +80,44 @@ export default function Caja() {
   /** La cita con el formulario de «Registrar pago» abierto (una a la vez). */
   const [pagando, setPagando] = useState<string | null>(null);
 
+  // Con 2 sedes o más: «Todas · sede A · sede B», la misma elección que en la Agenda.
+  const sedes = useSedes(companyId);
+  const [sede, setSede] = useSedeElegida(companyId, sedes);
+
   const { datos, cargando, error, releer } = useCargar(async () => {
     if (!companyId) return null;
-    const [movimientos, citas, pedidos, gastos, leads] = await Promise.all([
+    const [todosMovimientos, todasCitas, pedidos, todosGastos, leads] = await Promise.all([
       getMovimientos(companyId, dia, dia),
       getCitasDelPeriodo(companyId, dia, dia),
       getPedidos(companyId, 500),
       getGastos(companyId, dia),
       getLeads(companyId, 500),
     ]);
-    const pagos = await getPagosCaja(companyId, dia, movimientos);
-    return { dia, movimientos, citas, pedidos, gastos, leads, pagos };
-  }, [companyId, dia]);
+    const pagos = await getPagosCaja(companyId, dia, todosMovimientos);
+    if (!sede) return { dia, sede, movimientos: todosMovimientos, citas: todasCitas, pedidos, gastos: todosGastos, leads, pagos };
+
+    // Una sede: solo el dinero de SUS citas (por la sede de cada cita, también la de un adelanto
+    // pagado hoy para otro día). Pedidos y gastos no tienen sede: se ven en «Todas».
+    const sedeDe = await sedesDeCitas([
+      ...todosMovimientos.filter((m) => m.fuente === 'appointment').map((m) => m.movimiento_id),
+      ...pagos.pagosDelDia.map((p) => p.appointment_id ?? ''),
+    ]);
+    for (const c of todasCitas) sedeDe.set(c.id, c.sede ?? '');
+    const suya = (id: string | null | undefined) => !!id && sedeDe.get(id) === sede;
+    return {
+      dia,
+      sede,
+      movimientos: todosMovimientos.filter((m) => m.fuente === 'appointment' && suya(m.movimiento_id)),
+      citas: todasCitas.filter((c) => (c.sede ?? '') === sede),
+      pedidos,
+      gastos: [] as typeof todosGastos,
+      leads,
+      pagos: { ...pagos, pagosDelDia: pagos.pagosDelDia.filter((p) => suya(p.appointment_id)) },
+    };
+  }, [companyId, dia, sede]);
 
   const calculo = useMemo(() => {
-    if (!datos || datos.dia !== dia) return null;
+    if (!datos || datos.dia !== dia || datos.sede !== sede) return null;
     const metodoCita = new Map(datos.citas.map((c) => [c.id, c.metodo_pago ?? '']));
     const metodoPedido = new Map(datos.pedidos.map((p) => [p.id, p.payment_method ?? '']));
     for (const [id, m] of datos.pagos.metodoCita) if (!metodoCita.has(id)) metodoCita.set(id, m);
@@ -178,7 +202,7 @@ export default function Caja() {
       gastado,
       neto: entro - gastado,
     };
-  }, [datos, dia]);
+  }, [datos, dia, sede]);
 
   const nombrePorLead = useMemo(
     () => new Map((datos?.leads ?? []).map((l) => [l.id, l.name || telefono(l.phone)])),
@@ -208,6 +232,8 @@ export default function Caja() {
     <main className="main main--caja">
       <div className="wrap">
         <Topbar titulo="Caja" sub="Lo que entró, con qué, y lo que salió" />
+
+        <SelectorSede sedes={sedes} valor={sede} alCambiar={setSede} />
 
         <CajaResumen dia={dia} hoy={hoy} alDia={setDia} calculo={calculo} />
 
@@ -268,12 +294,21 @@ export default function Caja() {
               </div>
             )}
 
-            {/* ── Gastos ── */}
-            <Gastos
-              dia={dia}
-              gastos={datos?.gastos ?? []}
-              alCambiar={releer}
-            />
+            {/* ── Gastos (son del negocio, sin sede: se apuntan y se ven en «Todas») ── */}
+            {sede ? (
+              <div className="card">
+                <div className="card-mini-head">
+                  <h3>Gastos</h3>
+                </div>
+                <p className="vacio">Los gastos son de todo el negocio: se ven y se apuntan en «Todas».</p>
+              </div>
+            ) : (
+              <Gastos
+                dia={dia}
+                gastos={datos?.gastos ?? []}
+                alCambiar={releer}
+              />
+            )}
 
             {/* ── Sin cobro apuntado ── */}
             <div className="card caja-ancha">

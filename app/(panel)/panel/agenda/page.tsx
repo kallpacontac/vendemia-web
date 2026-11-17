@@ -36,8 +36,7 @@ import Topbar from '@/components/panel/Topbar';
 import AgendaControles from '@/components/panel/AgendaControles';
 import AvisarCliente from '@/components/panel/AvisarCliente';
 import NuevaCita from '@/components/panel/NuevaCita';
-import { sedesDe } from '@/modules/tu-pagina/dominio/adelantoCitas';
-import { supabase as clienteSupabase } from '@/lib/supabase/client';
+import SelectorSede, { esDeSede, useSedeElegida, useSedes } from '@/components/panel/SelectorSede';
 import TableroCanchas from '@/components/panel/TableroCanchas';
 import ComprobantesPorRevisar from '@/components/panel/ComprobantesPorRevisar';
 import AdelantosPorReprogramar from '@/components/panel/AdelantosPorReprogramar';
@@ -56,7 +55,7 @@ import { cobroPorApuntar, etiquetaMetodo, type MetodoPago } from '@/lib/panel/me
 import { BotonCobrar } from '@/components/panel/BotonCobrar';
 import { fotoParaCobro, type FotoPago } from '@/lib/panel/fotoPago';
 import { RegistrarPago } from '@/components/panel/Saldos';
-import { diaMes, ESTADO_CITA, hora as horaDe, soles } from '@/lib/panel/format';
+import { diaMes, ESTADO_CITA, hora as horaDe, isoLocal, soles } from '@/lib/panel/format';
 import { estadoInscripcion, type EstadoInscripcion, type Saldo, type VentaLead } from '@/lib/panel/saldo';
 import { selloCita, type SelloCita } from '@/lib/panel/adelantos';
 import { quienDeCita, quienEnUnaLinea } from '@/lib/panel/ficha';
@@ -189,12 +188,10 @@ export default function Agenda() {
   const [aplicando, setAplicando] = useState(false);
   const [aviso, setAviso] = useState<Aviso | null>(null);
 
-  // Las sedes de Mi página (secciones.citas.sedes): con 2 o más, «Nueva cita» pide en cuál.
-  const { datos: sedes } = useCargar(async () => {
-    if (!companyId) return [];
-    const r = await clienteSupabase().from('tu_pagina').select('secciones').eq('company_id', companyId).maybeSingle();
-    return sedesDe((r.data as { secciones?: { citas?: unknown } } | null)?.secciones?.citas);
-  }, [companyId]);
+  // Las sedes de Mi página (secciones.citas.sedes): con 2 o más, «Nueva cita» pide en cuál y
+  // arriba sale «Todas · sede A · sede B» para ver una sola (SelectorSede, la misma elección que en Caja).
+  const sedes = useSedes(companyId);
+  const [fSede, setFSede] = useSedeElegida(companyId, sedes);
 
   const { datos, cargando, recargar } = useCargar(async () => {
     if (!companyId) return null;
@@ -219,7 +216,7 @@ export default function Agenda() {
   const semana = useMemo(() => {
     if (!datos?.empresa) return null;
     return construirSemana(offset, {
-      citas: datos.citas,
+      citas: fSede ? datos.citas.filter((c) => esDeSede(c, fSede)) : datos.citas,
       nombrePorLead: new Map(datos.leads.map((l) => [l.id, l.name || l.phone])),
       nombrePorTrabajador: new Map(datos.trabajadores.map((t) => [t.id, t.name])),
       bloqueos: datos.bloqueos,
@@ -234,7 +231,7 @@ export default function Agenda() {
       })),
       empleadoId: fEmpleado || undefined,
     });
-  }, [datos, offset, fEmpleado]);
+  }, [datos, offset, fEmpleado, fSede]);
 
   const esRecurrente = datos?.empresa?.business_mode === 'recurring_appointment';
   /** «cita» en una barbería, «clase» en una academia. Ver lib/panel/vocabulario. */
@@ -247,9 +244,16 @@ export default function Agenda() {
    * su pestaña usa la lista completa, o elegir a alguien vaciaría los grupos.
    */
   const citasVista = useMemo(() => {
-    const todas = datos?.citas ?? [];
+    const todas = (datos?.citas ?? []).filter((c) => esDeSede(c, fSede));
     return fEmpleado ? todas.filter((c) => c.employee_id === fEmpleado) : todas;
-  }, [datos, fEmpleado]);
+  }, [datos, fEmpleado, fSede]);
+
+  /** Las citas de hoy que siguen en pie, por sede: el número de cada botón de sede. */
+  const hoySede = useMemo(() => {
+    const hoy = isoLocal(new Date());
+    const vivas = (datos?.citas ?? []).filter((c) => c.slot_start?.startsWith(hoy) && c.status !== 'cancelled' && c.status !== 'no_show');
+    return (sede: string) => vivas.filter((c) => esDeSede(c, sede)).length;
+  }, [datos]);
 
   /**
    * Soltar una cita en otro hueco.
@@ -357,6 +361,10 @@ export default function Agenda() {
           hoy={() => { setOffset(0); setDiaSel((new Date().getDay() + 6) % 7); }}
         />
 
+        {!esRecurrente && (
+          <SelectorSede sedes={sedes} valor={fSede} alCambiar={setFSede} cuenta={hoySede} etiqueta="hoy" />
+        )}
+
         {creando && !esRecurrente && (
           <div id="agenda-nueva-cita"><NuevaCita
             key={altaInicial ? `${altaInicial.itemId}|${altaInicial.fecha}|${altaInicial.hora}` : 'nueva'}
@@ -366,7 +374,7 @@ export default function Agenda() {
             trabajadores={datos?.trabajadores ?? []}
             canchas={canchas}
             companyId={companyId}
-            sedes={sedes ?? []}
+            sedes={sedes}
             alCerrar={() => setCreando(false)}
             alCambiar={recargar}
           /></div>
@@ -376,7 +384,7 @@ export default function Agenda() {
         {!canchas && companyId && <ComprobantesPorRevisar companyId={companyId} recarga={datos?.citas} alCambiar={recargar} enDonde="en el local" />}
 
         {/* Quien no vino o canceló con adelanto pagado (sql/0027): su dinero sigue a su favor. */}
-        {!canchas && companyId && <AdelantosPorReprogramar companyId={companyId} sedes={sedes ?? []} recarga={datos?.citas} alCambiar={recargar} />}
+        {!canchas && companyId && <AdelantosPorReprogramar companyId={companyId} sedes={sedes} recarga={datos?.citas} alCambiar={recargar} />}
 
         {/* El mensaje para el cliente de lo que se acaba de mover arrastrando. */}
         {aviso && <AvisarCliente {...aviso} alCerrar={() => setAviso(null)} />}

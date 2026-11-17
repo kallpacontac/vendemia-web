@@ -19,6 +19,7 @@
 import { useMemo, useState } from 'react';
 import { CalendarCheck, Send, Target, Users, Wallet, ShoppingBag } from 'lucide-react';
 import Topbar from '@/components/panel/Topbar';
+import MetricasPorSede from '@/components/panel/MetricasPorSede';
 import { useSesion } from '@/components/panel/Sesion';
 import { useCargar } from '@/components/panel/useCargar';
 import { conversionDeHoy } from '@/lib/panel/conversion';
@@ -287,6 +288,9 @@ export default function Metricas() {
             y se caen de la serie.
           </div>
         )}
+
+        {/* Con 2 sedes o más: cada una lado a lado y el total (components/panel/MetricasPorSede.tsx). */}
+        {companyId && <MetricasPorSede companyId={companyId} {...rangoDe(preset.dias)} />}
 
         {/*
           El periodo comparado con el anterior. Un número sin línea base no es un
