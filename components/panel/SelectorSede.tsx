@@ -84,7 +84,7 @@ export default function SelectorSede({ sedes, valor, alCambiar, cuenta, etiqueta
       style={{ display: 'grid', gridTemplateColumns: `repeat(${opciones.length}, minmax(0, 1fr))`, width: '100%', maxWidth: 560, margin: '10px 0' }}>
       {opciones.map((s) => (
         <button key={s || 'todas'} type="button" role="tab" aria-selected={valor === s} className={valor === s ? 'active' : ''}
-          onClick={() => alCambiar(s)} style={{ display: 'grid', justifyItems: 'center', gap: 1, minWidth: 0, padding: '7px 8px', lineHeight: 1.2 }}>
+          onClick={() => alCambiar(s)} style={{ display: 'grid', justifyItems: 'center', gap: 1, minWidth: 0, padding: '7px 8px', lineHeight: 1.2, ...(valor === s ? { color: '#fff' } : {}) }}>
           <span style={{ maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {s ? s : <><MapPin size={12} aria-hidden="true" style={{ verticalAlign: '-1px', marginRight: 3 }} />Todas</>}
           </span>
