@@ -379,12 +379,12 @@ export default function Agenda() {
             companyId={companyId}
             sedes={sedes}
             citas={datos?.citas ?? []}
-            alCreada={({ id, sede: suSede, resumen, aviso: suAviso }) => {
+            alCreada={({ id, sede: suSede, resumen, pasada, aviso: suAviso }) => {
               // Que se VEA lo agendado: se cierra el formulario, se va a «Próximas» con su sede (o todas)
               // y la cita sale resaltada; el mensaje para el cliente, arriba.
               setCreando(false);
               if (fSede && suSede !== fSede) setFSede(suSede);
-              setTab('proximas');
+              setTab(pasada ? 'pasadas' : 'proximas');
               setRecien(id);
               if (suAviso) setAviso(suAviso);
               avisarAgenda(`Agendada: ${resumen}`, 'ok');

@@ -52,6 +52,8 @@ function minutosLima(): number {
 const hhmm = (min: number) => `${String(Math.floor(min / 60)).padStart(2, '0')}:${String(min % 60).padStart(2, '0')}`;
 /** «Ahora» para agendar: el próximo múltiplo de 5 minutos (la base no acepta una hora que ya pasó). */
 const ahoraAgendable = () => Math.floor(minutosLima() / 5) * 5 + 5;
+/** Ayer en Lima, 'YYYY-MM-DD'. */
+const ayerLima = () => new Date(Date.now() - 864e5).toLocaleDateString('en-CA', { timeZone: 'America/Lima' });
 const sumarMin = (slot: string, min: number) => {
   const m = /^(\d{4}-\d{2}-\d{2}) (\d{2}):(\d{2})$/.exec(slot);
   return m ? `${m[1]} ${hhmm(Number(m[2]) * 60 + Number(m[3]) + min)}` : slot;
@@ -108,7 +110,7 @@ export default function NuevaCita({
    * Con esto, al agendar el formulario se cierra y la Agenda enseña la cita creada (resaltada) y el
    * mensaje para el cliente. Pedido de Alvaro (17-nov): «no veo lo que agendé».
    */
-  alCreada?: (c: { id: string; sede: string; resumen: string; aviso: { titulo: string; mensaje: string; waLink: string; nota?: string } | null }) => void;
+  alCreada?: (c: { id: string; sede: string; resumen: string; pasada: boolean; aviso: { titulo: string; mensaje: string; waLink: string; nota?: string } | null }) => void;
 }) {
   const comando = useComando();
   const avisar = useAvisar();
@@ -223,6 +225,8 @@ export default function NuevaCita({
         id: (r as { id?: string }).id ?? '',
         sede: pideSede ? sede : '',
         resumen,
+        // Anotada con hora que ya pasó (0030): sale en «Pasadas», donde se marca «Vino».
+        pasada: `${fecha} ${hora}` <= `${hoy} ${hhmm(minutosLima())}`,
         aviso: sinTelefono ? null : {
           titulo: r.duplicada ? 'Ese cliente ya tenía esta cita' : `Agendada: ${resumen}`,
           mensaje: r.mensaje,
@@ -354,7 +358,8 @@ export default function NuevaCita({
           <input
             className="input"
             type="date"
-            min={hoyLima()}
+            // Hasta 24 h atrás (tu-pagina 0030): ayer se puede elegir; la base corta en 24 h exactas.
+            min={ayerLima()}
             value={fecha}
             onChange={(e) => setFecha(e.target.value)}
           />
