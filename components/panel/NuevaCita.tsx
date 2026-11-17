@@ -124,15 +124,14 @@ export default function NuevaCita({
       avisar('Falta el día o la hora.', 'error');
       return;
     }
-    if (!nuevo && !lead) {
-      avisar('Elige al cliente, o márcalo como nuevo.', 'error');
-      return;
-    }
-    if (nuevo && (soloDigitos(tel).length < 9 || !nombre.trim())) {
-      avisar(
-        'Para un cliente nuevo hacen falta teléfono y nombre: sin nombre, la agenda queda con un número suelto.',
-        'error',
-      );
+    // Nombre y teléfono son opcionales (tu-pagina 0029): el que entra por la puerta no siempre
+    // deja su celular. Sin elegir a nadie, lo escrito en el buscador sirve de nombre o de número.
+    const escrito = busqueda.trim();
+    const escritoEsTel = soloDigitos(escrito).length >= 9 && !/[a-záéíóúñ]/i.test(escrito);
+    const telEnviar = nuevo ? soloDigitos(tel) : escritoEsTel ? soloDigitos(escrito) : '';
+    const nombreEnviar = nuevo ? nombre.trim() : escritoEsTel ? '' : escrito;
+    if (!lead && telEnviar && telEnviar.length < 9) {
+      avisar('Ese teléfono no está completo: escribe los 9 dígitos o déjalo vacío.', 'error');
       return;
     }
 
@@ -145,7 +144,7 @@ export default function NuevaCita({
     const r = await comando<ResultadoCrearCita>(
       'crear_cita',
       {
-        ...(nuevo ? { telefono: soloDigitos(tel), nombre: nombre.trim() } : { lead_id: lead?.id }),
+        ...(lead && !nuevo ? { lead_id: lead.id } : { telefono: telEnviar, nombre: nombreEnviar }),
         slot_start: `${fecha} ${hora}`,
         catalog_item_id: itemId,
         ...(empId ? { employee_id: empId } : {}),
@@ -165,6 +164,17 @@ export default function NuevaCita({
       else if ((s.data as { sobre_aforo?: boolean } | null)?.sobre_aforo) avisar(`Ojo: ${sede} ya tenía todas sus sillas ocupadas a esa hora. La cita quedó igual.`, 'error');
     }
 
+    // Sin teléfono no hay a quién escribirle: basta con el aviso.
+    if ((r as { sin_telefono?: boolean }).sin_telefono && !r.fija_id) {
+      avisar(`Cita creada: ${r.service} · ${soles(r.precio)}${nombreEnviar ? ` · ${nombreEnviar}` : ''}.`, 'ok');
+      setBusqueda('');
+      setLead(null);
+      setTel('');
+      setNombre('');
+      setHora('');
+      return;
+    }
+
     const saltadas = r.saltadas ?? [];
     const ficha = `${r.service} · ${r.slot_minutes} min · ${soles(r.precio)}`
       + (r.fija_id ? ` · turno fijo de ${r.creadas?.length ?? 0} semanas` : '')
@@ -179,7 +189,7 @@ export default function NuevaCita({
       nota: r.duplicada
         ? `No se ha creado una segunda: esta es la que ya tenía. ${ficha}`
         : r.cliente_nuevo
-          ? `${ficha}. ${nombre.trim()} queda guardado como cliente nuevo.`
+          ? `${ficha}. ${nombreEnviar || 'El número'} queda guardado como cliente nuevo.`
           : ficha,
     });
 
@@ -205,19 +215,19 @@ export default function NuevaCita({
 
       <div className="form-nueva">
         <div className="full">
-          <label className="field-label">Cliente</label>
+          <label className="field-label">Cliente <span className="muted" style={{ fontWeight: 500 }}>· opcional</span></label>
 
           {nuevo ? (
             <div className="form-nueva">
               <input
                 className="input"
-                placeholder="Teléfono · 51987654321"
+                placeholder="Teléfono (opcional) · 987654321"
                 value={tel}
                 onChange={(e) => setTel(e.target.value)}
               />
               <input
                 className="input"
-                placeholder="Nombre y apellido"
+                placeholder="Nombre (opcional)"
                 value={nombre}
                 onChange={(e) => setNombre(e.target.value)}
               />
@@ -238,7 +248,7 @@ export default function NuevaCita({
               <div className="search" style={{ width: '100%' }}>
                 <Search size={16} />
                 <input
-                  placeholder="Buscar por nombre o teléfono…"
+                  placeholder="Buscar cliente, o escribe su nombre o número (opcional)"
                   value={busqueda}
                   onChange={(e) => setBusqueda(e.target.value)}
                 />
