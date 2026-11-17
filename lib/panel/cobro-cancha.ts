@@ -1,3 +1,4 @@
+import { hora12 } from '@/lib/panel/format';
 /**
  * Cobrar una reserva de cancha desde el panel: qué montos ofrecer con un toque y qué le pasará
  * a la reserva con ese pago. Lo comparten «Por revisar» (comprobante subido en la página) y
@@ -75,7 +76,7 @@ export function fechaCorta(slot: string): string {
   const m = /^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}:\d{2})/.exec(slot);
   if (!m) return slot;
   const d = new Date(Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3])));
-  return `${DIAS[d.getUTCDay()]} ${Number(m[3])} ${MESES[Number(m[2]) - 1]} · ${m[4]}`;
+  return `${DIAS[d.getUTCDay()]} ${Number(m[3])} ${MESES[Number(m[2]) - 1]} · ${hora12(m[4])}`;
 }
 
 export const NOMBRE_METODO: Record<string, string> = { yape: 'Yape', plin: 'Plin', cash: 'Efectivo', bank_transfer: 'Transferencia' };

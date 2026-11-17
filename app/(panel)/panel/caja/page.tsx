@@ -49,7 +49,7 @@ import { BotonCobrar } from '@/components/panel/BotonCobrar';
 import ComprobantesDelDia from '@/components/panel/ComprobantesDelDia';
 import { fotoParaCobro, type FotoPago } from '@/lib/panel/fotoPago';
 import { RegistrarPago, SaldosPendientes } from '@/components/panel/Saldos';
-import { diaMes, hora, isoLocal, soles, telefono } from '@/lib/panel/format';
+import { diaMes, hora, hora12, isoLocal, soles, telefono } from '@/lib/panel/format';
 import { cobradoSinConstancia, entradasDelDia, suma, type CitaCaja } from '@/lib/panel/dinero';
 import { esPuntual, selloCita, type SelloCita } from '@/lib/panel/adelantos';
 import { saldoDeVenta, type Saldo } from '@/lib/panel/saldo';
@@ -471,7 +471,7 @@ function Sello({ s }: { s: SelloCita }) {
 /** «22 oct 16:00» de un slot "2026-10-22 16:00". */
 function textoSlotCorto(slot: string): string {
   const d = new Date(`${slot.slice(0, 10)}T12:00:00`);
-  return Number.isNaN(d.getTime()) ? slot : `${diaMes(d)} ${slot.slice(11, 16)}`.trim();
+  return Number.isNaN(d.getTime()) ? slot : `${diaMes(d)} ${hora12(slot.slice(11, 16))}`.trim();
 }
 
 function Gastos({

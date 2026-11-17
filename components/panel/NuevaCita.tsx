@@ -25,13 +25,13 @@
  * precio (día o noche) lo pone Postgres; las semanas que no caben se saltan y
  * se dicen. Ver agenda_crear_cita en modules/tu-pagina/sql/0011.
  */
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { CalendarPlus, Check, Search, UserPlus, X } from 'lucide-react';
 import AvisarCliente from './AvisarCliente';
 import ComboPanel from './ComboPanel';
 import { useAvisar, useComando } from './Avisos';
 import { hoyLima } from '@/lib/panel/inscripciones';
-import { soles, telefono as comoTelefono } from '@/lib/panel/format';
+import { hora12, soles, telefono as comoTelefono } from '@/lib/panel/format';
 import { json } from '@/lib/supabase/parse';
 import type { ResultadoCrearCita } from '@/lib/supabase/commands';
 import type { FranjaRecurrente } from '@/lib/supabase/types';
@@ -90,6 +90,7 @@ export default function NuevaCita({
   companyId,
   sedes = [],
   citas = [],
+  sedeInicial = '',
   alCreada,
 }: {
   leads: Lead[];
@@ -100,6 +101,8 @@ export default function NuevaCita({
   companyId?: string | null;
   /** Las sedes de Mi página. Con 2 o más, hay que decir en cuál es la cita. */
   sedes?: Sede[];
+  /** La sede elegida arriba en la Agenda: el combo empieza en ella (y la sigue si se cambia). */
+  sedeInicial?: string;
   /** Las citas ya cargadas en la Agenda: para sugerir el próximo cupo libre de cada sede. */
   citas?: Cita[];
   /** Lo que ya se sabe al abrirla: la casilla libre que se tocó en el tablero. */
@@ -125,7 +128,9 @@ export default function NuevaCita({
   const [hora, setHora] = useState(inicial?.hora ?? (canchas ? '' : hhmm(ahoraAgendable())));
   const [itemId, setItemId] = useState(inicial?.itemId ?? '');
   const [empId, setEmpId] = useState('');
-  const [sede, setSede] = useState('');
+  const [sede, setSede] = useState(sedeInicial);
+  // Cambiar la sede del filtro de arriba con el formulario abierto también cambia esta.
+  useEffect(() => { if (sedeInicial) setSede(sedeInicial); }, [sedeInicial]);
   const pideSede = !canchas && sedes.length > 1;
   const [turnos, setTurnos] = useState(1);
   const [semanas, setSemanas] = useState(1);
@@ -220,7 +225,7 @@ export default function NuevaCita({
     const sinTelefono = Boolean((r as { sin_telefono?: boolean }).sin_telefono);
     if (alCreada && !canchas && !r.fija_id) {
       const quien = lead && !nuevo ? lead.name || comoTelefono(lead.phone) : nombreEnviar || (telEnviar ? comoTelefono(telEnviar) : 'Cliente');
-      const resumen = `${quien} · ${r.service} · ${hora}${pideSede && sede ? ` · ${sede.split(' · ')[0]}` : ''}`;
+      const resumen = `${quien} · ${r.service} · ${hora12(hora)}${pideSede && sede ? ` · ${sede.split(' · ')[0]}` : ''}`;
       alCreada({
         id: (r as { id?: string }).id ?? '',
         sede: pideSede ? sede : '',
@@ -377,13 +382,13 @@ export default function NuevaCita({
         {!canchas && (
           <div className="full" style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: -4 }}>
             <button type="button" className="btn btn-ghost btn-sm" onClick={() => { setFecha(hoy); setHora(hhmm(ahoraAgendable())); }}>
-              Ahora · {hhmm(ahoraAgendable())}
+              Ahora · {hora12(hhmm(ahoraAgendable()))}
             </button>
             {sugerencias.map((x) => (
               <button key={x.sede} type="button" className="btn btn-ghost btn-sm" disabled={!x.hora}
                 title={x.hora ? `Primer cupo libre hoy en ${x.sede}` : `${x.sede} no tiene cupo libre hoy`}
                 onClick={() => { if (!x.hora) return; setFecha(hoy); setHora(x.hora); setSede(x.sede); }}>
-                {x.sede.split(' · ')[0]} · {x.hora ? `libre ${x.hora}` : 'lleno hoy'}
+                {x.sede.split(' · ')[0]} · {x.hora ? `libre ${hora12(x.hora)}` : 'lleno hoy'}
               </button>
             ))}
           </div>

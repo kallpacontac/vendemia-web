@@ -55,7 +55,7 @@ import { cobroPorApuntar, etiquetaMetodo, type MetodoPago } from '@/lib/panel/me
 import { BotonCobrar } from '@/components/panel/BotonCobrar';
 import { fotoParaCobro, type FotoPago } from '@/lib/panel/fotoPago';
 import { RegistrarPago } from '@/components/panel/Saldos';
-import { diaMes, ESTADO_CITA, hora as horaDe, isoLocal, soles } from '@/lib/panel/format';
+import { diaMes, ESTADO_CITA, hora as horaDe, hora12, isoLocal, soles } from '@/lib/panel/format';
 import { estadoInscripcion, type EstadoInscripcion, type Saldo, type VentaLead } from '@/lib/panel/saldo';
 import { selloCita, type SelloCita } from '@/lib/panel/adelantos';
 import { quienDeCita, quienEnUnaLinea } from '@/lib/panel/ficha';
@@ -379,6 +379,7 @@ export default function Agenda() {
             companyId={companyId}
             sedes={sedes}
             citas={datos?.citas ?? []}
+            sedeInicial={fSede}
             alCreada={({ id, sede: suSede, resumen, pasada, aviso: suAviso }) => {
               // Que se VEA lo agendado: se cierra el formulario, se va a «Próximas» con su sede (o todas)
               // y la cita sale resaltada; el mensaje para el cliente, arriba.
@@ -566,7 +567,7 @@ export default function Agenda() {
                   <div className="cal-scroll">
                     {semana?.horas.map((hora, i) => (
                       <div className="dia-fila" key={hora}>
-                        <div className="hourlbl">{hora}</div>
+                        <div className="hourlbl">{hora12(hora)}</div>
                         <Celda hueco={dia.huecos[i]} vista={vista} dnd={dnd} />
                       </div>
                     ))}
@@ -612,7 +613,7 @@ export default function Agenda() {
 function FilaDeHoras({ hora, children }: { hora: string; children: React.ReactNode }) {
   return (
     <>
-      <div className="hourlbl">{hora}</div>
+      <div className="hourlbl">{hora12(hora)}</div>
       {children}
     </>
   );

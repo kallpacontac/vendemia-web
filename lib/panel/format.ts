@@ -81,8 +81,20 @@ const MESES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'o
 
 export const diaMes = (d: Date) => `${d.getDate()} ${MESES[d.getMonth()]}`;
 
+/**
+ * «18:30» → «6:30 pm». En formato de 12 horas, como se dice en Perú (Alvaro, 17-nov: «en lugar de 18
+ * horas, 6pm»). Lo que no sea HH:MM se devuelve igual. Solo para ENSEÑAR: lo que se guarda o se
+ * compara sigue en 24 h («2026-11-17 18:30»).
+ */
+export function hora12(hhmm: string): string {
+  const m = /^(\d{1,2}):(\d{2})/.exec(hhmm ?? '');
+  if (!m) return hhmm;
+  const h = Number(m[1]);
+  return `${h % 12 || 12}:${m[2]} ${h < 12 ? 'am' : 'pm'}`;
+}
+
 export const hora = (d: Date) =>
-  d.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', hour12: false });
+  hora12(`${d.getHours()}:${String(d.getMinutes()).padStart(2, '0')}`);
 
 /** "hace 5 min", "14:20", "12 ago" — lo justo para una lista de conversaciones. */
 export function cuando(d: Date | null): string {
