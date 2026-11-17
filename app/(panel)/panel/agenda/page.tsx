@@ -380,6 +380,7 @@ export default function Agenda() {
             sedes={sedes}
             citas={datos?.citas ?? []}
             sedeInicial={fSede}
+            horario={datos?.empresa?.horario}
             alCreada={({ id, sede: suSede, resumen, pasada, aviso: suAviso }) => {
               // Que se VEA lo agendado: se cierra el formulario, se va a «Próximas» con su sede (o todas)
               // y la cita sale resaltada; el mensaje para el cliente, arriba.

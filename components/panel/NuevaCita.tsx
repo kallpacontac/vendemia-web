@@ -34,7 +34,8 @@ import { hoyLima } from '@/lib/panel/inscripciones';
 import { hora12, soles, telefono as comoTelefono } from '@/lib/panel/format';
 import { json } from '@/lib/supabase/parse';
 import type { ResultadoCrearCita } from '@/lib/supabase/commands';
-import type { FranjaRecurrente } from '@/lib/supabase/types';
+import type { ClaveDia, FranjaRecurrente, Horario } from '@/lib/supabase/types';
+import { tramoDe } from '@/lib/panel/medianoche';
 import type { Cita, ItemCatalogo, Lead, Trabajador } from '@/lib/supabase/queries';
 import type { Sede } from '@/modules/tu-pagina/dominio/adelantoCitas';
 import { supabase } from '@/lib/supabase/client';
@@ -64,16 +65,38 @@ const sumarMin = (slot: string, min: number) => {
  * cuentan en todas, como en la base) contra sus sillas. Es una ayuda: la base vuelve a comprobar
  * horario y aforo al agendar, y si no cabe lo dice.
  */
-function proximoLibre(citas: Cita[], hoy: string, sede: string, sillas: number, minutos: number): string | null {
+function proximoLibre(citas: Cita[], hoy: string, sede: string, sillas: number, minutos: number, permitidas?: string[] | null): string | null {
   const vivas = citas.filter((c) => c.slot_start?.startsWith(hoy) && c.status !== 'cancelled' && c.status !== 'no_show'
     && (!c.sede || c.sede === sede));
   for (let t = ahoraAgendable(); t + minutos <= 23 * 60; t += 5) {
+    // Con horario guardado, solo dentro de él (las de cada 15 min que ofrece el desplegable).
+    if (permitidas && !permitidas.includes(hhmm(t))) continue;
     const ini = `${hoy} ${hhmm(t)}`;
     const fin = `${hoy} ${hhmm(t + minutos)}`;
     const ocupadas = vivas.filter((c) => c.slot_start < fin && (c.slot_end || sumarMin(c.slot_start, c.slot_minutes ?? 30)) > ini).length;
     if (ocupadas < sillas) return hhmm(t);
   }
   return null;
+}
+
+const CLAVES_DIA: ClaveDia[] = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+
+/**
+ * Las horas que se pueden elegir ese día: de la apertura hasta que el servicio quepa antes del cierre,
+ * cada 15 min (Alvaro, 17-nov: «filtra el reloj para que esté dentro de los horarios»). null = no hay
+ * horario guardado (se usa el reloj libre); [] = ese día está cerrado.
+ */
+function horasDelDia(horario: Horario | undefined, fecha: string, minutos: number): string[] | null {
+  if (!horario || !Object.keys(horario).length) return null;
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(fecha);
+  if (!m) return null;
+  const clave = CLAVES_DIA[new Date(Date.UTC(+m[1], +m[2] - 1, +m[3])).getUTCDay()];
+  const t = tramoDe(horario[clave]);
+  if (!t) return [];
+  const fin = Math.min(t.cierra, 1440) - Math.max(minutos, 5);
+  const out: string[] = [];
+  for (let x = Math.ceil(t.abre / 15) * 15; x <= fin; x += 15) out.push(hhmm(x));
+  return out;
 }
 
 /** «Repetir cada semana»: 1 = solo esta vez. */
@@ -91,6 +114,7 @@ export default function NuevaCita({
   sedes = [],
   citas = [],
   sedeInicial = '',
+  horario,
   alCreada,
 }: {
   leads: Lead[];
@@ -101,6 +125,8 @@ export default function NuevaCita({
   companyId?: string | null;
   /** Las sedes de Mi página. Con 2 o más, hay que decir en cuál es la cita. */
   sedes?: Sede[];
+  /** El horario del negocio: la hora se elige solo dentro de él. */
+  horario?: Horario;
   /** La sede elegida arriba en la Agenda: el combo empieza en ella (y la sigue si se cambia). */
   sedeInicial?: string;
   /** Las citas ya cargadas en la Agenda: para sugerir el próximo cupo libre de cada sede. */
@@ -157,12 +183,18 @@ export default function NuevaCita({
   /** Hoy: «Ahora» y el próximo cupo libre de cada sede con sillas conocidas. */
   const hoy = hoyLima();
   const minutosServicio = servicios.find((x) => x.id === itemId)?.duration_minutes || 30;
+  /** Las horas del día elegido dentro del horario; la que ya está puesta («Ahora», un cupo libre) se añade en su sitio. */
+  const horasPosibles = useMemo(() => {
+    const l = canchas ? null : horasDelDia(horario, fecha, minutosServicio);
+    if (!l) return null;
+    return hora && !l.includes(hora) ? [...l, hora].sort() : l;
+  }, [canchas, horario, fecha, minutosServicio, hora]);
   const sugerencias = useMemo(() => {
     if (canchas) return [];
     return sedes
       .filter((x) => (x.capacidad ?? 0) > 0)
-      .map((x) => ({ sede: x.nombre, hora: proximoLibre(citas, hoy, x.nombre, x.capacidad ?? 0, minutosServicio) }));
-  }, [canchas, sedes, citas, hoy, minutosServicio]);
+      .map((x) => ({ sede: x.nombre, hora: proximoLibre(citas, hoy, x.nombre, x.capacidad ?? 0, minutosServicio, horasDelDia(horario, hoy, minutosServicio)) }));
+  }, [canchas, sedes, citas, hoy, minutosServicio, horario]);
 
   const encontrados = useMemo(() => {
     const q = busqueda.trim().toLowerCase();
@@ -371,12 +403,20 @@ export default function NuevaCita({
         </div>
         <div>
           <label className="field-label">Hora</label>
-          <input
-            className="input"
-            type="time"
-            value={hora}
-            onChange={(e) => setHora(e.target.value)}
-          />
+          {horasPosibles ? (
+            <select className="select" value={hora} onChange={(e) => setHora(e.target.value)} disabled={!horasPosibles.length}>
+              {!horasPosibles.length && <option value="">Ese día está cerrado</option>}
+              {horasPosibles.length > 0 && !hora && <option value="">Elige la hora</option>}
+              {horasPosibles.map((h) => <option key={h} value={h}>{hora12(h)}</option>)}
+            </select>
+          ) : (
+            <input
+              className="input"
+              type="time"
+              value={hora}
+              onChange={(e) => setHora(e.target.value)}
+            />
+          )}
         </div>
 
         {!canchas && (
