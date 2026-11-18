@@ -15,8 +15,8 @@ import { useEffect, useState } from 'react';
 import { FileText, Loader2, MessageCircle, Printer, ReceiptText } from 'lucide-react';
 import { numeroNota, textoWhatsAppNota, type NotaVenta } from '../dominio/nota';
 import {
-  ajustesParaCobro, compartirArchivos, compartirImagen, emitirNota, enlaceNota, enlaceWhatsAppNota, imprimirNota,
-  precargarImagen, type Ajustes,
+  ajustesParaCobro, compartirArchivos, compartirImagen, emitirNota, enlaceNota, enlaceWhatsAppNota, imagenNota, imprimirNota,
+  type Ajustes,
 } from './api';
 import BoletaDelCobro, { type LineaCobro } from './BoletaDelCobro';
 import '../estilos/facturacion.css';
@@ -45,7 +45,7 @@ export default function ComprobanteDelCobro({
   useEffect(() => setConImagen(compartirArchivos()), []);
   // La imagen del ticket se baja en cuanto hay nota: al tocar WhatsApp ya está lista.
   useEffect(() => {
-    if (nota) void precargarImagen(`/nota/${nota.id}`, numeroNota(nota));
+    if (nota) void imagenNota(nota);
   }, [nota]);
 
   useEffect(() => {
@@ -88,7 +88,7 @@ export default function ComprobanteDelCobro({
   async function mandarImagen() {
     if (!nota) return;
     const texto = textoWhatsAppNota(nota, enlaceNota(nota));
-    const r = await compartirImagen(await precargarImagen(`/nota/${nota.id}`, numeroNota(nota)), texto);
+    const r = await compartirImagen(await imagenNota(nota), texto);
     // Sin poder compartir la imagen: el chat con el texto y el enlace.
     if (r === 'no') window.open(enlaceWhatsAppNota(nota, telefono), '_blank', 'noopener');
   }

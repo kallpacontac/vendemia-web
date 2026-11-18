@@ -87,6 +87,11 @@ export async function POST(req: Request) {
       // Con 2 o más sedes hay que decir en cuál (la página no deja seguir sin elegirla).
       const sedes = esc.sedes ?? [];
       if (sedes.length > 1 && !sedes.some((x) => x.nombre === c.sede)) return responder({ status: 'datos_invalidos' }, 400);
+      // Y de ESA sede (tu-pagina 0034): el que trabaja en otra no se reserva aquí.
+      const sedeDeLaCita = sedes.find((x) => x.nombre === c.sede);
+      if (profesional && sedeDeLaCita && !agendaDeSede(esc.agenda, sedeDeLaCita).equipo.some((e) => e.id === profesional)) {
+        return responder({ status: 'datos_invalidos' }, 400);
+      }
       // Lo ocupado en su Google Calendar, sin caché: es la última palabra antes de guardar.
       const google = await ocupadoDe(c.slug.toLowerCase(), esc.hoy, sumarDias(esc.hoy, DIAS_GOOGLE));
       if (google.length) esc.agenda = { ...esc.agenda, ocupados: [...esc.agenda.ocupados, ...google] };

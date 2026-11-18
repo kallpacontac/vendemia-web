@@ -898,6 +898,11 @@ function Reservar({ item, esc, slug, alTerminar, presentacion, esBarberia = fals
       horasLibres(agenda, f, item.duracion, profesional || null, esc.ahora).filter((h) => !tomadas.has(h.inicio)),
     [agenda, faltaSede, esc.ahora, item.duracion, profesional, tomadas],
   );
+  // Los barberos de la sede elegida (agendaDeSede filtra el equipo, tu-pagina 0034).
+  const equipoVisible = agenda.equipo;
+  useEffect(() => {
+    if (profesional && !equipoVisible.some((e) => e.id === profesional)) setProfesional('');
+  }, [equipoVisible, profesional]);
   const [dia, setDia] = useState('');
   const [hora, setHora] = useState('');
   const [paginaDias, setPaginaDias] = useState(0);
@@ -971,7 +976,7 @@ function Reservar({ item, esc, slug, alTerminar, presentacion, esBarberia = fals
     <div className="tp-agenda-widget__calendario">
       <span className="tp-agenda-widget__paso">{esc.pideProfesional ? `2 · ${esBarberia ? 'BARBERO' : 'PROFESIONAL'} Y DÍA` : '2 · DÍA'}</span>
       {eligeSede && <ElegirSede sedes={sedes} valor={sede} alElegir={(x) => { setSede(x); setFallo(''); }} />}
-      {esc.pideProfesional && <ElegirProfesional equipo={esc.agenda.equipo} valor={profesional} alElegir={setProfesional} esBarberia={esBarberia} />}
+      {esc.pideProfesional && <ElegirProfesional equipo={equipoVisible} valor={profesional} alElegir={setProfesional} esBarberia={esBarberia} />}
       {faltaSede && <p className="tp-falta-sede">Elige primero la sede: cada una tiene sus propios horarios.</p>}
       {!faltaSede && <><div className="tp-agenda-widget__cabecera"><h3>Elige un día</h3><div><button type="button" aria-label="Días anteriores" disabled={paginaDias === 0} onClick={() => moverDias(paginaDias - 1)}><ChevronLeft size={18} aria-hidden="true" /></button><button type="button" aria-label="Días siguientes" disabled={(paginaDias + 1) * 6 >= dias.length} onClick={() => moverDias(paginaDias + 1)}><ChevronRight size={18} aria-hidden="true" /></button></div></div>
       <div className="tp-agenda-widget__dias" role="group" aria-label="Días disponibles">{diasVisibles.map((f) => { const libres = horasDe(f).length; return <button key={f} type="button" disabled={!libres} aria-pressed={dia === f} onClick={() => { setDia(f); setHora(''); }}><small>{ETIQUETA_DIA(f, esc.hoy)}</small><b>{fechaCorta(f).split(' ').slice(1).join(' ')}</b></button>; })}</div>
@@ -997,7 +1002,7 @@ function Reservar({ item, esc, slug, alTerminar, presentacion, esBarberia = fals
   return (
     <Detalle item={item}>
       {eligeSede && <ElegirSede sedes={sedes} valor={sede} alElegir={(x) => { setSede(x); setFallo(''); }} />}
-      {esc.pideProfesional && <ElegirProfesional equipo={esc.agenda.equipo} valor={profesional} alElegir={setProfesional} esBarberia={esBarberia}
+      {esc.pideProfesional && <ElegirProfesional equipo={equipoVisible} valor={profesional} alElegir={setProfesional} esBarberia={esBarberia}
         paso={presentacion === 'inline' ? `02 / ${esBarberia ? 'BARBERO' : 'PROFESIONAL'}` : undefined} />}
       {faltaSede && <p className="tp-vacio tp-falta-sede">Elige primero la sede: cada una tiene sus propios horarios.</p>}
       {!faltaSede && <>

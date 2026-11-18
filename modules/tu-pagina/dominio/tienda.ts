@@ -55,7 +55,7 @@ export interface DatosCrudos {
   media: { catalog_id: string; url: string; tipo: 'image' | 'video'; principal: number | null }[];
   variantes: { id: string; catalog_id: string; etiqueta: string; atributos: string | null; stock: number | null }[];
   /** `foto`: desde la 0012. */
-  equipo: { id: string; nombre: string; horario: string | null; foto?: string | null }[];
+  equipo: { id: string; nombre: string; horario: string | null; foto?: string | null; sedes?: string[] | null }[];
   bloqueos: { employee_id: string; inicio: string; fin: string }[];
   citas: {
     slot_start: string;
@@ -302,7 +302,10 @@ export function armarEscaparate(c: DatosCrudos, como?: ComoSeOfrece | null): Esc
     agenda: {
       horario: json<Horario>(c.negocio.horario, {}),
       paso,
-      equipo: c.equipo.map((e) => ({ id: e.id, nombre: e.nombre, horario: json<Horario>(e.horario, {}), foto: e.foto ?? '' })),
+      equipo: c.equipo.map((e) => ({
+        id: e.id, nombre: e.nombre, horario: json<Horario>(e.horario, {}), foto: e.foto ?? '',
+        sedes: Array.isArray(e.sedes) ? e.sedes.filter((x) => typeof x === 'string' && x) : [],
+      })),
       bloqueos: c.bloqueos.map((b) => ({ empleado: b.employee_id, inicio: b.inicio, fin: b.fin })),
       ocupados,
     },

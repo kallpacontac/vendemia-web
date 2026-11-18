@@ -8,7 +8,8 @@ import QRCode from 'qrcode';
 import { supabase } from '@/lib/supabase/client';
 import { comprobanteDe } from '../dominio/fila';
 import { textoQr, ticketHtml } from '../dominio/impreso';
-import { notaDe, notaHtml, textoWhatsAppNota, type NotaVenta } from '../dominio/nota';
+import { notaDe, notaHtml, numeroNota, textoWhatsAppNota, type NotaVenta } from '../dominio/nota';
+import { ticketAImagen } from './ticketImagen';
 import type { ComprobanteGuardado, IdProveedor, LineaEntrada, Cliente, TipoComprobante } from '../dominio/tipos';
 
 export type AlCobrar = 'no' | 'preguntar' | 'automatico';
@@ -250,26 +251,39 @@ export function imprimirNota(n: NotaVenta) {
   setTimeout(() => w.print(), 300);
 }
 
-/* ── La imagen del ticket por WhatsApp (18-nov, The 24/7: «sigue mandando solo texto») ──────
+/* ── El ticket como imagen por WhatsApp (18-nov, The 24/7: «sigue mandando solo texto»; «debe
+ * ser el mismo ticket de la NV o la boleta») ──────────────────────────────────────────────────
  * wa.me solo lleva texto. Para mandar la IMAGEN hay que compartir el archivo con la hoja de
- * compartir del sistema (Android: WhatsApp → el chat), con el texto de pie. La imagen es la de
- * opengraph-image (la misma que WhatsApp usaría de vista previa) y se baja ANTES del toque:
- * compartir tiene que ir pegado al clic. */
+ * compartir del sistema (Android: WhatsApp → el chat), con el texto de pie. La imagen es el
+ * ticket impreso tal cual (ticketImagen.ts), hecha ANTES del toque. */
 
-const imagenes = new Map<string, Promise<File | null>>();
+const tickets = new Map<string, Promise<File | null>>();
 
-/** Baja (una vez) la imagen del ticket de /nota/<id> o /comprobante/<id>. */
-export function precargarImagen(ruta: string, archivo: string): Promise<File | null> {
-  let p = imagenes.get(ruta);
+/**
+ * La imagen del TICKET IMPRESO (ui/ticketImagen.ts), hecha una vez y guardada: se prepara al
+ * salir la nota o la boleta, para que al tocar «WhatsApp» ya esté lista (compartir va pegado al clic).
+ */
+export function precargarTicket(clave: string, crear: () => Promise<{ html: string; ancho: number }>, nombre: string): Promise<File | null> {
+  let p = tickets.get(clave);
   if (!p) {
-    p = fetch(`${ruta}/opengraph-image`)
-      .then((r) => (r.ok ? r.blob() : null))
-      .then((b) => (b ? new File([b], `${archivo}.png`, { type: 'image/png' }) : null))
+    p = crear()
+      .then(({ html, ancho }) => ticketAImagen(html, ancho, nombre))
       .catch(() => null);
-    imagenes.set(ruta, p);
+    tickets.set(clave, p);
   }
   return p;
 }
+
+/** La nota de venta como imagen: el mismo ticket que se imprime. */
+export const imagenNota = (n: NotaVenta) =>
+  precargarTicket(`nota:${n.id}`, async () => ({ html: notaHtml(n), ancho: n.negocio.ticket_ancho }), `Nota ${numeroNota(n)}`);
+
+/** La boleta como imagen: el mismo ticket que se imprime, con su QR. */
+export const imagenBoleta = (c: ComprobanteGuardado, ancho: 58 | 80) =>
+  precargarTicket(`boleta:${c.id}`, async () => {
+    const qrDataUrl = c.hash ? await QRCode.toDataURL(textoQr(c), { margin: 0, width: 240, errorCorrectionLevel: 'M' }) : '';
+    return { html: ticketHtml(c, { ancho, qrDataUrl }), ancho };
+  }, `${c.tipo === 'factura' ? 'Factura' : 'Boleta'} ${c.serie}-${c.numero}`);
 
 /** ¿Este navegador comparte archivos? (Android sí; la computadora casi nunca.) */
 export function compartirArchivos(): boolean {

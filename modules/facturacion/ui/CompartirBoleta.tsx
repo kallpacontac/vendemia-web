@@ -9,7 +9,7 @@
 import { useEffect, useState } from 'react';
 import { Check, Link2, MessageCircle, Printer, Share2 } from 'lucide-react';
 import type { ComprobanteGuardado } from '../dominio/tipos';
-import { compartible, compartirArchivos, compartirImagen, enlaceComprobante, enlaceWhatsApp, imprimir, precargarImagen, textoWhatsApp } from './api';
+import { compartible, compartirArchivos, compartirImagen, enlaceComprobante, enlaceWhatsApp, imagenBoleta, imprimir, textoWhatsApp } from './api';
 
 export default function CompartirBoleta({
   c,
@@ -29,14 +29,12 @@ export default function CompartirBoleta({
   const [puedeCompartir, setPuedeCompartir] = useState(false);
   const [copiado, setCopiado] = useState(false);
   useEffect(() => setPuedeCompartir(typeof navigator !== 'undefined' && typeof navigator.share === 'function'), []);
-  // Con imagen (Android): la del ticket, bajada antes del toque (api.ts, precargarImagen).
+  // Con imagen (Android): el ticket impreso, hecho antes del toque (api.ts, imagenBoleta).
   const [conImagen, setConImagen] = useState(false);
   useEffect(() => setConImagen(compartirArchivos()), []);
-  const ruta = `/comprobante/${c.id}`;
-  const archivo = `${c.serie}-${c.numero}`;
   useEffect(() => {
-    if (conImagen && compartible(c)) void precargarImagen(ruta, archivo);
-  }, [conImagen, c, ruta, archivo]);
+    if (conImagen && compartible(c)) void imagenBoleta(c, ancho);
+  }, [conImagen, c, ancho]);
 
   if (!compartible(c)) return null;
   const nombre = `${c.tipo === 'factura' ? 'Factura' : 'Boleta'} ${c.serie}-${c.numero}`;
@@ -51,7 +49,7 @@ export default function CompartirBoleta({
   const compartir = async () => {
     // Primero con la IMAGEN del ticket; si no se puede, el texto con el enlace.
     if (conImagen) {
-      const r = await compartirImagen(await precargarImagen(ruta, archivo), textoWhatsApp(c));
+      const r = await compartirImagen(await imagenBoleta(c, ancho), textoWhatsApp(c));
       if (r !== 'no') return;
     }
     try {

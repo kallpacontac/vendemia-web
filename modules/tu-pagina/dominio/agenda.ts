@@ -49,7 +49,8 @@ export interface DatosAgenda {
   horario: Horario;
   /** El paso de la rejilla del negocio (companies.slot_minutes). */
   paso: number;
-  equipo: { id: string; nombre: string; horario: Horario; foto?: string }[];
+  /** `sedes`: dónde trabaja (tu-pagina 0034). Vacío o sin el dato = en todas. */
+  equipo: { id: string; nombre: string; horario: Horario; foto?: string; sedes?: string[] }[];
   bloqueos: { empleado: string; inicio: string; fin: string }[];
   ocupados: Ocupado[];
 }
@@ -65,7 +66,10 @@ export function agendaDeSede(d: DatosAgenda, sede: { nombre: string; capacidad?:
   const horario = sede.capacidad
     ? Object.fromEntries(Object.entries(d.horario).map(([k, v]) => [k, v ? { ...v, capacity: sede.capacidad } : v])) as Horario
     : d.horario;
-  return { ...d, horario, ocupados: d.ocupados.filter((o) => !o.sede || o.sede === sede.nombre) };
+  // Solo el equipo de ESTA sede (The 24/7, 18-nov): el que tiene otra sede marcada no sale aquí ni
+  // cuenta para «Cualquiera». Sin sedes marcadas, trabaja en todas.
+  const equipo = d.equipo.filter((e) => !e.sedes?.length || e.sedes.includes(sede.nombre));
+  return { ...d, horario, equipo, ocupados: d.ocupados.filter((o) => !o.sede || o.sede === sede.nombre) };
 }
 
 export const aMinutos = (hhmm: string): number => {
