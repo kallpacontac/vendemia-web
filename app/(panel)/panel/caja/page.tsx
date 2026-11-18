@@ -75,7 +75,8 @@ import {
   type Cita,
 } from '@/lib/supabase/queries';
 import type { ResultadoMarcarPagado } from '@/lib/supabase/commands';
-import BoletaDelCobro, { type LineaCobro } from '@/modules/facturacion/ui/BoletaDelCobro';
+import type { LineaCobro } from '@/modules/facturacion/ui/BoletaDelCobro';
+import ComprobanteDelCobro from '@/modules/facturacion/ui/ComprobanteDelCobro';
 import { supabase } from '@/lib/supabase/client';
 import { demoActivo } from '@/lib/panel/demo';
 
@@ -137,7 +138,7 @@ function Caja() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cierre]);
   /** El último cobro de «Listos para cobrar», para su boleta (modules/facturacion/ui/BoletaDelCobro). */
-  const [cobrada, setCobrada] = useState<{ id: string; texto: string; lineas: LineaCobro[]; tel: string } | null>(null);
+  const [cobrada, setCobrada] = useState<{ id: string; texto: string; lineas: LineaCobro[]; tel: string; cliente: string; atendio: string } | null>(null);
 
   // Con 2 sedes o más: «Todas · sede A · sede B», la misma elección que en la Agenda.
   const sedes = useSedes(companyId);
@@ -316,7 +317,8 @@ function Caja() {
       );
     setEnVuelo(null);
     // El celular, solo de ESTE cliente y solo al cobrarlo: para su boleta por WhatsApp y su sello.
-    const tel = r && c.lead_id ? ((await clientesDe(companyId ?? '', [c.lead_id]))[0]?.phone ?? '') : '';
+    const cli = r && c.lead_id ? (await clientesDe(companyId ?? '', [c.lead_id]))[0] : undefined;
+    const tel = cli?.phone ?? '';
     if (r && importe > 0) {
       // Una línea: el servicio por lo cobrado (con lo que se le sumó). Con el botón se puede desglosar.
       const servicio = c.service || 'Servicio';
@@ -325,6 +327,8 @@ function Caja() {
         texto: `${soles(importe)} · ${servicio}`,
         lineas: [{ descripcion: servicio, cantidad: 1, precio: importe }],
         tel: tel.replace(/\D/g, '').slice(-9),
+        cliente: cli?.name ?? '',
+        atendio: c.employee_id ? (nombrePorBarbero.get(c.employee_id) ?? '') : '',
       });
     }
     // La tarjeta de fidelidad, sola: si su celular tiene tarjeta, su sello (una vez por cita).
@@ -383,9 +387,10 @@ function Caja() {
         )}
 
         {!cierre && cobrada && companyId && (
-          <section className="card caja-boleta" aria-label="Boleta del último cobro">
+          <section className="card caja-boleta" aria-label="Comprobante del último cobro">
             <span className="muted">Último cobro: <b>{cobrada.texto}</b></span>
-            <BoletaDelCobro companyId={companyId} refCobro={{ tipo: 'cita', id: cobrada.id }} lineas={cobrada.lineas} telefono={cobrada.tel} />
+            <ComprobanteDelCobro companyId={companyId} refCobro={{ tipo: 'cita', id: cobrada.id }} lineas={cobrada.lineas} telefono={cobrada.tel}
+              cliente={cobrada.cliente} atendio={cobrada.atendio} />
           </section>
         )}
 

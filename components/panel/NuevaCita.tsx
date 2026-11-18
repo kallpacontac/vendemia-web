@@ -30,6 +30,7 @@ import { guiarA } from '@/lib/panel/guiar';
 import { ElegirFecha, ElegirHora, fechaEnPalabras } from './FechaHora';
 import { CalendarPlus, Check, Search, UserPlus, X } from 'lucide-react';
 import AvisarCliente from './AvisarCliente';
+import ElegirCumple, { guardarCumple } from './ElegirCumple';
 import { useAvisar, useComando } from './Avisos';
 import { hoyLima } from '@/lib/panel/inscripciones';
 import { hora12, soles, telefono as comoTelefono } from '@/lib/panel/format';
@@ -146,6 +147,8 @@ export default function NuevaCita({
   const [lead, setLead] = useState<Lead | null>(null);
   const [tel, setTel] = useState('');
   const [nombre, setNombre] = useState('');
+  /** El cumpleaños del cliente nuevo ('MM-DD' o ''): datos 0017. */
+  const [cumple, setCumple] = useState('');
   const [fecha, setFecha] = useState(inicial?.fecha ?? hoyLima());
   // Por defecto, AHORA: casi siempre es el que acaba de entrar por la puerta.
   const [hora, setHora] = useState(inicial?.hora ?? (canchas ? '' : hhmm(ahoraAgendable())));
@@ -257,6 +260,9 @@ export default function NuevaCita({
       alCambiar();
     }
 
+    // Cliente nuevo con cumpleaños: a su ficha (datos 0017). No bloquea la cita.
+    if (nuevo && cumple && companyId && tel) void guardarCumple(companyId, tel, cumple);
+
     const sinTelefono = Boolean((r as { sin_telefono?: boolean }).sin_telefono);
     if (alCreada && !canchas && !r.fija_id) {
       const quien = lead && !nuevo ? lead.name || comoTelefono(lead.phone) : nombreEnviar || (telEnviar ? comoTelefono(telEnviar) : 'Cliente');
@@ -284,6 +290,7 @@ export default function NuevaCita({
       setLead(null);
       setTel('');
       setNombre('');
+      setCumple('');
       setHora(hhmm(ahoraAgendable()));
       return;
     }
@@ -310,6 +317,7 @@ export default function NuevaCita({
     setLead(null);
     setTel('');
     setNombre('');
+    setCumple('');
     setHora(canchas ? '' : hhmm(ahoraAgendable()));
   }
 
@@ -461,6 +469,7 @@ export default function NuevaCita({
               <div className="nc-dos">
                 <input className="input" inputMode="tel" placeholder="Celular · 987654321" value={tel} onChange={(e) => setTel(e.target.value)} aria-label="Celular" />
                 <input className="input" placeholder="Nombre" value={nombre} onChange={(e) => setNombre(e.target.value)} aria-label="Nombre" />
+                <ElegirCumple valor={cumple} alCambiar={setCumple} />
                 <button type="button" className="nc-link" onClick={() => setNuevo(false)}>Buscar en mis clientes</button>
               </div>
             ) : lead ? (

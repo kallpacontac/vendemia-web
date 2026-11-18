@@ -15,11 +15,11 @@ import { CODIGO_COMPROBANTE, CODIGO_DOC_CLIENTE, LEYENDAS, NOMBRE_COMPROBANTE, N
 import { montoEnLetras } from './letras';
 import type { ComprobanteGuardado } from './tipos';
 
-const esc = (s: unknown) =>
+export const esc = (s: unknown) =>
   String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
 
-const dinero = (n: number) => n.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-const cantidad = (n: number) => (Number.isInteger(n) ? String(n) : n.toLocaleString('es-PE', { maximumFractionDigits: 3 }));
+export const dinero = (n: number) => n.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+export const cantidad = (n: number) => (Number.isInteger(n) ? String(n) : n.toLocaleString('es-PE', { maximumFractionDigits: 3 }));
 const fechaPe = (iso: string) => {
   const [a, m, d] = iso.split('-');
   return a && m && d ? `${d}/${m}/${a}` : iso;

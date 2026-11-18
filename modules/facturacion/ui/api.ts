@@ -8,6 +8,7 @@ import QRCode from 'qrcode';
 import { supabase } from '@/lib/supabase/client';
 import { comprobanteDe } from '../dominio/fila';
 import { textoQr, ticketHtml } from '../dominio/impreso';
+import { notaDe, notaHtml, textoWhatsAppNota, type NotaVenta } from '../dominio/nota';
 import type { ComprobanteGuardado, IdProveedor, LineaEntrada, Cliente, TipoComprobante } from '../dominio/tipos';
 
 export type AlCobrar = 'no' | 'preguntar' | 'automatico';
@@ -180,15 +181,17 @@ export async function imprimir(c: ComprobanteGuardado, ancho: 58 | 80) {
   setTimeout(() => w.print(), 350);
 }
 
-/** Texto para mandar por WhatsApp. */
+/**
+ * Texto para mandar por WhatsApp: el saludo y el enlace, que WhatsApp muestra como la imagen
+ * del ticket (app/comprobante/[id]/opengraph-image.tsx).
+ */
 export function textoWhatsApp(c: ComprobanteGuardado): string {
-  const nombre = c.tipo === 'factura' ? 'Factura electrónica' : 'Boleta electrónica';
+  const nombre = c.tipo === 'factura' ? 'factura electrónica' : 'boleta electrónica';
   const lineas = [
-    `${nombre} ${c.serie}-${c.numero}`,
-    `${c.emisor.nombreComercial || c.emisor.razonSocial} · RUC ${c.emisor.ruc}`,
-    `Total: S/ ${c.totales.total.toFixed(2)}`,
+    `¡Gracias por tu visita a ${c.emisor.nombreComercial || c.emisor.razonSocial}! ✂️`,
+    `Te dejamos tu ${nombre} ${c.serie}-${c.numero} por S/ ${c.totales.total.toFixed(2)}:`,
   ];
-  if (compartible(c)) lineas.push(`Mírala aquí: ${enlaceComprobante(c)}`);
+  if (compartible(c)) lineas.push(enlaceComprobante(c));
   else if (c.pdfUrl) lineas.push(c.pdfUrl);
   return lineas.join('\n');
 }
@@ -201,3 +204,48 @@ export const nuevaClave = () =>
   typeof crypto !== 'undefined' && 'randomUUID' in crypto
     ? crypto.randomUUID()
     : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 12)}`;
+
+/* ── Nota de venta (sql/0004) ───────────────────────────────────────────── */
+
+/** La nota de este cobro: la apunta (o devuelve la que ya tiene). */
+export async function emitirNota(
+  companyId: string,
+  d: { ref: { tipo: string; id: string }; lineas: { descripcion: string; cantidad: number; precio: number }[]; cliente?: string; telefono?: string; atendio?: string },
+): Promise<NotaVenta> {
+  const { data, error } = await supabase().rpc('nota_emitir', {
+    p_company: companyId,
+    p_datos: { ref_tipo: d.ref.tipo, ref_id: d.ref.id, lineas: d.lineas, cliente: d.cliente ?? '', telefono: d.telefono ?? '', atendio: d.atendio ?? '' },
+  });
+  if (error) {
+    throw new Error(/nota_emitir/.test(error.message) && /function|find/i.test(error.message)
+      ? 'Falta instalar la nota de venta (modules/facturacion/sql/0004_nota_de_venta.sql).'
+      : error.message);
+  }
+  return notaDe(data as Record<string, unknown>);
+}
+
+export async function leerNotaPublica(id: string): Promise<NotaVenta | null> {
+  const { data, error } = await supabase().rpc('nota_publica', { p_id: id });
+  return error || !data ? null : notaDe(data as Record<string, unknown>);
+}
+
+/** El enlace público de la nota (app/nota/[id]). */
+export const enlaceNota = (n: { id: string }) =>
+  `${typeof window !== 'undefined' ? window.location.origin : 'https://vendemias.com'}/nota/${n.id}`;
+
+/** wa.me al celular del cliente (9 dígitos → +51) con el saludo y el enlace de la nota. */
+export function enlaceWhatsAppNota(n: NotaVenta, telefono?: string): string {
+  const d = (telefono || n.telefono || '').replace(/\D/g, '');
+  const numero = d.length === 9 ? `51${d}` : d.length >= 11 ? d : '';
+  return `https://wa.me/${numero}?text=${encodeURIComponent(textoWhatsAppNota(n, enlaceNota(n)))}`;
+}
+
+export function imprimirNota(n: NotaVenta) {
+  const w = window.open('', '_blank', 'width=420,height=720');
+  if (!w) throw new Error('El navegador bloqueó la ventana del ticket. Permite las ventanas emergentes de Vendemia.');
+  w.document.open();
+  w.document.write(notaHtml(n));
+  w.document.close();
+  w.focus();
+  setTimeout(() => w.print(), 300);
+}

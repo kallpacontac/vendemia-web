@@ -37,7 +37,9 @@ import { supabase } from '@/lib/supabase/client';
 import { sumarSelloDeCita, type SelloResultado } from '@/components/panel/selloDeCita';
 import type { ItemCatalogo, Trabajador } from '@/lib/supabase/queries';
 import type { Sede } from '@/modules/tu-pagina/dominio/adelantoCitas';
-import BoletaDelCobro, { type LineaCobro } from '@/modules/facturacion/ui/BoletaDelCobro';
+import type { LineaCobro } from '@/modules/facturacion/ui/BoletaDelCobro';
+import ComprobanteDelCobro from '@/modules/facturacion/ui/ComprobanteDelCobro';
+import ElegirCumple, { guardarCumple } from '@/components/panel/ElegirCumple';
 
 const soloDigitos = (s: string) => s.replace(/\D/g, '');
 const claveSede = (c: string) => `vm-ticket-sede:${c}`;
@@ -83,6 +85,8 @@ export default function CobrarTicket({
     }
   }, [companyId, sedeInicial, pideSede, sedes]);
   const [conCliente, setConCliente] = useState(false);
+  /** El cumpleaños del cliente nuevo ('MM-DD' o ''): datos 0017. */
+  const [cumple, setCumple] = useState('');
   /**
    * El cliente se BUSCA (18-nov: «el nombre es para el buscador»): por nombre o celular, y solo
    * se consulta mientras se escribe. Elegido, va su celular (sello y boleta por WhatsApp); si no
@@ -131,7 +135,7 @@ export default function CobrarTicket({
   const [nombre, setNombre] = useState('');
   const [enviando, setEnviando] = useState(false);
   /** Lo último cobrado y lo que pasó con su tarjeta de fidelidad. */
-  const [hecho, setHecho] = useState<{ texto: string; tel: string; sello: SelloResultado; id?: string; lineas?: LineaCobro[] } | null>(null);
+  const [hecho, setHecho] = useState<{ texto: string; tel: string; sello: SelloResultado; id?: string; lineas?: LineaCobro[]; cliente?: string; atendio?: string } | null>(null);
 
   const total = items.reduce((t, id) => t + Number(porId.get(id)?.price ?? 0), 0);
   const cuenta = (id: string) => items.filter((x) => x === id).length;
@@ -155,6 +159,7 @@ export default function CobrarTicket({
     setConCliente(false);
     setBusca('');
     setModoCliente('buscar');
+    setCumple('');
   };
   const telLimpio = soloDigitos(tel);
 
@@ -235,11 +240,15 @@ export default function CobrarTicket({
       avisar(`Cobrado con ${etiquetaMetodo(metodo).toLowerCase()}: ${texto}`, 'ok');
     }
     // La tarjeta de fidelidad, sola: si el celular tiene tarjeta, su sello (una vez por ticket).
+    // Cliente nuevo con cumpleaños: a su ficha (datos 0017), ya creada por caja_ticket.
+    if (modoCliente === 'nuevo' && cumple && telLimpio.length >= 9) void guardarCumple(companyId, telLimpio, cumple);
     const sello = pagado === undefined ? null : await sumarSelloDeCita(companyId, telLimpio, r.id, Number(r.total));
     if (sello) avisar(sello.texto, sello.tono);
     setHecho({
       texto,
       tel: telLimpio.length >= 9 ? telLimpio : '',
+      cliente: nombre.trim(),
+      atendio: r.barbero ?? '',
       sello,
       // Lo cobrado, para su boleta. Si el cobro no entró, sin boleta: primero se cobra.
       ...(pagado === undefined ? {} : {
@@ -282,7 +291,8 @@ export default function CobrarTicket({
           )}
           {/* La boleta del cobro: sola o con su botón, según Ajustes › Boletas (modules/facturacion). */}
           {hecho.id && hecho.lineas && (
-            <BoletaDelCobro companyId={companyId} refCobro={{ tipo: 'cita', id: hecho.id }} lineas={hecho.lineas} telefono={hecho.tel} />
+            <ComprobanteDelCobro companyId={companyId} refCobro={{ tipo: 'cita', id: hecho.id }} lineas={hecho.lineas} telefono={hecho.tel}
+              cliente={hecho.cliente} atendio={hecho.atendio} />
           )}
         </div>
       )}
@@ -379,6 +389,7 @@ export default function CobrarTicket({
                     <input className="input" placeholder="Nombre" value={nombre} onChange={(e) => setNombre(e.target.value)}
                       aria-label="Nombre del cliente" autoComplete="off" />
                   </div>
+                  <ElegirCumple valor={cumple} alCambiar={setCumple} />
                   <button type="button" className="nc-link" onClick={() => { setTel(''); setNombre(''); setModoCliente('buscar'); }}>
                     <Search size={14} /> Buscar en mis clientes
                   </button>

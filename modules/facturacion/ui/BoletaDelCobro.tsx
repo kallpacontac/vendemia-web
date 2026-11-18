@@ -35,6 +35,7 @@ export default function BoletaDelCobro({
   lineas,
   telefono,
   servicios = true,
+  abrir = false,
 }: {
   companyId: string;
   /** De dónde sale: { tipo: 'cita', id }. Es también la clave de la boleta. */
@@ -43,12 +44,14 @@ export default function BoletaDelCobro({
   telefono?: string;
   /** Negocio de servicios (citas): unidad ZZ. Una tienda: NIU. */
   servicios?: boolean;
+  /** Ya se eligió «Boleta electrónica» (ComprobanteDelCobro): el formulario se abre solo. */
+  abrir?: boolean;
 }) {
   const [ajustes, setAjustes] = useState<Ajustes | null>(null);
   const [hecha, setHecha] = useState<ComprobanteGuardado | null>(null);
   const [emitiendo, setEmitiendo] = useState(false);
   const [error, setError] = useState('');
-  const [abierta, setAbierta] = useState(false);
+  const [abierta, setAbierta] = useState(abrir);
   const intentada = useRef('');
 
   const total = lineas.reduce((t, l) => t + l.cantidad * l.precio, 0);

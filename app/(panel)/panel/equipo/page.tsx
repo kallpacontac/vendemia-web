@@ -46,10 +46,12 @@ import {
   UserCog,
   UserX,
   Wallet,
+  IdCard,
 } from 'lucide-react';
 import Topbar from '@/components/panel/Topbar';
 import AvisarCliente from '@/components/panel/AvisarCliente';
 import { useSesion } from '@/components/panel/Sesion';
+import { useSedes } from '@/components/panel/SelectorSede';
 import { soloLeeLoDelDueno } from '@/lib/panel/roles';
 import { useAvisar, useComando } from '@/components/panel/Avisos';
 import { useCargar } from '@/components/panel/useCargar';
@@ -200,7 +202,16 @@ export default function Equipo() {
     return { empresa, trabajadores, bloqueos, citas, leads };
   }, [companyId]);
   // El sueldo base (datos 0016): solo el dueño lo ve y lo cambia. Sin la 0016, el campo no sale.
-  const esDueno = useSesion().rol === 'dueno';
+  const { rol } = useSesion();
+  const esDueno = rol === 'dueno';
+  // Sedes, teléfono y DNI de cada uno (datos 0018): el dueño y el administrador. Sin la 0018, no sale.
+  const puedeFicha = rol === 'dueno' || rol === 'admin';
+  const fichas = useCargar(async () => {
+    if (!companyId || !puedeFicha) return null;
+    const { data, error } = await supabase().rpc('empleado_fichas_leer', { p_company: companyId });
+    return error ? null : ((data ?? {}) as Record<string, DatosEmpleado>);
+  }, [companyId, puedeFicha]);
+  const sedesNegocio = useSedes(companyId).map((x) => x.nombre);
   const sueldos = useCargar(async () => {
     if (!companyId || !esDueno) return null;
     const { data, error } = await supabase().rpc('empleado_sueldos_leer', { p_company: companyId });
@@ -308,6 +319,9 @@ export default function Equipo() {
             alCambiar={recargar}
             sueldo={sueldos.datos ? (sueldos.datos[t.id] ?? null) : undefined}
             alCambiarSueldo={sueldos.releer}
+            datos={fichas.datos ? (fichas.datos[t.id] ?? SIN_DATOS) : undefined}
+            sedesNegocio={sedesNegocio}
+            alCambiarDatos={fichas.releer}
           />
         ))}
       </div>
@@ -416,6 +430,15 @@ function FotoTrabajador({ t, alCambiar }: { t: Trabajador; alCambiar: () => void
   );
 }
 
+/** Sedes, teléfono y DNI del empleado (datos 0018). Sedes vacías = trabaja en todas. */
+interface DatosEmpleado {
+  telefono: string;
+  dni: string;
+  sedes: string[];
+}
+const SIN_DATOS: DatosEmpleado = { telefono: '', dni: '', sedes: [] };
+const sedeCortaDe = (n: string) => n.split(' · ')[0];
+
 function Ficha({
   t,
   equipo,
@@ -428,6 +451,9 @@ function Ficha({
   alCambiar,
   sueldo,
   alCambiarSueldo,
+  datos,
+  sedesNegocio = [],
+  alCambiarDatos,
 }: {
   t: Trabajador;
   /** El equipo entero: hace falta para poder pasarle a otro las citas huérfanas. */
@@ -442,10 +468,18 @@ function Ficha({
   /** Sueldo base al mes (datos 0016). undefined = no se muestra (no es el dueño o falta la 0016). */
   sueldo?: number | null;
   alCambiarSueldo?: () => void;
+  /** Sedes, teléfono y DNI (datos 0018). undefined = no se muestra (empleado o falta la 0018). */
+  datos?: DatosEmpleado;
+  sedesNegocio?: string[];
+  alCambiarDatos?: () => void;
 }) {
   const comando = useComando();
   const avisar = useAvisar();
   const [sueldoTxt, setSueldoTxt] = useState(sueldo ? String(sueldo) : '');
+  const [telTxt, setTelTxt] = useState(datos?.telefono ?? '');
+  const [dniTxt, setDniTxt] = useState(datos?.dni ?? '');
+  const [sedesSel, setSedesSel] = useState<string[]>(datos?.sedes ?? []);
+  const alternarSede = (n: string) => setSedesSel((l) => (l.includes(n) ? l.filter((x) => x !== n) : [...l, n]));
 
   /** `schedule` vacío = hereda el del negocio. Ver EmployeeRow. */
   const tienePropio = Boolean(t.schedule?.trim());
@@ -468,6 +502,9 @@ function Ficha({
       setHorario(tienePropio ? t.horario : copiaDe(horarioNegocio));
       setComision(String(t.comision_pct ?? 0));
       setSueldoTxt(sueldo ? String(sueldo) : '');
+      setTelTxt(datos?.telefono ?? '');
+      setDniTxt(datos?.dni ?? '');
+      setSedesSel(datos?.sedes ?? []);
     }
   }
 
@@ -515,11 +552,37 @@ function Ficha({
       return;
     }
     const cambiaSueldo = sueldo !== undefined && Math.round(nuevoSueldo * 100) !== Math.round((sueldo ?? 0) * 100);
-    if (!Object.keys(cambios).length && !cambiaSueldo) {
+    // Sedes, teléfono y DNI (datos 0018).
+    const telLimpio = telTxt.replace(/\D/g, '');
+    const dniLimpio = dniTxt.replace(/[^0-9A-Za-z]/g, '').toUpperCase();
+    const mismas = (a: string[], b: string[]) => a.length === b.length && a.every((x) => b.includes(x));
+    const cambianDatos = datos !== undefined
+      && (telLimpio !== datos.telefono || dniLimpio !== datos.dni || !mismas(sedesSel, datos.sedes));
+    if (cambianDatos && telLimpio && telLimpio.length < 9) {
+      avisar('El teléfono tiene 9 dígitos (por ejemplo 987654321).', 'error');
+      return;
+    }
+    if (cambianDatos && dniLimpio && dniLimpio.length < 8) {
+      avisar('El DNI tiene 8 dígitos.', 'error');
+      return;
+    }
+    if (!Object.keys(cambios).length && !cambiaSueldo && !cambianDatos) {
       avisar('No has cambiado nada.', 'espera');
       return;
     }
     setGuardando(true);
+    if (cambianDatos) {
+      const { error } = await supabase().rpc('empleado_ficha_guardar', {
+        p_company: t.company_id, p_employee: t.id, p_datos: { telefono: telLimpio, dni: dniLimpio, sedes: sedesSel },
+      });
+      if (error) {
+        avisar(error.message, 'error');
+        setGuardando(false);
+        return;
+      }
+      alCambiarDatos?.();
+      if (!Object.keys(cambios).length && !cambiaSueldo) avisar('Datos guardados.', 'ok');
+    }
     if (cambiaSueldo) {
       const { error } = await supabase().rpc('empleado_sueldo_guardar', { p_company: t.company_id, p_employee: t.id, p_sueldo: nuevoSueldo || null });
       if (error) {
@@ -572,6 +635,7 @@ function Ficha({
             {tienePropio ? resumen(t.horario) : 'Horario del negocio'}
             {proximas > 0 ? ` · ${proximas} cita${proximas > 1 ? 's' : ''} por delante` : ''}
             {(t.comision_pct ?? 0) > 0 ? ` · ${t.comision_pct} % de comisión` : ''}
+            {datos && datos.sedes.length > 0 && sedesNegocio.length > 1 ? ` · ${datos.sedes.map(sedeCortaDe).join(', ')}` : ''}
           </small>
         </div>
         {vigentes.length > 0 && (
@@ -605,6 +669,42 @@ function Ficha({
           <small className="muted" style={{ fontSize: 11.5 }}>
             Mia reconoce al profesional por este nombre cuando el cliente pide «con {t.name.split(' ')[0]}».
           </small>
+
+          {/* Sedes, teléfono y DNI (datos 0018): dueño y administrador. */}
+          {datos !== undefined && (
+            <div className="sec emp-datos" style={{ marginTop: 14 }}>
+              <h4>
+                <IdCard /> Datos del empleado
+              </h4>
+              <div className="emp-datos__dos">
+                <label>
+                  <span className="field-label">Teléfono</span>
+                  <input className="input" inputMode="tel" placeholder="987654321" value={telTxt} onChange={(e) => setTelTxt(e.target.value)} />
+                </label>
+                <label>
+                  <span className="field-label">DNI</span>
+                  <input className="input" inputMode="numeric" placeholder="12345678" maxLength={12} value={dniTxt} onChange={(e) => setDniTxt(e.target.value)} />
+                </label>
+              </div>
+              {sedesNegocio.length > 1 && (
+                <>
+                  <span className="field-label">Sedes donde trabaja</span>
+                  <div className="ticket-chips" role="group" aria-label="Sedes">
+                    {sedesNegocio.map((n) => (
+                      <button key={n} type="button" className={`ticket-chip${sedesSel.includes(n) ? ' on' : ''}`} aria-pressed={sedesSel.includes(n)}
+                        onClick={() => alternarSede(n)}>
+                        {sedeCortaDe(n)}
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
+              <small className="muted" style={{ fontSize: 11.5 }}>
+                {sedesNegocio.length > 1 ? (sedesSel.length ? 'Solo en las sedes marcadas. ' : 'Sin marcar ninguna sede = trabaja en todas. ') : ''}
+                Teléfono y DNI solo los ven el dueño y el administrador.
+              </small>
+            </div>
+          )}
 
           <div className="sec" style={{ marginTop: 14 }}>
             <h4>

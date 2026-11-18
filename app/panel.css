@@ -2511,3 +2511,16 @@ nav.chip-tabs[aria-label="Caja"] a{flex-shrink:0;white-space:nowrap}
 .gc-fin{scroll-margin-bottom:96px}
 .main .gc-monto input:focus-visible{outline:none}
 @media (prefers-reduced-motion:reduce){.gc-campo--ahora>span:first-child::before{animation:none}}
+
+/* El cumpleaños del cliente nuevo (ElegirCumple): día y mes, uno al lado del otro. */
+.cumple{display:grid;gap:6px;margin-top:8px;grid-column:1/-1}
+.cumple__rotulo{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:700;color:var(--ink)}
+.cumple__rotulo small{font-weight:600;color:var(--ink-mute)}
+.cumple__campos{display:grid;grid-template-columns:minmax(0,90px) minmax(0,1fr);gap:8px;max-width:340px}
+.cumple__campos .select{min-height:46px}
+
+/* Equipo › datos del empleado (sedes, teléfono, DNI). */
+.emp-datos__dos{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-bottom:10px}
+.emp-datos__dos label{display:grid;gap:4px}
+.emp-datos .ticket-chips{margin:4px 0 6px}
+@media (max-width:520px){.emp-datos__dos{grid-template-columns:minmax(0,1fr)}}
