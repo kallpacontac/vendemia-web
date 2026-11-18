@@ -50,15 +50,14 @@ export interface OpcionesImpreso {
 
 export function ticketHtml(c: ComprobanteGuardado, o: OpcionesImpreso): string {
   const e = c.emisor;
-  const prueba = c.ambiente !== 'produccion' || c.proveedor === 'simulado';
   const anulado = c.estado === 'anulado' || c.estado === 'anulando';
   const noVale = c.estado === 'rechazado' || c.estado === 'error' || c.estado === 'por_enviar';
   const sinDoc = c.cliente.tipoDoc === 'sin_documento';
   const fuente = o.ancho === 58 ? 10 : 11.5;
 
-  const aviso = prueba
-    ? 'DOCUMENTO DE PRUEBA · SIN VALOR TRIBUTARIO'
-    : anulado
+  // En prueba no se marca nada (18-nov, The 24/7: «no me pongas nada, ya lo saben»): el ticket de
+  // prueba sale igual que el real. El panel sí lo dice (badge «Pruebas» en Boletas y Ajustes).
+  const aviso = anulado
       ? 'COMPROBANTE ANULADO'
       : noVale
         ? 'AÚN NO ACEPTADO POR SUNAT'

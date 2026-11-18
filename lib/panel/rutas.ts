@@ -95,8 +95,9 @@ const PANTALLAS: [string, (rol: RolNegocio | null) => boolean][] = [
 export function rutaPermitida(ruta: string, rol: RolNegocio | null): boolean {
   const esDelEmpleado = ruta.startsWith('/panel/mi-');
   if (!rolesEnVigor()) return !esDelEmpleado;
-  // El Dashboard es el resumen del negocio, con sus ingresos: del dueño.
-  if (ruta === '/panel') return rolPuede(rol, 'metricas.ver');
+  // El Dashboard (resumen del negocio y «Lo que necesita atención»): del dueño y, desde el
+  // 18-nov-2026 (The 24/7, urgente), también del administrador, que lleva la caja.
+  if (ruta === '/panel') return rolPuede(rol, 'metricas.ver') || rol === 'admin';
   const pantalla = PANTALLAS.find(([p]) => ruta === p || ruta.startsWith(`${p}/`));
   // Una pantalla que nadie ha clasificado: solo el dueño. Lista blanca.
   return pantalla ? pantalla[1](rol) : rol === 'dueno';
@@ -105,7 +106,8 @@ export function rutaPermitida(ruta: string, rol: RolNegocio | null): boolean {
 /** A dónde va cada uno al entrar, y a dónde se le manda desde una pantalla que no es suya. */
 export function inicioDe(rol: RolNegocio | null, modo: BusinessMode | null | undefined): string {
   if (!rolesEnVigor() || rol === 'dueno' || rol === null) return '/panel';
-  if (rol === 'admin') return esEcommerce(modo) ? '/panel/pedidos' : '/panel/agenda';
+  // El administrador entra al Dashboard, como el dueño: ahí ve lo que necesita atención.
+  if (rol === 'admin') return '/panel';
   // En una tienda o un restaurante no hay citas que atender: al empleado le
   // queda Fideliza, y lo que hace ahí es escanear tarjetas. Entra directo a la
   // caja, con el botón «Escanear QR» a mano (Alvaro, 27-oct-2026).

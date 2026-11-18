@@ -145,7 +145,7 @@ test('ticket impreso: escapa, avisa en pruebas y lleva el QR de SUNAT', () => {
   const html = ticketHtml(c, { ancho: 80, qrDataUrl: '' });
   assert.ok(html.includes('Barbería &lt;Uno&gt;'));
   assert.ok(!html.includes('<Uno>'));
-  assert.ok(html.includes('SIN VALOR TRIBUTARIO'));
+  assert.ok(!html.includes('SIN VALOR TRIBUTARIO'));
   assert.ok(html.includes('B001-7'));
   assert.ok(html.includes('SON SESENTA CON 00/100 SOLES'));
   assert.equal(textoQr(c), '20131312955|03|B001|7|9.15|60.00|2026-11-11|1|45678912|abc=|');
