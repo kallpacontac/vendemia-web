@@ -21,6 +21,18 @@ export interface LecturaComprobante {
   /** ISO 8601 con hora de Perú. */
   fechaHora: string | null;
   operacion: string | null;
+  /** Yape: los 3 dígitos del «código de seguridad», que salen también en la notificación del que recibe. */
+  codigoSeguridad: string | null;
+  /** Lo que a la IA le parece editado o fabricado. Solo manda a revisión: nunca rechaza ni aprueba. */
+  senales: string[];
+}
+
+/** Lo que se sabe de la reserva aparte de la captura (sql/0032). */
+export interface ContextoComprobante {
+  /** Cuándo se hizo la reserva (ms). Un pago de bastante antes no es de ella. */
+  reservadaMs?: number | null;
+  /** Ese celular ya mandó un comprobante que no llegó a la app del dueño. */
+  sospechoso?: boolean;
 }
 
 export type Decision = 'aprobar' | 'revisar' | 'rechazar';
@@ -53,7 +65,14 @@ const POR_REVISAR = {
   sinFecha: 'No se ve la fecha del pago.',
   fechaFutura: 'La fecha del comprobante es futura.',
   transferencia: 'Es una transferencia bancaria: se revisa a mano.',
+  sinOperacion: 'No se ve el número de operación: sin él no se puede saber si la captura ya se usó.',
+  sospechoso: 'Este celular ya envió antes un comprobante que no llegó a tu app.',
+  antesDeReservar: 'El pago es de antes de hacer la reserva: puede ser de otra compra.',
+  editada: (s: string[]) => `La captura podría estar editada: ${s.slice(0, 2).join('; ')}.`,
 };
+
+/** Margen para un pago hecho justo antes de terminar de reservar (lo yapeó mientras llenaba el formulario). */
+const MARGEN_ANTES_DE_RESERVAR_MS = 10 * 60_000;
 
 const COMPLETADO = ['completado', 'exitoso', 'aprobado', 'success', 'approved'];
 const FALLIDO = ['pendiente', 'rechazado', 'pending', 'rejected', 'failed', 'fallido'];
@@ -62,6 +81,7 @@ export function evaluarLectura(
   l: LecturaComprobante | null,
   numeros: string[],
   ahoraMs: number = Date.now(),
+  contexto: ContextoComprobante = {},
 ): { decision: Decision; motivo: string } {
   if (!l) return { decision: 'revisar', motivo: POR_REVISAR.sinLectura };
   if (!l.esComprobante) return { decision: 'rechazar', motivo: MENSAJES.noComprobante };
@@ -87,6 +107,15 @@ export function evaluarLectura(
 
   if (l.monto === null || !(l.monto > 0)) return { decision: 'revisar', motivo: POR_REVISAR.sinMonto };
   if (l.app !== 'yape' && l.app !== 'plin') return { decision: 'revisar', motivo: POR_REVISAR.transferencia };
+
+  // Antifraude (17-nov-2026). Todo esto manda a una persona, nunca rechaza: una captura buena con
+  // mala suerte no debe perder la cita, y una falsa bien hecha no la para ninguna regla de imagen.
+  if (contexto.sospechoso) return { decision: 'revisar', motivo: POR_REVISAR.sospechoso };
+  if (!l.operacion) return { decision: 'revisar', motivo: POR_REVISAR.sinOperacion };
+  if (contexto.reservadaMs && new Date(l.fechaHora).getTime() < contexto.reservadaMs - MARGEN_ANTES_DE_RESERVAR_MS) {
+    return { decision: 'revisar', motivo: POR_REVISAR.antesDeReservar };
+  }
+  if (l.senales.length) return { decision: 'revisar', motivo: POR_REVISAR.editada(l.senales) };
   return { decision: 'aprobar', motivo: '' };
 }
 

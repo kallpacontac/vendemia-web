@@ -9,6 +9,7 @@
 import { useState } from 'react';
 import { Check, ChevronDown, ExternalLink, X } from 'lucide-react';
 import AvisarCliente from '@/components/panel/AvisarCliente';
+import PagosPorCotejar from '@/components/panel/PagosPorCotejar';
 import Confirmar from '@/components/panel/Confirmar';
 import './tablero-canchas.css';
 import ElegirMonto, { METODOS_COMPROBANTE } from '@/components/panel/ElegirMonto';
@@ -31,6 +32,8 @@ export interface PorRevisar {
   motivo: string;
   /** Leído de la captura. Sin la 0018, no viene. */
   operacion?: string;
+  /** Yape: los 3 dígitos que salen también en tu notificación. Sin la 0032, no viene. */
+  codigo_seguridad?: string;
   /** Lo que confirma ESTA reserva (fijo en canchas, % del precio en citas). Sin la 0021, no viene. */
   adelanto?: number;
   /** Sigue sin confirmar. Sin la 0021, no viene: se deduce de lo pagado. */
@@ -164,6 +167,7 @@ export function ComprobantesPorRevisarVista({ datos, adelanto, alRevisar, alAvis
             <small>{c.telefono}</small>
             <small>Total {soles(Number(c.total) || 0)} · ya pagó {soles(Number(c.pagado) || 0)}</small>
             {c.operacion && <small className="tc-op">N.º de operación {c.operacion}</small>}
+            {c.codigo_seguridad && <small className="tc-op">Código de seguridad {c.codigo_seguridad}</small>}
             {c.motivo && <small className="tc-revisar__motivo">{c.motivo}</small>}
           </div>
           <div className="tc-revisar__acciones">
@@ -191,7 +195,7 @@ export function ComprobantesPorRevisarVista({ datos, adelanto, alRevisar, alAvis
             </p>
             <p>Se registra <b>{soles(pregunta.monto ?? 0)}</b> por <b>{NOMBRE_METODO[pregunta.metodo] ?? pregunta.metodo}</b>{pregunta.c.operacion ? <>, operación <b>{pregunta.c.operacion}</b></> : null}.</p>
             <p>{efectoDelPago(cobroDe(pregunta.c), pregunta.monto ?? 0, enDonde)}</p>
-            <p className="muted">Antes de aprobar, comprueba en tu app de Yape o Plin que el dinero llegó.</p>
+            <p className="muted">Antes de aprobar, comprueba en tu app de Yape o Plin que el dinero llegó{pregunta.c.codigo_seguridad ? <> (código de seguridad <b>{pregunta.c.codigo_seguridad}</b>)</> : null}. Una captura sola no lo prueba.</p>
           </>}
         />
       )}
@@ -230,7 +234,9 @@ export default function ComprobantesPorRevisar({ companyId, recarga, alCambiar, 
   }, [companyId, recarga]);
 
   const avisoCliente = aviso && <AvisarCliente {...aviso} alCerrar={() => setAviso(null)} />;
-  if (!datos?.lista.length) return avisoCliente || null;
+  // Debajo, los que se validaron solos y falta mirar en la app (sql/0032). Sale solo si hay alguno.
+  const cotejar = <PagosPorCotejar companyId={companyId} recarga={recarga} alCambiar={alCambiar} />;
+  if (!datos?.lista.length) return <>{avisoCliente}{cotejar}</>;
 
   async function revisar(c: PorRevisar, accion: Accion, monto: number | null, metodo: string): Promise<boolean> {
     const { data, error } = await supabase().rpc('comprobante_revisar', {
@@ -250,6 +256,7 @@ export default function ComprobantesPorRevisar({ companyId, recarga, alCambiar, 
     <>
       {avisoCliente}
       <ComprobantesPorRevisarVista datos={datos.lista} adelanto={datos.adelanto} alRevisar={revisar} alAvisar={setAviso} enDonde={enDonde} />
+      {cotejar}
     </>
   );
 }

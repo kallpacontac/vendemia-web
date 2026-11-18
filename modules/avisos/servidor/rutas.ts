@@ -4,7 +4,40 @@ import { entorno } from '@/modules/fideliza/servidor/entorno';
 import { cuerpo, desdeError, fallo, jwtDe, log, ok } from '@/modules/fideliza/servidor/http';
 import { enviarPush, pushConfigurado } from '@/modules/fideliza/servidor/push';
 import { deUsuario, rpc, servidor } from '@/modules/fideliza/servidor/supabase';
-import { planificar, type EventoPendiente, type Resumen } from '../dominio/redactar';
+import { enviarCorreo, esc } from '@/lib/correo';
+import { cuandoSlot, planificar, type EventoPendiente, type Resumen } from '../dominio/redactar';
+
+/**
+ * El recordatorio de un comprobante que lleva 15 min sin revisar (tu-pagina 0032) sale también por
+ * correo a dueños y administradores: el push solo llega si activaron los avisos en su celular, y el
+ * cliente está esperando. Los correos vienen en el evento (datos.correos). Nunca lanza.
+ */
+async function correosDeEspera(eventos: EventoPendiente[]): Promise<number> {
+  const base = process.env.NEXT_PUBLIC_SITE_URL || 'https://vendemias.com';
+  const r = await Promise.allSettled(eventos
+    .filter((e) => e.datos.clase === 'comprobante_esperando' && Array.isArray(e.datos.correos) && e.datos.correos.length)
+    .map((e) => {
+      const para = (e.datos.correos as unknown[]).filter((x): x is string => typeof x === 'string' && x.includes('@')).slice(0, 5);
+      const quien = e.cliente || 'Un cliente';
+      const monto = Number(e.datos.monto);
+      const cuando = cuandoSlot(e.datos.slot) || String(e.datos.slot ?? '').slice(0, 16);
+      const texto = `${quien} subió su comprobante${monto ? ` de S/ ${monto.toFixed(2)}` : ''} hace ${Number(e.datos.minutos) || 15} minutos `
+        + `para ${String(e.datos.servicio ?? 'su reserva')} (${cuando}) y sigue esperando. `
+        + 'Mira en tu Yape o Plin que el dinero llegó y apruébalo en la Agenda; la hora le queda guardada mientras tanto.';
+      const url = `${base}/panel/agenda`;
+      return enviarCorreo({
+        para,
+        asunto: `${e.negocio ? `${e.negocio}: ` : ''}${quien} espera que confirmes su pago`,
+        nombre: 'Vendemia',
+        texto: `${texto}
+
+Abrir la Agenda: ${url}`,
+        html: `<p style="font:15px/1.5 system-ui,sans-serif;color:#14211A">${esc(texto)}</p>`
+          + `<p><a href="${esc(url)}" style="display:inline-block;padding:10px 18px;border-radius:10px;background:#14211A;color:#fff;text-decoration:none;font:600 14px system-ui,sans-serif">Abrir la Agenda</a></p>`,
+      });
+    }));
+  return r.filter((x) => x.status === 'fulfilled' && x.value).length;
+}
 
 /**
  * Las tres rutas de los avisos al dueño.
@@ -34,6 +67,7 @@ export async function despachar(req: Request) {
     const sb = servidor();
     const p = await rpc<{ eventos: EventoPendiente[]; resumenes: Resumen[] }>(sb, 'panel_push_srv_pendientes', {});
     const envios = planificar(p.eventos ?? [], p.resumenes ?? []);
+    const correos = correosDeEspera(p.eventos ?? []);
 
     const enviados = new Set<string>();
     const caducados = new Set<string>();
@@ -48,7 +82,7 @@ export async function despachar(req: Request) {
     if (enviados.size || caducados.size) {
       await rpc(sb, 'panel_push_srv_resultado', { p_enviados: [...enviados], p_caducados: [...caducados] });
     }
-    const balance = { eventos: p.eventos?.length ?? 0, resumenes: p.resumenes?.length ?? 0, envios: envios.length, aceptados: enviados.size, caducados: caducados.size };
+    const balance = { eventos: p.eventos?.length ?? 0, resumenes: p.resumenes?.length ?? 0, envios: envios.length, aceptados: enviados.size, caducados: caducados.size, correos: await correos };
     log('avisos.despachar', balance);
     return ok(balance);
   } catch (e) {

@@ -110,6 +110,8 @@ export default function SubirComprobante({ slug, codigo, telefono, ejemplo = fal
           <input ref={entrada} className="tp-subir__archivo" type="file" accept="image/*" disabled={enviando} onChange={(e) => void subir(e.target.files?.[0])} />
         </label>
       )}
+      {/* Disuasivo sin acusar a nadie (17-nov-2026): quien fabrica capturas busca a quien no las coteja. */}
+      {!terminado && !ejemplo && <p className="tp-nota">Cada pago se coteja con nuestra cuenta de Yape o Plin.</p>}
       {ejemplo && listo && <p className="tp-nota">En esta muestra no se analizó tu imagen. En la página real se valida el monto, el destinatario y la fecha.</p>}
     </div>
   );

@@ -77,6 +77,7 @@ import Avisame from '@/modules/tu-pagina/ui/Avisame';
 import TarjetaEnPagina from '@/modules/tu-pagina/ui/TarjetaEnPagina';
 import type { ConfigTarjeta } from '@/modules/tu-pagina/dominio/tarjeta';
 import { ConfigDeCanchas } from '@/modules/tu-pagina/ui/Canchas';
+import { porcentajeAdelanto, type ConfigCitas } from '@/modules/tu-pagina/dominio/adelantoCitas';
 import { normalizarCanchas, type ConfigCanchas } from '@/modules/tu-pagina/dominio/canchas';
 import { proveedorCompleto, rucValido, type Proveedor } from '@/modules/tu-pagina/dominio/reclamos';
 import { telefonoBonito, telefonoNormal } from '@/modules/tu-pagina/dominio/envio';
@@ -91,6 +92,7 @@ interface Pagina {
   secciones: {
     catalogo?: boolean; reservar?: boolean; envios?: boolean; tipos?: TiposDePagina; apariencia?: AparienciaPagina;
     reclamos?: boolean; proveedor?: Partial<Proveedor>; canchas?: ConfigCanchas; fideliza?: ConfigTarjeta;
+    citas?: ConfigCitas;
   };
   logo_url: string | null;
   portada_url: string | null;
@@ -216,6 +218,10 @@ function MiPagina({ companyId, nombre, pagina, agendaNube, alGuardar }: {
   const [reclamos, setReclamos] = useState(pagina?.secciones?.reclamos ?? false);
   const [canchas, setCanchas] = useState<ConfigCanchas>(pagina?.secciones?.canchas ?? { desde: '18:00' });
   const [tarjeta, setTarjeta] = useState<ConfigTarjeta>(pagina?.secciones?.fideliza ?? {});
+  // Adelanto de citas (sql/0021): hoy solo se elige aquí quién valida la captura; el resto lo pone Vendemia.
+  const citasCfg = pagina?.secciones?.citas;
+  const conAdelantoCitas = porcentajeAdelanto(citasCfg) > 0;
+  const [validacionCitas, setValidacionCitas] = useState<'manual' | 'automatica'>(citasCfg?.validacion === 'automatica' ? 'automatica' : 'manual');
   const [funcionesAbiertas, setFuncionesAbiertas] = useState(Boolean(pagina?.secciones?.envios || pagina?.secciones?.reclamos || pagina?.secciones?.canchas?.activo || pagina?.secciones?.fideliza?.activo));
   const [proveedor, setProveedor] = useState<Proveedor>({
     razon_social: pagina?.secciones?.proveedor?.razon_social ?? '',
@@ -317,6 +323,8 @@ function MiPagina({ companyId, nombre, pagina, agendaNube, alGuardar }: {
             proveedor: { razon_social: proveedor.razon_social.trim(), ruc: proveedor.ruc.replace(/\D/g, ''), direccion: proveedor.direccion.trim() },
             // Con lo demás que traiga (la foto de la invitación): guardar reemplaza la clave entera.
             fideliza: { ...tarjeta, activo: Boolean(tarjeta.activo && tarjeta.slug), slug: tarjeta.slug ?? '' },
+            // Guardar reemplaza la clave entera: se mandan sus sedes, indicaciones y plazo tal cual.
+            ...(citasCfg ? { citas: { ...citasCfg, validacion: validacionCitas } } : {}),
           },
           distritos: distritos.split(/[,\n]/).map((d) => d.trim()).filter(Boolean),
         },
@@ -579,6 +587,20 @@ function MiPagina({ companyId, nombre, pagina, agendaNube, alGuardar }: {
               <Apartado activo={Boolean(canchas.activo || plantilla === 'canchas')} bloqueado={plantilla === 'canchas'} alCambiar={(activo) => setCanchas({ ...canchas, activo })} titulo="Canchas por horas" describe="Modalidades y horarios por cancha, con precios de día y de noche. Se activa al elegir la plantilla Fútbol / canchas.">
                 <ConfigDeCanchas companyId={companyId} valor={canchas} alCambiar={setCanchas} />
               </Apartado>
+            )}
+            {conAdelantoCitas && !(canchas.activo || plantilla === 'canchas') && (
+              <label className="tp-panel-campo">
+                <span>Quién valida la captura del adelanto ({porcentajeAdelanto(citasCfg)} %)</span>
+                <select className="input" value={validacionCitas} onChange={(e) => setValidacionCitas(e.target.value as 'manual' | 'automatica')}>
+                  <option value="automatica">Automático: la cita se confirma al momento si todo cuadra</option>
+                  <option value="manual">Yo: la apruebo en la Agenda</option>
+                </select>
+                <small className="muted">
+                  {validacionCitas === 'automatica'
+                    ? 'Se comprueba que sea un pago completado, a tu número, de las últimas horas, con su n.º de operación y sin repetir. Lo dudoso (captura con señales de edición, pago de antes de reservar, cliente que ya falló) te llega para revisar. Igual coteja en tu Yape los validados: sale la lista en la Agenda.'
+                    : 'Cada captura te llega a la Agenda y la cita sigue apartada hasta que la apruebes. Si tardas 15 minutos, te lo recordamos.'}
+                </small>
+              </label>
             )}
             <Apartado activo={envios} alCambiar={setEnvios} titulo="Agendar envíos" describe="Tus clientes te piden un recojo: dirección, distrito y fecha.">
               <label className="tp-panel-campo"><span>Distritos que atiendes <small className="muted">(vacío = cualquiera)</small></span><textarea className="input" rows={2} value={distritos} placeholder="Miraflores, Surco, San Isidro" onChange={(e) => setDistritos(e.target.value)} /></label>

@@ -578,6 +578,9 @@ begin
     return jsonb_build_object('eventos', v_eventos, 'resumenes', v_resumenes);
 end $$;
 revoke execute on function public.panel_push_srv_pendientes() from public, anon, authenticated;
+-- El despachador entra con la clave anon + x-fideliza-key (loyalty_srv_check la cierra dentro).
+-- Sin este grant no sale ningún aviso: pasó el 5-nov (scripts/arreglo-avisos-permiso.sql).
+grant execute on function public.panel_push_srv_pendientes() to anon;
 
 -- ── Permisos ──────────────────────────────────────────────────────────────────
 

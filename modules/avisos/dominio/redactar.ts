@@ -123,6 +123,20 @@ export function redactar(eventos: EventoPendiente[]): Mensaje {
   const prefijo = e.negocio ? `${e.negocio} · ` : '';
   const tag = `${e.company_id}:${e.tipo}`;
 
+  // Recordatorio: un comprobante de la página lleva 15 min sin revisar (tu-pagina 0032). Va solo y
+  // también por correo (/api/avisos/despachar), porque el cliente está esperando.
+  if (e.datos.clase === 'comprobante_esperando') {
+    const minutos = Number(e.datos.minutos) || 15;
+    return {
+      title: n === 1 ? `${prefijo}${quien} espera que confirmes su pago` : `${prefijo}${n} clientes esperan que confirmes su pago`,
+      body: n === 1
+        ? `Subió su comprobante${Number(e.datos.monto) ? ` de ${soles(e.datos.monto)}` : ''} hace ${minutos} min (${String(e.datos.servicio ?? 'su reserva')}, ${cuandoSlot(e.datos.slot) || String(e.datos.slot ?? '').slice(0, 16)}). Mira tu Yape y apruébalo en la Agenda.`
+        : 'Sus comprobantes llevan más de 15 min sin revisar. Mira tu Yape y apruébalos en la Agenda.',
+      url: '/panel/agenda',
+      tag: `${e.company_id}:comprobante_espera`,
+    };
+  }
+
   // Un comprobante subido en la página que tiene que mirar una persona (tu-pagina 0017).
   if (e.datos.clase === 'comprobante_por_revisar') {
     return {
@@ -247,15 +261,16 @@ export function redactar(eventos: EventoPendiente[]): Mensaje {
               tag,
             }
           : {
-              title: `${prefijo}Pago recibido · ${soles(e.datos.monto)}`,
-              body: `Mia verificó el comprobante de ${quien}.`,
-              url: '/panel/caja',
+              // «Validado», no «recibido»: una captura no prueba que el dinero llegó (17-nov-2026).
+              title: `${prefijo}Pago validado · ${soles(e.datos.monto)}`,
+              body: `El comprobante de ${quien} cuadra. Mira en tu Yape o Plin que llegó.`,
+              url: e.datos.cita ? '/panel/agenda' : '/panel/caja',
               tag,
             };
       }
       return {
-        title: porRevisar ? `${prefijo}${n} pagos · ${porRevisar} por revisar` : `${prefijo}${n} pagos recibidos · ${soles(total)}`,
-        body: porRevisar ? 'Hay comprobantes que necesitan que los confirmes.' : 'Mia verificó los comprobantes.',
+        title: porRevisar ? `${prefijo}${n} pagos · ${porRevisar} por revisar` : `${prefijo}${n} pagos validados · ${soles(total)}`,
+        body: porRevisar ? 'Hay comprobantes que necesitan que los confirmes.' : 'Los comprobantes cuadran. Mira en tu Yape o Plin que llegaron.',
         url: '/panel/caja',
         tag,
       };
@@ -458,7 +473,7 @@ export function planificar(eventos: EventoPendiente[], resumenes: Resumen[]): En
   for (const e of eventos) {
     for (const d of e.destinos) {
       // Una mesa llamando no se mezcla con las reservas o la agenda del mismo tipo de aviso.
-      const clave = `${d.id}|${e.company_id}|${e.datos.clase === 'web_mesa' ? 'mesa' : e.tipo}`;
+      const clave = `${d.id}|${e.company_id}|${e.datos.clase === 'web_mesa' ? 'mesa' : e.datos.clase === 'comprobante_esperando' ? 'espera' : e.tipo}`;
       const g = grupos.get(clave) ?? { destino: d, eventos: [] };
       g.eventos.push(e);
       grupos.set(clave, g);

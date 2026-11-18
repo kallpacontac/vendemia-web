@@ -26,6 +26,9 @@ interface Cita {
   company_id?: string;
   validacion?: string;
   numeros?: string[];
+  /** sql/0032: cuándo se hizo la reserva y si ese celular ya mandó un pago que no llegó. */
+  reservada_ms?: number | null;
+  sospechoso?: boolean;
 }
 
 interface Registro {
@@ -82,7 +85,7 @@ export async function POST(req: Request) {
     ]);
     const { decision, motivo } = manual
       ? { decision: 'revisar' as const, motivo: 'Lo revisas tú: la validación automática está apagada.' }
-      : evaluarLectura(lectura, cita.numeros ?? []);
+      : evaluarLectura(lectura, cita.numeros ?? [], Date.now(), { reservadaMs: Number(cita.reservada_ms) || null, sospechoso: cita.sospechoso === true });
     // Sin captura guardada nadie podría revisarla: se pide de nuevo antes que dejar al dueño a ciegas.
     if (decision === 'revisar' && !url) return fallo(MENSAJES.noGuardado, 503);
 
@@ -95,6 +98,7 @@ export async function POST(req: Request) {
         operacion: lectura?.operacion ?? '',
         destino: lectura?.destino ?? '',
         fecha_pago: lectura?.fechaHora ?? '',
+        codigo_seguridad: lectura?.codigoSeguridad ?? '',
       },
     });
     if (r.status === 'repetida') return fallo(MENSAJES.repetida, 409);
