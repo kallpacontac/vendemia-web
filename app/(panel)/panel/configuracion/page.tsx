@@ -65,6 +65,7 @@ import AdjuntosNota, {
   type AdjuntoNota,
 } from '@/components/panel/AdjuntosNota';
 import { useSesion } from '@/components/panel/Sesion';
+import SeccionFacturacion from '@/modules/facturacion/ui/SeccionFacturacion';
 import { necesitaEmparejar, useSalud } from '@/components/panel/Salud';
 import { useAvisar, useComando } from '@/components/panel/Avisos';
 import { useCargar } from '@/components/panel/useCargar';
@@ -1255,6 +1256,8 @@ function Configuracion() {
               da, pero los comandos no los puede encolar. Al empleado ni se le
               pinta. Ver components/panel/Equipo.tsx. */}
           {(rol === 'dueno' || rol === 'admin' || esAdminPlataforma) && <details ref={seccionEquipo} className="cfg-advanced cfg-advanced--section"><summary>Acceso del equipo</summary><Equipo sinLista={datos?.miembros.length ?? 0} /></details>}
+          {/* La configuración de boletas y facturas: la pantalla de emitir está en Caja. */}
+          {(rol === 'dueno' || rol === 'admin' || esAdminPlataforma) && <SeccionFacturacion />}
 
           <div className="nav-btns">
             <button className="btn btn-ghost" onClick={() => setPaso(2)}>

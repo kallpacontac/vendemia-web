@@ -11,7 +11,6 @@ import { usePathname } from 'next/navigation';
 import {
   BarChart2,
   CalendarDays,
-  FileText,
   Gift,
   GraduationCap,
   LayoutDashboard,
@@ -76,7 +75,7 @@ const NAV = [
   { href: '/panel/pedidos', icon: Receipt, label: 'Pedidos', sirveA: esEcommerce },
   { href: '/panel/caja', icon: Wallet, label: 'Caja' },
   // Boletas y facturas a SUNAT (modules/facturacion). Dueño y administrador.
-  { href: '/panel/comprobantes', icon: FileText, label: 'Boletas y facturas' },
+  // Boletas y facturas: dentro de Caja (pestaña «Boletas y facturas»); su configuración, en Ajustes.
   { href: '/panel/catalogo', icon: Package, label: 'Catálogo' },
   // Tarjetas de cliente, placas NFC/QR y Google Wallet. Tiene sus pestañas
   // dentro (app/(panel)/panel/fideliza/layout.tsx). En el móvil va en «Más».
@@ -168,15 +167,19 @@ export default function Sidebar({
   );
   const extra = nav.filter((n) => !fijas.has(n.href));
   // El dashboard es prefijo de todo lo demás: solo coincide exacto.
-  const esActivo = (href: string) => (href === '/panel' ? ruta === '/panel' : ruta.startsWith(href));
+  const esActivo = (href: string) =>
+    href === '/panel' ? ruta === '/panel' : ruta.startsWith(href) || (href === '/panel/caja' && ruta.startsWith('/panel/comprobantes'));
   // Estando en una de las de «Más», es «Más» la que se ilumina: si no, en la
   // barra del teléfono no se vería dónde estás.
   const extraActiva = extra.some((n) => esActivo(n.href));
 
   const rutaOperacion = esEcommerce(modo) ? '/panel/pedidos' : '/panel/agenda';
   const rail = nav.filter((n) =>
-    [...(pagina.mesasFija ? ['/panel/mesas'] : []), '/panel', RUTA_MI_AGENDA, RUTA_MI_COMISION, RUTA_MI_CATALOGO, '/panel/asistente', '/panel/mensajes', rutaOperacion, '/panel/leads', '/panel/caja',
-      ...(esCita(modo) ? ['/panel/fideliza', '/panel/catalogo', '/panel/metricas'] : []), '/panel/configuracion'].includes(n.href),
+    (esCita(modo)
+      // Barbería o salón: solo lo del día a día; Mia, mensajes y clientes, en «Más».
+      ? ['/panel', RUTA_MI_AGENDA, RUTA_MI_COMISION, RUTA_MI_CATALOGO, '/panel/agenda', '/panel/caja', '/panel/fideliza', '/panel/catalogo', '/panel/metricas', '/panel/configuracion']
+      : [...(pagina.mesasFija ? ['/panel/mesas'] : []), '/panel', RUTA_MI_AGENDA, RUTA_MI_COMISION, RUTA_MI_CATALOGO, '/panel/asistente', '/panel/mensajes', rutaOperacion, '/panel/leads', '/panel/caja', '/panel/configuracion']
+    ).includes(n.href),
   );
   const railExtra = nav.filter((n) => !rail.some((r) => r.href === n.href));
   const railExtraActiva = railExtra.some((n) => esActivo(n.href));

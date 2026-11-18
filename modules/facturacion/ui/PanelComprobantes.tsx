@@ -5,13 +5,15 @@
  * ══════════════════════════════════════════════════════════════════════════
  *
  * Una pantalla: emitir, ver lo del día, imprimir, consultar, reintentar y
- * anular. Los Ajustes salen aquí mismo (y abiertos si aún no está activo).
+ * anular. Está dentro de Caja (SubnavCaja); su configuración, en Ajustes › Boletas y facturas (SeccionFacturacion).
  *
  * Se puede abrir con algo ya escrito, para enlazarlo desde la Caja o Pedidos:
  *   /panel/comprobantes?nuevo=boleta&concepto=Corte&monto=35&ref=cita:abc123
  */
 import { useEffect, useState } from 'react';
 import { FilePlus2, MessageCircle, Printer, RefreshCw, Settings, Ban, ExternalLink } from 'lucide-react';
+import Link from 'next/link';
+import SubnavCaja from '@/components/panel/SubnavCaja';
 import Topbar from '@/components/panel/Topbar';
 import { useSesion } from '@/components/panel/Sesion';
 import { useCargar } from '@/components/panel/useCargar';
@@ -21,8 +23,7 @@ import { esAppointmentFamily } from '@/lib/panel/modo';
 import { INFO_PROVEEDOR } from '../dominio/proveedoresInfo';
 import { NOMBRE_DOC_CLIENTE } from '../dominio/catalogos';
 import type { ComprobanteGuardado, TipoComprobante } from '../dominio/tipos';
-import { actuar, imprimir, leerAjustes, leerComprobantes, SinTablas, soles2, textoWhatsApp, type Ajustes } from './api';
-import AjustesFacturacion from './AjustesFacturacion';
+import { actuar, imprimir, leerAjustes, leerComprobantes, SinTablas, soles2, textoWhatsApp } from './api';
 import NuevoComprobante, { type Prellenado } from './NuevoComprobante';
 import { EstadoPill } from './EstadoPill';
 import '../estilos/facturacion.css';
@@ -62,10 +63,8 @@ export default function PanelComprobantes() {
   const { companyId, compania } = useSesion();
   const avisar = useAvisar();
   const [periodo, setPeriodo] = useState<Periodo>('hoy');
-  const [verAjustes, setVerAjustes] = useState(false);
   const [nuevo, setNuevo] = useState<Prellenado | null>(null);
   const [ocupado, setOcupado] = useState<string | null>(null);
-  const [ajustesVivos, setAjustesVivos] = useState<Ajustes | null>(null);
 
   const cargaAjustes = useCargar(async () => {
     if (!companyId) return null;
@@ -83,7 +82,7 @@ export default function PanelComprobantes() {
     return leerComprobantes(companyId, desde, hasta).catch(() => [] as ComprobanteGuardado[]);
   }, [companyId, desde, hasta]);
 
-  const ajustes = ajustesVivos ?? (cargaAjustes.datos && cargaAjustes.datos !== 'sin_tablas' ? cargaAjustes.datos : null);
+  const ajustes = cargaAjustes.datos && cargaAjustes.datos !== 'sin_tablas' ? cargaAjustes.datos : null;
 
   // Abrir el formulario si se llegó desde otra pantalla con ?nuevo=…
   useEffect(() => {
@@ -167,7 +166,8 @@ export default function PanelComprobantes() {
   return (
     <main className="main">
       <div className="wrap">
-        <Topbar titulo="Boletas y facturas" sub={sub} />
+        <Topbar titulo="Caja" sub={sub} />
+        <SubnavCaja />
 
         {ajustes && (
           <div className="fe-barra">
@@ -185,25 +185,14 @@ export default function PanelComprobantes() {
                   {ajustes.ambiente === 'produccion' && ajustes.proveedor !== 'simulado' ? 'Producción' : 'Pruebas'}
                 </>
               ) : (
-                'Apagado: complétalo en Ajustes'
+                'Apagado: actívalo en Ajustes › Boletas y facturas'
               )}
             </span>
-            <button className="btn btn-ghost btn-sm" onClick={() => setVerAjustes((v) => !v)}>
-              <Settings size={14} /> Ajustes
-            </button>
+            {/* La configuración (proveedor, token, series) vive en Ajustes; aquí solo se emite. */}
+            <Link className="btn btn-ghost btn-sm" href="/panel/configuracion#facturacion">
+              <Settings size={14} /> Configurar
+            </Link>
           </div>
-        )}
-
-        {ajustes && companyId && (verAjustes || !ajustes.activo) && (
-          <AjustesFacturacion
-            key={`${companyId}-${ajustes.configurado}`}
-            companyId={companyId}
-            inicial={ajustes}
-            alGuardar={(a) => {
-              setAjustesVivos(a);
-              if (a.activo) setVerAjustes(false);
-            }}
-          />
         )}
 
         <div className="filters" style={{ margin: '16px 0 12px' }}>

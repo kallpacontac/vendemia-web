@@ -38,6 +38,7 @@ import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { Plus, Trash2, Wallet } from 'lucide-react';
 import CajaResumen from '@/components/panel/CajaResumen';
+import SubnavCaja from '@/components/panel/SubnavCaja';
 import SelectorSede, { sedesDeCitas, useSedeElegida, useSedes } from '@/components/panel/SelectorSede';
 import QuienCita from '@/components/panel/QuienCita';
 import Topbar from '@/components/panel/Topbar';
@@ -232,6 +233,7 @@ export default function Caja() {
     <main className="main main--caja">
       <div className="wrap">
         <Topbar titulo="Caja" sub="Lo que entró, con qué, y lo que salió" />
+        <SubnavCaja />
 
         <SelectorSede sedes={sedes} valor={sede} alCambiar={setSede} />
 

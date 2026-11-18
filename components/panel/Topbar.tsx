@@ -122,22 +122,21 @@ function NavegacionPanel() {
    * prioricen los botones de lo que van a utilizar»). En una tablet las pestañas no caben todas y
    * «Reportes» quedaba cortado a la derecha.
    */
+  // Solo cinco (17-nov: «hay demasiadas opciones»). Reportes = Resumen + Métricas; Clientes y
+  // Actividad siguen en el menú lateral, en «Más». Boletas y facturas, dentro de Caja.
   const tabsCita = [
     { href: operacion, label: operacionLabel, rutas: [operacion] },
-    { href: '/panel/caja', label: 'Caja', rutas: ['/panel/caja', '/panel/equipo', '/panel/comisiones'] },
+    { href: '/panel/caja', label: 'Caja', rutas: ['/panel/caja', '/panel/comprobantes', '/panel/equipo', '/panel/comisiones'] },
     { href: '/panel/fideliza', label: 'Fideliza', rutas: ['/panel/fideliza'] },
     { href: '/panel/catalogo', label: 'Catálogo', rutas: ['/panel/catalogo'] },
-    { href: '/panel/metricas', label: 'Reportes', rutas: ['/panel/metricas'] },
-    { href: '/panel', label: 'Resumen', rutas: ['/panel'] },
-    { href: '/panel/leads', label: 'Clientes', rutas: ['/panel/leads', '/panel/retargeting'] },
-    { href: '/panel/mensajes', label: 'Actividad', rutas: ['/panel/mensajes'] },
+    { href: '/panel/metricas', label: 'Reportes', rutas: ['/panel/metricas', '/panel'] },
   ];
   const tabsTodos = [
     { href: '/panel', label: 'Resumen', rutas: ['/panel'] },
     { href: '/panel/mensajes', label: 'Actividad', rutas: ['/panel/mensajes'] },
     { href: operacion, label: operacionLabel, rutas: [operacion] },
     { href: '/panel/leads', label: 'Clientes', rutas: ['/panel/leads', '/panel/alumnos', '/panel/retargeting', '/panel/fideliza'] },
-    { href: '/panel/caja', label: 'Gestión', rutas: ['/panel/caja', '/panel/catalogo', '/panel/equipo', '/panel/comisiones'] },
+    { href: '/panel/caja', label: 'Caja', rutas: ['/panel/caja', '/panel/comprobantes', '/panel/catalogo', '/panel/equipo', '/panel/comisiones'] },
     { href: '/panel/metricas', label: 'Reportes', rutas: ['/panel/metricas'] },
   ];
   const tabs = esCita(modo) ? tabsCita : tabsTodos;
