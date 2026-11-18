@@ -54,3 +54,11 @@
 .cierres__hechos ul { list-style: none; margin: 4px 0 0; padding: 0; }
 .cierres__hechos li { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px; padding: 6px 0; }
 .cierres__nota { flex-basis: 100%; }
+
+/* «Pagar» y «Pagué S/ …» en Comisiones: grandes; en tablet y celular, a lo ancho. */
+.cierres__fila > .btn-primary { min-height: 44px; min-width: 110px; justify-content: center; }
+.cierres__pagar .btn { min-height: 46px; }
+@media (max-width: 900px) {
+  .cierres__fila > .btn-primary { flex-basis: 100%; }
+  .cierres__pagar .btn-primary { flex: 1 1 100%; }
+}

@@ -7,8 +7,14 @@
  * un tope por persona. Una compra nueva cancela los recordatorios en cola; una
  * baja también. «Aceptado» es lo que dice el servicio de push del navegador:
  * no es «entregado» ni «leído», y aquí no se llama así.
+ *
+ * 18-nov-2026 (The 24/7: «no sé si se guardó el personalizado; al configurar "Te extrañamos"
+ * tengo que bajar: mejor un pop up y que diga que se creó con éxito»): «Configurar» abre una
+ * VENTANA con los botones grandes abajo; el alcance se calcula solo; al guardar se cierra con un
+ * aviso claro, y la tarjeta enseña el título y el texto guardados (así se ve que quedó el tuyo).
  */
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { Check, X } from 'lucide-react';
 import { useFideliza } from '@/modules/fideliza/ui/Contexto';
 import { Cargando, Fallo } from '@/modules/fideliza/ui/Estados';
 import { useAvisar } from '@/components/panel/Avisos';
@@ -53,6 +59,23 @@ export default function Campanas() {
     return { campanas, config, m };
   }, [companyId]);
 
+  // Los hooks, antes de los return de abajo (siempre en el mismo orden).
+  const [guardando, setGuardando] = useState(false);
+  /** La tarjeta recién guardada, resaltada un momento. */
+  const [recien, setRecien] = useState<Plantilla | null>(null);
+  useEffect(() => {
+    if (!recien) return;
+    const t = window.setTimeout(() => setRecien(null), 2600);
+    return () => window.clearTimeout(t);
+  }, [recien]);
+  // Escape cierra la ventana.
+  useEffect(() => {
+    if (!abierta) return;
+    const tecla = (e: KeyboardEvent) => e.key === 'Escape' && setAbierta(null);
+    document.addEventListener('keydown', tecla);
+    return () => document.removeEventListener('keydown', tecla);
+  }, [abierta]);
+
   if (cargando && !datos) return <Cargando texto="Cargando campañas…" />;
   if (error) return <Fallo texto={error} reintentar={releer} />;
   if (!datos) return null;
@@ -68,18 +91,36 @@ export default function Campanas() {
       body: c?.body ?? p.texto,
       config: { inactive_days: 60, cycle_days: 30, max_per_30d: 2, ...(c?.config ?? {}) },
     });
+    // A cuántos llegaría, sin tener que pedirlo.
+    void accion<{ matching: number; reachable: number }>('campana.audiencia', {
+      companyId, template: t, config: { inactive_days: 60, cycle_days: 30, max_per_30d: 2, ...(c?.config ?? {}) },
+    }).then(setAudiencia).catch(() => undefined);
   }
 
   async function guardar(status: Campana['status']) {
-    if (!abierta || !borr) return;
+    if (!abierta || !borr || guardando) return;
+    setGuardando(true);
     try {
       await accion('campana.guardar', { companyId, template: abierta, status, ...borr });
-      avisar(status === 'active' ? 'Campaña activa' : status === 'paused' ? 'Campaña pausada' : 'Guardada como borrador');
+      const nombre = PLANTILLAS.find((p) => p.t === abierta)!.nombre;
+      avisar(
+        status === 'active'
+          ? `✓ «${nombre}» guardada y ACTIVA: se enviará sola, con tu texto.`
+          : status === 'paused'
+            ? `✓ «${nombre}» guardada y en pausa: no se envía hasta que la actives.`
+            : `✓ «${nombre}» guardada como borrador.`,
+        'ok',
+      );
+      setRecien(abierta);
+      setAbierta(null);
       releer();
     } catch (e) {
       avisar(mensaje(e), 'error');
+    } finally {
+      setGuardando(false);
     }
   }
+
 
   async function estimar() {
     if (!abierta || !borr) return;
@@ -113,7 +154,7 @@ export default function Campanas() {
           const c = datos.campanas.find((x) => x.template === p.t);
           const resumen = etapas(p.t);
           return (
-            <div key={p.t} className="card">
+            <div key={p.t} className={`card fz-campana${recien === p.t ? ' fz-campana--recien' : ''}`}>
               <div className="fz-fila" style={{ justifyContent: 'space-between' }}>
                 <b>{p.nombre}</b>
                 <span className={`badge-pill ${c?.status === 'active' ? 'b-new' : c?.status === 'paused' ? 'b-warm' : 'b-mute'}`}>
@@ -121,9 +162,17 @@ export default function Campanas() {
                 </span>
               </div>
               <p className="fz-def">{p.cuando}</p>
+              {/* Lo que tiene guardado: se ve que quedó el texto propio. */}
+              {c && (
+                <div className="fz-campana__guardado">
+                  <small>{c.title !== p.titulo || c.body !== p.texto ? 'Tu mensaje' : 'Mensaje'}</small>
+                  <b>{c.title}</b>
+                  <span>{c.body}</span>
+                </div>
+              )}
               {resumen && <p className="fz-def">Últimos 30 días: {resumen}</p>}
-              <button className="btn btn-ghost btn-sm" style={{ marginTop: 10 }} onClick={() => abrir(p.t)}>
-                {editable ? 'Configurar' : 'Ver'}
+              <button className={`btn ${c ? 'btn-ghost' : 'btn-primary'} fz-campana__boton`} onClick={() => abrir(p.t)}>
+                {editable ? (c ? 'Editar' : 'Configurar') : 'Ver'}
               </button>
             </div>
           );
@@ -131,62 +180,69 @@ export default function Campanas() {
       </div>
 
       {abierta && borr && (
-        <div className="card" style={{ maxWidth: 640 }}>
-          <h3 style={{ fontSize: 16, marginBottom: 10 }}>{PLANTILLAS.find((p) => p.t === abierta)!.nombre}</h3>
-          <div className="fz-campo">
-            <label className="field-label">Título (máx. 60)</label>
-            <input className="input" maxLength={60} value={borr.title} disabled={!editable} onChange={(e) => setBorr({ ...borr, title: e.target.value })} />
-          </div>
-          <div className="fz-campo">
-            <label className="field-label">Texto (máx. 160)</label>
-            <textarea className="textarea" maxLength={160} value={borr.body} disabled={!editable} onChange={(e) => setBorr({ ...borr, body: e.target.value })} />
-          </div>
-          {abierta === 'return_reminder' && (
-            <div className="fz-campo">
-              <label className="field-label">Días habituales entre visitas (7–180)</label>
-              <input className="input" type="number" min={7} max={180} value={borr.config.cycle_days} disabled={!editable} onChange={(e) => setBorr({ ...borr, config: { ...borr.config, cycle_days: Number(e.target.value) } })} />
+        <div className="modal-fondo" role="presentation" onMouseDown={(e) => { if (e.target === e.currentTarget && !guardando) setAbierta(null); }}>
+          <div className="modal fz-modal" role="dialog" aria-modal="true" aria-labelledby="fz-modal-titulo">
+            <div className="fz-modal__cab">
+              <h3 id="fz-modal-titulo">{PLANTILLAS.find((p) => p.t === abierta)!.nombre}</h3>
+              <button type="button" className="q-icon" aria-label="Cerrar" onClick={() => setAbierta(null)} disabled={guardando}>
+                <X size={18} />
+              </button>
             </div>
-          )}
-          {abierta === 'winback' && (
-            <div className="fz-campo">
-              <label className="field-label">Días sin venir para considerarlo inactivo (14–365)</label>
-              <input className="input" type="number" min={14} max={365} value={borr.config.inactive_days} disabled={!editable} onChange={(e) => setBorr({ ...borr, config: { ...borr.config, inactive_days: Number(e.target.value) } })} />
+            <div className="fz-modal__cuerpo">
+              <p className="fz-def" style={{ marginTop: 0 }}>{PLANTILLAS.find((p) => p.t === abierta)!.cuando}</p>
+              <div className="fz-campo">
+                <label className="field-label">Título (máx. 60)</label>
+                <input className="input" maxLength={60} value={borr.title} disabled={!editable} onChange={(e) => setBorr({ ...borr, title: e.target.value })} />
+              </div>
+              <div className="fz-campo">
+                <label className="field-label">Texto (máx. 160)</label>
+                <textarea className="textarea" maxLength={160} value={borr.body} disabled={!editable} onChange={(e) => setBorr({ ...borr, body: e.target.value })} />
+              </div>
+              {abierta === 'return_reminder' && (
+                <div className="fz-campo">
+                  <label className="field-label">Días habituales entre visitas (7–180)</label>
+                  <input className="input" type="number" inputMode="numeric" min={7} max={180} value={borr.config.cycle_days} disabled={!editable} onChange={(e) => setBorr({ ...borr, config: { ...borr.config, cycle_days: Number(e.target.value) } })} />
+                </div>
+              )}
+              {abierta === 'winback' && (
+                <div className="fz-campo">
+                  <label className="field-label">Días sin venir para considerarlo inactivo (14–365)</label>
+                  <input className="input" type="number" inputMode="numeric" min={14} max={365} value={borr.config.inactive_days} disabled={!editable} onChange={(e) => setBorr({ ...borr, config: { ...borr.config, inactive_days: Number(e.target.value) } })} />
+                </div>
+              )}
+              <div className="fz-campo">
+                <label className="field-label">Máximo de mensajes por persona cada 30 días (1–4)</label>
+                <input className="input" type="number" inputMode="numeric" min={1} max={4} value={borr.config.max_per_30d} disabled={!editable} onChange={(e) => setBorr({ ...borr, config: { ...borr.config, max_per_30d: Number(e.target.value) } })} />
+              </div>
+
+              <label className="field-label">Así le llega al cliente</label>
+              <div className="fz-modal__vista">
+                <b>{borr.title || 'Título'}</b>
+                <span>{borr.body || 'Texto del aviso'}</span>
+              </div>
+              <p className="fz-modal__alcance">
+                {audiencia
+                  ? <>Hoy cumplen el criterio <b>{audiencia.matching}</b>; con avisos activados: <b>{audiencia.reachable}</b>.{' '}
+                      <button type="button" className="nc-link" onClick={() => void estimar()}>Recalcular</button></>
+                  : 'Calculando a cuántos llegaría…'}
+              </p>
             </div>
-          )}
-          <div className="fz-campo">
-            <label className="field-label">Máximo de mensajes por persona cada 30 días (1–4)</label>
-            <input className="input" type="number" min={1} max={4} value={borr.config.max_per_30d} disabled={!editable} onChange={(e) => setBorr({ ...borr, config: { ...borr.config, max_per_30d: Number(e.target.value) } })} />
-          </div>
-
-          <label className="field-label">Vista previa</label>
-          <div className="card" style={{ boxShadow: 'none', border: '1.5px solid var(--line)', maxWidth: 360, padding: 12 }}>
-            <b style={{ fontSize: 14 }}>{borr.title}</b>
-            <p style={{ fontSize: 13 }}>{borr.body}</p>
-          </div>
-
-          <div className="fz-fila" style={{ marginTop: 12 }}>
-            <button className="btn btn-ghost btn-sm" onClick={() => void estimar()}>
-              Estimar audiencia
-            </button>
-            {audiencia && (
-              <span className="muted" style={{ fontSize: 13 }}>
-                Cumplen el criterio hoy: {audiencia.matching} · con avisos activados: <b>{audiencia.reachable}</b>
-              </span>
+            {editable ? (
+              <div className="fz-modal__pie">
+                <button className="btn btn-primary" disabled={guardando} onClick={() => void guardar('active')}>
+                  <Check size={17} /> {guardando ? 'Guardando…' : 'Guardar y activar'}
+                </button>
+                <div className="fz-modal__pie-dos">
+                  <button className="btn btn-ghost" disabled={guardando} onClick={() => void guardar('paused')}>Guardar en pausa</button>
+                  <button className="btn btn-ghost" disabled={guardando} onClick={() => void guardar('draft')}>Borrador</button>
+                </div>
+              </div>
+            ) : (
+              <div className="fz-modal__pie">
+                <button className="btn btn-ghost" onClick={() => setAbierta(null)}>Cerrar</button>
+              </div>
             )}
           </div>
-          {editable && (
-            <div className="fz-fila" style={{ marginTop: 14 }}>
-              <button className="btn btn-primary btn-sm" onClick={() => void guardar('active')}>
-                Activar
-              </button>
-              <button className="btn btn-ghost btn-sm" onClick={() => void guardar('paused')}>
-                Pausar
-              </button>
-              <button className="btn btn-ghost btn-sm" onClick={() => void guardar('draft')}>
-                Guardar borrador
-              </button>
-            </div>
-          )}
         </div>
       )}
     </>

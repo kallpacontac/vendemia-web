@@ -71,3 +71,11 @@
 .fe-apagado b { font-size: 16px; }
 .fe-apagado p { margin: 4px 0 0; font-size: 13.5px; max-width: 560px; }
 .fe-apagado .btn { min-height: 46px; }
+
+/* Al cobrar: «Nota de venta / Boleta electrónica» y sus acciones, grandes y a lo ancho (ComprobanteDelCobro). */
+.fe-elegir { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 8px; width: 100%; }
+.fe-elegir > .fe-cobro__que { grid-column: 1 / -1; font-weight: 700; }
+.fe-elegir .btn { min-height: 48px; justify-content: center; font-size: 15px; }
+.fe-elegir .fe-cobro__acciones { grid-column: 1 / -1; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.fe-elegir .fe-cobro__acciones .btn { width: 100%; }
+.fe-elegir > .fe-cobro { grid-column: 1 / -1; }

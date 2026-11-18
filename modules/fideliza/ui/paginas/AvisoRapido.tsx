@@ -76,10 +76,10 @@ export default function AvisoRapido(props: { companyId: string; push: boolean; r
     if (r.queued === 0) {
       avisar('No salió a nadie nuevo: ya lo recibieron hace un momento o dejaron de cumplir el filtro.', 'error');
     } else if (r.immediate) {
-      avisar(`Enviando a ${clientes(r.queued)}.`);
+      avisar(`✓ Aviso enviado a ${clientes(r.queued)}.`, 'ok');
       sincronizarEnSegundoPlano(companyId);
     } else {
-      avisar(`Programado para ${clientes(r.queued)}: saldrá a las 09:00.`);
+      avisar(`✓ Aviso programado para ${clientes(r.queued)}: saldrá a las 09:00.`, 'ok');
     }
     props.alEnviar();
   }
@@ -92,12 +92,12 @@ export default function AvisoRapido(props: { companyId: string; push: boolean; r
       <h3 style={{ fontSize: 16 }}>Enviar un aviso ahora</h3>
       <p className="fz-def">Llega como notificación a quien activó los avisos. Fuera de horario sale a las 09:00. Máximo 4 por persona cada 30 días.</p>
 
-      <div className="fz-fila" role="group" aria-label="A quién enviarlo" style={{ margin: '12px 0' }}>
+      <div className="fz-fila aviso-quien" role="group" aria-label="A quién enviarlo" style={{ margin: '12px 0' }}>
         {OPCIONES.map((o) => (
           <button
             key={o.p}
             type="button"
-            className={`btn btn-sm ${o.p === elegida.p ? 'btn-primary' : 'btn-ghost'}`}
+            className={`btn ${o.p === elegida.p ? 'btn-primary' : 'btn-ghost'}`}
             aria-pressed={o.p === elegida.p}
             onClick={() => elegir(o)}
           >
@@ -140,8 +140,8 @@ export default function AvisoRapido(props: { companyId: string; push: boolean; r
       )}
 
       {!audiencia ? (
-        <button type="button" className="btn btn-primary btn-sm" disabled={!listo || ocupado || !props.push} onClick={() => void revisar()}>
-          Revisar envío
+        <button type="button" className="btn btn-primary aviso-boton" disabled={!listo || ocupado || !props.push} onClick={() => void revisar()}>
+          {listo ? 'Revisar envío' : 'Escribe el título y el texto'}
         </button>
       ) : (
         <>
@@ -152,14 +152,14 @@ export default function AvisoRapido(props: { companyId: string; push: boolean; r
               <>No llegaría a nadie: {audiencia.matching > 0 ? `${clientes(audiencia.matching)} cumplen el filtro, pero sin avisos activos o con el tope alcanzado.` : 'ningún cliente cumple el filtro.'}</>
             )}
           </p>
-          <div className="fz-fila">
+          <div className="aviso-acciones">
             {audiencia.reachable > 0 && (
-              <button type="button" className="btn btn-primary btn-sm" disabled={ocupado} onClick={() => void enviar()}>
-                <Send size={15} aria-hidden="true" /> Enviar a {clientes(audiencia.reachable)}
+              <button type="button" className="btn btn-primary aviso-boton" disabled={ocupado} onClick={() => void enviar()}>
+                <Send size={17} aria-hidden="true" /> {ocupado ? 'Enviando…' : `Enviar a ${clientes(audiencia.reachable)}`}
               </button>
             )}
-            <button type="button" className="btn btn-ghost btn-sm" disabled={ocupado} onClick={() => setAudiencia(null)}>
-              Cambiar
+            <button type="button" className="btn btn-ghost aviso-boton" disabled={ocupado} onClick={() => setAudiencia(null)}>
+              Cambiar el mensaje
             </button>
           </div>
         </>

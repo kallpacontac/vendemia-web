@@ -2533,3 +2533,27 @@ nav.chip-tabs[aria-label="Caja"] a{flex-shrink:0;white-space:nowrap}
 .catalogo-clases button.on{background:var(--ink,#0A0A0A);border-color:var(--ink,#0A0A0A);color:#fff}
 .catalogo-clases button.on small{color:rgba(255,255,255,.7)}
 @media (max-width:620px){.catalogo-clases{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}.catalogo-clases button{flex:none;min-height:42px;padding:0 14px;font-size:13.5px}}
+
+/* Fideliza › Campañas: la tarjeta con lo guardado y el editor en ventana (Campanas.tsx). */
+.fz-campana{display:flex;flex-direction:column;gap:6px;transition:box-shadow .3s ease}
+.fz-campana--recien{box-shadow:0 0 0 3px #16A34A, var(--sh-card)}
+.fz-campana__guardado{display:flex;flex-direction:column;gap:2px;padding:10px 12px;border-radius:12px;background:var(--bg-soft);font-size:13px}
+.fz-campana__guardado small{font-size:11px;font-weight:700;color:var(--ink-mute);text-transform:uppercase;letter-spacing:.04em}
+.fz-campana__guardado span{color:var(--ink-soft)}
+.fz-campana__boton{width:100%;min-height:46px;margin-top:auto}
+.fz-modal{width:min(560px,100%);max-height:calc(100dvh - 32px);display:flex;flex-direction:column}
+.fz-modal__cab{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:16px 18px 8px;border-bottom:1px solid var(--line)}
+.fz-modal__cab h3{margin:0;font-size:17px}
+.fz-modal__cuerpo{overflow-y:auto;padding:14px 18px;display:grid;gap:4px}
+.fz-modal__vista{display:flex;flex-direction:column;gap:3px;max-width:360px;padding:12px 14px;border-radius:14px;border:1.5px solid var(--line);font-size:13.5px}
+.fz-modal__vista span{color:var(--ink-soft)}
+.fz-modal__alcance{margin:8px 0 0;font-size:13px;color:var(--ink-soft)}
+.fz-modal__pie{display:grid;gap:8px;padding:12px 18px 16px;border-top:1px solid var(--line);background:var(--bg-card)}
+.fz-modal__pie>.btn{width:100%;min-height:52px;font-size:16px;justify-content:center}
+.fz-modal__pie-dos{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.fz-modal__pie-dos .btn{min-height:46px;justify-content:center}
+
+/* Fideliza › Enviar un aviso ahora: a quién, en botones claros; las acciones, a lo ancho. */
+.aviso-quien .btn{min-height:44px}
+.aviso-boton{width:100%;min-height:52px;font-size:16px;justify-content:center}
+.aviso-acciones{display:grid;gap:8px}
