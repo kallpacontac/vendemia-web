@@ -56,3 +56,4 @@
 .cierres__hechos summary { cursor: pointer; color: var(--ink-soft, #5C5C5C); padding: 6px 0; }
 .cierres__hechos ul { list-style: none; margin: 4px 0 0; padding: 0; }
 .cierres__hechos li { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px; padding: 6px 0; }
+.cierres__nota { flex-basis: 100%; }

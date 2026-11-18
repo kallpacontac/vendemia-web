@@ -5,7 +5,8 @@
  *
  * Por barbero: lo que lleva ganado desde su último pago (comisión de lo atendido) menos sus
  * adelantos, y un botón «Pagar». Pagar apunta un cierre: esas citas y adelantos ya no vuelven
- * a salir. Debajo, los últimos pagos, con «Deshacer» para el dueño si se equivocó.
+ * a salir, y el pago sale como gasto de hoy en la Caja (datos 0014), para que cuadre con el cajón.
+ * Debajo, los últimos pagos, con «Deshacer» para el dueño si se equivocó (borra también el gasto).
  *
  * La cuenta vive en lib/panel/cierres.ts. Sin la 0014, o si quien mira no es dueño ni
  * administrador, no se pinta.
@@ -50,7 +51,7 @@ export default function CierresPorPagar({ companyId, esDueno }: { companyId: str
     setEnVuelo(true);
     try {
       await pagarCierre(companyId, p, metodo);
-      avisar(`Pagado: ${soles(p.aPagar)} a ${p.nombre} (${METODOS.find((m) => m[0] === metodo)?.[1].toLowerCase()}).`, 'ok');
+      avisar(`Pagado: ${soles(p.aPagar)} a ${p.nombre} (${METODOS.find((m) => m[0] === metodo)?.[1].toLowerCase()}). Sale como gasto de hoy en la Caja.`, 'ok');
       setAbierto(null);
       setRonda((r) => r + 1);
     } catch (e) {
@@ -61,7 +62,7 @@ export default function CierresPorPagar({ companyId, esDueno }: { companyId: str
   }
 
   async function deshacer(id: string) {
-    if (!window.confirm('¿Deshacer este pago? Sus citas y adelantos vuelven a «por pagar».')) return;
+    if (!window.confirm('¿Deshacer este pago? Sus citas y adelantos vuelven a «por pagar» y se borra su gasto de la Caja.')) return;
     try {
       await deshacerCierre(companyId, id);
       avisar('Pago deshecho.', 'ok');
@@ -104,6 +105,7 @@ export default function CierresPorPagar({ companyId, esDueno }: { companyId: str
                         </button>
                       ))}
                     </div>
+                    <small className="muted cierres__nota">Sale como gasto de hoy en la Caja.</small>
                     <button type="button" className="btn btn-ghost btn-sm" onClick={() => setAbierto(null)} disabled={enVuelo}>Cancelar</button>
                     <button type="button" className="btn btn-primary btn-sm" onClick={() => pagar(p)} disabled={enVuelo}>
                       <Check size={14} /> {enVuelo ? 'Guardando…' : `Pagué ${soles(p.aPagar)}`}

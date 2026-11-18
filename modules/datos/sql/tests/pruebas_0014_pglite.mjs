@@ -31,6 +31,8 @@ begin
 end $$;
 create table employees (id text primary key, company_id text, name text);
 create table appointments (id text primary key, company_id text, employee_id text, status text, slot_start text);
+create table gastos (id text primary key, company_id text not null, fecha text not null, concepto text not null,
+  categoria text not null default '', importe real not null, creado_por text not null default '', created_at bigint);
 insert into employees values ('e1', 'c1', 'Alexander'), ('e2', 'c1', 'Brandy'), ('e9', 'c2', 'Otro');
 insert into appointments values
   ('a1', 'c1', 'e1', 'completed', '2026-11-18 10:00'), ('a2', 'c1', 'e1', 'completed', '2026-11-18 11:00'),
@@ -65,6 +67,9 @@ await espera('la misma cita dos veces', () => q(`select comision_cierre_guardar(
 await espera('el mismo adelanto dos veces', () => q(`select comision_cierre_guardar('c1', $1::jsonb)`, [pago({ citas: [], adelantos: ['g1'] })]), /ya se pagó/);
 r = await q(`select comision_cierre_guardar('c1', $1::jsonb) v`, [pago({ employee_id: 'e2', citas: ['a4'], adelantos: [], comision: 12.5, adelantado: 0, pagado: 12.5 })]);
 ok('otro barbero, otro cierre', Number(r.rows[0].v.comision) === 12.5);
+let g = await q(`select * from gastos where id = $1`, ['cierre-' + c1.id]);
+ok('el pago sale como gasto de hoy', g.rows.length === 1 && Number(g.rows[0].importe) === 15 && g.rows[0].categoria === 'Comisiones'
+  && /Comisión de Alexander \(yape\)/.test(g.rows[0].concepto) && /^\d{4}-\d{2}-\d{2}$/.test(g.rows[0].fecha) && c1.gasto_id === 'cierre-' + c1.id);
 r = await q(`select comision_cierres_leer('c1') v`);
 ok('leer: los dos, el último primero', r.rows[0].v.length === 2 && r.rows[0].v[0].employee_id === 'e2');
 
@@ -72,8 +77,18 @@ await espera('el admin no deshace', () => q(`select comision_cierre_borrar('c1',
 await rol('dueno');
 await espera('deshacer de otro negocio', () => q(`select comision_cierre_borrar('c2', $1)`, [c1.id]), /ya no existe/);
 await q(`select comision_cierre_borrar('c1', $1)`, [c1.id]);
+g = await q(`select count(*)::int n from gastos where id = $1`, ['cierre-' + c1.id]);
+ok('deshacer borra su gasto', g.rows[0].n === 0);
 r = await q(`select comision_cierre_guardar('c1', $1::jsonb) v`, [pago()]);
 ok('deshecho: se puede volver a pagar', Number(r.rows[0].v.pagado) === 15);
+await db.exec(`alter table gastos add column employee_id text not null default ''`);
+r = await q(`select comision_cierre_guardar('c1', $1::jsonb) v`, [pago({ employee_id: 'e2', citas: [], adelantos: ['g7'], comision: 0, adelantado: 5, pagado: 0 })]);
+g = await q(`select count(*)::int n from gastos where company_id = 'c1'`);
+ok('pagado 0: sin gasto', r.rows[0].v.gasto_id === '' && g.rows[0].n === 2);
+await db.exec(`insert into appointments values ('a5', 'c1', 'e2', 'completed', '2026-11-18 15:00')`);
+r = await q(`select comision_cierre_guardar('c1', $1::jsonb) v`, [pago({ employee_id: 'e2', citas: ['a5'], adelantos: [], comision: 9, adelantado: 0, pagado: 9 })]);
+g = await q(`select employee_id from gastos where id = $1`, [r.rows[0].v.gasto_id]);
+ok('con la 0013, el gasto dice a quién fue', g.rows[0]?.employee_id === 'e2');
 
 r = await q(`select has_function_privilege('anon','public.comision_cierre_guardar(text,jsonb)','execute') a,
   has_table_privilege('authenticated','public.comision_cierres','select') b,
