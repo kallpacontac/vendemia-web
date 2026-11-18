@@ -21,7 +21,7 @@
  */
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { Gift, Minus, Receipt, UserPlus, X } from 'lucide-react';
+import { Gift, Minus, Plus, Receipt, UserPlus, X } from 'lucide-react';
 import { BotonCobrar } from '@/components/panel/BotonCobrar';
 import { cobrable } from '@/components/panel/ListosParaCobrar';
 import { useAvisar, useComando } from '@/components/panel/Avisos';
@@ -29,6 +29,7 @@ import { fotoParaCobro, type FotoPago } from '@/lib/panel/fotoPago';
 import { etiquetaMetodo, type MetodoPago } from '@/lib/panel/metodosPago';
 import { soles } from '@/lib/panel/format';
 import { supabase } from '@/lib/supabase/client';
+import { sumarSelloDeCita, type SelloResultado } from '@/components/panel/selloDeCita';
 import type { ItemCatalogo, Trabajador } from '@/lib/supabase/queries';
 import type { Sede } from '@/modules/tu-pagina/dominio/adelantoCitas';
 
@@ -77,8 +78,8 @@ export default function CobrarTicket({
   const [tel, setTel] = useState('');
   const [nombre, setNombre] = useState('');
   const [enviando, setEnviando] = useState(false);
-  /** Lo último cobrado: para ofrecer el sello de su tarjeta. */
-  const [hecho, setHecho] = useState<{ texto: string; tel: string } | null>(null);
+  /** Lo último cobrado y lo que pasó con su tarjeta de fidelidad. */
+  const [hecho, setHecho] = useState<{ texto: string; tel: string; sello: SelloResultado } | null>(null);
 
   const total = items.reduce((t, id) => t + Number(porId.get(id)?.price ?? 0), 0);
   const cuenta = (id: string) => items.filter((x) => x === id).length;
@@ -86,6 +87,18 @@ export default function CobrarTicket({
     const i = l.lastIndexOf(id);
     return i < 0 ? l : [...l.slice(0, i), ...l.slice(i + 1)];
   });
+  const sumarUno = (id: string) => setItems((l) => [...l, id]);
+  /**
+   * Tocar marca o desmarca (17-nov-2026: «que no se sume al darle varias veces»). La cantidad,
+   * con − y + en la línea del ticket, abajo.
+   */
+  const alternar = (id: string) => setItems((l) => (l.includes(id) ? l.filter((x) => x !== id) : [...l, id]));
+  const stockDe = (id: string) => porId.get(id)?.stock ?? null;
+  const quitarCliente = () => {
+    setTel('');
+    setNombre('');
+    setConCliente(false);
+  };
   const telLimpio = soloDigitos(tel);
 
   /** Lo que falta, dicho en una línea encima del botón. */
@@ -137,7 +150,10 @@ export default function CobrarTicket({
     } else {
       avisar(`Cobrado con ${etiquetaMetodo(metodo).toLowerCase()}: ${texto}`, 'ok');
     }
-    setHecho({ texto, tel: telLimpio.length >= 9 ? telLimpio : '' });
+    // La tarjeta de fidelidad, sola: si el celular tiene tarjeta, su sello (una vez por ticket).
+    const sello = pagado === undefined ? null : await sumarSelloDeCita(companyId, telLimpio, r.id, Number(r.total));
+    if (sello) avisar(sello.texto, sello.tono);
+    setHecho({ texto, tel: telLimpio.length >= 9 ? telLimpio : '', sello });
     setItems([]);
     setTel('');
     setNombre('');
@@ -157,8 +173,11 @@ export default function CobrarTicket({
 
       {hecho && (
         <div className="ticket-hecho" role="status">
-          <span>Último: <b>{hecho.texto}</b></span>
-          {hecho.tel && (
+          <span>
+            Último: <b>{hecho.texto}</b>
+            {hecho.sello && <small className="ticket-hecho__sello"><Gift size={13} /> {hecho.sello.texto}</small>}
+          </span>
+          {hecho.tel && hecho.sello?.tono !== 'ok' && (
             <Link className="btn btn-ghost btn-sm" href={`/panel/fideliza/caja?q=${hecho.tel.slice(-9)}`}>
               <Gift size={14} /> Sumar a su tarjeta
             </Link>
@@ -187,11 +206,11 @@ export default function CobrarTicket({
         )}
 
         <div className="ticket-paso">
-          <span className="ticket-rotulo">{activos.length > 0 ? '2 · ' : ''}¿Qué se hizo? <small>toca para sumar</small></span>
+          <span className="ticket-rotulo">{activos.length > 0 ? '2 · ' : ''}¿Qué se hizo? <small>toca para elegir; la cantidad, abajo con − y +</small></span>
           <div className="ticket-chips">
             {servicios.map((c) => (
               <button key={c.id} type="button" className={`ticket-chip ticket-chip--item${cuenta(c.id) ? ' on' : ''}`}
-                onClick={() => setItems((l) => [...l, c.id])}>
+                aria-pressed={cuenta(c.id) > 0} onClick={() => alternar(c.id)}>
                 <span>{c.name}</span>
                 <small>{c.price != null ? soles(Number(c.price)) : '—'}</small>
                 {cuenta(c.id) > 1 && <i className="ticket-x">×{cuenta(c.id)}</i>}
@@ -204,8 +223,8 @@ export default function CobrarTicket({
               <div className="ticket-chips">
                 {productos.map((c) => (
                   <button key={c.id} type="button" className={`ticket-chip ticket-chip--item${cuenta(c.id) ? ' on' : ''}`}
-                    disabled={c.stock != null && c.stock <= cuenta(c.id)}
-                    onClick={() => setItems((l) => [...l, c.id])}>
+                    disabled={c.stock != null && c.stock <= 0 && cuenta(c.id) === 0}
+                    aria-pressed={cuenta(c.id) > 0} onClick={() => alternar(c.id)}>
                     <span>{c.name}</span>
                     <small>{c.price != null ? soles(Number(c.price)) : '—'}{c.stock != null ? ` · quedan ${c.stock}` : ''}</small>
                     {cuenta(c.id) > 1 && <i className="ticket-x">×{cuenta(c.id)}</i>}
@@ -235,12 +254,20 @@ export default function CobrarTicket({
 
         <div className="ticket-paso">
           {conCliente ? (
-            <div className="ticket-cliente">
-              <input className="input" inputMode="tel" placeholder="Celular · 987654321" value={tel} onChange={(e) => setTel(e.target.value)}
-                aria-label="Celular del cliente" autoComplete="off" />
-              <input className="input" placeholder="Nombre" value={nombre} onChange={(e) => setNombre(e.target.value)}
-                aria-label="Nombre del cliente" autoComplete="off" />
-            </div>
+            <>
+              <span className="ticket-rotulo ticket-rotulo--cerrable">
+                Cliente <small>con su celular, el sello de su tarjeta se suma solo</small>
+                <button type="button" className="ticket-cerrar" onClick={quitarCliente} aria-label="Quitar cliente">
+                  <X size={15} /> Quitar
+                </button>
+              </span>
+              <div className="ticket-cliente">
+                <input className="input" inputMode="tel" placeholder="Celular · 987654321" value={tel} onChange={(e) => setTel(e.target.value)}
+                  aria-label="Celular del cliente" autoComplete="off" autoFocus />
+                <input className="input" placeholder="Nombre" value={nombre} onChange={(e) => setNombre(e.target.value)}
+                  aria-label="Nombre del cliente" autoComplete="off" />
+              </div>
+            </>
           ) : (
             <button type="button" className="btn btn-ghost btn-sm" onClick={() => setConCliente(true)}>
               <UserPlus size={14} /> Cliente (opcional, para su tarjeta)
@@ -255,11 +282,18 @@ export default function CobrarTicket({
           <ul className="ticket-lineas">
             {[...new Set(items)].map((id) => (
               <li key={id}>
-                <span>{cuenta(id) > 1 ? `${cuenta(id)} × ` : ''}{porId.get(id)?.name}</span>
+                <span>{porId.get(id)?.name}</span>
+                <span className="ticket-paso-cant" role="group" aria-label={`Cantidad de ${porId.get(id)?.name}`}>
+                  <button type="button" className="ticket-mm" aria-label={cuenta(id) === 1 ? `Quitar ${porId.get(id)?.name}` : 'Uno menos'} onClick={() => quitarUno(id)}>
+                    <Minus size={16} />
+                  </button>
+                  <b aria-live="polite">{cuenta(id)}</b>
+                  <button type="button" className="ticket-mm" aria-label="Uno más" onClick={() => sumarUno(id)}
+                    disabled={stockDe(id) != null && (stockDe(id) ?? 0) <= cuenta(id)}>
+                    <Plus size={16} />
+                  </button>
+                </span>
                 <b>{soles(Number(porId.get(id)?.price ?? 0) * cuenta(id))}</b>
-                <button type="button" className="q-icon" aria-label={`Quitar ${porId.get(id)?.name}`} onClick={() => quitarUno(id)}>
-                  <Minus size={14} />
-                </button>
               </li>
             ))}
           </ul>

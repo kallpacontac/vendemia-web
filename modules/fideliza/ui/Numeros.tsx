@@ -111,7 +111,7 @@ export function VistaNumeros({ n, dias, setDias, extra = null }: { n: NumerosCal
   // Embudo de leads: «Abrieron Únete» solo si el servidor lo dio y hay algo que contar.
   const pasos = [
     ...(extra && extra.abrieronUnete > 0 ? [{ id: 'abrieron', nombre: 'Abrieron «Únete»', valor: extra.abrieronUnete, nota: 'Escanearon el QR o tocaron la placa' }] : []),
-    { id: 'registrados', nombre: 'Crearon su tarjeta', valor: n.embudo.registrados, nota: 'Leads nuevos del período' },
+    { id: 'registrados', nombre: 'Crearon su tarjeta', valor: n.embudo.registrados, nota: 'Clientes nuevos del período' },
     { id: 'compraron', nombre: 'Hicieron su primera compra', valor: n.embudo.compraron, nota: 'Ya pasaron por caja' },
     { id: 'volvieron', nombre: 'Volvieron', valor: n.embudo.volvieron, nota: 'Dos visitas o más' },
   ];
@@ -138,7 +138,7 @@ export function VistaNumeros({ n, dias, setDias, extra = null }: { n: NumerosCal
 
       <div className="fz-numeros__fila fz-leads">
         <article className="fz-numeros__card">
-          <div className="negocio-card-head"><h2>Tus leads</h2><span className="negocio-currency">últimos {periodo}</span></div>
+          <div className="negocio-card-head"><h2>Tus clientes</h2><span className="negocio-currency">últimos {periodo}</span></div>
           <p className="fz-numeros__sub">De quien se registró en tu club a quien ya es cliente que vuelve.</p>
           <ol className="fz-embudo">
             {pasos.map((p, i) => (

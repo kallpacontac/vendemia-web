@@ -109,7 +109,7 @@ export default function Leads() {
   return (
     <main className="main main--leads">
       <div className="wrap">
-        <Topbar titulo="Leads" sub="Todos tus contactos de WhatsApp" accionesTitulo={
+        <Topbar titulo="Clientes" sub="Todos tus clientes y contactos" accionesTitulo={
           <button type="button" className="btn btn-ghost leads-exportar" onClick={exportarCsv} disabled={!filtrados.length}>
             <Download size={16} /> Exportar
           </button>

@@ -2319,3 +2319,68 @@ button.fpill{font-family:inherit;min-height:36px}
 /* Dentro de la ventana de Nueva cita el calendario va en línea: flotando, el desplazamiento de la ventana lo cortaba. */
 .nc .fh-pop{position:static;transform:none;margin-top:8px;box-shadow:none;width:fit-content;max-width:100%}
 @media (max-width:420px){.nc .fh-pop{width:100%;display:flex;justify-content:center}}
+
+/* Ticket: cantidad con − y + (antes: tocar varias veces el servicio). */
+.ticket-lineas li:has(.ticket-paso-cant){grid-template-columns:1fr auto 80px}
+.ticket-lineas li>b{text-align:right}
+.ticket-paso-cant{display:inline-flex;align-items:center;gap:6px;background:var(--bg-card);border:1.5px solid var(--line-2);border-radius:999px;padding:3px}
+.ticket-paso-cant>b{min-width:22px;text-align:center;font-size:15px}
+.ticket-mm{width:40px;height:40px;border-radius:50%;border:none;background:var(--brand-soft);color:var(--brand-txt);display:grid;place-items:center;cursor:pointer}
+.ticket-mm:hover:not(:disabled){background:var(--brand);color:var(--on-brand,#fff)}
+.ticket-mm:disabled{opacity:.4;cursor:not-allowed}
+.ticket-rotulo--cerrable{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.ticket-cerrar,.nc-cerrar{margin-left:auto;display:inline-flex;align-items:center;gap:4px;min-height:40px;padding:0 12px;border-radius:999px;
+  border:1.5px solid var(--line-2);background:var(--bg-card);color:var(--ink-soft);font:700 13px 'Plus Jakarta Sans';cursor:pointer}
+.ticket-cerrar:hover,.nc-cerrar:hover{border-color:var(--brand);color:var(--brand-txt)}
+.ticket-hecho__sello{display:flex;align-items:center;gap:5px;margin-top:4px;font-size:12.5px;font-weight:600}
+.nc-interruptor{justify-self:start;display:inline-flex;align-items:center;gap:6px;min-height:42px;padding:0 14px;border-radius:999px;
+  border:1.5px dashed var(--line-2);background:none;color:var(--brand-txt);font:700 13.5px 'Plus Jakarta Sans';cursor:pointer}
+.nc-interruptor.on{border-style:solid;color:var(--ink-soft)}
+/* Agenda: «Libre» se toca para agendar a esa hora. */
+.cell.free--tocable{cursor:pointer;display:flex;align-items:center;justify-content:center;gap:4px;transition:.12s}
+.cell.free--tocable:hover,.cell.free--tocable:focus-visible{border-color:var(--brand);border-style:solid;color:var(--brand-txt);background:var(--brand-soft)}
+.cell.free--tocable svg{opacity:.6}
+
+/* ── La campana que suena: lo que pide atención ya (Campana.tsx) ────────────── */
+@keyframes campana-suena{
+  0%,62%,100%{transform:rotate(0)}
+  66%{transform:rotate(16deg)}70%{transform:rotate(-14deg)}74%{transform:rotate(11deg)}
+  78%{transform:rotate(-8deg)}82%{transform:rotate(5deg)}86%{transform:rotate(-2deg)}
+}
+.campana{display:inline-grid;place-items:center;color:#E08A00;transform-origin:50% 8%;animation:campana-suena 2.8s ease-in-out infinite;vertical-align:-2px}
+.campana svg{display:block}
+/* Los comprobantes por revisar (ComprobantesPorRevisar): la misma campana, puesta con CSS. */
+.tc-revisar__titulo{display:inline-flex;align-items:center;gap:8px}
+.tc-revisar__titulo::before{content:'';width:18px;height:18px;flex:none;background:#E08A00;transform-origin:50% 8%;animation:campana-suena 2.8s ease-in-out infinite;
+  -webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M10.27 21a2 2 0 0 0 3.46 0'/%3E%3Cpath d='M3.26 15.33A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.67C19.41 13.96 18 12.5 18 8A6 6 0 0 0 6 8c0 4.5-1.41 5.96-2.74 7.33'/%3E%3C/svg%3E") center/contain no-repeat;
+  mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M10.27 21a2 2 0 0 0 3.46 0'/%3E%3Cpath d='M3.26 15.33A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.67C19.41 13.96 18 12.5 18 8A6 6 0 0 0 6 8c0 4.5-1.41 5.96-2.74 7.33'/%3E%3C/svg%3E") center/contain no-repeat}
+@media (prefers-reduced-motion:reduce){.campana,.tc-revisar__titulo::before{animation:none}}
+/* Las pestañas de Caja (Caja del día · Boletas y facturas · Comisiones): en el celular se desplazan, no se salen. */
+nav.chip-tabs[aria-label="Caja"]{max-width:100%;overflow-x:auto;scrollbar-width:none}
+nav.chip-tabs[aria-label="Caja"] a{flex-shrink:0;white-space:nowrap}
+
+/* ── Botones que no hay que buscar (18-nov-2026, The 24/7: «que no tengan que buscarlos, en
+   especial guardar; mi cliente no es muy bueno con la tecnología») ──────────────────────────
+   1 · En pantallas táctiles (tablet y celular) todo lo que se toca crece, mida lo que mida la
+       pantalla: la Blackview tiene 1280 px de ancho y antes recibía los botones de escritorio. */
+@media (pointer: coarse){
+  .main .btn{min-height:46px}
+  .main .btn-sm{min-height:42px;padding:9px 16px;font-size:13.5px}
+  .main .q-icon{width:42px;height:42px}
+  .modal .btn{min-height:48px;padding:0 20px}
+  .main .fpill{min-height:40px;padding:8px 16px;font-size:13.5px}
+}
+/* 2 · «Guardar» fijo abajo mientras se edita (Catálogo, Equipo): no hay que bajar a buscarlo. */
+.barra-guardar{position:sticky;bottom:12px;z-index:30;display:flex;flex-wrap:wrap;gap:10px;justify-content:space-between;align-items:center;
+  margin-top:18px;padding:12px;background:var(--bg-card);border:1px solid var(--line);border-radius:16px;box-shadow:0 -8px 28px rgba(20,20,18,.10)}
+.main .barra-guardar .btn-primary{min-height:52px;font-size:16px;padding:0 28px}
+/* 3 · La barra de «cambios sin guardar» de Ajustes: el botón, más grande. */
+.guardar-barra .btn-primary{min-height:50px;font-size:15.5px;padding:0 24px}
+.modal__pie .btn-primary{min-width:120px}
+@media (max-width:820px){
+  .barra-guardar{bottom:86px}
+  .barra-guardar .btn{flex:1}
+}
+/* overflow:hidden convierte la tarjeta en contenedor de desplazamiento y anula el sticky; clip recorta igual sin romperlo. */
+.cat-item:has(.barra-guardar){overflow:clip}
+@media (max-width:820px){.main .barra-guardar .btn-primary{flex:2;white-space:nowrap}.barra-guardar .btn-ghost{font-size:13px}}

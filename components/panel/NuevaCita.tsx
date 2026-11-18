@@ -416,9 +416,11 @@ export default function NuevaCita({
             {horasPosibles ? (
               <>
                 <ElegirHora horas={horasVisibles} valor={hora} alCambiar={setHora} llenas={llenas} />
-                {fecha === hoy && !verPasadas && horasVisibles.length < horasPosibles.length && (
-                  <button type="button" className="nc-link" onClick={() => setVerPasadas(true)}>
-                    ¿Ya lo atendiste? Ver las horas de antes
+                {/* Un interruptor, no una puerta de un solo sentido: se abre y se vuelve a cerrar. */}
+                {fecha === hoy && (verPasadas || horasVisibles.length < horasPosibles.length) && (
+                  <button type="button" className={`nc-interruptor${verPasadas ? ' on' : ''}`} aria-pressed={verPasadas}
+                    onClick={() => setVerPasadas((v) => !v)}>
+                    {verPasadas ? <><X size={15} /> Ocultar las horas que ya pasaron</> : '¿Ya lo atendiste? Ver las horas que ya pasaron'}
                   </button>
                 )}
               </>

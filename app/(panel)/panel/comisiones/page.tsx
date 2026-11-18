@@ -28,6 +28,7 @@ import { Fragment, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { AlertTriangle, ChevronDown, ChevronUp, Download, Percent, Scissors, Wallet } from 'lucide-react';
 import Topbar from '@/components/panel/Topbar';
+import SubnavCaja from '@/components/panel/SubnavCaja';
 import { useSesion } from '@/components/panel/Sesion';
 import { useCargar } from '@/components/panel/useCargar';
 import { diaMes, soles } from '@/lib/panel/format';
@@ -123,7 +124,8 @@ export default function Comisiones() {
   return (
     <main className="main">
       <div className="wrap">
-        <Topbar titulo="Comisiones" sub="Cuánto le toca a cada profesional, por las citas que atendió" />
+        <Topbar titulo="Caja" sub="Cuánto le toca a cada barbero, por lo que atendió" />
+        <SubnavCaja />
 
         <div className="filters" style={{ marginBottom: 16 }}>
           {PERIODOS.map(([k, txt]) => (

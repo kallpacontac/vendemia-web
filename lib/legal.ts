@@ -66,7 +66,7 @@ export const EMPRESA = {
  * informando de nada — el sentido de esa fecha es marcar cuándo cambió el
  * texto, y eso solo lo sabe quien lo cambia.
  */
-export const ACTUALIZADO = '24 de septiembre de 2026';
+export const ACTUALIZADO = '17 de noviembre de 2026';
 
 /**
  * La misma fecha en ISO, para el `lastmod` del sitemap.
@@ -75,7 +75,7 @@ export const ACTUALIZADO = '24 de septiembre de 2026';
  * una persona al pie de la página y la otra un rastreador, no porque puedan
  * decir cosas distintas.
  */
-export const ACTUALIZADO_ISO = '2026-09-24';
+export const ACTUALIZADO_ISO = '2026-11-17';
 
 export type Bloque = {
   h?: string;
@@ -232,6 +232,33 @@ export const PRIVACIDAD: PaginaLegal = {
       p: [
         'Esos datos se usan únicamente para prestar el servicio al negocio que nos contrató: responder a sus clientes, agendar sus citas, registrar sus pedidos y enseñarle sus conversaciones en su panel.',
         'No los vendemos, no los cedemos a terceros, no los usamos para publicidad ni para crear perfiles, y no los cruzamos entre negocios distintos: lo que un cliente le dice a un negocio no lo ve ningún otro.',
+      ],
+    },
+    {
+      /**
+       * Google lo exige para verificar el permiso del calendario (Google Auth
+       * Platform → Verification Center): qué datos de Google se usan, para qué, y
+       * la declaración de «Limited Use». Si el código empieza a leer algo más
+       * del calendario (títulos, invitados…), hay que cambiar esto ANTES.
+       * Código: modules/agenda-google.
+       */
+      h: 'Datos de Google Calendar',
+      p: [
+        'Si el negocio decide conectar su Google Calendar desde el panel (Configuración → Google Calendar), nos autoriza a acceder a su calendario con dos fines y nada más:',
+      ],
+      li: [
+        'Consultar sus horas libres y ocupadas, para no ofrecer en su página de reservas un horario en el que ya tiene otro compromiso. Solo leemos los intervalos de libre u ocupado: no leemos el título, la descripción, el lugar ni los invitados de sus eventos.',
+        'Crear en su calendario cada cita que un cliente reserva en su página (con el servicio, el nombre y el WhatsApp de quien reservó) y, si el negocio lo activa, el enlace de Google Meet de esa cita.',
+      ],
+    },
+    {
+      p: [
+        'Guardamos la dirección de la cuenta conectada y un token de acceso cifrado. Los intervalos de ocupado se usan en el momento y se conservan como máximo un minuto en caché. Los datos de Google no se usan para publicidad, no se venden, no se usan para entrenar modelos de inteligencia artificial y ninguna persona de nuestro equipo los lee, salvo que el negocio nos lo pida para darle soporte o lo exija la ley.',
+        'El negocio puede desconectar su calendario en cualquier momento desde el mismo panel: revocamos el permiso en Google y borramos el token. También puede retirarlo desde la configuración de seguridad de su cuenta de Google.',
+        'El uso y la transferencia a cualquier otra aplicación de la información recibida de las API de Google se ajustan a la Política de Datos de Usuario de los Servicios de API de Google, incluidos los requisitos de Uso Limitado.',
+      ],
+      enlaces: [
+        { href: 'https://developers.google.com/terms/api-services-user-data-policy', label: 'Política de Datos de Usuario de los Servicios de API de Google' },
       ],
     },
     {

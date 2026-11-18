@@ -12,6 +12,7 @@
  */
 import { CalendarCheck, CheckCircle, ChevronLeft, ChevronRight, Clock } from 'lucide-react';
 import ComboPanel from './ComboPanel';
+import Campana from './Campana';
 
 type Tab = 'semana' | 'proximas' | 'pasadas';
 type Props = {
@@ -50,7 +51,7 @@ export default function AgendaControles(p: Props) {
           {!p.canchas && (!p.recurrente || p.pendientes > 0) && (
             <button type="button" role="tab" className={`${p.tab === 'pasadas' ? 'active' : ''}${p.pendientes > 0 ? ' con-pendientes' : ''}`}
               aria-selected={p.tab === 'pasadas'} onClick={() => p.alTab('pasadas')}>
-              <CheckCircle size={15} /> ¿Vino?{p.pendientes > 0 ? ` · ${p.pendientes}` : ''}
+              {p.pendientes > 0 ? <Campana size={15} /> : <CheckCircle size={15} />} ¿Vino?{p.pendientes > 0 ? ` · ${p.pendientes}` : ''}
             </button>
           )}
         </div>

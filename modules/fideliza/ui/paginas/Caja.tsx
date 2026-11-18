@@ -122,6 +122,8 @@ export default function Caja() {
   const [q, setQ] = useState('');
   const [buscando, setBuscando] = useState(false);
   const [candidatos, setCandidatos] = useState<MiembroCaja[]>([]);
+  /** Varias tarjetas con ese nombre: se elige la de la persona que está delante. */
+  const [porNombre, setPorNombre] = useState<{ id: string; public_code: string; alias: string | null; phone?: string | null }[]>([]);
   /** La tarjeta de la PERSONA, tal como la devuelve la base. */
   const [persona, setM] = useState<MiembroCaja | null>(null);
   /** 0017: la línea en la que se opera (null = la principal). */
@@ -185,45 +187,93 @@ export default function Caja() {
   }, [companyId]);
 
   // ── Escáner ─────────────────────────────────────────────────────────────
+  // 18-nov-2026 (The 24/7, tablet Blackview: «el scanner no está funcionando»). Tres arreglos:
+  //   · El <video> puede no estar pintado aún (se llega con ?camara=1 mientras carga la página):
+  //     antes se salía dejando la cámara encendida y sin imagen. Ahora lo espera.
+  //   · En muchas tablets Android existe BarcodeDetector pero sin QR (les falta el servicio de
+  //     Google): crearlo falla o no lee nunca. Se pregunta si sabe leer QR y, si no, jsQR.
+  //   · El error dice por qué: permiso negado, cámara ocupada o sin cámara.
   useEffect(() => {
     if (!camara) return;
     let flujo: MediaStream | null = null;
     let vivo = true;
+    const esperar = (ms: number) => new Promise((res) => setTimeout(res, ms));
     (async () => {
       try {
-        flujo = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
-        if (!video.current) return;
-        video.current.srcObject = flujo;
-        await video.current.play();
-        // Con lector nativo (Chrome en Android) se usa ese; si no (Chrome en
-        // Windows, iPhone, Firefox…), jsQR lee el fotograma desde un canvas.
-        const nativo = window.BarcodeDetector ? new window.BarcodeDetector({ formats: ['qr_code'] }) : null;
-        const jsQR = nativo ? null : (await import('jsqr')).default;
+        flujo = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' } }, audio: false });
+        for (let n = 0; vivo && !video.current && n < 40; n++) await esperar(100);
+        const v = video.current;
+        if (!vivo || !v) {
+          flujo.getTracks().forEach((t) => t.stop());
+          return;
+        }
+        v.setAttribute('playsinline', 'true');
+        v.muted = true;
+        v.srcObject = flujo;
+        await v.play().catch(() => undefined);
+
+        // ¿El lector nativo sabe leer QR de verdad? Si no, jsQR (funciona en cualquier navegador).
+        let nativo: { detect: (v: HTMLVideoElement) => Promise<{ rawValue: string }[]> } | null = null;
+        try {
+          const BD = window.BarcodeDetector as unknown as
+            | ({ new (o: { formats: string[] }): { detect: (v: HTMLVideoElement) => Promise<{ rawValue: string }[]> }; getSupportedFormats?: () => Promise<string[]> })
+            | undefined;
+          if (BD) {
+            const formatos = BD.getSupportedFormats ? await BD.getSupportedFormats() : ['qr_code'];
+            if (formatos.includes('qr_code')) nativo = new BD({ formats: ['qr_code'] });
+          }
+        } catch {
+          nativo = null;
+        }
+        const jsQR = (await import('jsqr')).default;
         const lienzo = document.createElement('canvas');
         const ctx = lienzo.getContext('2d', { willReadFrequently: true });
-        const leer = async (v: HTMLVideoElement): Promise<string | null> => {
-          if (nativo) return (await nativo.detect(v).catch(() => []))[0]?.rawValue ?? null;
-          if (!jsQR || !ctx || !v.videoWidth) return null;
+        let fallosNativo = 0;
+        const conJsQR = (el: HTMLVideoElement): string | null => {
+          if (!ctx || !el.videoWidth) return null;
           // Basta con 640 px de ancho: más grande solo gasta batería.
-          const escala = Math.min(1, 640 / v.videoWidth);
-          lienzo.width = Math.round(v.videoWidth * escala);
-          lienzo.height = Math.round(v.videoHeight * escala);
-          ctx.drawImage(v, 0, 0, lienzo.width, lienzo.height);
+          const escala = Math.min(1, 640 / el.videoWidth);
+          lienzo.width = Math.round(el.videoWidth * escala);
+          lienzo.height = Math.round(el.videoHeight * escala);
+          ctx.drawImage(el, 0, 0, lienzo.width, lienzo.height);
           const img = ctx.getImageData(0, 0, lienzo.width, lienzo.height);
-          return jsQR(img.data, img.width, img.height, { inversionAttempts: 'dontInvert' })?.data || null;
+          return jsQR(img.data, img.width, img.height, { inversionAttempts: 'attemptBoth' })?.data || null;
+        };
+        const leer = async (el: HTMLVideoElement): Promise<string | null> => {
+          if (nativo && fallosNativo < 5) {
+            try {
+              const r = await nativo.detect(el);
+              if (r[0]?.rawValue) return r[0].rawValue;
+            } catch {
+              fallosNativo++;
+            }
+          }
+          // Siempre se prueba también con jsQR: el nativo de algunas tablets nunca encuentra nada.
+          return conJsQR(el);
         };
         while (vivo && video.current) {
           const valor = await leer(video.current);
           if (valor) {
+            if (navigator.vibrate) navigator.vibrate(60);
             setCamara(false);
             setQ(valor);
             void buscar(valor);
             break;
           }
-          await new Promise((res) => setTimeout(res, 200));
+          await esperar(180);
         }
-      } catch {
-        avisar('No se pudo abrir la cámara. Escribe el código de la tarjeta.', 'error');
+      } catch (e) {
+        const nombre = e instanceof DOMException ? e.name : '';
+        avisar(
+          nombre === 'NotAllowedError'
+            ? 'El navegador no dejó usar la cámara. Toca el candado junto a la dirección › Permisos › Cámara › Permitir, y vuelve a intentarlo.'
+            : nombre === 'NotReadableError'
+              ? 'La cámara está ocupada por otra app. Ciérrala y vuelve a intentarlo.'
+              : nombre === 'NotFoundError' || nombre === 'OverconstrainedError'
+                ? 'Este aparato no tiene cámara disponible. Escribe el código, el celular o el nombre.'
+                : 'No se pudo abrir la cámara. Escribe el código, el celular o el nombre.',
+          'error',
+        );
         setCamara(false);
       }
     })();
@@ -244,11 +294,24 @@ export default function Caja() {
     setBuscando(true);
     setCandidatos([]);
     try {
+      setPorNombre([]);
       let r = await accion<MiembroCaja[]>('caja.buscar', { companyId, q: texto.trim() });
+      // Por NOMBRE (18-nov-2026, The 24/7: «escribir nombre o número y que le aparezca»): el
+      // código y el celular los busca la base de una; el nombre, en la lista de clientes.
+      if (r.length === 0 && /[a-záéíóúñ]{2,}/i.test(texto) && !/^vq/.test(texto.trim())) {
+        const lista = await accion<{ rows: { id: string; public_code: string; alias: string | null; phone?: string | null }[] }>(
+          'miembro.buscar', { companyId, q: texto.trim(), limit: 8 },
+        ).catch(() => ({ rows: [] }));
+        if (lista.rows.length === 1) r = await accion<MiembroCaja[]>('caja.buscar', { companyId, q: lista.rows[0].public_code });
+        else if (lista.rows.length > 1) {
+          setPorNombre(lista.rows);
+          return;
+        }
+      }
       // ¿Es la tarjeta de otro negocio de quien atiende? (la cafetería leyendo la de la academia)
       if (r.length === 0) r = await buscarEnOtros(texto.trim());
       if (r.length === 1) elegir(r[0]);
-      else if (r.length === 0) avisar('No hay ninguna tarjeta con ese código en este negocio.', 'espera');
+      else if (r.length === 0) avisar('No hay ninguna tarjeta con ese código, celular o nombre en este negocio.', 'espera');
       else setCandidatos(r);
     } catch (e) {
       avisar(mensaje(e), 'error');
@@ -539,12 +602,12 @@ export default function Caja() {
           <input
             className="input fz-input-gran"
             style={{ flex: 1 }}
-            placeholder="VDM-XXXXXX o teléfono"
+            placeholder="Código, celular o nombre"
             value={q}
-            autoCapitalize="characters"
+            autoCapitalize="none"
             onChange={(e) => setQ(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && void buscar()}
-            aria-label="Código de la tarjeta o teléfono"
+            aria-label="Código de la tarjeta, celular o nombre"
           />
         </div>
         <div className="fz-col2" style={{ marginTop: 10 }}>
@@ -568,6 +631,26 @@ export default function Caja() {
           </button>
         )}
       </div>
+
+      {porNombre.length > 1 && (
+        <div className="card" style={{ marginBottom: 14 }}>
+          <b>{porNombre.length} tarjetas con ese nombre</b>
+          <p className="fz-def">Elige la de la persona que tienes delante.</p>
+          <ul className="fz-lista">
+            {porNombre.map((c) => (
+              <li key={c.id}>
+                <span>
+                  {c.alias ?? 'Sin nombre'} <span className="fz-mono muted">{c.public_code}</span>
+                  {c.phone && <span className="muted"> · {c.phone}</span>}
+                </span>
+                <button className="btn btn-ghost btn-sm" onClick={() => { setPorNombre([]); setQ(c.public_code); void buscar(c.public_code); }}>
+                  Elegir
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       {candidatos.length > 1 && (
         <div className="card" style={{ marginBottom: 14 }}>

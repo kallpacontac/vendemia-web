@@ -57,7 +57,7 @@ const NAV = [
   // «Mia Gerente»: el nombre comercial del asistente del dueño (Alvaro, 14-oct-2026).
   { href: '/panel/asistente', icon: Sparkles, label: 'Mia Gerente', sinEmpleado: true },
   { href: '/panel/mensajes', icon: MessageCircle, label: 'Mensajes' },
-  { href: '/panel/leads', icon: Users, label: 'Leads' },
+  { href: '/panel/leads', icon: Users, label: 'Clientes' },
   { href: '/panel/retargeting', icon: Send, label: 'Retargeting' },
   // Agenda es de todo negocio que agenda: citas Y grupos recurrentes.
   { href: '/panel/agenda', icon: CalendarDays, label: 'Agenda', sirveA: esAppointmentFamily },

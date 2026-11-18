@@ -41,6 +41,7 @@ import CajaResumen from '@/components/panel/CajaResumen';
 import CobrarTicket from '@/components/panel/CobrarTicket';
 import ListosParaCobrar from '@/components/panel/ListosParaCobrar';
 import { useSondeo } from '@/components/panel/useSondeo';
+import { sumarSelloDeCita } from '@/components/panel/selloDeCita';
 import SubnavCaja from '@/components/panel/SubnavCaja';
 import { sedeCorta, sedesDeCitas, useSedeElegida, useSedes } from '@/components/panel/SelectorSede';
 import QuienCita from '@/components/panel/QuienCita';
@@ -254,6 +255,13 @@ export default function Caja() {
         'ok',
       );
     setEnVuelo(null);
+    // La tarjeta de fidelidad, sola: si su celular tiene tarjeta, su sello (una vez por cita).
+    if (r && companyId) {
+      const tel = datos?.leads.find((l) => l.id === c.lead_id)?.phone;
+      const total = Number(datos?.movimientos.find((m) => m.fuente === 'appointment' && m.movimiento_id === c.id)?.importe ?? 0);
+      const sello = await sumarSelloDeCita(companyId, tel, c.id, total);
+      if (sello) avisar(sello.texto, sello.tono);
+    }
   }
 
   return (

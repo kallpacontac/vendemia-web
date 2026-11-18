@@ -15,6 +15,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Plus, Scissors, Wallet, X } from 'lucide-react';
 import { BotonCobrar } from '@/components/panel/BotonCobrar';
+import Campana from '@/components/panel/Campana';
 import { RegistrarPago } from '@/components/panel/Saldos';
 import { sedeCorta } from '@/components/panel/SelectorSede';
 import { useAvisar } from '@/components/panel/Avisos';
@@ -99,7 +100,7 @@ export default function ListosParaCobrar({
     <section className="card listos" aria-label="Listos para cobrar">
       <div className="card-mini-head">
         <h3>
-          <span className="listos-punto" aria-hidden="true" /> Listos para cobrar · {filas.length}
+          <Campana size={17} /> Listos para cobrar · {filas.length}
         </h3>
         <small className="muted">{soles(total)}</small>
       </div>

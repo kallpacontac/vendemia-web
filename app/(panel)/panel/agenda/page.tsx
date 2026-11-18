@@ -28,6 +28,7 @@ import {
   ChevronRight,
   Clock,
   Pencil,
+  Plus,
   ShoppingBag,
   User,
   Wallet,
@@ -314,6 +315,12 @@ export default function Agenda() {
     });
   }
 
+  /** Tocar «Libre» en el calendario: «Nueva cita» ya con ese día y esa hora. */
+  const abrirEn = (slotStart: string) => {
+    setAltaInicial({ fecha: slotStart.slice(0, 10), hora: slotStart.slice(11, 16), itemId: '' });
+    setCreando(true);
+  };
+
   const dnd: Arrastre = {
     activo: arrastrada !== null,
     sobre,
@@ -582,7 +589,7 @@ export default function Agenda() {
                     {semana?.horas.map((hora, i) => (
                       <div className="dia-fila" key={hora}>
                         <div className="hourlbl">{hora12(hora)}</div>
-                        <Celda hueco={dia.huecos[i]} vista={vista} dnd={dnd} />
+                        <Celda hueco={dia.huecos[i]} vista={vista} dnd={dnd} alLibre={abrirEn} />
                       </div>
                     ))}
                   </div>
@@ -602,7 +609,7 @@ export default function Agenda() {
                   {semana?.horas.map((hora, i) => (
                     <FilaDeHoras key={hora} hora={hora}>
                       {semana.dias.map((d) => (
-                        <Celda key={d.iso + hora} hueco={d.huecos[i]} vista={vista} dnd={dnd} />
+                        <Celda key={d.iso + hora} hueco={d.huecos[i]} vista={vista} dnd={dnd} alLibre={abrirEn} />
                       ))}
                     </FilaDeHoras>
                   ))}
@@ -645,10 +652,13 @@ function Celda({
   hueco,
   vista,
   dnd,
+  alLibre,
 }: {
   hueco: ReturnType<typeof construirSemana>['dias'][number]['huecos'][number];
   vista: 'negocio' | 'cliente';
   dnd?: Arrastre;
+  /** Tocar un hueco libre abre «Nueva cita» con ese día y esa hora (17-nov-2026). */
+  alLibre?: (slotStart: string) => void;
 }) {
   /* En el pasado no se suelta: el bot rechaza mover una cita a una hora que ya
      pasó, y ofrecer el gesto para que falle después es peor que no ofrecerlo. */
@@ -698,8 +708,8 @@ function Celda({
     } else if (hueco.pasado) {
       clase = 'past';
     } else {
-      clase = 'free';
-      contenido = 'Libre';
+      clase = alLibre ? 'free free--tocable' : 'free';
+      contenido = alLibre ? <><Plus size={14} aria-hidden="true" /> Libre</> : 'Libre';
     }
   } else if (hueco.pasado) {
     clase = 'past';
@@ -718,9 +728,15 @@ function Celda({
     contenido = 'Copado';
   }
 
+  const tocable = Boolean(alLibre) && vista === 'negocio' && clase.startsWith('free') && !dnd?.activo;
   return (
     <div
       className={`cell ${clase} ${sobre ? 'sobre' : ''}`}
+      role={tocable ? 'button' : undefined}
+      tabIndex={tocable ? 0 : undefined}
+      aria-label={tocable ? `Agendar el ${hueco.slotStart.slice(8, 10)} a las ${hora12(hueco.slotStart.slice(11, 16))}` : undefined}
+      onClick={tocable ? () => alLibre?.(hueco.slotStart) : undefined}
+      onKeyDown={tocable ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); alLibre?.(hueco.slotStart); } } : undefined}
       style={hueco.reservas.length > 0 && vista === 'negocio' ? { gap: 4 } : undefined}
       title={titulo}
       // `preventDefault` en dragOver es lo ÚNICO que hace que un sitio acepte

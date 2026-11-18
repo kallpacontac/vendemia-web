@@ -301,7 +301,7 @@ export default function Metricas() {
             <Comparado
               key={c.campo}
               etiqueta={
-                c.campo === 'leads' ? 'Leads' : c.campo === 'cerrados' ? 'Cerrados' : 'Ingresos'
+                c.campo === 'leads' ? 'Clientes nuevos' : c.campo === 'cerrados' ? 'Cerrados' : 'Ingresos'
               }
               texto={c.campo === 'ingresos' ? soles(c.valor) : String(c.valor)}
               valor={c.valor}
@@ -318,7 +318,7 @@ export default function Metricas() {
         </div>
 
         <div className="kpi5">
-          <Kpi icono={<Users size={18} />} fondo="#FFF1E6" color="#F58220" valor={leadsHoy} etiqueta="Leads hoy" />
+          <Kpi icono={<Users size={18} />} fondo="#FFF1E6" color="#F58220" valor={leadsHoy} etiqueta="Clientes nuevos hoy" />
           {conCitas && (
             <Kpi
               icono={<CalendarCheck size={18} />}
@@ -362,7 +362,7 @@ export default function Metricas() {
         <div className="row-2">
           <div className="card">
             <div className="card-head">
-              <h3>Leads por {GRANOS.find((g) => g.valor === grano)?.cubo}</h3>
+              <h3>Clientes nuevos por {GRANOS.find((g) => g.valor === grano)?.cubo}</h3>
               <span className="badge-pill b-mute">{preset.label.toLowerCase()}</span>
             </div>
             {serie.length ? (
@@ -377,7 +377,7 @@ export default function Metricas() {
               <h3>Distribución de intención</h3>
             </div>
             {totalIntencion === 0 ? (
-              <p className="vacio">Sin leads en los últimos 30 días.</p>
+              <p className="vacio">Sin clientes nuevos en los últimos 30 días.</p>
             ) : (
               <div className="donut-wrap">
                 <div className="donut">
@@ -411,7 +411,7 @@ export default function Metricas() {
                   </svg>
                   <div className="center">
                     <b>{totalIntencion}</b>
-                    <small>leads</small>
+                    <small>clientes</small>
                   </div>
                 </div>
                 <div className="dleg">

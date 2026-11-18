@@ -663,7 +663,8 @@ function Ficha({
             alCambiar={alCambiar}
           />
 
-          <div className="nav-btns" style={{ marginTop: 18 }}>
+          {/* «Guardar» siempre a la vista: fijo abajo mientras se edita (18-nov-2026, The 24/7). */}
+          <div className="nav-btns barra-guardar">
             <button className="btn btn-ghost" onClick={() => void alternarActivo()}>
               {t.activo ? (
                 <>

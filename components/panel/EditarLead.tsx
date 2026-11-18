@@ -153,12 +153,12 @@ export function EditarLead({
           </p>
         </div>
         <div className="modal__pie">
-          <button type="button" className="btn btn-ghost btn-sm" onClick={alCerrar}>
+          <button type="button" className="btn btn-ghost" onClick={alCerrar}>
             Cancelar
           </button>
           <button
             type="button"
-            className="btn btn-primary btn-sm"
+            className="btn btn-primary"
             disabled={!hayCambios || guardando || correoMal}
             onClick={() => void guardar()}
           >
