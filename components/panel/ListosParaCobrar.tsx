@@ -16,6 +16,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Plus, Scissors, Wallet, X } from 'lucide-react';
 import { BotonCobrar } from '@/components/panel/BotonCobrar';
 import Campana from '@/components/panel/Campana';
+import FiltroProductos, { ordenarPorVentas, useMasVendidos } from '@/components/panel/ProductosFiltro';
 import { RegistrarPago } from '@/components/panel/Saldos';
 import { sedeCorta } from '@/components/panel/SelectorSede';
 import { useAvisar } from '@/components/panel/Avisos';
@@ -174,10 +175,10 @@ function Agregar({ companyId, citaId, catalogo, alCerrar, alCambiar }: {
   alCambiar: () => void;
 }) {
   const avisar = useAvisar();
-  const opciones = useMemo(
-    () => catalogo.filter(cobrable).sort((a, b) => Number(a.tipo === 'producto') - Number(b.tipo === 'producto')),
-    [catalogo],
-  );
+  const ventas = useMasVendidos(companyId);
+  // Servicios arriba y productos debajo, lo más pedido primero en cada uno (datos 0013).
+  const servicios = useMemo(() => ordenarPorVentas(catalogo.filter((c) => cobrable(c) && c.tipo !== 'producto'), ventas), [catalogo, ventas]);
+  const productos = useMemo(() => catalogo.filter((c) => cobrable(c) && c.tipo === 'producto'), [catalogo]);
   const [enVuelo, setEnVuelo] = useState(false);
   const [lineas, setLineas] = useState<{ lineas: Linea[]; total: number } | null>(null);
 
@@ -229,15 +230,22 @@ function Agregar({ companyId, citaId, catalogo, alCerrar, alCambiar }: {
           <li className="listo-agregar__total"><span>Total</span><b>{soles(lineas.total)}</b><span aria-hidden="true" /></li>
         </ul>
       )}
-      <div className="ticket-chips">
-        {opciones.map((c) => (
+      <div className="ticket-chips">{servicios.map((c: ItemCatalogo) => (
           <button key={c.id} type="button" className="ticket-chip ticket-chip--item" disabled={enVuelo || (c.stock != null && c.stock <= 0)}
             onClick={() => void cambiar({ accion: 'agregar', catalog_item_id: c.id, cantidad: 1 }, `Sumado: ${c.name}.`)}>
             <span>+ {c.name}</span>
             <small>{c.price != null ? soles(Number(c.price)) : '—'}{c.tipo === 'producto' && c.stock != null ? ` · quedan ${c.stock}` : ''}</small>
           </button>
-        ))}
-      </div>
+        ))}</div>
+      {productos.length > 0 && (
+        <FiltroProductos productos={productos} ventas={ventas} render={(lista) => <div className="ticket-chips">{lista.map((c: ItemCatalogo) => (
+          <button key={c.id} type="button" className="ticket-chip ticket-chip--item" disabled={enVuelo || (c.stock != null && c.stock <= 0)}
+            onClick={() => void cambiar({ accion: 'agregar', catalog_item_id: c.id, cantidad: 1 }, `Sumado: ${c.name}.`)}>
+            <span>+ {c.name}</span>
+            <small>{c.price != null ? soles(Number(c.price)) : '—'}{c.tipo === 'producto' && c.stock != null ? ` · quedan ${c.stock}` : ''}</small>
+          </button>
+        ))}</div>} />
+      )}
     </div>
   );
 }

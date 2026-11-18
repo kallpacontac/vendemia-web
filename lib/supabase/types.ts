@@ -309,6 +309,8 @@ export interface CatalogRow {
    * y a un pedido. Opcional: sin la 0047 la columna no llega.
    */
   tipo?: '' | 'servicio' | 'producto' | null;
+  /** La familia o categoría («Cortes», «Bebidas»): agrupa en Mi página y en «Cobrar ticket». */
+  familia?: string | null;
   /**
    * ⚠️ CAMPO MUERTO. El bot NO lo envía nunca. Las fotos viven en
    * `catalog_media`. No lo ofrezcas en ningún formulario: quien lo rellene
@@ -537,6 +539,10 @@ export interface GastoRow {
   /** auth.uid() de quien lo apuntó (commands.created_by). */
   creado_por: string;
   created_at: number;
+  /** datos 0013: del negocio, adelanto a un barbero (se le descuenta) o personal del dueño. */
+  tipo?: 'negocio' | 'adelanto' | 'personal';
+  /** datos 0013: a quién fue (un adelanto, o el almuerzo de alguien). '' = a nadie. */
+  employee_id?: string;
 }
 
 export interface EmployeeBlockRow {

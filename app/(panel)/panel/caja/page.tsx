@@ -34,11 +34,14 @@
  * adelantos incluidos (categoría «adelanto»), en vez de un libro de préstamos
  * aparte.
  */
-import { useMemo, useState } from 'react';
+import { Suspense, useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { Plus, QrCode, Receipt, Trash2, Wallet } from 'lucide-react';
+import { QrCode, Receipt, Wallet } from 'lucide-react';
 import CajaResumen from '@/components/panel/CajaResumen';
 import CobrarTicket from '@/components/panel/CobrarTicket';
+import Campana from '@/components/panel/Campana';
+import GastosCaja from '@/components/panel/GastosCaja';
 import ListosParaCobrar from '@/components/panel/ListosParaCobrar';
 import { useSondeo } from '@/components/panel/useSondeo';
 import { sumarSelloDeCita } from '@/components/panel/selloDeCita';
@@ -74,10 +77,16 @@ import {
 import type { ResultadoMarcarPagado } from '@/lib/supabase/commands';
 import BoletaDelCobro, { type LineaCobro } from '@/modules/facturacion/ui/BoletaDelCobro';
 
-/** Sugerencias para la categoría. Texto libre: el negocio puede escribir otra. */
-const CATEGORIAS = ['Adelanto', 'Insumos', 'Alquiler', 'Servicios (luz, agua, internet)', 'Sueldos', 'Otros'];
 
-export default function Caja() {
+export default function CajaPagina() {
+  return (
+    <Suspense fallback={<main className="main"><div className="wrap"><p className="vacio">Cargando la caja…</p></div></main>}>
+      <Caja />
+    </Suspense>
+  );
+}
+
+function Caja() {
   const { companyId } = useSesion();
   const v = useVocabulario();
   const comando = useComando();
@@ -89,6 +98,17 @@ export default function Caja() {
   const [pagando, setPagando] = useState<string | null>(null);
   /** «Cobrar ticket» abierto: el cliente llegó a caja con el ticket del barbero (0031). */
   const [ticket, setTicket] = useState(false);
+  /** «Gasto o adelanto» abierto en la pestaña Cobrar. */
+  const [gasto, setGasto] = useState(false);
+  /**
+   * Dos pestañas, la misma pantalla (18-nov-2026): «Cobrar» (el mostrador, siempre hoy) y
+   * «Cierre del día» (?ver=cierre: cuadrar, cualquier día). Ver SubnavCaja.
+   */
+  const cierre = useSearchParams().get('ver') === 'cierre';
+  useEffect(() => {
+    if (!cierre) setDia(hoy);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cierre]);
   /** El último cobro de «Listos para cobrar», para su boleta (modules/facturacion/ui/BoletaDelCobro). */
   const [cobrada, setCobrada] = useState<{ id: string; texto: string; lineas: LineaCobro[]; tel: string } | null>(null);
 
@@ -284,18 +304,7 @@ export default function Caja() {
       <div className="wrap">
         {/* Lo que se hace en la Caja (17-nov-2026): cobrar, escanear la tarjeta de fidelidad y cerrar
             el día. La Agenda dice quién viene y si vino; el dinero, aquí. */}
-        <Topbar titulo="Caja" sub="Cobrar, escanear tarjetas y cerrar el día" accionesTitulo={
-          <div className="caja-acciones">
-            <Link href="/panel/fideliza/caja?camara=1" className="btn btn-ghost">
-              <QrCode size={17} /> Escanear tarjeta
-            </Link>
-            {dia === hoy && (
-              <button type="button" className="btn btn-primary" aria-expanded={ticket} onClick={() => setTicket((t) => !t)}>
-                <Receipt size={17} /> {ticket ? 'Cerrar ticket' : 'Cobrar ticket'}
-              </button>
-            )}
-          </div>
-        } />
+        <Topbar titulo="Caja" sub={cierre ? 'Lo que entró, con qué, y lo que salió' : 'Cobra, escanea tarjetas y apunta gastos'} />
         <SubnavCaja />
 
         {/* La sede se elige arriba, en la cabecera (SedeGlobal). */}
@@ -303,7 +312,29 @@ export default function Caja() {
           <p className="agenda-sede-aviso">Viendo solo <b>{sedeCorta(sede)}</b>. Cámbialo arriba, en la sede.</p>
         )}
 
-        {ticket && companyId && datos && dia === hoy && (
+        {/* ── COBRAR: tres botones grandes, la cola y nada más ── */}
+        {!cierre && (
+          <div className="caja-tres" role="group" aria-label="Qué hacer">
+            <button type="button" className={`caja-tres__btn caja-tres__btn--principal${ticket ? ' on' : ''}`} aria-expanded={ticket}
+              onClick={() => { setTicket((t) => !t); setGasto(false); }}>
+              <Receipt size={26} /> <span>{ticket ? 'Cerrar ticket' : 'Cobrar ticket'}</span>
+            </button>
+            <Link href="/panel/fideliza/caja?camara=1" className="caja-tres__btn">
+              <QrCode size={26} /> <span>Escanear tarjeta</span>
+            </Link>
+            <button type="button" className={`caja-tres__btn${gasto ? ' on' : ''}`} aria-expanded={gasto}
+              onClick={() => { setGasto((g) => !g); setTicket(false); }}>
+              <Wallet size={26} /> <span>Gasto o adelanto</span>
+            </button>
+          </div>
+        )}
+
+        {!cierre && gasto && (
+          <GastosCaja modo="formulario" dia={hoy} gastos={[]} trabajadores={datos?.trabajadores ?? []} soloTodas={false}
+            alCambiar={releer} alCerrar={() => setGasto(false)} />
+        )}
+
+        {!cierre && ticket && companyId && datos && dia === hoy && (
           <CobrarTicket
             companyId={companyId}
             trabajadores={datos.trabajadores}
@@ -315,7 +346,7 @@ export default function Caja() {
           />
         )}
 
-        {cobrada && companyId && (
+        {!cierre && cobrada && companyId && (
           <section className="card caja-boleta" aria-label="Boleta del último cobro">
             <span className="muted">Último cobro: <b>{cobrada.texto}</b></span>
             <BoletaDelCobro companyId={companyId} refCobro={{ tipo: 'cita', id: cobrada.id }} lineas={cobrada.lineas} telefono={cobrada.tel} />
@@ -323,7 +354,7 @@ export default function Caja() {
         )}
 
         {/* ── Listos para cobrar: lo que ya se atendió. Es la cola del mostrador. ── */}
-        {calculo && companyId && (
+        {!cierre && calculo && companyId && (
           <ListosParaCobrar
             companyId={companyId}
             catalogo={datos?.catalogo ?? []}
@@ -338,104 +369,30 @@ export default function Caja() {
         )}
 
         {/* Sin nadie en la cola: qué va a salir aquí y el botón para cobrar a mano, a la vista. */}
-        {calculo && calculo.listos.length === 0 && dia === hoy && !ticket && (
+        {!cierre && calculo && calculo.listos.length === 0 && !ticket && !gasto && (
           <section className="card listos-vacio" aria-label="Listos para cobrar">
             <div>
-              <b>Nadie esperando para pagar</b>
+              <b><Campana size={16} /> Nadie esperando para pagar</b>
               <p className="muted">
                 Cuando el barbero marque «Atendido», el cliente sale aquí solo, sin recargar. ¿Llegó alguien con su ticket
-                y no está? Cóbralo con «Cobrar ticket».
+                y no está? Toca «Cobrar ticket».
               </p>
             </div>
-            <button type="button" className="btn btn-primary" onClick={() => setTicket(true)}>
-              <Receipt size={17} /> Cobrar ticket
-            </button>
           </section>
         )}
 
-        <CajaResumen dia={dia} hoy={hoy} alDia={setDia} calculo={calculo} />
+        {cierre && <CajaResumen dia={dia} hoy={hoy} alDia={setDia} calculo={calculo} />}
 
         {error && <p className="vacio">No se pudo cargar la caja: {error}</p>}
         {cargando && !datos && <p className="vacio">Cargando la caja…</p>}
 
-        {calculo && (
-          <div className="caja-grid">
-            {/* ── Lo que entró, por método (completo + a cuenta) ── */}
-            <div className="card">
-              <div className="card-mini-head">
-                <h3>Entró, por método</h3>
-              </div>
-              {calculo.porMetodo.length === 0 ? (
-                <p className="vacio">No ha entrado nada todavía este día.</p>
-              ) : (
-                calculo.porMetodo.map(([metodo, total]) => (
-                  <div className="kv-fila" key={metodo}>
-                    <span style={metodo === 'Sin método' ? { color: '#B26B00' } : undefined}>{metodo}</span>
-                    <b>{soles(total)}</b>
-                  </div>
-                ))
-              )}
-              {calculo.porMetodo.some(([m]) => m === 'Sin método') && (
-                <p className="muted" style={{ fontSize: 12, marginTop: 8 }}>
-                  «Sin método»: cobros apuntados sin decir con qué, o verificados por Mia antes de que se
-                  guardara el método.
-                </p>
-              )}
-            </div>
-
-            {/* ── A cuenta: entró, pero lo que paga sigue por cobrar ── */}
-            {calculo.aCuenta.length > 0 && (
-              <div className="card">
-                <div className="card-mini-head">
-                  <h3>A cuenta · por cobrar</h3>
-                  <small className="muted">{soles(calculo.aCuentaTotal)} de lo que entró</small>
-                </div>
-                {calculo.aCuenta.map(({ pago, metodo, cita, falta }) => (
-                  <div className="kv-fila" key={pago.id}>
-                    <span>
-                      {nombrePorLead.get(pago.lead_id) ?? 'Cliente'}
-                      <small className="muted">
-                        {' '}
-                        · {etiquetaMetodo(metodo)}
-                        {cita?.slot_start ? ` · para el ${textoSlotCorto(cita.slot_start)}` : ''}
-                        {cita?.service ? ` · ${cita.service}` : ''}
-                        {falta > 0 ? ` · faltan ${soles(falta)}` : ''}
-                      </small>
-                    </span>
-                    <b>{soles(Number(pago.amount ?? 0))}</b>
-                  </div>
-                ))}
-                <p className="muted" style={{ fontSize: 12, marginTop: 8 }}>
-                  Pagos que no cubren todavía el total: el dinero entró y suma a la caja, pero {v.la} {v.sesion}
-                  sigue por cobrar hasta que se pague todo.
-                </p>
-              </div>
-            )}
-
-            {/* ── Gastos (son del negocio, sin sede: se apuntan y se ven en «Todas») ── */}
-            {sede ? (
-              <div className="card">
-                <div className="card-mini-head">
-                  <h3>Gastos</h3>
-                </div>
-                <p className="vacio">Los gastos son de todo el negocio: se ven y se apuntan en «Todas».</p>
-              </div>
-            ) : (
-              <Gastos
-                dia={dia}
-                gastos={datos?.gastos ?? []}
-                alCambiar={releer}
-              />
-            )}
-
-            {/* ── Sin cobro apuntado ── */}
-            <div className="card caja-ancha">
-              <div className="card-mini-head">
-                <h3>{cap(v.reservas)} sin atender todavía</h3>
-                {calculo.porCobrar.length > 0 && (
-                  <small className="muted">{soles(calculo.porCobrarTotal)} en juego</small>
-                )}
-              </div>
+        {/* Agendados que aún no se atienden: plegado, para quien paga antes (no es lo de cada momento). */}
+        {!cierre && calculo && calculo.porCobrar.length > 0 && (
+          <details className="card caja-sin-atender">
+            <summary>
+              <span>{cap(v.reservas)} de hoy que aún no se atienden · {calculo.porCobrar.length}</span>
+              <small className="muted">{soles(calculo.porCobrarTotal)}</small>
+            </summary>
               {calculo.porCobrar.length === 0 ? (
                 <p className="vacio">Nada pendiente: lo atendido sale arriba, en «Listos para cobrar».</p>
               ) : (
@@ -492,11 +449,71 @@ export default function Caja() {
                   .
                 </p>
               )}
+          </details>
+        )}
+
+        {/* ── CIERRE DEL DÍA: cuadrar la caja ── */}
+        {cierre && calculo && (
+          <div className="caja-grid">
+            {/* ── Lo que entró, por método (completo + a cuenta) ── */}
+            <div className="card">
+              <div className="card-mini-head">
+                <h3>Entró, por método</h3>
+              </div>
+              {calculo.porMetodo.length === 0 ? (
+                <p className="vacio">No ha entrado nada todavía este día.</p>
+              ) : (
+                calculo.porMetodo.map(([metodo, total]) => (
+                  <div className="kv-fila" key={metodo}>
+                    <span style={metodo === 'Sin método' ? { color: '#B26B00' } : undefined}>{metodo}</span>
+                    <b>{soles(total)}</b>
+                  </div>
+                ))
+              )}
+              {calculo.porMetodo.some(([m]) => m === 'Sin método') && (
+                <p className="muted" style={{ fontSize: 12, marginTop: 8 }}>
+                  «Sin método»: cobros apuntados sin decir con qué, o verificados por Mia antes de que se
+                  guardara el método.
+                </p>
+              )}
             </div>
+
+            {/* ── A cuenta: entró, pero lo que paga sigue por cobrar ── */}
+            {calculo.aCuenta.length > 0 && (
+              <div className="card">
+                <div className="card-mini-head">
+                  <h3>A cuenta · por cobrar</h3>
+                  <small className="muted">{soles(calculo.aCuentaTotal)} de lo que entró</small>
+                </div>
+                {calculo.aCuenta.map(({ pago, metodo, cita, falta }) => (
+                  <div className="kv-fila" key={pago.id}>
+                    <span>
+                      {nombrePorLead.get(pago.lead_id) ?? 'Cliente'}
+                      <small className="muted">
+                        {' '}
+                        · {etiquetaMetodo(metodo)}
+                        {cita?.slot_start ? ` · para el ${textoSlotCorto(cita.slot_start)}` : ''}
+                        {cita?.service ? ` · ${cita.service}` : ''}
+                        {falta > 0 ? ` · faltan ${soles(falta)}` : ''}
+                      </small>
+                    </span>
+                    <b>{soles(Number(pago.amount ?? 0))}</b>
+                  </div>
+                ))}
+                <p className="muted" style={{ fontSize: 12, marginTop: 8 }}>
+                  Pagos que no cubren todavía el total: el dinero entró y suma a la caja, pero {v.la} {v.sesion}
+                  sigue por cobrar hasta que se pague todo.
+                </p>
+              </div>
+            )}
+
+            {/* ── Gastos y adelantos: todo lo que sale de la caja, en un sitio (datos 0013) ── */}
+            <GastosCaja dia={dia} gastos={datos?.gastos ?? []} trabajadores={datos?.trabajadores ?? []} soloTodas={Boolean(sede)} alCambiar={releer} />
+
           </div>
         )}
 
-        {calculo && (calculo.esperando.length > 0 || calculo.sinHora.length > 0) && (
+        {cierre && calculo && (calculo.esperando.length > 0 || calculo.sinHora.length > 0) && (
           <div className="card" style={{ marginTop: 16 }}>
             <div className="card-mini-head">
               <h3>Esperando pago</h3>
@@ -551,17 +568,22 @@ export default function Caja() {
           </div>
         )}
 
-        {companyId && <ComprobantesDelDia companyId={companyId} dia={dia} recarga={datos} />}
+        {cierre && companyId && <ComprobantesDelDia companyId={companyId} dia={dia} recarga={datos} />}
 
-        <SaldosPendientes key={companyId} alCambiar={releer} />
+        {cierre && <SaldosPendientes key={companyId} alCambiar={releer} />}
 
-        <p className="muted" style={{ fontSize: 12.5, lineHeight: 1.7, marginTop: 14 }}>
+        {cierre && (
+        <details className="caja-como">
+        <summary>¿Cómo se cuenta lo que entró?</summary>
+        <p className="muted" style={{ fontSize: 12.5, lineHeight: 1.7, marginTop: 8 }}>
           <b>Entró es lo que entró, no lo que podría entrar.</b> Cada comprobante que verificó Mia y cada pago
           registrado cuentan por su importe y el día en que se pagaron: una seña de S/ 50 es S/ 50, aunque la
           inscripción valga más. Lo que se marcó «Cobrada» sin importe cuenta por su precio, el día de la {v.sesion}.
           Lo pagado a cuenta suma el día que entra; {v.la} {v.sesion} solo pasa a cobrad{v.a} cuando se paga todo.
           Las deudas de otros períodos se consultan en «Saldos por cobrar», sin depender de la fecha seleccionada.
         </p>
+        </details>
+        )}
       </div>
     </main>
   );
@@ -590,126 +612,4 @@ function Sello({ s }: { s: SelloCita }) {
 function textoSlotCorto(slot: string): string {
   const d = new Date(`${slot.slice(0, 10)}T12:00:00`);
   return Number.isNaN(d.getTime()) ? slot : `${diaMes(d)} ${hora12(slot.slice(11, 16))}`.trim();
-}
-
-function Gastos({
-  dia,
-  gastos,
-  alCambiar,
-}: {
-  dia: string;
-  gastos: { id: string; concepto: string; categoria: string; importe: number }[];
-  alCambiar: () => void;
-}) {
-  const comando = useComando();
-  const [creando, setCreando] = useState(false);
-  const [concepto, setConcepto] = useState('');
-  const [categoria, setCategoria] = useState('');
-  const [importe, setImporte] = useState('');
-  const [guardando, setGuardando] = useState(false);
-  const [borrando, setBorrando] = useState<string | null>(null);
-
-  const monto = Number(importe.replace(',', '.'));
-  const valido = concepto.trim() !== '' && importe.trim() !== '' && Number.isFinite(monto) && monto >= 0;
-
-  async function apuntar() {
-    if (!valido || guardando) return;
-    setGuardando(true);
-    const r = await comando(
-      'upsert_gasto',
-      { gasto: { fecha: dia, concepto: concepto.trim(), categoria: categoria.trim(), importe: monto } },
-      'Gasto apuntado',
-      alCambiar,
-    );
-    setGuardando(false);
-    if (r) {
-      setConcepto('');
-      setCategoria('');
-      setImporte('');
-      setCreando(false);
-    }
-  }
-
-  async function borrar(id: string) {
-    if (!window.confirm('¿Borrar este gasto?')) return;
-    setBorrando(id);
-    await comando('delete_gasto', { id }, 'Gasto borrado', alCambiar);
-    setBorrando(null);
-  }
-
-  return (
-    <div className="card">
-      <div className="card-mini-head">
-        <h3>Gastos</h3>
-        <button type="button" className="btn btn-ghost btn-sm" aria-expanded={creando} onClick={() => setCreando((v) => !v)}><Plus size={15}/> {creando ? 'Cerrar' : 'Nuevo gasto'}</button>
-      </div>
-      {gastos.length === 0 ? (
-        <p className="vacio">Sin gastos apuntados este día.</p>
-      ) : (
-        gastos.map((g) => (
-          <div className="kv-fila" key={g.id}>
-            <span>
-              {g.concepto}
-              {g.categoria && <small className="muted"> · {g.categoria}</small>}
-            </span>
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
-              <b>{soles(g.importe)}</b>
-              <button
-                type="button"
-                className="q-icon"
-                aria-label="Borrar gasto"
-                disabled={borrando === g.id}
-                onClick={() => void borrar(g.id)}
-              >
-                <Trash2 size={14} />
-              </button>
-            </span>
-          </div>
-        ))
-      )}
-
-      {creando && <>
-      <p className="muted caja-gasto-fecha">Registrar gasto del {diaMes(new Date(`${dia}T12:00:00`))}</p>
-      <div className="gasto-form">
-        <input
-          className="input"
-          placeholder="Concepto (p. ej. adelanto a Ana)"
-          aria-label="Concepto del gasto"
-          value={concepto}
-          onChange={(e) => setConcepto(e.target.value)}
-        />
-        <input
-          className="input"
-          placeholder="Categoría"
-          aria-label="Categoría del gasto"
-          list="categorias-gasto"
-          value={categoria}
-          onChange={(e) => setCategoria(e.target.value)}
-        />
-        <datalist id="categorias-gasto">
-          {CATEGORIAS.map((c) => (
-            <option key={c} value={c} />
-          ))}
-        </datalist>
-        <input
-          className="input"
-          placeholder="Importe"
-          aria-label="Importe del gasto"
-          inputMode="decimal"
-          value={importe}
-          onChange={(e) => setImporte(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') void apuntar();
-          }}
-        />
-        <button className="btn btn-primary btn-sm" disabled={!valido || guardando} onClick={() => void apuntar()}>
-          <Plus size={14} /> {guardando ? 'Apuntando…' : 'Apuntar'}
-        </button>
-      </div>
-      <p className="muted" style={{ fontSize: 11.5, marginTop: 6 }}>
-        Un adelanto de sueldo va aquí, con la categoría «Adelanto».
-      </p>
-      </>}
-    </div>
-  );
 }

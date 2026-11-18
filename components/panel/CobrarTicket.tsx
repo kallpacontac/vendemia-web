@@ -24,6 +24,7 @@ import Link from 'next/link';
 import { Gift, Minus, Plus, Receipt, UserPlus, X } from 'lucide-react';
 import { BotonCobrar } from '@/components/panel/BotonCobrar';
 import { cobrable } from '@/components/panel/ListosParaCobrar';
+import FiltroProductos, { ordenarPorVentas, useMasVendidos } from '@/components/panel/ProductosFiltro';
 import { useAvisar, useComando } from '@/components/panel/Avisos';
 import { fotoParaCobro, type FotoPago } from '@/lib/panel/fotoPago';
 import { etiquetaMetodo, type MetodoPago } from '@/lib/panel/metodosPago';
@@ -58,7 +59,9 @@ export default function CobrarTicket({
   const avisar = useAvisar();
   const comando = useComando();
   const activos = useMemo(() => trabajadores.filter((t) => t.activo), [trabajadores]);
-  const servicios = useMemo(() => catalogo.filter((c) => cobrable(c) && c.tipo !== 'producto'), [catalogo]);
+  // Lo más pedido primero (datos 0013), en servicios y en productos.
+  const ventas = useMasVendidos(companyId);
+  const servicios = useMemo(() => ordenarPorVentas(catalogo.filter((c) => cobrable(c) && c.tipo !== 'producto'), ventas), [catalogo, ventas]);
   const productos = useMemo(() => catalogo.filter((c) => cobrable(c) && c.tipo === 'producto'), [catalogo]);
   const porId = useMemo(() => new Map(catalogo.map((c) => [c.id, c])), [catalogo]);
 
@@ -237,10 +240,11 @@ export default function CobrarTicket({
             ))}
           </div>
           {productos.length > 0 && (
-            <details className="ticket-productos">
-              <summary>Productos ({productos.length})</summary>
+            <div className="ticket-productos">
+              <span className="ticket-rotulo">Productos <small>bebidas, ceras, geles…</small></span>
+              <FiltroProductos productos={productos} ventas={ventas} render={(lista) => (
               <div className="ticket-chips">
-                {productos.map((c) => (
+                {lista.map((c) => (
                   <button key={c.id} type="button" className={`ticket-chip ticket-chip--item${cuenta(c.id) ? ' on' : ''}`}
                     disabled={c.stock != null && c.stock <= 0 && cuenta(c.id) === 0}
                     aria-pressed={cuenta(c.id) > 0} onClick={() => alternar(c.id)}>
@@ -250,7 +254,8 @@ export default function CobrarTicket({
                   </button>
                 ))}
               </div>
-            </details>
+              )} />
+            </div>
           )}
           {servicios.length === 0 && productos.length === 0 && (
             <p className="ticket-nota">No hay servicios activos en el <Link href="/panel/catalogo">Catálogo</Link>.</p>

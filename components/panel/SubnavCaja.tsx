@@ -1,40 +1,51 @@
 'use client';
 
 /**
- * Caja y Boletas y facturas, juntas (The 24/7, 17-nov: «boletas y facturas en caja, unifícalo
- * excepto su configuración»). Dos pestañas arriba de las dos pantallas; la configuración de SUNAT
- * vive en Ajustes › «Boletas y facturas».
+ * Las pestañas de la Caja, cada una con UN propósito (18-nov-2026, Alvaro: «la caja tiene varias
+ * funciones; lo más práctico y menos engorroso posible»):
+ *
+ *   Cobrar          lo que se hace con el cliente delante: cobrar ticket, escanear tarjeta,
+ *                   apuntar un gasto, y la cola de «Listos para cobrar». Se abre por defecto.
+ *   Cierre del día  cuadrar la caja: lo que entró por método, gastos y adelantos, a cuenta,
+ *                   comprobantes y saldos. Es /panel/caja?ver=cierre (la misma pantalla).
+ *   Boletas         Boletas y facturas (SUNAT); su configuración, en Ajustes.
+ *   Comisiones      lo que le toca a cada barbero (solo negocios de citas y quien las ve).
  */
+import { Suspense } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useSearchParams } from 'next/navigation';
 import { useSesion } from '@/components/panel/Sesion';
 import { esCita } from '@/lib/panel/modo';
 import { puedeVer } from '@/lib/panel/roles';
 
-const PESTANAS = [
-  { href: '/panel/caja', label: 'Caja del día' },
-  { href: '/panel/comprobantes', label: 'Boletas y facturas' },
-];
-
 export default function SubnavCaja() {
-  const ruta = usePathname();
-  const { rol, compania } = useSesion();
-  // Comisiones, junto a la caja (18-nov-2026: «¿dónde ve el dueño las comisiones?»). Antes solo
-  // estaban en «Más» del menú lateral. Solo en negocios de citas y para quien las puede ver.
-  const pestanas = esCita(compania?.business_mode) && puedeVer(rol, 'comisiones.ver')
-    ? [...PESTANAS, { href: '/panel/comisiones', label: 'Comisiones' }]
-    : PESTANAS;
   return (
-    <nav className="chip-tabs" aria-label="Caja" style={{ margin: '0 0 14px' }}>
-      {pestanas.map((p) => {
-        const activa = ruta.startsWith(p.href);
-        return (
-          <Link key={p.href} href={p.href} className={activa ? 'active' : ''} aria-current={activa ? 'page' : undefined}
-            style={{ padding: '6px 14px', borderRadius: 999, fontWeight: 700, fontSize: 12.5, ...(activa ? { background: 'var(--brand)', color: 'var(--on-brand)' } : { color: 'var(--ink-soft)' }) }}>
-            {p.label}
-          </Link>
-        );
-      })}
+    <Suspense fallback={<nav className="chip-tabs" aria-label="Caja" style={{ margin: '0 0 14px', minHeight: 40 }} />}>
+      <Pestanas />
+    </Suspense>
+  );
+}
+
+function Pestanas() {
+  const ruta = usePathname();
+  const cierre = useSearchParams().get('ver') === 'cierre';
+  const { rol, compania } = useSesion();
+  const pestanas = [
+    { href: '/panel/caja', label: 'Cobrar', activa: ruta.startsWith('/panel/caja') && !cierre },
+    { href: '/panel/caja?ver=cierre', label: 'Cierre del día', activa: ruta.startsWith('/panel/caja') && cierre },
+    { href: '/panel/comprobantes', label: 'Boletas', activa: ruta.startsWith('/panel/comprobantes') },
+    ...(esCita(compania?.business_mode) && puedeVer(rol, 'comisiones.ver')
+      ? [{ href: '/panel/comisiones', label: 'Comisiones', activa: ruta.startsWith('/panel/comisiones') }]
+      : []),
+  ];
+  return (
+    <nav className="chip-tabs subnav-caja" aria-label="Caja" style={{ margin: '0 0 14px' }}>
+      {pestanas.map((p) => (
+        <Link key={p.href} href={p.href} className={p.activa ? 'active' : ''} aria-current={p.activa ? 'page' : undefined}
+          style={{ padding: '6px 14px', borderRadius: 999, fontWeight: 700, fontSize: 12.5, ...(p.activa ? { background: 'var(--brand)', color: 'var(--on-brand)' } : { color: 'var(--ink-soft)' }) }}>
+          {p.label}
+        </Link>
+      ))}
     </nav>
   );
 }

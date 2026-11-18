@@ -24,6 +24,7 @@
  */
 import { useMemo, useState } from 'react';
 import Topbar from '@/components/panel/Topbar';
+import { supabase } from '@/lib/supabase/client';
 import { useSesion } from '@/components/panel/Sesion';
 import { useCargar } from '@/components/panel/useCargar';
 import { calcularComisiones } from '@/lib/panel/comisiones';
@@ -57,8 +58,14 @@ export default function MiComision() {
     // Solo las suyas. Una cita sin asignar no es de nadie: no le cuenta a él.
     const mias = ficha ? citas.filter((c) => c.employee_id === ficha) : [];
     const ids = mias.map((c) => c.id);
-    const [lineas, congeladas] = await Promise.all([getServiciosDeCitas(ids), getComisionesCongeladas(ids)]);
-    return { ficha, mias, lineas, congeladas, fichas, catalogo };
+    const [lineas, congeladas, adelantos] = await Promise.all([
+      getServiciosDeCitas(ids),
+      getComisionesCongeladas(ids),
+      // Sus adelantos de estas fechas (datos 0013). Sin la 0013, ninguno.
+      supabase().rpc('mis_adelantos', { p_company: companyId, p_desde: desde, p_hasta: hasta })
+        .then(({ data, error }) => (error || !data ? { total: 0, filas: [] } : (data as { total: number; filas: { fecha: string; concepto: string; importe: number }[] }))),
+    ]);
+    return { ficha, mias, lineas, congeladas, fichas, catalogo, adelantos };
   }, [companyId, desde, hasta]);
 
   const resumen = useMemo(() => {
@@ -122,6 +129,13 @@ export default function MiComision() {
                 {resumen.yo ? ` · ${soles(resumen.yo.facturado)} en servicios` : ''}
                 {resumen.pct > 0 && ` · tu comisión general es del ${resumen.pct}%`}
               </p>
+              {(datos?.adelantos.total ?? 0) > 0 && (
+                <div className="mi-recibe">
+                  <span>Comisión <b>{soles(resumen.yo?.comision ?? 0)}</b></span>
+                  <span className="mi-recibe__menos">Adelantos <b>− {soles(Number(datos?.adelantos.total ?? 0))}</b></span>
+                  <span className="mi-recibe__total">Vas a recibir <b>{soles((resumen.yo?.comision ?? 0) - Number(datos?.adelantos.total ?? 0))}</b></span>
+                </div>
+              )}
               {resumen.hoy && (
                 <p style={{ fontSize: 13.5, marginTop: 8 }}>
                   Hoy: <b>{soles(resumen.hoy.comision)}</b>{' '}

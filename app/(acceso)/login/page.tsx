@@ -31,6 +31,7 @@ import Link from 'next/link';
 import { ArrowRight, Eye, EyeOff } from 'lucide-react';
 import { FALTAN_CLAVES, supabase } from '@/lib/supabase/client';
 import BotonGoogle from '@/components/panel/BotonGoogle';
+import { usuarioACorreo } from '@/lib/panel/cuentaCelular';
 import { MENSAJE_CADUCIDAD } from '@/lib/panel/caducidad';
 import { tomarDestino, verDestino, vieneDePlaca } from '@/lib/panel/destino';
 import { fuenteDeRuta, rutaActivacionPlaca, type FuentePlaca } from '@/modules/fideliza/dominio/activacion';
@@ -115,7 +116,8 @@ export default function Login() {
     try {
       const sb = supabase();
       if (modo === 'entrar') {
-        const { error } = await sb.auth.signInWithPassword({ email, password: clave });
+        // El barbero entra con su celular: se convierte en su correo interno (lib/panel/cuentaCelular).
+        const { error } = await sb.auth.signInWithPassword({ email: usuarioACorreo(email), password: clave });
         if (error) throw error;
         router.replace(destinoTrasAcceso(fuentePlaca));
       } else if (modo === 'recuperar') {
@@ -250,17 +252,19 @@ export default function Login() {
         {modo !== 'recuperar' && <BotonGoogle alFallar={(m) => setError(m)} />}
 
         <label className="field-label" htmlFor="email">
-          Correo
+          {modo === 'entrar' ? 'Correo o celular' : 'Correo'}
         </label>
         <input
           id="email"
           className="input"
-          type="email"
-          autoComplete="email"
+          type={modo === 'entrar' ? 'text' : 'email'}
+          inputMode={modo === 'entrar' ? 'email' : undefined}
+          autoComplete="username"
+          autoCapitalize="none"
           required
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          placeholder="tu@correo.com"
+          placeholder={modo === 'entrar' ? 'tu@correo.com o 987654321' : 'tu@correo.com'}
         />
 
         {/* Recuperando solo hace falta el correo: pedir una contraseña que no

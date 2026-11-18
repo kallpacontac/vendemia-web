@@ -28,6 +28,7 @@ import { Fragment, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { AlertTriangle, ChevronDown, ChevronUp, Download, Percent, Scissors, Wallet } from 'lucide-react';
 import Topbar from '@/components/panel/Topbar';
+import { supabase } from '@/lib/supabase/client';
 import SubnavCaja from '@/components/panel/SubnavCaja';
 import CierresPorPagar from '@/components/panel/CierresPorPagar';
 import { useSesion } from '@/components/panel/Sesion';
@@ -65,8 +66,8 @@ export default function Comisiones() {
       getCatalogo(companyId),
     ]);
     const ids = citas.map((c) => c.id);
-    const [lineas, congeladas] = await Promise.all([getServiciosDeCitas(ids), getComisionesCongeladas(ids)]);
-    return { citas, lineas, congeladas, trabajadores, catalogo };
+    const [lineas, congeladas, adelantos] = await Promise.all([getServiciosDeCitas(ids), getComisionesCongeladas(ids), adelantosDelPeriodo(companyId, desde, hasta)]);
+    return { citas, lineas, congeladas, trabajadores, catalogo, adelantos };
   }, [companyId, desde, hasta]);
 
   const resumen = useMemo(
@@ -85,6 +86,9 @@ export default function Comisiones() {
     (datos?.catalogo ?? []).some((c) => c.comision_pct != null || c.comision_monto != null);
 
   const citasAtendidas = resumen?.profesionales.reduce((t, p) => t + p.citas, 0) ?? 0;
+  /** Lo adelantado a cada uno en estas fechas (Caja › Gastos y adelantos, datos 0013). */
+  const adelanto = (id: string) => datos?.adelantos.get(id) ?? 0;
+  const totalAdelantos = [...(datos?.adelantos.values() ?? [])].reduce((t, n) => t + n, 0);
   const facturado = resumen?.profesionales.reduce((t, p) => t + p.facturado, 0) ?? 0;
 
   function descargar() {
@@ -170,6 +174,17 @@ export default function Comisiones() {
               <small>Facturado en esas citas</small>
             </div>
           </div>
+          {totalAdelantos > 0 && (
+            <div className="mini">
+              <div className="ic" style={{ background: '#FFF1E6', color: '#C2410C' }}>
+                <Wallet size={20} />
+              </div>
+              <div>
+                <b>{soles(totalAdelantos)}</b>
+                <small>Adelantos (se descuentan)</small>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* 2 · Lo que explica un total en cero. */}
@@ -225,6 +240,8 @@ export default function Comisiones() {
                   <th>Citas</th>
                   <th>Facturado</th>
                   <th>Comisión</th>
+                  <th>Adelantos</th>
+                  <th>A pagar</th>
                   <th />
                 </tr>
               </thead>
@@ -250,8 +267,12 @@ export default function Comisiones() {
                         </td>
                         <td data-label="Citas">{p.citas}</td>
                         <td data-label="Facturado">{soles(p.facturado)}</td>
-                        <td data-label="Comisión">
-                          <b>{soles(p.comision)}</b>
+                        <td data-label="Comisión">{soles(p.comision)}</td>
+                        <td data-label="Adelantos" style={p.employeeId && adelanto(p.employeeId) > 0 ? { color: '#C2410C' } : undefined}>
+                          {p.employeeId && adelanto(p.employeeId) > 0 ? `− ${soles(adelanto(p.employeeId))}` : '—'}
+                        </td>
+                        <td data-label="A pagar">
+                          <b>{soles(p.comision - (p.employeeId ? adelanto(p.employeeId) : 0))}</b>
                         </td>
                         <td>{esteAbierto ? <ChevronUp size={16} /> : <ChevronDown size={16} />}</td>
                       </tr>
@@ -270,6 +291,8 @@ export default function Comisiones() {
                                 {l.pct != null ? ` ${l.pct} %` : ''}
                               </small>
                             </td>
+                            <td />
+                            <td />
                             <td />
                           </tr>
                         ))}
@@ -295,4 +318,24 @@ export default function Comisiones() {
       </div>
     </main>
   );
+}
+
+/**
+ * Los adelantos de cada barbero entre dos fechas (Caja › Gastos y adelantos, datos 0013). Sin la
+ * 0013 la columna `tipo` no existe y la consulta falla: entonces, sin adelantos.
+ */
+async function adelantosDelPeriodo(companyId: string, desde: string, hasta: string): Promise<Map<string, number>> {
+  const { data, error } = await supabase()
+    .from('gastos')
+    .select('employee_id, importe')
+    .eq('company_id', companyId)
+    .eq('tipo', 'adelanto')
+    .gte('fecha', desde)
+    .lte('fecha', hasta);
+  const m = new Map<string, number>();
+  if (error) return m;
+  for (const g of (data ?? []) as { employee_id: string | null; importe: number }[]) {
+    if (g.employee_id) m.set(g.employee_id, (m.get(g.employee_id) ?? 0) + Number(g.importe ?? 0));
+  }
+  return m;
 }
