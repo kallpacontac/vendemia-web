@@ -17,6 +17,7 @@ import { fuenteDeRuta } from '@/modules/fideliza/dominio/activacion';
 import AltaNegocio from '@/components/panel/AltaNegocio';
 import Instalable from '@/components/panel/Instalable';
 import BannerApp from '@/components/panel/BannerApp';
+import TecladoVisible from '@/components/panel/TecladoVisible';
 
 /**
  * ══════════════════════════════════════════════════════════════════════════
@@ -176,6 +177,8 @@ export default function PanelLayout({ children }: { children: React.ReactNode })
     <ProveedorSesion>
       {/* Manifest, service worker y el «Instalar» de Android: el panel como app. */}
       <Instalable />
+      {/* Que el teclado de la tablet no tape la caja de texto que se está llenando. */}
+      <TecladoVisible />
       {/* Salud va DENTRO de Sesión (necesita la compañía activa) y FUERA de la
           guardia, para que la píldora de la barra superior y el aviso flotante
           lean la misma consulta en vez de hacer una cada uno.

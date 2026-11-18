@@ -15,8 +15,12 @@
  *              sale una sola casilla: «Descontar de su comisión». Marcada = adelanto (se le resta
  *              en Comisiones y en su «Mi comisión»); desmarcada = gasto del negocio para él (el
  *              almuerzo). Se guarda en datos 0013 (gastos.tipo y gastos.employee_id).
+ *
+ * Guiado (18-nov): al abrir, la vista baja al formulario y el cursor queda en «¿Cuánto?» (sale el
+ * teclado numérico); cada respuesta lleva al siguiente paso, resaltado (lib/panel/guiar.ts).
  */
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { guiarA } from '@/lib/panel/guiar';
 import { Check, Plus, Trash2, X } from 'lucide-react';
 import ComboPanel from '@/components/panel/ComboPanel';
 import { useComando } from '@/components/panel/Avisos';
@@ -85,6 +89,7 @@ export default function GastosCaja({
   function rapido(r: (typeof RAPIDOS)[number]) {
     setConcepto(r.texto);
     if (r.descuenta !== null) setDescuenta(r.descuenta);
+    guiarA(refQuien.current);
   }
 
   function limpiar() {
@@ -127,6 +132,26 @@ export default function GastosCaja({
     setBorrando(null);
   }
 
+  // ── La guía ──
+  const raiz = useRef<HTMLDivElement>(null);
+  const refMonto = useRef<HTMLInputElement>(null);
+  const refEnQue = useRef<HTMLDivElement>(null);
+  const refQuien = useRef<HTMLDivElement>(null);
+  const refFin = useRef<HTMLDivElement>(null);
+  const ahora = !(Number.isFinite(monto) && monto > 0) ? 'cuanto' : !concepto.trim() ? 'enque' : 'guardar';
+  useEffect(() => {
+    if (!abierto) return;
+    guiarA(raiz.current);
+    refMonto.current?.focus({ preventScroll: true });
+  }, [abierto]);
+  /** «Siguiente» del teclado: deja el número y baja a «¿En qué?». */
+  const siguiente = (e: React.KeyboardEvent<HTMLInputElement>, a: React.RefObject<HTMLElement>) => {
+    if (e.key !== 'Enter') return;
+    e.preventDefault();
+    e.currentTarget.blur();
+    guiarA(a.current);
+  };
+
   const etiqueta = (g: Gasto) =>
     g.tipo === 'adelanto'
       ? { texto: `Adelanto · ${g.employee_id ? (nombre.get(g.employee_id) ?? 'barbero') : 'sin barbero'}`, clase: 'gc-tipo--adelanto' }
@@ -135,7 +160,7 @@ export default function GastosCaja({
         : { texto: g.employee_id ? `Del negocio · para ${nombre.get(g.employee_id) ?? 'un barbero'}` : 'Del negocio', clase: '' };
 
   return (
-    <div className={`card gc${soloForm ? ' gc--solo' : ''}`}>
+    <div ref={raiz} className={`card gc${soloForm ? ' gc--solo' : ''}`}>
       {!soloForm && <div className="card-mini-head">
         <h3>Gastos y adelantos</h3>
         {!abierto && (
@@ -154,15 +179,16 @@ export default function GastosCaja({
             </button>
           </div>
 
-          <label className="gc-campo">
+          <label className={`gc-campo${ahora === 'cuanto' ? ' gc-campo--ahora' : ''}`}>
             <span>¿Cuánto?</span>
             <span className="gc-monto">
               <i>S/</i>
-              <input inputMode="decimal" placeholder="0" value={importe} onChange={(e) => setImporte(e.target.value)} aria-label="Importe" autoFocus />
+              <input ref={refMonto} inputMode="decimal" enterKeyHint="next" placeholder="0" value={importe} onChange={(e) => setImporte(e.target.value)}
+                onKeyDown={(e) => siguiente(e, refEnQue)} aria-label="Importe" autoFocus />
             </span>
           </label>
 
-          <div className="gc-campo">
+          <div ref={refEnQue} className={`gc-campo${ahora === 'enque' ? ' gc-campo--ahora' : ''}`}>
             <span>¿En qué?</span>
             <div className="ticket-chips">
               {RAPIDOS.map((r) => (
@@ -171,12 +197,14 @@ export default function GastosCaja({
                 </button>
               ))}
             </div>
-            <input className="input" placeholder="O escríbelo: navajas, toallas…" value={concepto} onChange={(e) => setConcepto(e.target.value)} aria-label="Concepto" />
+            <input className="input" placeholder="O escríbelo: navajas, toallas…" value={concepto} onChange={(e) => setConcepto(e.target.value)}
+              enterKeyHint="next" onKeyDown={(e) => siguiente(e, refQuien)} aria-label="Concepto" />
           </div>
 
-          <div className="gc-campo">
+          <div ref={refQuien} className="gc-campo">
             <span>¿De quién?</span>
-            <ComboPanel tipo="persona" etiqueta="De quién es el gasto" value={quien} alCambiar={setQuien}
+            <ComboPanel tipo="persona" etiqueta="De quién es el gasto" value={quien}
+              alCambiar={(q) => { setQuien(q); guiarA(refFin.current, 'end'); }}
               opciones={[
                 { value: NEGOCIO, label: 'Del negocio' },
                 { value: PERSONAL, label: 'Personal', detalle: 'retiro del dueño' },
@@ -193,13 +221,15 @@ export default function GastosCaja({
             )}
           </div>
 
-          {falta ? (
-            <p className="ticket-falta">Falta: {falta.charAt(0).toLowerCase() + falta.slice(1)}</p>
-          ) : (
-            <button type="button" className="btn btn-primary gc-guardar" disabled={guardando} onClick={() => void guardar()}>
-              <Check size={18} /> {guardando ? 'Guardando…' : `Guardar ${soles(monto)}`}
-            </button>
-          )}
+          <div ref={refFin} className="gc-fin">
+            {falta ? (
+              <p className="ticket-falta">Falta: {falta.charAt(0).toLowerCase() + falta.slice(1)}</p>
+            ) : (
+              <button type="button" className="btn btn-primary gc-guardar" disabled={guardando} onClick={() => void guardar()}>
+                <Check size={18} /> {guardando ? 'Guardando…' : `Guardar ${soles(monto)}`}
+              </button>
+            )}
+          </div>
         </div>
       )}
 

@@ -491,12 +491,24 @@ export default function NuevaCita({
         </div>
 
         <div className="nc-pie">
-          <p className="nc-resumen" aria-live="polite">
-            {servicioElegido ? <b>{servicioElegido.name}</b> : <span className="muted">Elige el servicio</span>}
-            {hora ? ` · ${fechaEnPalabras(fecha, hoy)} · ${hora12(hora)}` : ''}
-            {pideSede && sede ? ` · ${nombreSede(sede)}` : ''}
-            {servicioElegido?.price != null ? ` · ${soles(servicioElegido.price)}` : ''}
-          </p>
+          {/* Lo que se agenda y, aparte y grande, lo que va a pagar (18-nov: «más grande y claro»). */}
+          <div className="nc-resumen" aria-live="polite">
+            <div className="nc-resumen__que">
+              {servicioElegido ? <b>{servicioElegido.name}</b> : <span className="muted">Elige el servicio</span>}
+              {(hora || (pideSede && sede)) && (
+                <span>
+                  {hora ? `${fechaEnPalabras(fecha, hoy)} · ${hora12(hora)}` : ''}
+                  {pideSede && sede ? `${hora ? ' · ' : ''}${nombreSede(sede)}` : ''}
+                </span>
+              )}
+            </div>
+            {servicioElegido?.price != null && (
+              <div className="nc-resumen__total">
+                <small>A pagar</small>
+                <b>{soles(servicioElegido.price)}</b>
+              </div>
+            )}
+          </div>
           <div className="nc-botones">
             <button type="button" className="btn btn-ghost" onClick={alCerrar} disabled={enviando}>Cancelar</button>
             <button type="button" className="btn btn-primary" disabled={enviando || !itemId || !hora || (pideSede && !sede)} onClick={() => void crear()}>

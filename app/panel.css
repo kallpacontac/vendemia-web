@@ -2234,7 +2234,13 @@ button.fpill{font-family:inherit;min-height:36px}
 .nc-buscar{width:100%}
 .nc-elegido{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:10px 12px;border-radius:12px;background:var(--bg-soft)}
 .nc-pie{display:grid;gap:10px;padding:14px 20px 16px;border-top:1px solid var(--line);background:var(--bg-card)}
-.nc-resumen{margin:0;font-size:13.5px;line-height:1.4}
+.nc-resumen{margin:0;display:flex;align-items:center;justify-content:space-between;gap:14px}
+.nc-resumen__que{display:flex;flex-direction:column;gap:3px;min-width:0}
+.nc-resumen__que b{font-size:16.5px;line-height:1.25;color:var(--ink)}
+.nc-resumen__que span{font-size:14px;color:var(--ink-soft);line-height:1.35}
+.nc-resumen__total{flex:none;display:flex;flex-direction:column;align-items:flex-end;padding:8px 14px;border-radius:14px;background:var(--brand-soft,#FFEFE7)}
+.nc-resumen__total small{font-size:11.5px;font-weight:700;color:var(--brand-txt,#CC3A00);text-transform:uppercase;letter-spacing:.05em}
+.nc-resumen__total b{font-size:24px;line-height:1.1;color:var(--brand-txt,#CC3A00);letter-spacing:-.02em}
 .nc-botones{display:flex;justify-content:flex-end;gap:10px}
 .nc-botones .btn{min-height:48px;min-width:120px}
 @media (max-width:640px){
@@ -2495,3 +2501,13 @@ nav.chip-tabs[aria-label="Caja"] a{flex-shrink:0;white-space:nowrap}
 .nc-campo--ahora>.nc-rotulo{color:var(--brand-txt,#CC3A00)}
 .nc-campo{border-radius:12px}
 @media (prefers-reduced-motion:reduce){.guia-pulso,.ticket-paso--ahora.guia-pulso,.ticket-paso--ahora>.ticket-rotulo::before{animation:none}}
+
+/* Gasto o adelanto: el paso que toca, como en el ticket; el importe sin doble borde. */
+.gc-campo{border-radius:14px;transition:background .25s ease,box-shadow .25s ease;scroll-margin-top:96px}
+.gc-campo--ahora{background:var(--brand-soft,#FFEFE7);box-shadow:0 0 0 8px var(--brand-soft,#FFEFE7)}
+.gc-campo--ahora>span:first-child{color:var(--brand-txt,#CC3A00)}
+.gc-campo--ahora>span:first-child::before{content:'';display:inline-block;width:8px;height:8px;margin-right:7px;border-radius:50%;
+  background:var(--brand);vertical-align:2px;animation:guia-punto 1.4s ease-in-out infinite}
+.gc-fin{scroll-margin-bottom:96px}
+.main .gc-monto input:focus-visible{outline:none}
+@media (prefers-reduced-motion:reduce){.gc-campo--ahora>span:first-child::before{animation:none}}

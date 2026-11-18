@@ -10,7 +10,8 @@
 --   1 · modules/facturacion/sql/0002_servicios_y_productos.sql   (Iquitos: servicios Y productos)
 --   2 · modules/facturacion/sql/0003_boleta_al_cobrar.sql        (la boleta al cobrar en Caja)
 --
--- LLENA las 3 líneas de «datos» (las de tus boletas de papel). Sin ellas el script se para.
+-- RUC, razón social y dirección: si los dejas vacíos abajo, se toman de Mi página › Libro de
+-- Reclamaciones. Si tampoco están ahí, el script se para y te lo dice.
 --
 -- Qué deja puesto (todo se cambia luego en Ajustes › Boletas y facturas):
 --   · IGV: exonerado, Amazonía, «ambas» leyendas: cada boleta lleva la de lo vendido
@@ -30,12 +31,19 @@ begin;
 
 do $$
 declare
-    -- ▼▼▼ LLENA ESTO ▼▼▼
+    -- ▼▼▼ Vacíos = los de Mi página › Libro de Reclamaciones ▼▼▼
     v_ruc          text := '';   -- 11 dígitos, empieza en 10 o 20. Ej.: '20612345678'
     v_razon_social text := '';   -- como figura en SUNAT. Ej.: 'INVERSIONES 24/7 E.I.R.L.'
     v_direccion    text := '';   -- dirección fiscal. Ej.: 'Jr. Huallaga 625, Iquitos'
-    -- ▲▲▲ LLENA ESTO ▲▲▲
+    -- ▲▲▲
 begin
+    -- Vacíos: se toman de Mi página › Libro de Reclamaciones (lo que ya se llenó en la ficha).
+    select coalesce(nullif(v_ruc, ''), regexp_replace(coalesce(secciones #>> '{proveedor,ruc}', ''), '\D', '', 'g')),
+           coalesce(nullif(btrim(v_razon_social), ''), btrim(coalesce(secciones #>> '{proveedor,razon_social}', ''))),
+           coalesce(nullif(btrim(v_direccion), ''), btrim(coalesce(secciones #>> '{proveedor,direccion}', '')))
+      into v_ruc, v_razon_social, v_direccion
+      from public.tu_pagina where company_id = 'the247barbershop';
+    v_ruc := coalesce(v_ruc, ''); v_razon_social := coalesce(v_razon_social, ''); v_direccion := coalesce(v_direccion, '');
     if to_regprocedure('public.factura_leyendas(text,text,jsonb)') is null then
         raise exception 'Falta correr antes modules/facturacion/sql/0002_servicios_y_productos.sql';
     end if;
@@ -43,7 +51,7 @@ begin
         raise exception 'Falta correr antes modules/facturacion/sql/0003_boleta_al_cobrar.sql';
     end if;
     if v_ruc !~ '^(10|15|16|17|20)\d{9}$' then
-        raise exception 'Pon el RUC del negocio arriba (11 dígitos, empieza en 10 o 20).';
+        raise exception 'Falta el RUC: ponlo arriba en v_ruc o en Mi página › Libro de Reclamaciones (11 dígitos, empieza en 10 o 20).';
     end if;
     -- El dígito verificador, como lo comprueba el panel (modules/facturacion/dominio/validar.ts).
     if (11 - ((5*substr(v_ruc,1,1)::int + 4*substr(v_ruc,2,1)::int + 3*substr(v_ruc,3,1)::int + 2*substr(v_ruc,4,1)::int
@@ -52,7 +60,7 @@ begin
         raise exception 'El RUC % no es válido (el último dígito no cuadra): revísalo.', v_ruc;
     end if;
     if btrim(v_razon_social) = '' or btrim(v_direccion) = '' then
-        raise exception 'Pon arriba la razón social y la dirección fiscal.';
+        raise exception 'Faltan la razón social o la dirección fiscal: ponlas arriba o en Mi página › Libro de Reclamaciones.';
     end if;
 
     insert into public.factura_ajustes as a (

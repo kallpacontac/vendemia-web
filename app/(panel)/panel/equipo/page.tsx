@@ -45,6 +45,7 @@ import {
   UserCheck,
   UserCog,
   UserX,
+  Wallet,
 } from 'lucide-react';
 import Topbar from '@/components/panel/Topbar';
 import AvisarCliente from '@/components/panel/AvisarCliente';
@@ -198,6 +199,13 @@ export default function Equipo() {
     ]);
     return { empresa, trabajadores, bloqueos, citas, leads };
   }, [companyId]);
+  // El sueldo base (datos 0016): solo el dueño lo ve y lo cambia. Sin la 0016, el campo no sale.
+  const esDueno = useSesion().rol === 'dueno';
+  const sueldos = useCargar(async () => {
+    if (!companyId || !esDueno) return null;
+    const { data, error } = await supabase().rpc('empleado_sueldos_leer', { p_company: companyId });
+    return error ? null : ((data ?? {}) as Record<string, number>);
+  }, [companyId, esDueno]);
 
   const nombrePorLead = useMemo(
     () => new Map((datos?.leads ?? []).map((l) => [l.id, l.name || l.phone])),
@@ -298,6 +306,8 @@ export default function Equipo() {
             abierta={abierta === t.id}
             alAbrir={() => setAbierta((a) => (a === t.id ? null : t.id))}
             alCambiar={recargar}
+            sueldo={sueldos.datos ? (sueldos.datos[t.id] ?? null) : undefined}
+            alCambiarSueldo={sueldos.releer}
           />
         ))}
       </div>
@@ -416,6 +426,8 @@ function Ficha({
   abierta,
   alAbrir,
   alCambiar,
+  sueldo,
+  alCambiarSueldo,
 }: {
   t: Trabajador;
   /** El equipo entero: hace falta para poder pasarle a otro las citas huérfanas. */
@@ -427,9 +439,13 @@ function Ficha({
   abierta: boolean;
   alAbrir: () => void;
   alCambiar: () => void;
+  /** Sueldo base al mes (datos 0016). undefined = no se muestra (no es el dueño o falta la 0016). */
+  sueldo?: number | null;
+  alCambiarSueldo?: () => void;
 }) {
   const comando = useComando();
   const avisar = useAvisar();
+  const [sueldoTxt, setSueldoTxt] = useState(sueldo ? String(sueldo) : '');
 
   /** `schedule` vacío = hereda el del negocio. Ver EmployeeRow. */
   const tienePropio = Boolean(t.schedule?.trim());
@@ -451,6 +467,7 @@ function Ficha({
       setPropio(tienePropio);
       setHorario(tienePropio ? t.horario : copiaDe(horarioNegocio));
       setComision(String(t.comision_pct ?? 0));
+      setSueldoTxt(sueldo ? String(sueldo) : '');
     }
   }
 
@@ -491,19 +508,38 @@ function Ficha({
       avisar('Hace falta un nombre: es como Mia lo reconoce.', 'error');
       return;
     }
-    if (!Object.keys(cambios).length) {
+    // El sueldo base: vacío = sin sueldo. Va aparte (datos 0016), solo el dueño.
+    const nuevoSueldo = sueldoTxt.trim() ? Number(sueldoTxt.replace(',', '.')) : 0;
+    if (sueldo !== undefined && (!Number.isFinite(nuevoSueldo) || nuevoSueldo < 0)) {
+      avisar('El sueldo es un número en soles (por ejemplo 1200), o déjalo vacío.', 'error');
+      return;
+    }
+    const cambiaSueldo = sueldo !== undefined && Math.round(nuevoSueldo * 100) !== Math.round((sueldo ?? 0) * 100);
+    if (!Object.keys(cambios).length && !cambiaSueldo) {
       avisar('No has cambiado nada.', 'espera');
       return;
     }
     setGuardando(true);
-    const r = await comando<{ id: string } & ConSinPermiso>(
-      'upsert_employee',
-      { employee: { id: t.id, ...cambios } },
-      'Guardado',
-      alCambiar,
-    );
-    // El resto se guardó; el porcentaje, no. Ver ConSinPermiso.
-    if (r?.sin_permiso?.includes('comision_pct')) avisar('La comisión solo la cambia el dueño.', 'error');
+    if (cambiaSueldo) {
+      const { error } = await supabase().rpc('empleado_sueldo_guardar', { p_company: t.company_id, p_employee: t.id, p_sueldo: nuevoSueldo || null });
+      if (error) {
+        avisar(error.message, 'error');
+        setGuardando(false);
+        return;
+      }
+      alCambiarSueldo?.();
+      if (!Object.keys(cambios).length) avisar(nuevoSueldo ? `Sueldo base guardado: S/ ${nuevoSueldo}` : 'Sueldo base quitado.', 'ok');
+    }
+    if (Object.keys(cambios).length) {
+      const r = await comando<{ id: string } & ConSinPermiso>(
+        'upsert_employee',
+        { employee: { id: t.id, ...cambios } },
+        'Guardado',
+        alCambiar,
+      );
+      // El resto se guardó; el porcentaje, no. Ver ConSinPermiso.
+      if (r?.sin_permiso?.includes('comision_pct')) avisar('La comisión solo la cambia el dueño.', 'error');
+    }
     setGuardando(false);
   }
 
@@ -653,6 +689,30 @@ function Ficha({
               {pctDelDueno && ' Solo la cambia el dueño.'}
             </small>
           </div>
+
+          {/* Sueldo base (datos 0016): opcional, solo el dueño lo ve. */}
+          {sueldo !== undefined && (
+            <div className="sec" style={{ marginTop: 14 }}>
+              <h4>
+                <Wallet /> Sueldo base <span className="muted" style={{ fontWeight: 600, fontSize: 12 }}>opcional</span>
+              </h4>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, maxWidth: 220 }}>
+                <b>S/</b>
+                <input
+                  className="input"
+                  inputMode="decimal"
+                  placeholder="Sin sueldo base"
+                  value={sueldoTxt}
+                  onChange={(e) => setSueldoTxt(e.target.value)}
+                  aria-label="Sueldo base al mes"
+                />
+                <span className="muted">al mes</span>
+              </div>
+              <small className="muted" style={{ fontSize: 11.5 }}>
+                Lo fijo que gana al mes, aparte de su comisión. Vacío = solo comisión. Solo lo ves tú.
+              </small>
+            </div>
+          )}
 
           <Ausencias
             t={t}

@@ -12,6 +12,7 @@
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import CuentaPanel from './CuentaPanel';
+import CampanaAvisos from './CampanaAvisos';
 import CambiarClave from '@/components/panel/CambiarClave';
 import ComboPanel from './ComboPanel';
 import Confirmar from './Confirmar';
@@ -124,9 +125,10 @@ function NavegacionPanel() {
    */
   // Solo cinco (17-nov: «hay demasiadas opciones»). Reportes = Resumen + Métricas; Clientes y
   // Actividad siguen en el menú lateral, en «Más». Boletas y facturas, dentro de Caja.
+  // Caja primero (18-nov: «la caja en primer orden de los menús»): es donde se trabaja todo el día.
   const tabsCita = [
-    { href: operacion, label: operacionLabel, rutas: [operacion] },
     { href: '/panel/caja', label: 'Caja', rutas: ['/panel/caja', '/panel/comprobantes', '/panel/equipo', '/panel/comisiones'] },
+    { href: operacion, label: operacionLabel, rutas: [operacion] },
     { href: '/panel/fideliza', label: 'Fideliza', rutas: ['/panel/fideliza'] },
     { href: '/panel/catalogo', label: 'Catálogo', rutas: ['/panel/catalogo'] },
     { href: '/panel/metricas', label: 'Reportes', rutas: ['/panel/metricas', '/panel'] },
@@ -261,7 +263,7 @@ export default function Topbar({
     <CabeceraPanel titulo={titulo} sub={sub} accionesTitulo={accionesTitulo}
       navegacion={<NavegacionPanel />}
       avisos={<>{children}<BotonDemo /><AvisoCorteDeRoles /></>}
-      cuenta={<>{conSede && <SedeGlobal companyId={companyId} />}<SelectorCompania /><MenuCuenta email={email} pie={pie} /></>}
+      cuenta={<>{conSede && <SedeGlobal companyId={companyId} />}<CampanaAvisos /><SelectorCompania /><MenuCuenta email={email} pie={pie} /></>}
     />
   );
 }

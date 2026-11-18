@@ -46,6 +46,9 @@ import { useLoQueHaceLaPagina } from '@/modules/tu-pagina/ui/secciones';
 
 const NAV = [
   { href: '/panel', icon: LayoutDashboard, label: 'Dashboard' },
+  // Caja, primero después del inicio (The 24/7, 18-nov: «la caja en primer orden de los menús»).
+  // El empleado no la ve (rutaPermitida).
+  { href: '/panel/caja', icon: Wallet, label: 'Caja' },
   // Las dos pantallas del empleado. Solo existen tras el corte de roles, y solo
   // para él: quién ve cada entrada lo decide `rutaPermitida` (lib/panel/rutas.ts).
   { href: RUTA_MI_AGENDA, icon: CalendarDays, label: 'Mi agenda', sirveA: esAppointmentFamily },
@@ -73,7 +76,6 @@ const NAV = [
   { href: '/panel/mesas', icon: ConciergeBell, label: 'Mesas', sirveA: () => false },
   // Pedidos es del negocio que vende productos: una barbería no crea pedidos.
   { href: '/panel/pedidos', icon: Receipt, label: 'Pedidos', sirveA: esEcommerce },
-  { href: '/panel/caja', icon: Wallet, label: 'Caja' },
   // Boletas y facturas a SUNAT (modules/facturacion). Dueño y administrador.
   // Boletas y facturas: dentro de Caja (pestaña «Boletas y facturas»); su configuración, en Ajustes.
   { href: '/panel/catalogo', icon: Package, label: 'Catálogo' },
@@ -109,7 +111,7 @@ const NAV = [
 const FIJAS_MOVIL = ['/panel', '/panel/mesas', RUTA_MI_AGENDA, RUTA_MI_COMISION, '/panel/mensajes', '/panel/agenda', '/panel/pedidos', '/panel/alumnos', '/panel/caja'];
 const MAX_FIJAS_MOVIL = 4;
 /** Barbería o salón: lo que se usa en el mostrador (el barbero, su agenda y su comisión). */
-const FIJAS_MOVIL_CITA = [RUTA_MI_AGENDA, RUTA_MI_COMISION, '/panel/agenda', '/panel/caja', '/panel/fideliza', '/panel/catalogo'];
+const FIJAS_MOVIL_CITA = ['/panel/caja', RUTA_MI_AGENDA, RUTA_MI_COMISION, '/panel/agenda', '/panel/fideliza', '/panel/catalogo'];
 
 type Entrada = (typeof NAV)[number];
 

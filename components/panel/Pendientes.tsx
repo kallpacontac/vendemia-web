@@ -1,20 +1,19 @@
 'use client';
 
 /**
- * «Lo que necesita atención» · arriba del panel principal (18-nov-2026).
+ * «Lo que necesita atención» (18-nov-2026, The 24/7).
  *
- * Alvaro, con la captura de otro sistema: «que en el panel principal, que es donde entra por
- * defecto, tenga las acciones que tiene pendientes». Y luego (The 24/7): «le interesa qué
- * acciones tiene pendientes, por ejemplo por cobrar, más que las conversaciones; una animación
- * como de timbre sobre lo que necesita atender, claro y entendible».
+ * Lo que hay que hacer y dónde se hace: por cobrar, citas sin marcar, pagos por verificar, lo que
+ * se le debe al equipo… Aquí no se resuelve nada; cada fila lleva a la pantalla donde se resuelve.
+ * En orden de urgencia: primero lo que tiene a alguien esperando AHORA.
  *
- * Cada fila dice cuántas hay (número grande sobre el ícono), qué es, y un verbo (Cobrar, Marcar,
- * Pagar…) que lleva a la pantalla donde se resuelve; aquí no se resuelve nada. En orden de
- * urgencia: lo que tiene a alguien esperando AHORA (el cliente en el mostrador) primero, con la
- * campana sonando; lo que puede esperar, después y quieto. Sin nada: «Todo al día».
+ * Sale en dos sitios, con UNA sola consulta (usePendientes, compartida cada 30 s):
+ *   · TarjetaPendientes: en el inicio, debajo de ingresos y citas, con la estética del dashboard
+ *     (las mismas .card, .dash-section-head y .action-row que «Agenda de hoy» o «Más vendidos»).
+ *   · CampanaAvisos (components/panel/CampanaAvisos.tsx): la campana de la barra de arriba, en
+ *     todas las pantallas; vibra mientras haya algo urgente y despliega la misma lista.
  *
- * Cada consulta aguanta que su SQL no esté instalada o que el rol no la vea (cuenta 0), y se
- * relee cada 30 s sin recargar.
+ * Cada consulta aguanta que su SQL no esté instalada o que el rol no la vea (cuenta 0).
  */
 import Link from 'next/link';
 import { useState } from 'react';
@@ -90,7 +89,7 @@ function porPagarAlEquipo(companyId: string) {
   return v;
 }
 
-async function leer(companyId: string, conversaciones: number): Promise<Pendiente[]> {
+async function leer(companyId: string): Promise<Pendiente[]> {
   const sb = supabase();
   const hoy = isoLocal(new Date());
   const hace7 = isoLocal(new Date(Date.now() - 7 * 86_400_000));
@@ -98,7 +97,7 @@ async function leer(companyId: string, conversaciones: number): Promise<Pendient
   const margen = new Date(Date.now() - 30 * 60_000);
   const hhmm = (d: Date) => `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
   const yaPaso = `${hoy} ${isoLocal(margen) === hoy ? hhmm(margen) : '00:00'}`;
-  const [porVerificar, porCotejar, listos, adelantos, boletas, equipo, sinMarcar] = await Promise.all([
+  const [porVerificar, porCotejar, listos, adelantos, boletas, equipo, sinMarcar, conversaciones] = await Promise.all([
     // Capturas subidas en la página que mira una persona (tu-pagina 0017/0021).
     cuenta(sb.rpc('comprobantes_panel', { p_company: companyId })),
     // Validadas solas, falta mirar si llegaron en la app del banco (0032).
@@ -122,6 +121,8 @@ async function leer(companyId: string, conversaciones: number): Promise<Pendient
       sb.from('appointments').select('id', { count: 'exact', head: true })
         .eq('company_id', companyId).eq('status', 'confirmed').like('slot_start', `${hoy}%`).lt('slot_start', yaPaso),
     ),
+    // Mia pasó la conversación a una persona y nadie la tomó.
+    cuenta(sb.from('escalations').select('id', { count: 'exact', head: true }).eq('company_id', companyId).eq('status', 'pending')),
   ]);
 
   // En orden de urgencia: el cliente esperando en el mostrador, primero.
@@ -170,59 +171,80 @@ async function leer(companyId: string, conversaciones: number): Promise<Pendient
   return todas.filter((p) => p.n > 0);
 }
 
-export default function Pendientes({ companyId, conversaciones = 0 }: { companyId: string | null; conversaciones?: number }) {
-  const [ronda, setRonda] = useState(0);
-  const { datos } = useCargar(
-    () => (companyId ? leer(companyId, conversaciones) : Promise.resolve([])),
-    [companyId, ronda, conversaciones],
-  );
-  useSondeo(() => setRonda((r) => r + 1), 30_000, Boolean(companyId));
+/** Una consulta por negocio cada ~25 s, aunque la pidan la campana y el inicio a la vez. */
+const compartida = new Map<string, { at: number; v: Promise<Pendiente[]> }>();
+function leerCompartido(companyId: string): Promise<Pendiente[]> {
+  const c = compartida.get(companyId);
+  if (c && Date.now() - c.at < 25_000) return c.v;
+  const v = leer(companyId).catch(() => [] as Pendiente[]);
+  compartida.set(companyId, { at: Date.now(), v });
+  return v;
+}
 
-  return datos ? <VistaPendientes datos={datos} /> : null;
+/** Lo pendiente del negocio, releído cada 30 s sin recargar. null mientras carga la primera vez. */
+export function usePendientes(companyId: string | null): Pendiente[] | null {
+  const [ronda, setRonda] = useState(0);
+  const { datos } = useCargar(() => (companyId ? leerCompartido(companyId) : Promise.resolve([])), [companyId, ronda]);
+  useSondeo(() => setRonda((r) => r + 1), 30_000, Boolean(companyId));
+  return datos ?? null;
+}
+
+const urgentesDe = (l: Pendiente[]) => l.filter((p) => p.tono === 'ya').length;
+
+/**
+ * Las filas, con la forma de las del dashboard (.action-row): ícono en su cuadro de color, título,
+ * detalle gris y la flecha. Lo urgente, en naranja y con el ícono vibrando; lo demás, quieto.
+ */
+export function FilasPendientes({ datos, alElegir }: { datos: Pendiente[]; alElegir?: () => void }) {
+  return (
+    <>
+      {datos.map(({ clave, n, titulo, detalle, href, tono, Icono }, i) => (
+        <Link key={clave} href={href} onClick={alElegir}
+          className={`action-row pend-row${tono === 'ya' ? ' pend-row--ya' : ''}`} style={{ ['--i' as string]: i }}>
+          <span className={`action-row__icon ${tono === 'ya' ? 'action-row__icon--orange' : i % 2 ? 'action-row__icon--violet' : 'action-row__icon--teal'}`}>
+            <Icono size={17} aria-hidden />
+            <i className="pend-row__n" aria-hidden>{n > 99 ? '99+' : n}</i>
+          </span>
+          <span>
+            <b>{titulo}</b>
+            <small>{detalle}</small>
+          </span>
+          <ChevronRight size={16} aria-hidden />
+        </Link>
+      ))}
+    </>
+  );
+}
+
+/** La tarjeta del inicio: debajo de ingresos y citas, a todo lo ancho. */
+export default function TarjetaPendientes({ companyId }: { companyId: string | null }) {
+  const datos = usePendientes(companyId);
+  if (!datos) return null;
+  return <VistaPendientes datos={datos} />;
 }
 
 /** El dibujo, aparte de la consulta. */
 export function VistaPendientes({ datos }: { datos: Pendiente[] }) {
-  const urgentes = datos.filter((p) => p.tono === 'ya').length;
-  const hay = datos.length > 0;
-
+  const urgentes = urgentesDe(datos);
   return (
-    <section className={`card atencion${urgentes ? ' atencion--suena' : ''}`} aria-label="Lo que necesita atención" aria-live="polite">
-      <div className="atencion__cab">
-        <span className={`atencion__timbre${!hay ? ' atencion__timbre--ok' : urgentes ? '' : ' atencion__timbre--calma'}`}>
-          {urgentes ? <Campana size={22} /> : hay ? <ListChecks size={21} aria-hidden /> : <CheckCircle2 size={22} aria-hidden />}
-        </span>
+    <article className="card dash-attention-card" aria-label="Lo que necesita atención" aria-live="polite">
+      <div className="dash-section-head">
         <div>
-          <h2>{hay ? 'Lo que necesita atención' : 'Todo al día'}</h2>
-          <small>
-            {!hay
-              ? 'Nada pendiente ahora. Cuando algo llegue, suena aquí solo.'
-              : urgentes
-                ? `${plural(urgentes, 'cosa no puede', 'cosas no pueden')} esperar`
-                : 'Nada urgente: cuando tengas un momento.'}
-          </small>
+          <span className="dash-eyebrow">Prioridades</span>
+          <h3>{datos.length ? 'Lo que necesita atención' : 'Todo al día'}</h3>
         </div>
+        <span className={`pend-estado${urgentes ? ' pend-estado--ya' : datos.length ? '' : ' pend-estado--ok'}`}>
+          {urgentes ? <><Campana size={15} /> {urgentes === 1 ? '1 urgente' : `${urgentes} urgentes`}</>
+            : datos.length ? `${datos.length} por hacer` : <><CheckCircle2 size={15} aria-hidden /> Nada pendiente</>}
+        </span>
       </div>
-
-      {hay && (
-        <div className="atencion__lista">
-          {datos.map(({ clave, n, titulo, detalle, href, tono, Icono, accion }, i) => (
-            <Link key={clave} href={href} className={`pendiente pendiente--${tono}`} style={{ ['--i' as string]: i }}>
-              <span className="pendiente__icono" aria-hidden>
-                <Icono size={20} />
-                <i className="pendiente__n">{n > 99 ? '99+' : n}</i>
-              </span>
-              <span className="pendiente__texto">
-                <b>{titulo}</b>
-                <span>{detalle}</span>
-              </span>
-              <span className="pendiente__accion">
-                {accion} <ChevronRight size={16} aria-hidden />
-              </span>
-            </Link>
-          ))}
+      {datos.length > 0 ? (
+        <div className="pend-grid">
+          <FilasPendientes datos={datos} />
         </div>
+      ) : (
+        <p className="pend-vacio">Cuando algo llegue (un cliente por cobrar, un pago por revisar), aparece aquí solo.</p>
       )}
-    </section>
+    </article>
   );
 }

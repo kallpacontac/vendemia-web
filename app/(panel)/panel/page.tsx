@@ -147,9 +147,6 @@ export default function Dashboard() {
           }
         />
 
-        {/* Lo PRIMERO: lo que necesita atención (por cobrar, sin marcar, por pagar…), con la campana. */}
-        <Pendientes companyId={companyId} conversaciones={pendientes} />
-
         {error && <div className="dashboard-error" role="alert">No se pudo actualizar el resumen. {datos ? 'Mostramos la última lectura disponible.' : 'Reintenta para consultar las cifras.'}<button type="button" onClick={releer}>Reintentar</button></div>}
 
         {datos && <>
@@ -164,6 +161,10 @@ export default function Dashboard() {
           pendientes={pendientes}
           porPagar={porPagar}
         />
+
+        {/* Lo que necesita atención (por cobrar, sin marcar, por pagar…), debajo de ingresos y
+            citas, con la estética de las demás tarjetas. También en la campana de arriba. */}
+        <Pendientes companyId={companyId} />
 
         <section className="dash-lower-grid">
           <article className="card dash-agenda-card">

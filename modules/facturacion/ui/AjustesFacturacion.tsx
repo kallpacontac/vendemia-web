@@ -6,7 +6,8 @@
  * cada uno queda guardado aparte, y lo ya emitido se sigue consultando con el
  * proveedor con el que salió.
  */
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { supabase } from '@/lib/supabase/client';
 import { KeyRound, Save } from 'lucide-react';
 import { useAvisar } from '@/components/panel/Avisos';
 import { INFO_PROVEEDOR } from '../dominio/proveedoresInfo';
@@ -40,6 +41,32 @@ export default function AjustesFacturacion({
   const mypeGuardado = a.igv_tipo === 'mype' && inicial.igv_tipo === 'mype';
 
   const poner = <K extends keyof Ajustes>(k: K, v: Ajustes[K]) => setA((x) => ({ ...x, [k]: v }));
+
+  /**
+   * Lo que ya está en la ficha no se vuelve a escribir (18-nov, The 24/7: «esto ya lo teníamos»):
+   * con RUC, razón social y dirección vacíos, se llenan con los de Mi página › Libro de
+   * Reclamaciones (tu_pagina.secciones.proveedor). Quedan puestos para revisar y Guardar.
+   */
+  const [deLaFicha, setDeLaFicha] = useState(false);
+  useEffect(() => {
+    if (inicial.ruc || inicial.razon_social || inicial.direccion) return;
+    let vigente = true;
+    void (async () => {
+      const { data } = await supabase().from('tu_pagina').select('secciones').eq('company_id', companyId).maybeSingle();
+      const p = (data?.secciones as { proveedor?: { ruc?: string; razon_social?: string; direccion?: string } } | null)?.proveedor;
+      if (!vigente || !p || !(p.ruc || p.razon_social || p.direccion)) return;
+      setA((x) => ({
+        ...x,
+        ruc: x.ruc || soloDigitos(p.ruc ?? ''),
+        razon_social: x.razon_social || (p.razon_social ?? '').trim(),
+        direccion: x.direccion || (p.direccion ?? '').trim(),
+      }));
+      setDeLaFicha(true);
+    })();
+    return () => {
+      vigente = false;
+    };
+  }, [companyId, inicial.ruc, inicial.razon_social, inicial.direccion]);
 
   const faltan = a.activo
     ? erroresEmisor(
@@ -165,6 +192,11 @@ export default function AjustesFacturacion({
       </div>
 
       <h4 className="fe-sub">El negocio, como sale en el comprobante</h4>
+      {deLaFicha && (
+        <p className="muted" style={{ fontSize: 13, margin: '0 0 8px' }}>
+          Tomado de Mi página › Libro de Reclamaciones. Revísalo y toca <b>Guardar</b>.
+        </p>
+      )}
       <div className="grid-form">
         {campo('ruc', 'RUC', { inputMode: 'numeric', maxLength: 11, onChange: (e) => poner('ruc', soloDigitos(e.target.value).slice(0, 11)) })}
         {campo('razon_social', 'Razón social (como en SUNAT)')}
