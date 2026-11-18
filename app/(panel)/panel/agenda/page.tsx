@@ -20,6 +20,7 @@
  * grupos con su ocupación del mes.
  */
 import { useMemo, useState } from 'react';
+import Link from 'next/link';
 import {
   CalendarOff,
   CalendarPlus,
@@ -36,7 +37,7 @@ import Topbar from '@/components/panel/Topbar';
 import AgendaControles from '@/components/panel/AgendaControles';
 import AvisarCliente from '@/components/panel/AvisarCliente';
 import NuevaCita from '@/components/panel/NuevaCita';
-import SelectorSede, { esDeSede, sedeCorta, useSedeElegida, useSedes } from '@/components/panel/SelectorSede';
+import { esDeSede, sedeCorta, useSedeElegida, useSedes } from '@/components/panel/SelectorSede';
 import TableroCanchas from '@/components/panel/TableroCanchas';
 import ComprobantesPorRevisar from '@/components/panel/ComprobantesPorRevisar';
 import AdelantosPorReprogramar from '@/components/panel/AdelantosPorReprogramar';
@@ -48,6 +49,7 @@ import Paginacion, { usePaginacion } from '@/components/panel/Paginacion';
 import { useSesion } from '@/components/panel/Sesion';
 import { useAvisar, useComando } from '@/components/panel/Avisos';
 import { useCargar } from '@/components/panel/useCargar';
+import { useSondeo } from '@/components/panel/useSondeo';
 import { useMovil } from '@/components/panel/useMovil';
 import { construirSemana, lunesDe } from '@/lib/panel/agenda';
 import { cap, vocabulario, type Vocabulario } from '@/lib/panel/vocabulario';
@@ -129,12 +131,15 @@ function yaPasaron(citas: Cita[]): Cita[] {
     .sort((a, b) => (b.inicio?.getTime() ?? 0) - (a.inicio?.getTime() ?? 0));
 }
 
-/** De las pasadas, las que piden algo: sin resolver, presuntas, o sin cobrar. */
-function pidenAlgo(pasadas: Cita[]): Cita[] {
+/**
+ * De las pasadas, las que piden algo: sin resolver o presuntas. Lo que falta COBRAR solo cuenta
+ * donde se cobra en la Agenda (canchas); en una barbería eso es de la Caja («Listos para cobrar»).
+ */
+function pidenAlgo(pasadas: Cita[], conCobro = false): Cita[] {
   return pasadas.filter((c) => {
     const cumplido = selloCumplido('appointment', c.status, c.cumplido_por);
     return (
-      cumplido.grado === 'pendiente' || pideRevision(cumplido) || faltaCobrar('appointment', c.status)
+      cumplido.grado === 'pendiente' || pideRevision(cumplido) || (conCobro && faltaCobrar('appointment', c.status))
     );
   });
 }
@@ -196,7 +201,7 @@ export default function Agenda() {
   const sedes = useSedes(companyId);
   const [fSede, setFSede] = useSedeElegida(companyId, sedes);
 
-  const { datos, cargando, recargar } = useCargar(async () => {
+  const { datos, cargando, recargar, releer } = useCargar(async () => {
     if (!companyId) return null;
     const [empresa, citas, leads, trabajadores, bloqueos, catalogo] = await Promise.all([
       getCompania(companyId),
@@ -215,6 +220,11 @@ export default function Agenda() {
     ]);
     return { empresa, citas, leads, trabajadores, bloqueos, catalogo, ventas, pagosCitas };
   }, [companyId]);
+
+  // Sin recargar la página: lo que entra por la página web, lo que marca el barbero y los
+  // comprobantes que suben los clientes aparecen solos. Cada 30 s, con la pestaña a la vista, y
+  // nunca a mitad de arrastrar una cita.
+  useSondeo(releer, 30_000, arrastrada === null);
 
   const semana = useMemo(() => {
     if (!datos?.empresa) return null;
@@ -318,7 +328,7 @@ export default function Agenda() {
 
   /** Solo para los números de las pestañas: cada lista se filtra luego dentro. */
   const nProximas = useMemo(() => porVenir(citasVista).length, [citasVista]);
-  const nPendientes = useMemo(() => pidenAlgo(yaPasaron(citasVista)).length, [citasVista]);
+  const nPendientes = useMemo(() => pidenAlgo(yaPasaron(citasVista), canchas).length, [citasVista, canchas]);
 
   if (cargando && !datos) {
     return (
@@ -353,19 +363,19 @@ export default function Agenda() {
         <AgendaControles
           recurrente={esRecurrente} movil={esMovil} tab={tab} alTab={setTab} canchas={canchas}
           proximas={nProximas} pendientes={nPendientes}
-          resumen={!esRecurrente && !canchas ? { reservas: semana?.totales.reservado ?? 0, libres: semana?.totales.libre ?? 0, ocupacion } : undefined}
           profesionales={datos?.trabajadores ?? []} profesional={fEmpleado} alProfesional={setFEmpleado}
           fecha={esMovil
             ? `${dia?.esHoy ? 'Hoy · ' : ''}${dia ? `${dia.weekday.replace('.', '')} ${diaMes(dia.fecha)}` : '—'}`
             : `${offset === 0 ? 'Esta semana · ' : ''}${diaMes(lunesDe(offset))} – ${diaMes(new Date(lunesDe(offset).getTime() + 6 * 864e5))}`}
-          vista={vista} alVista={setVista}
+          enHoy={esMovil ? offset === 0 && diaSel === (new Date().getDay() + 6) % 7 : offset === 0}
           anterior={() => esMovil ? irDia(-1) : setOffset((o) => o - 1)}
           siguiente={() => esMovil ? irDia(1) : setOffset((o) => o + 1)}
           hoy={() => { setOffset(0); setDiaSel((new Date().getDay() + 6) % 7); }}
         />
 
-        {!esRecurrente && (
-          <SelectorSede sedes={sedes} valor={fSede} alCambiar={setFSede} cuenta={hoySede} etiqueta="hoy" />
+        {/* La sede se elige arriba, en la cabecera (SedeGlobal): aquí solo se dice cuál se está viendo. */}
+        {!esRecurrente && fSede && (
+          <p className="agenda-sede-aviso">Viendo solo <b>{sedeCorta(fSede)}</b> · {hoySede(fSede)} hoy. Cámbialo arriba, en la sede.</p>
         )}
 
         {creando && !esRecurrente && (
@@ -431,6 +441,7 @@ export default function Agenda() {
         {tab === 'pasadas' && (
           <PorConfirmar
             v={v}
+            cobraAqui={canchas}
             citas={citasVista}
             nombrePorLead={new Map((datos?.leads ?? []).map((l) => [l.id, l.name || l.phone]))}
             pagosCitas={datos?.pagosCitas ?? new Map()}
@@ -443,6 +454,7 @@ export default function Agenda() {
         {tab === 'proximas' && (
           <Proximas
             v={v}
+            cobraAqui={canchas}
             companyId={companyId}
             catalogo={canchas ? datos?.catalogo ?? [] : []}
             citas={citasVista}
@@ -483,6 +495,7 @@ export default function Agenda() {
           <div id="ya-jugaron" style={{ marginTop: 18, scrollMarginTop: 12 }}>
             <PorConfirmar
               v={v}
+              cobraAqui
               citas={citasVista}
               nombrePorLead={new Map((datos?.leads ?? []).map((l) => [l.id, l.name || l.phone]))}
               pagosCitas={datos?.pagosCitas ?? new Map()}
@@ -1073,10 +1086,13 @@ function Proximas({
   pagosCitas,
   trabajadores,
   resaltar,
+  cobraAqui = false,
   alCambiar,
 }: {
   v: Vocabulario;
   companyId: string | null;
+  /** ¿Se cobra desde la Agenda? Solo con canchas. Una barbería o un salón cobran en Caja. */
+  cobraAqui?: boolean;
   /** La cita recién agendada: se pinta para que se vea dónde quedó. */
   resaltar?: string | null;
   /** Con canchas: el catálogo, para cargar consumos (gaseosas, pelota) a la reserva. Vacío = sin consumos. */
@@ -1296,7 +1312,7 @@ function Proximas({
                 </div>
 
                 <div className="confirmar-acciones">
-                  {cobroPorApuntar(c.status, c.pagado_por) && sello?.clave !== 'pago_sin_hora' && (
+                  {cobraAqui && cobroPorApuntar(c.status, c.pagado_por) && sello?.clave !== 'pago_sin_hora' && (
                     <button
                       type="button"
                       className="btn btn-ghost btn-sm"
@@ -1466,12 +1482,15 @@ function Proximas({
  */
 function PorConfirmar({
   v,
+  cobraAqui = false,
   citas,
   nombrePorLead,
   pagosCitas,
   alCambiar,
 }: {
   v: Vocabulario;
+  /** ¿Se cobra aquí? Solo con canchas; los demás cobran en Caja. */
+  cobraAqui?: boolean;
   citas: Cita[];
   nombrePorLead: Map<string, string>;
   pagosCitas: Map<string, Saldo>;
@@ -1487,7 +1506,7 @@ function PorConfirmar({
   const reparto = useMemo(() => repartoCumplido(pasadas, 'appointment'), [pasadas]);
 
   /** Las que piden algo: sin resolver, presuntas, sin dato, o sin cobrar. */
-  const pendientes = useMemo(() => pidenAlgo(pasadas), [pasadas]);
+  const pendientes = useMemo(() => pidenAlgo(pasadas, cobraAqui), [pasadas, cobraAqui]);
 
   /**
    * Paginada, y esto no es opcional: la lista crece con cada cita atendida. Va
@@ -1501,7 +1520,7 @@ function PorConfirmar({
       'marcar_cumplido',
       { tipo: 'appointment', id: c.id, vino },
       vino
-        ? 'Anotado: vino'
+        ? c.pagado_por ? 'Anotado: atendido.' : 'Atendido: ya sale en Caja › «Listos para cobrar».'
         // Con adelanto (sql/0027): la hora ya quedó libre y el dinero, a su favor, arriba de la Agenda.
         : (pagosCitas.get(c.id)?.pagado ?? 0) > 0
           ? 'Anotado: no vino. La hora queda libre y su adelanto, en «Adelantos por reprogramar».'
@@ -1570,6 +1589,7 @@ function PorConfirmar({
               quien={quienDeCita(c, nombrePorLead.get(c.lead_id))}
               sello={selloCita(c, pagosCitas.get(c.id), soles)}
               ocupado={enVuelo === c.id}
+              cobraAqui={cobraAqui}
               alResolver={(vino) => void resolver(c, vino)}
               alCobrar={(metodo, foto) => void cobrar(c, metodo, foto)}
             />
@@ -1587,10 +1607,12 @@ function FilaPorConfirmar({
   quien,
   sello,
   ocupado,
+  cobraAqui,
   alResolver,
   alCobrar,
 }: {
   cita: Cita;
+  cobraAqui: boolean;
   /** Quien recibe y quien reservó. Ver quienDeCita(). */
   quien: { nombre: string; deQuien: string };
   /** Adelanto, apartada o pagó sin hora. Ver lib/panel/adelantos.ts. */
@@ -1648,9 +1670,9 @@ function FilaPorConfirmar({
           className="btn btn-ghost btn-sm"
           disabled={ocupado}
           onClick={() => alResolver(true)}
-          title="Confirmar que sí vino"
+          title="Confirmar que sí vino y fue atendido"
         >
-          <Check size={14} /> Vino
+          <Check size={14} /> Atendido
         </button>
         <button
           className="btn btn-ghost btn-sm confirmar-no"
@@ -1665,7 +1687,14 @@ function FilaPorConfirmar({
             día no se podía apuntar. Ver cobroPorApuntar. En `pending_payment`,
             cobrar además LIBERA EL CUPO al pasar a `confirmed`. */}
         {cobroPorApuntar(cita.status, cita.pagado_por) && (
-          <BotonCobrar ocupado={ocupado} alCobrar={alCobrar} />
+          cobraAqui ? (
+            <BotonCobrar ocupado={ocupado} alCobrar={alCobrar} />
+          ) : (
+            // Cada pantalla, lo suyo: aquí se dice si vino; el dinero, en Caja (17-nov-2026).
+            <Link href="/panel/caja" className="btn btn-ghost btn-sm agenda-a-caja">
+              <Wallet size={14} /> Cobrar en Caja
+            </Link>
+          )
         )}
       </div>
     </div>

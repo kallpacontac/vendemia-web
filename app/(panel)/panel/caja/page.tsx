@@ -36,10 +36,13 @@
  */
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
-import { Plus, Trash2, Wallet } from 'lucide-react';
+import { Plus, QrCode, Receipt, Trash2, Wallet } from 'lucide-react';
 import CajaResumen from '@/components/panel/CajaResumen';
+import CobrarTicket from '@/components/panel/CobrarTicket';
+import ListosParaCobrar from '@/components/panel/ListosParaCobrar';
+import { useSondeo } from '@/components/panel/useSondeo';
 import SubnavCaja from '@/components/panel/SubnavCaja';
-import SelectorSede, { sedesDeCitas, useSedeElegida, useSedes } from '@/components/panel/SelectorSede';
+import { sedeCorta, sedesDeCitas, useSedeElegida, useSedes } from '@/components/panel/SelectorSede';
 import QuienCita from '@/components/panel/QuienCita';
 import Topbar from '@/components/panel/Topbar';
 import { useSesion } from '@/components/panel/Sesion';
@@ -57,12 +60,14 @@ import { saldoDeVenta, type Saldo } from '@/lib/panel/saldo';
 import { cobroPorApuntar, etiquetaMetodo, type MetodoPago } from '@/lib/panel/metodosPago';
 import { cap } from '@/lib/panel/vocabulario';
 import {
+  getCatalogo,
   getCitasDelPeriodo,
   getGastos,
   getLeads,
   getMovimientos,
   getPagosCaja,
   getPedidos,
+  getTrabajadores,
   type Cita,
 } from '@/lib/supabase/queries';
 import type { ResultadoMarcarPagado } from '@/lib/supabase/commands';
@@ -80,22 +85,26 @@ export default function Caja() {
   const [enVuelo, setEnVuelo] = useState<string | null>(null);
   /** La cita con el formulario de «Registrar pago» abierto (una a la vez). */
   const [pagando, setPagando] = useState<string | null>(null);
+  /** «Cobrar ticket» abierto: el cliente llegó a caja con el ticket del barbero (0031). */
+  const [ticket, setTicket] = useState(false);
 
   // Con 2 sedes o más: «Todas · sede A · sede B», la misma elección que en la Agenda.
   const sedes = useSedes(companyId);
-  const [sede, setSede] = useSedeElegida(companyId, sedes);
+  const [sede] = useSedeElegida(companyId, sedes);
 
   const { datos, cargando, error, releer } = useCargar(async () => {
     if (!companyId) return null;
-    const [todosMovimientos, todasCitas, pedidos, todosGastos, leads] = await Promise.all([
+    const [todosMovimientos, todasCitas, pedidos, todosGastos, leads, trabajadores, catalogo] = await Promise.all([
       getMovimientos(companyId, dia, dia),
       getCitasDelPeriodo(companyId, dia, dia),
       getPedidos(companyId, 500),
       getGastos(companyId, dia),
       getLeads(companyId, 500),
+      getTrabajadores(companyId).catch(() => []),
+      getCatalogo(companyId).catch(() => []),
     ]);
     const pagos = await getPagosCaja(companyId, dia, todosMovimientos);
-    if (!sede) return { dia, sede, movimientos: todosMovimientos, citas: todasCitas, pedidos, gastos: todosGastos, leads, pagos };
+    if (!sede) return { dia, sede, movimientos: todosMovimientos, citas: todasCitas, pedidos, gastos: todosGastos, leads, pagos, trabajadores, catalogo };
 
     // Una sede: solo el dinero de SUS citas (por la sede de cada cita, también la de un adelanto
     // pagado hoy para otro día). Pedidos y gastos no tienen sede: se ven en «Todas».
@@ -114,8 +123,14 @@ export default function Caja() {
       gastos: [] as typeof todosGastos,
       leads,
       pagos: { ...pagos, pagosDelDia: pagos.pagosDelDia.filter((p) => suya(p.appointment_id)) },
+      trabajadores,
+      catalogo,
     };
   }, [companyId, dia, sede]);
+
+  // Lo que el barbero acaba de marcar «Atendido» tiene que aparecer solo, sin recargar: el cliente
+  // ya viene caminando hacia la caja con su ticket. Solo hoy, y con la pestaña a la vista.
+  useSondeo(releer, 20_000, dia === hoy);
 
   const calculo = useMemo(() => {
     if (!datos || datos.dia !== dia || datos.sede !== sede) return null;
@@ -184,6 +199,12 @@ export default function Caja() {
     const porCobrar = filas.filter(
       (f) => cobroPorApuntar(f.cita.status, f.cita.pagado_por) && (!f.sello || f.sello.clave === 'por_cobrar'),
     );
+    // Atendidas (el barbero dijo «Atendido» / «Vino»): el cliente está en la caja o va hacia ella.
+    // Primero lo último que se atendió. Las demás aún no se atienden: abajo, aparte.
+    const listos = porCobrar
+      .filter((f) => f.cita.status === 'completed')
+      .sort((a, b) => (b.cita.inicio?.getTime() ?? 0) - (a.cita.inicio?.getTime() ?? 0));
+    const porAtender = porCobrar.filter((f) => f.cita.status !== 'completed');
     const pedidosSinConstancia = datos.movimientos.filter((m) => m.fuente === 'order' && cobradoSinConstancia(m));
 
     const entro = entradas.reduce((t, e) => t + e.importe, 0);
@@ -194,9 +215,10 @@ export default function Caja() {
       aCuentaTotal,
       aCuenta,
       porMetodo: [...porMetodo.entries()].sort((a, b) => b[1] - a[1]),
-      porCobrar,
+      porCobrar: porAtender,
       // Lo que falta: el precio entero, o lo que queda tras lo pagado a cuenta.
-      porCobrarTotal: porCobrar.reduce((t, x) => t + (x.pagos ? x.pagos.saldo : x.importe), 0),
+      porCobrarTotal: porAtender.reduce((t, x) => t + (x.pagos ? x.pagos.saldo : x.importe), 0),
+      listos,
       esperando,
       sinHora,
       pedidosSinConstancia,
@@ -206,7 +228,12 @@ export default function Caja() {
   }, [datos, dia, sede]);
 
   const nombrePorLead = useMemo(
-    () => new Map((datos?.leads ?? []).map((l) => [l.id, l.name || telefono(l.phone)])),
+    // El cliente de mostrador no tiene nombre ni teléfono: '' para que se lea «Cliente», no «—».
+    () => new Map((datos?.leads ?? []).map((l) => [l.id, l.name || (l.phone ? telefono(l.phone) : '')])),
+    [datos],
+  );
+  const nombrePorBarbero = useMemo(
+    () => new Map((datos?.trabajadores ?? []).map((t) => [t.id, t.name])),
     [datos],
   );
 
@@ -232,10 +259,69 @@ export default function Caja() {
   return (
     <main className="main main--caja">
       <div className="wrap">
-        <Topbar titulo="Caja" sub="Lo que entró, con qué, y lo que salió" />
+        {/* Lo que se hace en la Caja (17-nov-2026): cobrar, escanear la tarjeta de fidelidad y cerrar
+            el día. La Agenda dice quién viene y si vino; el dinero, aquí. */}
+        <Topbar titulo="Caja" sub="Cobrar, escanear tarjetas y cerrar el día" accionesTitulo={
+          <div className="caja-acciones">
+            <Link href="/panel/fideliza/caja?camara=1" className="btn btn-ghost">
+              <QrCode size={17} /> Escanear tarjeta
+            </Link>
+            {dia === hoy && (
+              <button type="button" className="btn btn-primary" aria-expanded={ticket} onClick={() => setTicket((t) => !t)}>
+                <Receipt size={17} /> {ticket ? 'Cerrar ticket' : 'Cobrar ticket'}
+              </button>
+            )}
+          </div>
+        } />
         <SubnavCaja />
 
-        <SelectorSede sedes={sedes} valor={sede} alCambiar={setSede} />
+        {/* La sede se elige arriba, en la cabecera (SedeGlobal). */}
+        {sede && (
+          <p className="agenda-sede-aviso">Viendo solo <b>{sedeCorta(sede)}</b>. Cámbialo arriba, en la sede.</p>
+        )}
+
+        {ticket && companyId && datos && dia === hoy && (
+          <CobrarTicket
+            companyId={companyId}
+            trabajadores={datos.trabajadores}
+            catalogo={datos.catalogo}
+            sedes={sedes}
+            sedeInicial={sede}
+            alCerrar={() => setTicket(false)}
+            alListo={releer}
+          />
+        )}
+
+        {/* ── Listos para cobrar: lo que ya se atendió. Es la cola del mostrador. ── */}
+        {calculo && companyId && (
+          <ListosParaCobrar
+            companyId={companyId}
+            catalogo={datos?.catalogo ?? []}
+            filas={calculo.listos}
+            barbero={(id) => nombrePorBarbero.get(id)}
+            cliente={(id) => nombrePorLead.get(id)}
+            conSede={!sede}
+            enVuelo={enVuelo}
+            alCobrar={(c, m, foto) => void cobrar(c, m, foto)}
+            alCambiar={releer}
+          />
+        )}
+
+        {/* Sin nadie en la cola: qué va a salir aquí y el botón para cobrar a mano, a la vista. */}
+        {calculo && calculo.listos.length === 0 && dia === hoy && !ticket && (
+          <section className="card listos-vacio" aria-label="Listos para cobrar">
+            <div>
+              <b>Nadie esperando para pagar</b>
+              <p className="muted">
+                Cuando el barbero marque «Atendido», el cliente sale aquí solo, sin recargar. ¿Llegó alguien con su ticket
+                y no está? Cóbralo con «Cobrar ticket».
+              </p>
+            </div>
+            <button type="button" className="btn btn-primary" onClick={() => setTicket(true)}>
+              <Receipt size={17} /> Cobrar ticket
+            </button>
+          </section>
+        )}
 
         <CajaResumen dia={dia} hoy={hoy} alDia={setDia} calculo={calculo} />
 
@@ -315,17 +401,17 @@ export default function Caja() {
             {/* ── Sin cobro apuntado ── */}
             <div className="card caja-ancha">
               <div className="card-mini-head">
-                <h3>{cap(v.reservas)} sin cobro apuntado</h3>
+                <h3>{cap(v.reservas)} sin atender todavía</h3>
                 {calculo.porCobrar.length > 0 && (
                   <small className="muted">{soles(calculo.porCobrarTotal)} en juego</small>
                 )}
               </div>
               {calculo.porCobrar.length === 0 ? (
-                <p className="vacio">Todo lo de este día tiene su cobro apuntado.</p>
+                <p className="vacio">Nada pendiente: lo atendido sale arriba, en «Listos para cobrar».</p>
               ) : (
                 <>
                   <p className="muted" style={{ fontSize: 12.5, marginBottom: 10 }}>
-                    Cuentan en los ingresos, pero no están en la caja hasta que se apunte con qué se pagaron.
+                    Agendad{v.a}s que el barbero aún no marca como atendid{v.a}s. Si pagan antes, cóbral{v.a}s aquí.
                   </p>
                   {calculo.porCobrar.map(({ cita, importe, pagos, sello }) => (
                     <div key={cita.id}>

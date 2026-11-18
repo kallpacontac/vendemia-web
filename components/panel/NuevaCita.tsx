@@ -26,9 +26,9 @@
  * se dicen. Ver agenda_crear_cita en modules/tu-pagina/sql/0011.
  */
 import { useEffect, useMemo, useState } from 'react';
+import { ElegirFecha, ElegirHora, fechaEnPalabras } from './FechaHora';
 import { CalendarPlus, Check, Search, UserPlus, X } from 'lucide-react';
 import AvisarCliente from './AvisarCliente';
-import ComboPanel from './ComboPanel';
 import { useAvisar, useComando } from './Avisos';
 import { hoyLima } from '@/lib/panel/inscripciones';
 import { hora12, soles, telefono as comoTelefono } from '@/lib/panel/format';
@@ -65,18 +65,13 @@ const sumarMin = (slot: string, min: number) => {
  * cuentan en todas, como en la base) contra sus sillas. Es una ayuda: la base vuelve a comprobar
  * horario y aforo al agendar, y si no cabe lo dice.
  */
-function proximoLibre(citas: Cita[], hoy: string, sede: string, sillas: number, minutos: number, permitidas?: string[] | null): string | null {
-  const vivas = citas.filter((c) => c.slot_start?.startsWith(hoy) && c.status !== 'cancelled' && c.status !== 'no_show'
-    && (!c.sede || c.sede === sede));
-  for (let t = ahoraAgendable(); t + minutos <= 23 * 60; t += 5) {
-    // Con horario guardado, solo dentro de él (las de cada 15 min que ofrece el desplegable).
-    if (permitidas && !permitidas.includes(hhmm(t))) continue;
-    const ini = `${hoy} ${hhmm(t)}`;
-    const fin = `${hoy} ${hhmm(t + minutos)}`;
-    const ocupadas = vivas.filter((c) => c.slot_start < fin && (c.slot_end || sumarMin(c.slot_start, c.slot_minutes ?? 30)) > ini).length;
-    if (ocupadas < sillas) return hhmm(t);
-  }
-  return null;
+/** Cuántas citas vivas de esa sede (o sin sede) se cruzan con [inicio, inicio + minutos). */
+function ocupadasA(citas: Cita[], fecha: string, sede: string, hora: string, minutos: number): number {
+  const ini = `${fecha} ${hora}`;
+  const fin = sumarMin(ini, minutos);
+  return citas.filter((c) => c.slot_start?.startsWith(fecha) && c.status !== 'cancelled' && c.status !== 'no_show'
+    && (!c.sede || c.sede === sede)
+    && c.slot_start < fin && (c.slot_end || sumarMin(c.slot_start, c.slot_minutes ?? 30)) > ini).length;
 }
 
 const CLAVES_DIA: ClaveDia[] = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
@@ -189,12 +184,18 @@ export default function NuevaCita({
     if (!l) return null;
     return hora && !l.includes(hora) ? [...l, hora].sort() : l;
   }, [canchas, horario, fecha, minutosServicio, hora]);
-  const sugerencias = useMemo(() => {
-    if (canchas) return [];
-    return sedes
-      .filter((x) => (x.capacidad ?? 0) > 0)
-      .map((x) => ({ sede: x.nombre, hora: proximoLibre(citas, hoy, x.nombre, x.capacidad ?? 0, minutosServicio, horasDelDia(horario, hoy, minutosServicio)) }));
-  }, [canchas, sedes, citas, hoy, minutosServicio, horario]);
+  /** Las horas llenas de la sede elegida ese día (con sillas conocidas): salen tachadas. */
+  const capacidad = sedes.find((x) => x.nombre === sede)?.capacidad ?? 0;
+  const llenas = useMemo(() => {
+    if (canchas || !horasPosibles || !sede || capacidad <= 0) return new Set<string>();
+    return new Set(horasPosibles.filter((h) => h !== hora && ocupadasA(citas, fecha, sede, h, minutosServicio) >= capacidad));
+  }, [canchas, horasPosibles, sede, capacidad, citas, fecha, minutosServicio, hora]);
+  /** Hoy, solo de ahora en adelante; las de antes, si se pide (anotar a quien ya se atendió, 0030). */
+  const [verPasadas, setVerPasadas] = useState(false);
+  const desde = fecha === hoy && !verPasadas ? hhmm(Math.floor(minutosLima() / 15) * 15) : '';
+  const horasVisibles = (horasPosibles ?? []).filter((h) => !desde || h >= desde || h === hora);
+  const cerrado = (iso: string) => horasDelDia(horario, iso, 5)?.length === 0;
+  const servicioElegido = servicios.find((x) => x.id === itemId);
 
   const encontrados = useMemo(() => {
     const q = busqueda.trim().toLowerCase();
@@ -310,187 +311,171 @@ export default function NuevaCita({
     setHora(canchas ? '' : hhmm(ahoraAgendable()));
   }
 
+  // Escape cierra; detrás no se desplaza la página mientras está abierta.
+  useEffect(() => {
+    const tecla = (e: KeyboardEvent) => e.key === 'Escape' && !enviando && alCerrar();
+    document.addEventListener('keydown', tecla);
+    const antes = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.removeEventListener('keydown', tecla);
+      document.body.style.overflow = antes;
+    };
+  }, [alCerrar, enviando]);
+
+  const nombreSede = (n: string) => n.split(' · ')[0];
+
   return (
-    <div className="card" style={{ marginBottom: 18 }}>
-      <div className="card-head">
-        <h3>
-          <CalendarPlus size={16} style={{ verticalAlign: -3 }} /> {canchas ? 'Nueva reserva' : 'Nueva cita'}
-        </h3>
-        <button type="button" className="q-icon" aria-label="Cerrar" onClick={alCerrar}>
-          <X size={15} />
-        </button>
-      </div>
+    <div className="modal-fondo nc-fondo" role="presentation" onMouseDown={(e) => { if (e.target === e.currentTarget && !enviando) alCerrar(); }}>
+      <div className="modal nc" role="dialog" aria-modal="true" aria-labelledby="nc-titulo">
+        <div className="nc-cab">
+          <h3 id="nc-titulo"><CalendarPlus size={18} /> {canchas ? 'Nueva reserva' : 'Nueva cita'}</h3>
+          <button type="button" className="q-icon" aria-label="Cerrar" onClick={alCerrar} disabled={enviando}>
+            <X size={18} />
+          </button>
+        </div>
 
-      {aviso && <AvisarCliente {...aviso} alCerrar={() => setAviso(null)} />}
+        <div className="nc-cuerpo">
+          {aviso && <AvisarCliente {...aviso} alCerrar={() => setAviso(null)} />}
 
-      <div className="form-nueva">
-        <div className="full">
-          <label className="field-label">Cliente <span className="muted" style={{ fontWeight: 500 }}>· opcional</span></label>
-
-          {nuevo ? (
-            <div className="form-nueva">
-              <input
-                className="input"
-                placeholder="Teléfono (opcional) · 987654321"
-                value={tel}
-                onChange={(e) => setTel(e.target.value)}
-              />
-              <input
-                className="input"
-                placeholder="Nombre (opcional)"
-                value={nombre}
-                onChange={(e) => setNombre(e.target.value)}
-              />
-              <button className="btn btn-ghost btn-sm" onClick={() => setNuevo(false)}>
-                Buscar en mis clientes
-              </button>
-            </div>
-          ) : lead ? (
-            <div className="check-inline">
-              <b>{lead.name || 'Sin nombre'}</b>
-              <span className="muted">{comoTelefono(lead.phone)}</span>
-              <button className="btn btn-ghost btn-sm" onClick={() => setLead(null)}>
-                Cambiar
-              </button>
-            </div>
-          ) : (
-            <>
-              <div className="search" style={{ width: '100%' }}>
-                <Search size={16} />
-                <input
-                  placeholder="Buscar cliente, o escribe su nombre o número (opcional)"
-                  value={busqueda}
-                  onChange={(e) => setBusqueda(e.target.value)}
-                />
-              </div>
-              {encontrados.map((l) => (
-                <button
-                  type="button"
-                  key={l.id}
-                  className="buscador-res"
-                  onClick={() => {
-                    setLead(l);
-                    setBusqueda('');
-                  }}
-                >
-                  <b>{l.name || 'Sin nombre'}</b>
-                  <span className="muted">{comoTelefono(l.phone)}</span>
+          <div className="nc-campo">
+            <span className="nc-rotulo">{canchas ? '¿Qué cancha?' : '¿Qué servicio?'}</span>
+            <div className="nc-chips" role="radiogroup" aria-label={canchas ? 'Cancha' : 'Servicio'}>
+              {servicios.map((x) => (
+                <button key={x.id} type="button" role="radio" aria-checked={itemId === x.id}
+                  className={`ticket-chip ticket-chip--item${itemId === x.id ? ' on' : ''}`} onClick={() => setItemId(x.id)}>
+                  <span>{x.name}</span>
+                  <small>{x.price != null ? soles(x.price) : '—'}{x.duration_minutes ? ` · ${x.duration_minutes} min` : ''}</small>
                 </button>
               ))}
-              {/* El que llamó por teléfono y nunca le escribió a Mia: es media
-                  clientela de una barbería, y hasta hoy no cabía en la agenda. */}
-              <button
-                className="btn btn-ghost btn-sm"
-                style={{ marginTop: 8 }}
-                onClick={() => setNuevo(true)}
-              >
-                <UserPlus size={14} /> No está: es cliente nuevo
-              </button>
-            </>
+              {servicios.length === 0 && <p className="fh-vacio">No hay servicios activos en el Catálogo.</p>}
+            </div>
+          </div>
+
+          {canchas && (
+            <div className="nc-dos">
+              <div className="nc-campo">
+                <label className="nc-rotulo" htmlFor="nueva-turnos">Tiempo</label>
+                <select id="nueva-turnos" className="select" value={turnos} onChange={(e) => setTurnos(Number(e.target.value))}>
+                  {[1, 2, 3, 4].map((n) => <option key={n} value={n}>{n * turno % 60 === 0 ? `${n * turno / 60} h` : `${n * turno} min`}</option>)}
+                </select>
+              </div>
+              <div className="nc-campo">
+                <label className="nc-rotulo" htmlFor="nueva-semanas">Repetir</label>
+                <select id="nueva-semanas" className="select" value={semanas} onChange={(e) => setSemanas(Number(e.target.value))}>
+                  {SEMANAS.map((n) => <option key={n} value={n}>{n === 1 ? 'Solo esta vez' : `Cada semana · ${n} semanas`}</option>)}
+                </select>
+              </div>
+            </div>
           )}
+
+          {pideSede && (
+            <div className="nc-campo">
+              <span className="nc-rotulo">¿En qué sede?</span>
+              <div className="nc-chips" role="radiogroup" aria-label="Sede">
+                {sedes.map((x) => (
+                  <button key={x.nombre} type="button" role="radio" aria-checked={sede === x.nombre}
+                    className={`ticket-chip${sede === x.nombre ? ' on' : ''}`} onClick={() => setSede(x.nombre)}>
+                    {nombreSede(x.nombre)}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {activos.length > 0 && (
+            <div className="nc-campo">
+              <span className="nc-rotulo">¿Con quién?</span>
+              <div className="nc-chips" role="radiogroup" aria-label="Profesional">
+                <button type="button" role="radio" aria-checked={empId === ''} className={`ticket-chip${empId === '' ? ' on' : ''}`} onClick={() => setEmpId('')}>
+                  Cualquiera
+                </button>
+                {activos.map((t) => (
+                  <button key={t.id} type="button" role="radio" aria-checked={empId === t.id}
+                    className={`ticket-chip${empId === t.id ? ' on' : ''}`} onClick={() => setEmpId(t.id)}>
+                    {t.name}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div className="nc-campo">
+            <span className="nc-rotulo">¿Qué día?</span>
+            <ElegirFecha valor={fecha} alCambiar={(f) => { setFecha(f); setVerPasadas(false); if (f !== hoy && hora && !(horasDelDia(horario, f, minutosServicio) ?? []).includes(hora)) setHora(''); }}
+              min={ayerLima()} cerrado={canchas ? undefined : cerrado} />
+          </div>
+
+          <div className="nc-campo">
+            <span className="nc-rotulo">
+              ¿A qué hora?
+              {fecha === hoy && !canchas && (
+                <button type="button" className="nc-ahora" onClick={() => setHora(hhmm(ahoraAgendable()))}>Ahora · {hora12(hhmm(ahoraAgendable()))}</button>
+              )}
+            </span>
+            {horasPosibles ? (
+              <>
+                <ElegirHora horas={horasVisibles} valor={hora} alCambiar={setHora} llenas={llenas} />
+                {fecha === hoy && !verPasadas && horasVisibles.length < horasPosibles.length && (
+                  <button type="button" className="nc-link" onClick={() => setVerPasadas(true)}>
+                    ¿Ya lo atendiste? Ver las horas de antes
+                  </button>
+                )}
+              </>
+            ) : (
+              <input className="input" type="time" value={hora} onChange={(e) => setHora(e.target.value)} aria-label="Hora" />
+            )}
+          </div>
+
+          <div className="nc-campo">
+            <span className="nc-rotulo">¿Para quién? <span className="nc-opcional">opcional</span></span>
+            {nuevo ? (
+              <div className="nc-dos">
+                <input className="input" inputMode="tel" placeholder="Celular · 987654321" value={tel} onChange={(e) => setTel(e.target.value)} aria-label="Celular" />
+                <input className="input" placeholder="Nombre" value={nombre} onChange={(e) => setNombre(e.target.value)} aria-label="Nombre" />
+                <button type="button" className="nc-link" onClick={() => setNuevo(false)}>Buscar en mis clientes</button>
+              </div>
+            ) : lead ? (
+              <div className="nc-elegido">
+                <b>{lead.name || 'Sin nombre'}</b>
+                <span className="muted">{comoTelefono(lead.phone)}</span>
+                <button type="button" className="btn btn-ghost btn-sm" onClick={() => setLead(null)}>Cambiar</button>
+              </div>
+            ) : (
+              <>
+                <div className="search nc-buscar">
+                  <Search size={16} />
+                  <input placeholder="Nombre o celular" value={busqueda} onChange={(e) => setBusqueda(e.target.value)} aria-label="Buscar cliente" />
+                </div>
+                {encontrados.map((l) => (
+                  <button type="button" key={l.id} className="buscador-res" onClick={() => { setLead(l); setBusqueda(''); }}>
+                    <b>{l.name || 'Sin nombre'}</b>
+                    <span className="muted">{comoTelefono(l.phone)}</span>
+                  </button>
+                ))}
+                {/* El que llamó por teléfono y nunca le escribió a Mia: media clientela de una barbería. */}
+                <button type="button" className="nc-link" onClick={() => setNuevo(true)}>
+                  <UserPlus size={14} /> Es cliente nuevo
+                </button>
+              </>
+            )}
+          </div>
         </div>
 
-        <div>
-          <label className="field-label">Día</label>
-          <input
-            className="input"
-            type="date"
-            // Hasta 24 h atrás (tu-pagina 0030): ayer se puede elegir; la base corta en 24 h exactas.
-            min={ayerLima()}
-            value={fecha}
-            onChange={(e) => setFecha(e.target.value)}
-          />
-        </div>
-        <div>
-          <label className="field-label">Hora</label>
-          {horasPosibles ? (
-            <select className="select" value={hora} onChange={(e) => setHora(e.target.value)} disabled={!horasPosibles.length}>
-              {!horasPosibles.length && <option value="">Ese día está cerrado</option>}
-              {horasPosibles.length > 0 && !hora && <option value="">Elige la hora</option>}
-              {horasPosibles.map((h) => <option key={h} value={h}>{hora12(h)}</option>)}
-            </select>
-          ) : (
-            <input
-              className="input"
-              type="time"
-              value={hora}
-              onChange={(e) => setHora(e.target.value)}
-            />
-          )}
-        </div>
-
-        {!canchas && (
-          <div className="full" style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: -4 }}>
-            <button type="button" className="btn btn-ghost btn-sm" onClick={() => { setFecha(hoy); setHora(hhmm(ahoraAgendable())); }}>
-              Ahora · {hora12(hhmm(ahoraAgendable()))}
+        <div className="nc-pie">
+          <p className="nc-resumen" aria-live="polite">
+            {servicioElegido ? <b>{servicioElegido.name}</b> : <span className="muted">Elige el servicio</span>}
+            {hora ? ` · ${fechaEnPalabras(fecha, hoy)} · ${hora12(hora)}` : ''}
+            {pideSede && sede ? ` · ${nombreSede(sede)}` : ''}
+            {servicioElegido?.price != null ? ` · ${soles(servicioElegido.price)}` : ''}
+          </p>
+          <div className="nc-botones">
+            <button type="button" className="btn btn-ghost" onClick={alCerrar} disabled={enviando}>Cancelar</button>
+            <button type="button" className="btn btn-primary" disabled={enviando || !itemId || !hora || (pideSede && !sede)} onClick={() => void crear()}>
+              <Check size={16} /> {enviando ? 'Agendando…' : 'Agendar'}
             </button>
-            {sugerencias.map((x) => (
-              <button key={x.sede} type="button" className="btn btn-ghost btn-sm" disabled={!x.hora}
-                title={x.hora ? `Primer cupo libre hoy en ${x.sede}` : `${x.sede} no tiene cupo libre hoy`}
-                onClick={() => { if (!x.hora) return; setFecha(hoy); setHora(x.hora); setSede(x.sede); }}>
-                {x.sede.split(' · ')[0]} · {x.hora ? `libre ${hora12(x.hora)}` : 'lleno hoy'}
-              </button>
-            ))}
           </div>
-        )}
-
-        <div>
-          <label className="field-label">{canchas ? 'Cancha' : 'Servicio'}</label>
-          <ComboPanel tipo={canchas ? 'cancha' : 'servicio'} etiqueta={canchas ? 'Cancha' : 'Servicio'} value={itemId} alCambiar={setItemId}
-            opciones={[{ value:'', label: canchas ? 'Elige la cancha' : 'Elige el servicio' }, ...servicios.map((s) => ({ value:s.id, label:s.name, detalle:s.price != null ? soles(s.price) : undefined }))]} />
         </div>
-
-        {canchas && (
-          <>
-            <div>
-              <label className="field-label" htmlFor="nueva-turnos">Tiempo</label>
-              <select id="nueva-turnos" className="select" value={turnos} onChange={(e) => setTurnos(Number(e.target.value))}>
-                {[1, 2, 3, 4].map((n) => <option key={n} value={n}>{n * turno % 60 === 0 ? `${n * turno / 60} h` : `${n * turno} min`}</option>)}
-              </select>
-            </div>
-            <div>
-              <label className="field-label" htmlFor="nueva-semanas">Repetir</label>
-              <select id="nueva-semanas" className="select" value={semanas} onChange={(e) => setSemanas(Number(e.target.value))}>
-                {SEMANAS.map((n) => <option key={n} value={n}>{n === 1 ? 'Solo esta vez' : `Cada semana · ${n} semanas`}</option>)}
-              </select>
-            </div>
-          </>
-        )}
-
-        {pideSede && (
-          <div>
-            <label className="field-label">Sede</label>
-            <ComboPanel etiqueta="Sede" value={sede} alCambiar={setSede}
-              opciones={[{ value: '', label: 'Elige la sede' }, ...sedes.map((x) => ({ value: x.nombre, label: x.capacidad ? `${x.nombre} · ${x.capacidad} a la vez` : x.nombre }))]} />
-          </div>
-        )}
-
-        {activos.length > 0 && (
-          <div>
-            <label className="field-label">Profesional</label>
-            <ComboPanel tipo="persona" etiqueta="Profesional" value={empId} alCambiar={setEmpId}
-              opciones={[{ value:'', label:'Da igual' }, ...activos.map((t) => ({ value:t.id, label:t.name }))]} />
-          </div>
-        )}
-
-        <small className="muted full" style={{ fontSize: 11.5, marginTop: -4 }}>
-          {canchas ? 'El precio sale de la cancha y de la hora (día o noche): no se teclea.' : 'Del servicio salen el precio y la duración: no se teclean.'}
-        </small>
-
-        <div className="full nav-btns">
-          <button className="btn btn-ghost" onClick={alCerrar}>
-            Dejarlo
-          </button>
-          <button className="btn btn-primary" disabled={enviando} onClick={() => void crear()}>
-            <Check size={16} /> {enviando ? 'Agendando…' : 'Agendar'}
-          </button>
-        </div>
-
-        <small className="muted full" style={{ fontSize: 11.5 }}>
-          Si no cabe —ocupado, bloqueado o fuera de horario— Mia te dirá exactamente por qué y no se
-          crea nada. Al terminar te doy el mensaje para avisar al cliente: <b>{canchas ? 'esta reserva' : 'esta cita'} no pasa por
-          Mia</b>, así que nadie le avisa si no lo mandas tú.
-        </small>
       </div>
     </div>
   );

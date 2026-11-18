@@ -55,6 +55,7 @@ import FotoDelPago from '@/components/panel/FotoDelPago';
 import { supabase } from '@/lib/supabase/client';
 import { fotoParaCobro, type FotoPago } from '@/lib/panel/fotoPago';
 import { useCargar } from '@/components/panel/useCargar';
+import { useSondeo } from '@/components/panel/useSondeo';
 import { esRecurrente } from '@/lib/panel/modo';
 import { hora, isoLocal, soles } from '@/lib/panel/format';
 import { pideRevision, selloCumplido } from '@/lib/panel/confirmacion';
@@ -186,6 +187,9 @@ function MisCitas({ companyId }: { companyId: string }) {
     return { lunes, negocio, citas, clientes, saldos };
   }, [companyId, lunes, cobra]);
 
+  // Sin recargar: una cita nueva de la página o una que le asignan aparece sola (cada 45 s).
+  useSondeo(releer, 45_000);
+
   // Al volver a la app desde WhatsApp u otra: lo de ahora, sin esperar a nada.
   useEffect(() => {
     const alVolver = () => {
@@ -223,7 +227,13 @@ function MisCitas({ companyId }: { companyId: string }) {
 
   async function marcar(c: Cita, vino: boolean) {
     setEnVuelo(c.id);
-    await comando('marcar_cumplido', { tipo: 'appointment', id: c.id, vino }, vino ? 'Anotado: vino' : 'Anotado: no vino', releer);
+    // «Atendido» manda al cliente a la caja: allí sale en «Listos para cobrar» con tu nombre.
+    await comando(
+      'marcar_cumplido',
+      { tipo: 'appointment', id: c.id, vino },
+      vino ? (c.pagado_por ? 'Anotado: atendido.' : 'Atendido: ya sale en Caja para cobrar, con tu nombre.') : 'Anotado: no vino.',
+      releer,
+    );
     setEnVuelo(null);
   }
 
@@ -402,6 +412,12 @@ function FilaCita({
             {sello.label}
           </span>
           {!c.employee_id && <span className="mia-sin">Sin asignar</span>}
+          {/* Lo que ya atendió: ¿pasó por caja? Así sabe si su cliente pagó. */}
+          {c.status === 'completed' && (
+            c.pagado_por
+              ? <span className="badge-pill" style={{ color: '#0B7A4B', background: '#0FA96818' }}>Cobrado</span>
+              : <span className="badge-pill" style={{ color: '#C2410C', background: '#C2410C18' }}>En caja · por cobrar</span>
+          )}
         </div>
         <b>{c.service || 'Sin servicio indicado'}</b>
         <small>{quien.nombre}</small>
@@ -413,8 +429,8 @@ function FilaCita({
         <div className="mia-acciones">
           {porMarcar && (
             <>
-              <button type="button" className="btn btn-ghost btn-sm" disabled={ocupado} onClick={() => alMarcar(c, true)}>
-                <Check size={14} /> Vino
+              <button type="button" className="btn btn-primary btn-sm" disabled={ocupado} onClick={() => alMarcar(c, true)}>
+                <Check size={14} /> Atendido
               </button>
               <button type="button" className="btn btn-ghost btn-sm confirmar-no" disabled={ocupado} onClick={() => alMarcar(c, false)}>
                 <X size={14} /> No vino

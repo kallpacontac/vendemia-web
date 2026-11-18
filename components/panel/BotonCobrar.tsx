@@ -23,8 +23,14 @@ export function BotonCobrar({
   ocupado,
   alCobrar,
   metodos = METODOS_CITA,
+  etiqueta = 'Cobrada',
+  grande = false,
 }: {
   ocupado?: boolean;
+  /** El texto del botón cerrado: «Cobrada» en una lista, «Cobrar S/ 25» en el ticket. */
+  etiqueta?: string;
+  /** Botones de tamaño normal (no `btn-sm`): para el mostrador, con el dedo, en la tablet. */
+  grande?: boolean;
   /** `foto` solo llega si se adjuntó una: se manda con el cobro y Postgres la revisa. */
   alCobrar: (metodo: MetodoPago, foto?: FotoPago) => void;
   metodos?: MetodoPago[];
@@ -42,6 +48,7 @@ export function BotonCobrar({
     setFoto(null);
   }
 
+  const tam = grande ? 'btn' : 'btn btn-sm';
   if (conFoto && companyId) {
     const obligatoria = exigeFoto(cobroFoto, conFoto);
     return (
@@ -50,7 +57,7 @@ export function BotonCobrar({
         <FotoDelPago companyId={companyId} foto={foto} obligatoria={obligatoria} alFoto={setFoto} alLeyendo={setLeyendo} />
         {foto && foto.decision !== 'aprobar' && foto.motivo && <p className="fp-aviso">Ojo: {foto.motivo}</p>}
         <button
-          className="btn btn-primary btn-sm"
+          className={`${tam} btn-primary`}
           disabled={ocupado || leyendo || (obligatoria && !foto)}
           title={obligatoria && !foto ? 'Este negocio pide la foto del comprobante' : undefined}
           onClick={() => {
@@ -62,7 +69,7 @@ export function BotonCobrar({
         >
           <Check size={14} /> {foto ? 'Registrar con foto' : obligatoria ? 'Falta la foto' : 'Registrar sin foto'}
         </button>
-        <button className="btn btn-ghost btn-sm" onClick={cerrar} aria-label="Cancelar">
+        <button className={`${tam} btn-ghost`} onClick={cerrar} aria-label="Cancelar">
           <X size={14} />
         </button>
       </div>
@@ -71,8 +78,8 @@ export function BotonCobrar({
 
   if (!eligiendo) {
     return (
-      <button className="btn btn-primary btn-sm" disabled={ocupado} onClick={() => setEligiendo(true)}>
-        <Wallet size={14} /> Cobrada
+      <button className={`${tam} btn-primary`} disabled={ocupado} onClick={() => setEligiendo(true)}>
+        <Wallet size={grande ? 16 : 14} /> {etiqueta}
       </button>
     );
   }
@@ -81,7 +88,7 @@ export function BotonCobrar({
       {metodos.map((m) => (
         <button
           key={m}
-          className="btn btn-primary btn-sm"
+          className={`${tam} btn-primary`}
           disabled={ocupado}
           onClick={() => {
             setEligiendo(false);
@@ -92,7 +99,7 @@ export function BotonCobrar({
           {METODO_LABEL[m]}
         </button>
       ))}
-      <button className="btn btn-ghost btn-sm" onClick={() => setEligiendo(false)} aria-label="Cancelar">
+      <button className={`${tam} btn-ghost`} onClick={() => setEligiendo(false)} aria-label="Cancelar">
         <X size={14} />
       </button>
     </span>

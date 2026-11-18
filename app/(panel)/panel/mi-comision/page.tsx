@@ -28,6 +28,7 @@ import { useSesion } from '@/components/panel/Sesion';
 import { useCargar } from '@/components/panel/useCargar';
 import { calcularComisiones } from '@/lib/panel/comisiones';
 import { diaMes, hora, isoLocal, soles } from '@/lib/panel/format';
+import { PERIODOS, rango, type Periodo } from '@/lib/panel/periodos';
 import {
   getCatalogoDelEquipo,
   getCitasDelPeriodo,
@@ -39,9 +40,10 @@ import {
 
 export default function MiComision() {
   const { companyId } = useSesion();
-  const hoy = new Date();
-  const [desde, setDesde] = useState(isoLocal(new Date(hoy.getFullYear(), hoy.getMonth(), 1)));
-  const [hasta, setHasta] = useState(isoLocal(hoy));
+  // Los mismos periodos que ve el dueño en Comisiones: así las dos cifras cuadran.
+  const [periodo, setPeriodo] = useState<Periodo>('quincena');
+  const { desde, hasta } = rango(periodo);
+  const hoyIso = isoLocal(new Date());
 
   const { datos, cargando, error } = useCargar(async () => {
     if (!companyId) return null;
@@ -70,23 +72,34 @@ export default function MiComision() {
       new Date(),
       datos.congeladas,
     );
+    const yo = r.profesionales.find((p) => p.employeeId === datos.ficha) ?? null;
+    const deHoy = (yo?.lineas ?? []).filter((l) => l.cita.slot_start.startsWith(hoyIso));
     return {
       pct: Number(mia?.comision_pct ?? 0),
-      yo: r.profesionales.find((p) => p.employeeId === datos.ficha) ?? null,
+      yo,
       sinMarcar: r.sinMarcar,
+      // Lo de hoy, aparte: es lo que el barbero mira al cerrar el día.
+      hoy: periodo !== 'hoy' && desde <= hoyIso && hoyIso <= hasta
+        ? { comision: deHoy.reduce((t, l) => t + l.comision, 0), citas: new Set(deHoy.map((l) => l.cita.id)).size }
+        : null,
     };
-  }, [datos]);
+  }, [datos, hoyIso, periodo, desde, hasta]);
 
   return (
     <main className="main">
       <div className="wrap">
         <Topbar titulo="Mi comisión" sub="Lo que llevas ganado con las citas que atendiste" />
 
-        <div className="mia-dia">
-          <span className="muted" style={{ fontSize: 13 }}>Del</span>
-          <input type="date" value={desde} max={hasta} onChange={(e) => e.target.value && setDesde(e.target.value)} aria-label="Desde" />
-          <span className="muted" style={{ fontSize: 13 }}>al</span>
-          <input type="date" value={hasta} min={desde} onChange={(e) => e.target.value && setHasta(e.target.value)} aria-label="Hasta" />
+        <div className="filters" role="tablist" aria-label="Periodo" style={{ marginBottom: 14 }}>
+          {PERIODOS.map(([k, txt]) => (
+            <button key={k} type="button" role="tab" aria-selected={periodo === k} className={`fpill ${periodo === k ? 'active' : ''}`}
+              onClick={() => setPeriodo(k)}>
+              {txt}
+            </button>
+          ))}
+          <span className="muted" style={{ fontSize: 12.5, alignSelf: 'center', marginLeft: 6 }}>
+            {desde === hasta ? diaMes(new Date(`${desde}T12:00`)) : `del ${diaMes(new Date(`${desde}T12:00`))} al ${diaMes(new Date(`${hasta}T12:00`))}`}
+          </span>
         </div>
 
         {error && <p className="vacio">No se pudo cargar tu comisión: {error}</p>}
@@ -102,10 +115,21 @@ export default function MiComision() {
         {resumen && (
           <>
             <div className="card mia-grupo">
-              <h3>{soles(resumen.yo?.comision ?? 0)}</h3>
+              <small className="muted" style={{ fontSize: 12.5, fontWeight: 700 }}>Lo que te toca · {PERIODOS.find(([k]) => k === periodo)?.[1].toLowerCase()}</small>
+              <h3 style={{ fontSize: 30, margin: '2px 0 4px' }}>{soles(resumen.yo?.comision ?? 0)}</h3>
               <p className="muted" style={{ fontSize: 13 }}>
-                {resumen.yo?.citas ?? 0} {resumen.yo?.citas === 1 ? 'cita atendida' : 'citas atendidas'}
+                {resumen.yo?.citas ?? 0} {resumen.yo?.citas === 1 ? 'atención' : 'atenciones'}
+                {resumen.yo ? ` · ${soles(resumen.yo.facturado)} en servicios` : ''}
                 {resumen.pct > 0 && ` · tu comisión general es del ${resumen.pct}%`}
+              </p>
+              {resumen.hoy && (
+                <p style={{ fontSize: 13.5, marginTop: 8 }}>
+                  Hoy: <b>{soles(resumen.hoy.comision)}</b>{' '}
+                  <span className="muted">({resumen.hoy.citas} {resumen.hoy.citas === 1 ? 'atención' : 'atenciones'})</span>
+                </p>
+              )}
+              <p className="muted" style={{ fontSize: 12, marginTop: 8 }}>
+                Cuenta cada cliente que marcaste «Atendido» (o que la caja cobró a tu nombre), con la misma cuenta que ve el dueño.
               </p>
               {resumen.sinMarcar.citas > 0 && (
                 <p className="muted" style={{ fontSize: 12.5, marginTop: 8 }}>

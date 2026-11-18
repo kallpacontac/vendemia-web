@@ -1,59 +1,76 @@
 'use client';
 
-import { Briefcase, CalendarCheck, CheckCircle, ChevronLeft, ChevronRight, Clock, User } from 'lucide-react';
+/**
+ * Los controles de la Agenda. Menos y con propósito (17-nov-2026, Alvaro: «demasiados botones,
+ * hasta yo me saturo; cada uno debe tener un propósito»):
+ *
+ *   · Tres pestañas, y debajo, en una frase, para qué sirve la elegida.
+ *   · Las flechas de la semana (o del día en el celular); «Hoy» solo si te has ido a otra.
+ *   · Fuera: «Reservas / Disponibilidad» (la segunda vista era la de la página pública: no la
+ *     usaba nadie) y «N reservas · N cupos · N % ocupación» (2 004 cupos no le dice nada a nadie).
+ *   · La sede ya no va aquí: se elige una vez arriba, en la cabecera (SedeGlobal).
+ */
+import { CalendarCheck, CheckCircle, ChevronLeft, ChevronRight, Clock } from 'lucide-react';
 import ComboPanel from './ComboPanel';
 
 type Tab = 'semana' | 'proximas' | 'pasadas';
-type Vista = 'negocio' | 'cliente';
 type Props = {
   recurrente: boolean; movil: boolean; tab: Tab; alTab: (tab: Tab) => void;
   proximas: number; pendientes: number; profesionales: { id: string; name: string; activo: boolean }[];
   profesional: string; alProfesional: (id: string) => void;
-  fecha: string; vista: Vista; alVista: (vista: Vista) => void;
+  fecha: string;
   anterior: () => void; siguiente: () => void; hoy: () => void;
-  resumen?: { reservas: number; libres: number; ocupacion: number };
+  /** ¿Ya está en hoy (o esta semana)? Entonces «Hoy» sobra. */
+  enHoy: boolean;
   /** Con canchas, la primera pestaña es el tablero del día, que trae sus propios controles. */
   canchas?: boolean;
 };
 
-/** Controles presentacionales compartidos por la agenda real y su prueba responsive. */
+const AYUDA: Record<Tab, string> = {
+  semana: 'Quién viene y a qué hora. Para agendar, «Nueva cita».',
+  proximas: 'Lo que viene, en lista: mover de hora, cambiar de barbero o cancelar.',
+  pasadas: 'Ya pasaron: marca si vino. El cobro se hace en Caja.',
+};
+
 export default function AgendaControles(p: Props) {
   const calendario = !p.recurrente && p.tab === 'semana' && !p.canchas;
   return (
-    <section className="agenda-controls" aria-label="Filtros de la agenda">
-      <div className="view-toggle tabs-agenda" role="group" aria-label="Contenido de la agenda">
-        <button type="button" className={p.tab === 'semana' ? 'active' : ''} aria-pressed={p.tab === 'semana'} onClick={() => p.alTab('semana')}>
-          <CalendarCheck size={15} /> {p.recurrente ? 'Grupos' : p.canchas ? 'Canchas' : p.movil ? 'Día' : 'Semana'}
-        </button>
-        {(!p.recurrente || p.proximas > 0) && <button type="button" className={p.tab === 'proximas' ? 'active' : ''} aria-pressed={p.tab === 'proximas'} onClick={() => p.alTab('proximas')}>
-          <Clock size={15} /> Próximas{p.proximas > 0 ? ` (${p.proximas})` : ''}
-        </button>}
-        {/* Con canchas no: lo que ya pasó sale en la misma pantalla del tablero (menos pestañas). */}
-        {!p.canchas && (!p.recurrente || p.pendientes > 0) && <button type="button" className={p.tab === 'pasadas' ? 'active' : ''} aria-pressed={p.tab === 'pasadas'} onClick={() => p.alTab('pasadas')} title="Atenciones pasadas sin confirmar o sin cobrar">
-          <CheckCircle size={15} /> Por revisar{p.pendientes > 0 ? ` (${p.pendientes})` : ''}
-        </button>}
+    <section className="agenda-controls agenda-controls--simple" aria-label="Controles de la agenda">
+      <div className="agenda-controls__fila">
+        <div className="view-toggle tabs-agenda" role="tablist" aria-label="Qué ver">
+          <button type="button" role="tab" className={p.tab === 'semana' ? 'active' : ''} aria-selected={p.tab === 'semana'} onClick={() => p.alTab('semana')}>
+            <CalendarCheck size={15} /> {p.recurrente ? 'Grupos' : p.canchas ? 'Canchas' : 'Calendario'}
+          </button>
+          {(!p.recurrente || p.proximas > 0) && (
+            <button type="button" role="tab" className={p.tab === 'proximas' ? 'active' : ''} aria-selected={p.tab === 'proximas'} onClick={() => p.alTab('proximas')}>
+              <Clock size={15} /> Próximas{p.proximas > 0 ? ` · ${p.proximas}` : ''}
+            </button>
+          )}
+          {/* Con canchas no: lo que ya pasó sale en la misma pantalla del tablero (menos pestañas). */}
+          {!p.canchas && (!p.recurrente || p.pendientes > 0) && (
+            <button type="button" role="tab" className={`${p.tab === 'pasadas' ? 'active' : ''}${p.pendientes > 0 ? ' con-pendientes' : ''}`}
+              aria-selected={p.tab === 'pasadas'} onClick={() => p.alTab('pasadas')}>
+              <CheckCircle size={15} /> ¿Vino?{p.pendientes > 0 ? ` · ${p.pendientes}` : ''}
+            </button>
+          )}
+        </div>
+        {calendario && (
+          <div className="week-nav">
+            <button type="button" className="nb" aria-label={p.movil ? 'Día anterior' : 'Semana anterior'} onClick={p.anterior}><ChevronLeft size={18} /></button>
+            <b aria-live="polite">{p.fecha}</b>
+            <button type="button" className="nb" aria-label={p.movil ? 'Día siguiente' : 'Semana siguiente'} onClick={p.siguiente}><ChevronRight size={18} /></button>
+            {!p.enHoy && <button type="button" className="btn btn-ghost btn-sm" onClick={p.hoy}>Volver a hoy</button>}
+          </div>
+        )}
       </div>
-      {p.profesionales.length > 0 && (!p.recurrente || p.tab !== 'semana') && <div className="agenda-controls__team">
-        <span>Profesional</span>
-        <ComboPanel tipo="persona" etiqueta="Filtrar por profesional" value={p.profesional} alCambiar={p.alProfesional}
-          opciones={[{value:'',label:'Todo el equipo'},...p.profesionales.map((t)=>({value:t.id,label:t.name,detalle:t.activo?undefined:'Dado de baja'}))]} />
-      </div>}
-      {p.resumen && <div className="agenda-controls__stats" aria-label="Resumen de la semana">
-        <span><b>{p.resumen.reservas}</b> reservas</span><span><b>{p.resumen.libres}</b> cupos</span><span><b>{p.resumen.ocupacion}%</b> ocupación</span>
-      </div>}
-      {calendario && <div className="agenda-controls__calendar">
-        <div className="week-nav">
-          <button type="button" className="nb" aria-label={p.movil ? 'Día anterior' : 'Semana anterior'} onClick={p.anterior}><ChevronLeft size={16} /></button>
-          <b aria-live="polite">{p.fecha}</b>
-          <button type="button" className="nb" aria-label={p.movil ? 'Día siguiente' : 'Semana siguiente'} onClick={p.siguiente}><ChevronRight size={16} /></button>
-          <button type="button" className="btn btn-ghost btn-sm" onClick={p.hoy}>Hoy</button>
+      <p className="agenda-controls__ayuda">{AYUDA[p.tab]}</p>
+      {p.profesionales.length > 0 && (!p.recurrente || p.tab !== 'semana') && (
+        <div className="agenda-controls__team">
+          <span>Ver de</span>
+          <ComboPanel tipo="persona" etiqueta="Filtrar por profesional" value={p.profesional} alCambiar={p.alProfesional}
+            opciones={[{ value: '', label: 'Todo el equipo' }, ...p.profesionales.map((t) => ({ value: t.id, label: t.name, detalle: t.activo ? undefined : 'Dado de baja' }))]} />
         </div>
-        <div className="view-toggle" role="group" aria-label="Presentación de la agenda">
-          <button type="button" className={p.vista === 'negocio' ? 'active' : ''} aria-pressed={p.vista === 'negocio'} onClick={() => p.alVista('negocio')}><Briefcase size={15} /> Reservas</button>
-          <button type="button" className={p.vista === 'cliente' ? 'active' : ''} aria-pressed={p.vista === 'cliente'} onClick={() => p.alVista('cliente')}><User size={15} /> Disponibilidad</button>
-        </div>
-      </div>}
-      {calendario && p.profesional && <p className="agenda-controls__note">Solo este profesional: su horario y ausencias determinan los cupos disponibles.</p>}
+      )}
     </section>
   );
 }

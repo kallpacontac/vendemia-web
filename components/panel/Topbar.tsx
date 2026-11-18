@@ -11,7 +11,6 @@
  */
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Bell } from 'lucide-react';
 import CuentaPanel from './CuentaPanel';
 import CambiarClave from '@/components/panel/CambiarClave';
 import ComboPanel from './ComboPanel';
@@ -20,6 +19,7 @@ import { useAvisar } from './Avisos';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useSesion } from './Sesion';
+import { SedeGlobal } from './SelectorSede';
 import { BotonDemo, useDemo } from './Demo';
 import { alternarDemo } from '@/lib/panel/demo';
 import { esAppointmentFamily, esCita, esEcommerce, esRecurrente } from '@/lib/panel/modo';
@@ -248,8 +248,11 @@ export default function Topbar({
   children?: React.ReactNode;
   accionesTitulo?: React.ReactNode;
 }) {
-  const { session, compania, esAdminPlataforma } = useSesion();
+  const { session, compania, esAdminPlataforma, companyId } = useSesion();
   const email = session?.user.email ?? '';
+  // La sede se elige aquí arriba, una vez, en las pantallas que la usan (Agenda y Caja).
+  const ruta = usePathname();
+  const conSede = ['/panel/agenda', '/panel/caja'].some((r) => ruta.startsWith(r));
   /* El admin de plataforma no tiene compañía activa, y un guion ahí se lee como
      "algo no cargó". Lo que mira son todos los negocios a la vez: que lo diga. */
   const pie = compania?.nombre ?? (esAdminPlataforma ? 'Todos los negocios' : '—');
@@ -258,7 +261,7 @@ export default function Topbar({
     <CabeceraPanel titulo={titulo} sub={sub} accionesTitulo={accionesTitulo}
       navegacion={<NavegacionPanel />}
       avisos={<>{children}<BotonDemo /><AvisoCorteDeRoles /></>}
-      cuenta={<><SelectorCompania /><div className="icon-btn" aria-hidden="true"><Bell size={18} /></div><MenuCuenta email={email} pie={pie} /></>}
+      cuenta={<>{conSede && <SedeGlobal companyId={companyId} />}<SelectorCompania /><MenuCuenta email={email} pie={pie} /></>}
     />
   );
 }

@@ -152,7 +152,10 @@ export default function Caja() {
   // Se lee de location y no con useSearchParams para no exigir un Suspense a la página.
   useEffect(() => {
     if (!companyId) return;
-    const pedido = new URLSearchParams(window.location.search).get('q')?.trim();
+    const params = new URLSearchParams(window.location.search);
+    // «Escanear tarjeta» de la Caja del panel (17-nov-2026): llega con la cámara ya abierta.
+    if (params.get('camara') === '1') setCamara(true);
+    const pedido = params.get('q')?.trim();
     if (!pedido) return;
     setQ(pedido);
     void buscar(pedido);

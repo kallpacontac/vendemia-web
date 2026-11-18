@@ -1,7 +1,7 @@
 'use client';
-import type { FormEvent } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { isoLocal, soles } from '@/lib/panel/format';
+import { ElegirFecha } from './FechaHora';
 
 export default function CajaResumen({ dia, hoy, alDia, calculo }: {
   dia: string; hoy: string; alDia: (dia: string) => void;
@@ -12,17 +12,12 @@ export default function CajaResumen({ dia, hoy, alDia, calculo }: {
     fecha.setDate(fecha.getDate() + n);
     alDia(isoLocal(fecha));
   }
-  function seleccionar(e: FormEvent<HTMLInputElement>) {
-    const campo = e.currentTarget;
-    if (campo.validity.valid && campo.value && campo.value <= hoy) alDia(campo.value);
-  }
   return <section className="caja-resumen" aria-label="Fecha y resumen de caja">
     <div className="caja-fecha">
       <button type="button" className="btn btn-ghost" aria-label="Día anterior" onClick={() => mover(-1)}><ChevronLeft size={16}/></button>
-      <label><span className="sr-only">Fecha de caja</span><input className="input" type="date" value={dia} max={hoy}
-        onInput={seleccionar} onChange={seleccionar}/></label>
+      <ElegirFecha valor={dia} alCambiar={alDia} max={hoy} etiqueta="Día de caja" atajos={false} />
       <button type="button" className="btn btn-ghost" aria-label="Día siguiente" disabled={dia >= hoy} onClick={() => mover(1)}><ChevronRight size={16}/></button>
-      <button type="button" className="btn btn-ghost caja-hoy" disabled={dia === hoy} onClick={() => alDia(hoy)}>Hoy</button>
+      {dia !== hoy && <button type="button" className="btn btn-ghost caja-hoy" onClick={() => alDia(hoy)}>Volver a hoy</button>}
     </div>
     <dl className="caja-totales" aria-live="polite">
       {/* Todo lo que entró, a cuenta incluido; lo a cuenta se nombra aparte (Alvaro, 19-oct-2026). */}

@@ -30,7 +30,8 @@ import { AlertTriangle, ChevronDown, ChevronUp, Download, Percent, Scissors, Wal
 import Topbar from '@/components/panel/Topbar';
 import { useSesion } from '@/components/panel/Sesion';
 import { useCargar } from '@/components/panel/useCargar';
-import { diaMes, isoLocal, soles } from '@/lib/panel/format';
+import { diaMes, soles } from '@/lib/panel/format';
+import { PERIODOS, rango, type Periodo } from '@/lib/panel/periodos';
 import { esCita } from '@/lib/panel/modo';
 import { calcularComisiones, type Regla } from '@/lib/panel/comisiones';
 import {
@@ -40,37 +41,6 @@ import {
   getServiciosDeCitas,
   getTrabajadores,
 } from '@/lib/supabase/queries';
-
-type Periodo = 'quincena' | 'quincena-anterior' | 'mes' | 'mes-anterior';
-
-const PERIODOS: [Periodo, string][] = [
-  ['quincena', 'Esta quincena'],
-  ['quincena-anterior', 'Quincena anterior'],
-  ['mes', 'Este mes'],
-  ['mes-anterior', 'Mes anterior'],
-];
-
-/**
- * Quincenas del 1 al 15 y del 16 a fin de mes, que es como se paga en Perú.
- * Fechas locales ('YYYY-MM-DD'): el bot guarda `slot_start` en hora de Lima.
- */
-function rango(p: Periodo, hoy = new Date()): { desde: string; hasta: string } {
-  const y = hoy.getFullYear();
-  const m = hoy.getMonth();
-  const finDe = (yy: number, mm: number) => new Date(yy, mm + 1, 0);
-  if (p === 'mes') return { desde: isoLocal(new Date(y, m, 1)), hasta: isoLocal(finDe(y, m)) };
-  if (p === 'mes-anterior') return { desde: isoLocal(new Date(y, m - 1, 1)), hasta: isoLocal(finDe(y, m - 1)) };
-  const primera = hoy.getDate() <= 15;
-  if (p === 'quincena') {
-    return primera
-      ? { desde: isoLocal(new Date(y, m, 1)), hasta: isoLocal(new Date(y, m, 15)) }
-      : { desde: isoLocal(new Date(y, m, 16)), hasta: isoLocal(finDe(y, m)) };
-  }
-  // quincena anterior
-  return primera
-    ? { desde: isoLocal(new Date(y, m - 1, 16)), hasta: isoLocal(finDe(y, m - 1)) }
-    : { desde: isoLocal(new Date(y, m, 1)), hasta: isoLocal(new Date(y, m, 15)) };
-}
 
 const REGLA: Record<Regla, string> = {
   fija: 'fija del servicio',
@@ -157,9 +127,9 @@ export default function Comisiones() {
 
         <div className="filters" style={{ marginBottom: 16 }}>
           {PERIODOS.map(([k, txt]) => (
-            <div key={k} className={`fpill ${periodo === k ? 'active' : ''}`} onClick={() => setPeriodo(k)}>
+            <button key={k} type="button" aria-pressed={periodo === k} className={`fpill ${periodo === k ? 'active' : ''}`} onClick={() => setPeriodo(k)}>
               {txt}
-            </div>
+            </button>
           ))}
           <span className="muted" style={{ fontSize: 12.5, alignSelf: 'center', marginLeft: 6 }}>
             del {diaMes(new Date(`${desde}T12:00`))} al {diaMes(new Date(`${hasta}T12:00`))}

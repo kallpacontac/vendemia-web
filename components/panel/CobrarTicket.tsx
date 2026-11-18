@@ -1,0 +1,279 @@
+'use client';
+
+/**
+ * ══════════════════════════════════════════════════════════════════════════
+ * COBRAR TICKET · el cliente llega a caja con el ticket del barbero
+ * ══════════════════════════════════════════════════════════════════════════
+ *
+ * The 24/7 (17-nov-2026): «el cliente va con el barbero, lo atiende, este le da un ticket y el
+ * cliente va a caja a pagar con ese ticket; lo anota el cajero / admin».
+ *
+ * Lo que dice el ticket se toca, no se teclea: QUIÉN atendió, QUÉ se hizo (uno o varios
+ * servicios o productos, a su precio de carta) y, con dos sedes, DÓNDE. El cliente es opcional:
+ * con su celular, el cobro queda en su ficha y se le puede sumar el sello de la tarjeta.
+ *
+ * Dos pasos, a propósito (tu-pagina 0031):
+ *   1 · `caja_ticket` deja la atención anotada y ATENDIDA, a nombre del barbero (su comisión
+ *       se congela ahí mismo). No mira el aforo: el cliente ya fue atendido.
+ *   2 · `marcar_pagado`, el cobro de siempre: método, foto si el negocio la pide, caja del día.
+ * Si el paso 2 falla, la atención ya está en «Listos para cobrar» y se cobra desde ahí: nada se
+ * pierde ni se duplica.
+ */
+import { useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
+import { Gift, Minus, Receipt, UserPlus, X } from 'lucide-react';
+import { BotonCobrar } from '@/components/panel/BotonCobrar';
+import { cobrable } from '@/components/panel/ListosParaCobrar';
+import { useAvisar, useComando } from '@/components/panel/Avisos';
+import { fotoParaCobro, type FotoPago } from '@/lib/panel/fotoPago';
+import { etiquetaMetodo, type MetodoPago } from '@/lib/panel/metodosPago';
+import { soles } from '@/lib/panel/format';
+import { supabase } from '@/lib/supabase/client';
+import type { ItemCatalogo, Trabajador } from '@/lib/supabase/queries';
+import type { Sede } from '@/modules/tu-pagina/dominio/adelantoCitas';
+
+const soloDigitos = (s: string) => s.replace(/\D/g, '');
+const claveSede = (c: string) => `vm-ticket-sede:${c}`;
+
+export default function CobrarTicket({
+  companyId,
+  trabajadores,
+  catalogo,
+  sedes,
+  sedeInicial,
+  alCerrar,
+  alListo,
+}: {
+  companyId: string;
+  trabajadores: Trabajador[];
+  catalogo: ItemCatalogo[];
+  sedes: Sede[];
+  /** La sede que se está mirando en la Caja ('' = todas). */
+  sedeInicial: string;
+  alCerrar: () => void;
+  alListo: () => void;
+}) {
+  const avisar = useAvisar();
+  const comando = useComando();
+  const activos = useMemo(() => trabajadores.filter((t) => t.activo), [trabajadores]);
+  const servicios = useMemo(() => catalogo.filter((c) => cobrable(c) && c.tipo !== 'producto'), [catalogo]);
+  const productos = useMemo(() => catalogo.filter((c) => cobrable(c) && c.tipo === 'producto'), [catalogo]);
+  const porId = useMemo(() => new Map(catalogo.map((c) => [c.id, c])), [catalogo]);
+
+  const [barbero, setBarbero] = useState(activos.length === 1 ? activos[0].id : '');
+  const [items, setItems] = useState<string[]>([]);
+  const pideSede = sedes.length > 1;
+  const [sede, setSede] = useState(sedeInicial);
+  useEffect(() => {
+    if (sedeInicial || !pideSede) return;
+    try {
+      const s = localStorage.getItem(claveSede(companyId));
+      if (s && sedes.some((x) => x.nombre === s)) setSede(s);
+    } catch {
+      /* sin almacenamiento: la elige */
+    }
+  }, [companyId, sedeInicial, pideSede, sedes]);
+  const [conCliente, setConCliente] = useState(false);
+  const [tel, setTel] = useState('');
+  const [nombre, setNombre] = useState('');
+  const [enviando, setEnviando] = useState(false);
+  /** Lo último cobrado: para ofrecer el sello de su tarjeta. */
+  const [hecho, setHecho] = useState<{ texto: string; tel: string } | null>(null);
+
+  const total = items.reduce((t, id) => t + Number(porId.get(id)?.price ?? 0), 0);
+  const cuenta = (id: string) => items.filter((x) => x === id).length;
+  const quitarUno = (id: string) => setItems((l) => {
+    const i = l.lastIndexOf(id);
+    return i < 0 ? l : [...l.slice(0, i), ...l.slice(i + 1)];
+  });
+  const telLimpio = soloDigitos(tel);
+
+  /** Lo que falta, dicho en una línea encima del botón. */
+  const falta =
+    activos.length > 0 && !barbero ? '¿Quién lo atendió?'
+      : items.length === 0 ? '¿Qué se hizo?'
+        : pideSede && !sede ? '¿En qué sede?'
+          : telLimpio && telLimpio.length < 9 ? 'El celular está incompleto'
+            : '';
+
+  async function cobrar(metodo: MetodoPago, foto?: FotoPago) {
+    if (falta || enviando) return;
+    setEnviando(true);
+    const { data, error } = await supabase().rpc('caja_ticket', {
+      p_company: companyId,
+      p_datos: {
+        items,
+        employee_id: barbero,
+        sede: pideSede ? sede : '',
+        telefono: telLimpio,
+        nombre: nombre.trim(),
+      },
+    });
+    if (error) {
+      setEnviando(false);
+      avisar(
+        /caja_ticket/.test(error.message) && /function|find/i.test(error.message)
+          ? 'Falta instalar «Cobrar ticket» en la base (tu-pagina 0031).'
+          : error.message,
+        'error',
+      );
+      return;
+    }
+    const r = data as { id: string; total: number; servicio: string; barbero: string };
+    try {
+      if (pideSede && sede) localStorage.setItem(claveSede(companyId), sede);
+    } catch {
+      /* nada */
+    }
+    const pagado = await comando(
+      'marcar_pagado',
+      { tipo: 'appointment', id: r.id, metodo_pago: metodo, ...(foto ? { foto: fotoParaCobro(foto) } : {}) },
+    );
+    setEnviando(false);
+    const texto = `${soles(Number(r.total))} · ${r.servicio}${r.barbero ? ` · ${r.barbero}` : ''}`;
+    if (pagado === undefined) {
+      // El ticket existe; solo faltó el cobro: queda en «Listos para cobrar».
+      avisar(`Anotado ${texto}. Si no aparece como cobrado, cóbralo en «Listos para cobrar».`, 'espera');
+    } else {
+      avisar(`Cobrado con ${etiquetaMetodo(metodo).toLowerCase()}: ${texto}`, 'ok');
+    }
+    setHecho({ texto, tel: telLimpio.length >= 9 ? telLimpio : '' });
+    setItems([]);
+    setTel('');
+    setNombre('');
+    setConCliente(false);
+    if (activos.length !== 1) setBarbero('');
+    alListo();
+  }
+
+  return (
+    <section className="card ticket" aria-label="Cobrar ticket">
+      <div className="card-head">
+        <h3><Receipt size={17} style={{ verticalAlign: -3 }} /> Cobrar ticket</h3>
+        <button type="button" className="q-icon" aria-label="Cerrar" onClick={alCerrar} disabled={enviando}>
+          <X size={16} />
+        </button>
+      </div>
+
+      {hecho && (
+        <div className="ticket-hecho" role="status">
+          <span>Último: <b>{hecho.texto}</b></span>
+          {hecho.tel && (
+            <Link className="btn btn-ghost btn-sm" href={`/panel/fideliza/caja?q=${hecho.tel.slice(-9)}`}>
+              <Gift size={14} /> Sumar a su tarjeta
+            </Link>
+          )}
+        </div>
+      )}
+
+      <div className="ticket-cuerpo">
+        {activos.length > 0 ? (
+          <div className="ticket-paso">
+            <span className="ticket-rotulo">1 · ¿Quién lo atendió?</span>
+            <div className="ticket-chips" role="radiogroup" aria-label="Barbero">
+              {activos.map((t) => (
+                <button key={t.id} type="button" role="radio" aria-checked={barbero === t.id}
+                  className={`ticket-chip${barbero === t.id ? ' on' : ''}`} onClick={() => setBarbero(t.id)}>
+                  {t.name}
+                </button>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <p className="ticket-nota">
+            Todavía no hay barberos en <Link href="/panel/equipo">Equipo</Link>: el ticket se cobra igual, pero no suma a la
+            comisión de nadie.
+          </p>
+        )}
+
+        <div className="ticket-paso">
+          <span className="ticket-rotulo">{activos.length > 0 ? '2 · ' : ''}¿Qué se hizo? <small>toca para sumar</small></span>
+          <div className="ticket-chips">
+            {servicios.map((c) => (
+              <button key={c.id} type="button" className={`ticket-chip ticket-chip--item${cuenta(c.id) ? ' on' : ''}`}
+                onClick={() => setItems((l) => [...l, c.id])}>
+                <span>{c.name}</span>
+                <small>{c.price != null ? soles(Number(c.price)) : '—'}</small>
+                {cuenta(c.id) > 1 && <i className="ticket-x">×{cuenta(c.id)}</i>}
+              </button>
+            ))}
+          </div>
+          {productos.length > 0 && (
+            <details className="ticket-productos">
+              <summary>Productos ({productos.length})</summary>
+              <div className="ticket-chips">
+                {productos.map((c) => (
+                  <button key={c.id} type="button" className={`ticket-chip ticket-chip--item${cuenta(c.id) ? ' on' : ''}`}
+                    disabled={c.stock != null && c.stock <= cuenta(c.id)}
+                    onClick={() => setItems((l) => [...l, c.id])}>
+                    <span>{c.name}</span>
+                    <small>{c.price != null ? soles(Number(c.price)) : '—'}{c.stock != null ? ` · quedan ${c.stock}` : ''}</small>
+                    {cuenta(c.id) > 1 && <i className="ticket-x">×{cuenta(c.id)}</i>}
+                  </button>
+                ))}
+              </div>
+            </details>
+          )}
+          {servicios.length === 0 && productos.length === 0 && (
+            <p className="ticket-nota">No hay servicios activos en el <Link href="/panel/catalogo">Catálogo</Link>.</p>
+          )}
+        </div>
+
+        {pideSede && (
+          <div className="ticket-paso">
+            <span className="ticket-rotulo">¿En qué sede?</span>
+            <div className="ticket-chips" role="radiogroup" aria-label="Sede">
+              {sedes.map((s) => (
+                <button key={s.nombre} type="button" role="radio" aria-checked={sede === s.nombre}
+                  className={`ticket-chip${sede === s.nombre ? ' on' : ''}`} onClick={() => setSede(s.nombre)}>
+                  {s.nombre.split(' · ')[0]}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <div className="ticket-paso">
+          {conCliente ? (
+            <div className="ticket-cliente">
+              <input className="input" inputMode="tel" placeholder="Celular · 987654321" value={tel} onChange={(e) => setTel(e.target.value)}
+                aria-label="Celular del cliente" autoComplete="off" />
+              <input className="input" placeholder="Nombre" value={nombre} onChange={(e) => setNombre(e.target.value)}
+                aria-label="Nombre del cliente" autoComplete="off" />
+            </div>
+          ) : (
+            <button type="button" className="btn btn-ghost btn-sm" onClick={() => setConCliente(true)}>
+              <UserPlus size={14} /> Cliente (opcional, para su tarjeta)
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* El ticket, como lo tiene el cliente en la mano, y el botón de cobrar debajo. */}
+      <div className="ticket-pie">
+        {items.length > 0 && (
+          <ul className="ticket-lineas">
+            {[...new Set(items)].map((id) => (
+              <li key={id}>
+                <span>{cuenta(id) > 1 ? `${cuenta(id)} × ` : ''}{porId.get(id)?.name}</span>
+                <b>{soles(Number(porId.get(id)?.price ?? 0) * cuenta(id))}</b>
+                <button type="button" className="q-icon" aria-label={`Quitar ${porId.get(id)?.name}`} onClick={() => quitarUno(id)}>
+                  <Minus size={14} />
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+        <div className="ticket-total">
+          <span>Total</span>
+          <b>{soles(total)}</b>
+        </div>
+        {falta ? (
+          <p className="ticket-falta">Falta: {falta.charAt(0).toLowerCase() + falta.slice(1)}</p>
+        ) : (
+          <BotonCobrar grande ocupado={enviando} etiqueta={enviando ? 'Cobrando…' : `Cobrar ${soles(total)}`} alCobrar={(m, f) => void cobrar(m, f)} />
+        )}
+      </div>
+    </section>
+  );
+}
