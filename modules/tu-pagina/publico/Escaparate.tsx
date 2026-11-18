@@ -300,7 +300,8 @@ export default function Escaparate({ esc: todo, slug, whatsapp, puedePedir, pued
         <span>01 / SERVICIO</span>
         <label htmlFor="tp-servicio-inline">Tu servicio</label>
         <select id="tp-servicio-inline" value={servicioInline.id} onChange={(e) => setServicioInlineId(e.target.value)}>
-          {esc.items.map((servicio) => <option key={servicio.id} value={servicio.id}>{servicio.nombre}</option>)}
+          {/* Solo lo que se reserva: los productos no van en «Tu servicio». */}
+          {esc.items.filter((i) => i.tipo === 'cita').map((servicio) => <option key={servicio.id} value={servicio.id}>{servicio.nombre}</option>)}
         </select>
       </div>
       <div className="tp-luxury-reserva-real__panel">
@@ -804,14 +805,17 @@ function ElegirSede({ sedes, valor, alElegir }: { sedes: Sede[]; valor: string; 
 }
 
 /** Elegir viendo la cara. Quien no tiene foto sale con su inicial, en el mismo círculo. */
-function ElegirProfesional({ equipo, valor, alElegir, esBarberia }: {
+function ElegirProfesional({ equipo, valor, alElegir, esBarberia, paso }: {
   equipo: Datos['agenda']['equipo'];
   valor: string;
   alElegir: (id: string) => void;
   esBarberia: boolean;
+  /** En la plantilla luxury, su número de paso («02 / BARBERO»). */
+  paso?: string;
 }) {
   return (
     <div className="tp-campo">
+      {paso && <span className="tp-luxury-reserva-real__paso">{paso}</span>}
       <label id="tp-pro-l">{esBarberia ? 'Elige a tu barbero' : 'Elige a tu profesional'}</label>
       <div className="tp-equipo" role="group" aria-labelledby="tp-pro-l">
         <button type="button" className="tp-persona" aria-pressed={!valor} onClick={() => alElegir('')}>
@@ -993,11 +997,12 @@ function Reservar({ item, esc, slug, alTerminar, presentacion, esBarberia = fals
   return (
     <Detalle item={item}>
       {eligeSede && <ElegirSede sedes={sedes} valor={sede} alElegir={(x) => { setSede(x); setFallo(''); }} />}
-      {esc.pideProfesional && <ElegirProfesional equipo={esc.agenda.equipo} valor={profesional} alElegir={setProfesional} esBarberia={esBarberia} />}
+      {esc.pideProfesional && <ElegirProfesional equipo={esc.agenda.equipo} valor={profesional} alElegir={setProfesional} esBarberia={esBarberia}
+        paso={presentacion === 'inline' ? `02 / ${esBarberia ? 'BARBERO' : 'PROFESIONAL'}` : undefined} />}
       {faltaSede && <p className="tp-vacio tp-falta-sede">Elige primero la sede: cada una tiene sus propios horarios.</p>}
       {!faltaSede && <>
       <div className="tp-campo">
-        {presentacion === 'inline' && <span className="tp-luxury-reserva-real__paso">02 / DÍA</span>}
+        {presentacion === 'inline' && <span className="tp-luxury-reserva-real__paso">{esc.pideProfesional ? '03' : '02'} / DÍA</span>}
         <label id="tp-dia-l">{presentacion === 'inline' ? 'Elige un día' : 'Día'}</label>
         <div className="tp-dias" role="group" aria-labelledby="tp-dia-l">
           {dias.map((f) => {
@@ -1012,7 +1017,7 @@ function Reservar({ item, esc, slug, alTerminar, presentacion, esBarberia = fals
         </div>
       </div>
       <div className="tp-campo">
-        {presentacion === 'inline' && <span className="tp-luxury-reserva-real__paso">03 / HORA</span>}
+        {presentacion === 'inline' && <span className="tp-luxury-reserva-real__paso">{esc.pideProfesional ? '04' : '03'} / HORA</span>}
         <label id="tp-hora-l">{presentacion === 'inline' ? 'Escoge tu horario' : 'Hora'}</label>
         {horas.length > HORAS_SIN_SELECTOR ? (
           // Muchas horas: por franjas, como los meses de un calendario (key: vuelve a empezar al cambiar de día).

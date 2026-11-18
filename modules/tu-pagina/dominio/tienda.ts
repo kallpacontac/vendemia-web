@@ -49,6 +49,8 @@ export interface DatosCrudos {
     vigencia_meses: number | null;
     promo_vigencia: string | null;
     familia: string | null;
+    /** catalog.tipo (tu-pagina 0033): 'producto' o ''. Sin la 0033, no viene. */
+    tipo?: string | null;
   }[];
   media: { catalog_id: string; url: string; tipo: 'image' | 'video'; principal: number | null }[];
   variantes: { id: string; catalog_id: string; etiqueta: string; atributos: string | null; stock: number | null }[];
@@ -243,11 +245,19 @@ export function armarEscaparate(c: DatosCrudos, como?: ComoSeOfrece | null): Esc
     fotosDe.set(m.catalog_id, [...(fotosDe.get(m.catalog_id) ?? []), url]);
   }
 
+  // Un producto del catálogo (catalog.tipo, 0033) no se reserva: en una página de solo Agenda no
+  // sale (The 24/7, 18-nov: «Tu servicio» ofrecía cervezas y ceras); con «Las dos», va a la tienda
+  // salvo que se marque otra cosa en Mi página.
+  const esProducto = (k: { tipo?: string | null }) => k.tipo === 'producto';
+  const soloAgenda = Boolean(como?.reservar) && !como?.catalogo;
   const items: Item[] = c.catalogo
     .filter((k) => vigenteHoy(k.promo_vigencia, c.hoy))
+    .filter((k) => !(soloAgenda && esProducto(k)))
     .map((k) => {
       const franjas = json<FranjaRecurrente[]>(k.grupos, []);
-      const tipo = tipoDe(modo, { conGrupos: franjas.length > 0, duracion: k.duracion }, como, k.id);
+      const tipo = esProducto(k) && como?.catalogo && !como?.tipos?.[k.id]
+        ? 'producto'
+        : tipoDe(modo, { conGrupos: franjas.length > 0, duracion: k.duracion }, como, k.id);
       const quedanDe = (stock: number | null, variante: string) =>
         stock === null || stock === undefined ? null : Math.max(0, stock - (c.apartado[`${k.id}|${variante}`] ?? 0));
       const opciones = c.variantes
