@@ -30,3 +30,10 @@
 /* Configuración: tres opciones en vez de dos. */
 .opciones--3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 @media (max-width: 720px) { .opciones--3 { grid-template-columns: 1fr; } }
+
+/* «Registrar sin foto / con foto» a lo ancho, no pegado a la derecha (The 24/7, 18-nov: «que no
+   tenga que buscarlo»). La X de cancelar se queda a su lado, pequeña. */
+.fp-cobrar { max-width: none; margin-left: 0; justify-content: stretch; }
+.fp-cobrar__titulo { text-align: center; }
+.fp-cobrar > .btn:not([aria-label="Cancelar"]) { flex: 1 1 auto; min-height: 50px; font-size: 15.5px; justify-content: center; }
+.fp-cobrar > .btn[aria-label="Cancelar"] { min-height: 50px; min-width: 56px; justify-content: center; }

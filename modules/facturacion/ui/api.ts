@@ -188,7 +188,7 @@ export async function imprimir(c: ComprobanteGuardado, ancho: 58 | 80) {
 export function textoWhatsApp(c: ComprobanteGuardado): string {
   const nombre = c.tipo === 'factura' ? 'factura electrónica' : 'boleta electrónica';
   const lineas = [
-    `¡Gracias por tu visita a ${c.emisor.nombreComercial || c.emisor.razonSocial}! ✂️`,
+    `¡Gracias por tu visita a ${c.emisor.nombreComercial || c.emisor.razonSocial}!`,
     `Te dejamos tu ${nombre} ${c.serie}-${c.numero} por S/ ${c.totales.total.toFixed(2)}:`,
   ];
   if (compartible(c)) lineas.push(enlaceComprobante(c));
@@ -248,4 +248,46 @@ export function imprimirNota(n: NotaVenta) {
   w.document.close();
   w.focus();
   setTimeout(() => w.print(), 300);
+}
+
+/* ── La imagen del ticket por WhatsApp (18-nov, The 24/7: «sigue mandando solo texto») ──────
+ * wa.me solo lleva texto. Para mandar la IMAGEN hay que compartir el archivo con la hoja de
+ * compartir del sistema (Android: WhatsApp → el chat), con el texto de pie. La imagen es la de
+ * opengraph-image (la misma que WhatsApp usaría de vista previa) y se baja ANTES del toque:
+ * compartir tiene que ir pegado al clic. */
+
+const imagenes = new Map<string, Promise<File | null>>();
+
+/** Baja (una vez) la imagen del ticket de /nota/<id> o /comprobante/<id>. */
+export function precargarImagen(ruta: string, archivo: string): Promise<File | null> {
+  let p = imagenes.get(ruta);
+  if (!p) {
+    p = fetch(`${ruta}/opengraph-image`)
+      .then((r) => (r.ok ? r.blob() : null))
+      .then((b) => (b ? new File([b], `${archivo}.png`, { type: 'image/png' }) : null))
+      .catch(() => null);
+    imagenes.set(ruta, p);
+  }
+  return p;
+}
+
+/** ¿Este navegador comparte archivos? (Android sí; la computadora casi nunca.) */
+export function compartirArchivos(): boolean {
+  if (typeof navigator === 'undefined' || typeof navigator.share !== 'function' || typeof navigator.canShare !== 'function') return false;
+  try {
+    return navigator.canShare({ files: [new File([new Blob(['x'])], 'x.png', { type: 'image/png' })] });
+  } catch {
+    return false;
+  }
+}
+
+/** Comparte la imagen con su texto. 'no' = no se pudo (sin soporte o sin imagen): usar wa.me. */
+export async function compartirImagen(archivo: File | null, texto: string): Promise<'ok' | 'cancelado' | 'no'> {
+  if (!archivo || !compartirArchivos() || !navigator.canShare({ files: [archivo] })) return 'no';
+  try {
+    await navigator.share({ files: [archivo], text: texto });
+    return 'ok';
+  } catch (e) {
+    return (e as Error).name === 'AbortError' ? 'cancelado' : 'no';
+  }
 }

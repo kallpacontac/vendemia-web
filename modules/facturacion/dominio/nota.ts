@@ -90,7 +90,7 @@ ${n.atendio ? `<div>Atendió: ${esc(n.atendio)}</div>` : ''}
 export function textoWhatsAppNota(n: NotaVenta, enlace: string): string {
   const quien = n.cliente ? `Hola ${n.cliente.split(' ')[0]}, ¡gracias` : '¡Gracias';
   return [
-    `${quien} por tu visita a ${n.negocio.nombre || n.negocio.razon_social}! ✂️`,
+    `${quien} por tu visita a ${n.negocio.nombre || n.negocio.razon_social}!`,
     `Te dejamos tu nota de venta ${numeroNota(n)} por S/ ${n.total.toFixed(2)}:`,
     enlace,
   ].join('\n');

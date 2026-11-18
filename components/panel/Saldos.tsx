@@ -126,6 +126,7 @@ export function RegistrarPago({
   appointmentId,
   alCerrar,
   alGuardar,
+  alPagado,
 }: {
   leadId: string;
   /** El importe con el que arranca: lo que falta. */
@@ -133,6 +134,8 @@ export function RegistrarPago({
   appointmentId?: string;
   alCerrar: () => void;
   alGuardar: () => void;
+  /** Registrado: cuánto y con qué (la Caja ofrece la nota de venta o la boleta de ese pago). */
+  alPagado?: (monto: number) => void;
 }) {
   const comando = useComando();
   const avisar = useAvisar();
@@ -176,7 +179,10 @@ export function RegistrarPago({
       alGuardar,
     );
     setEnviando(false);
-    if (r !== undefined) alCerrar();
+    if (r !== undefined) {
+      alPagado?.(Math.round(valor * 100) / 100);
+      alCerrar();
+    }
   }
 
   return (

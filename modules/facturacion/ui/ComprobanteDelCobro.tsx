@@ -13,8 +13,11 @@
  */
 import { useEffect, useState } from 'react';
 import { FileText, Loader2, MessageCircle, Printer, ReceiptText } from 'lucide-react';
-import { numeroNota, type NotaVenta } from '../dominio/nota';
-import { ajustesParaCobro, emitirNota, enlaceWhatsAppNota, imprimirNota, type Ajustes } from './api';
+import { numeroNota, textoWhatsAppNota, type NotaVenta } from '../dominio/nota';
+import {
+  ajustesParaCobro, compartirArchivos, compartirImagen, emitirNota, enlaceNota, enlaceWhatsAppNota, imprimirNota,
+  precargarImagen, type Ajustes,
+} from './api';
 import BoletaDelCobro, { type LineaCobro } from './BoletaDelCobro';
 import '../estilos/facturacion.css';
 
@@ -38,6 +41,12 @@ export default function ComprobanteDelCobro({
   const [nota, setNota] = useState<NotaVenta | null>(null);
   const [enVuelo, setEnVuelo] = useState(false);
   const [error, setError] = useState('');
+  const [conImagen, setConImagen] = useState(false);
+  useEffect(() => setConImagen(compartirArchivos()), []);
+  // La imagen del ticket se baja en cuanto hay nota: al tocar WhatsApp ya está lista.
+  useEffect(() => {
+    if (nota) void precargarImagen(`/nota/${nota.id}`, numeroNota(nota));
+  }, [nota]);
 
   useEffect(() => {
     let vivo = true;
@@ -76,6 +85,14 @@ export default function ComprobanteDelCobro({
     }
   }
 
+  async function mandarImagen() {
+    if (!nota) return;
+    const texto = textoWhatsAppNota(nota, enlaceNota(nota));
+    const r = await compartirImagen(await precargarImagen(`/nota/${nota.id}`, numeroNota(nota)), texto);
+    // Sin poder compartir la imagen: el chat con el texto y el enlace.
+    if (r === 'no') window.open(enlaceWhatsAppNota(nota, telefono), '_blank', 'noopener');
+  }
+
   const imprimir = () => {
     if (!nota) return;
     try {
@@ -110,9 +127,21 @@ export default function ComprobanteDelCobro({
             <button type="button" className="btn btn-ghost btn-sm" onClick={imprimir}>
               <Printer size={14} /> Imprimir
             </button>
-            <a className="btn btn-primary btn-sm" href={enlaceWhatsAppNota(nota, telefono)} target="_blank" rel="noopener noreferrer">
-              <MessageCircle size={14} /> WhatsApp
-            </a>
+            {conImagen ? (
+              <button type="button" className="btn btn-primary btn-sm" onClick={() => void mandarImagen()}>
+                <MessageCircle size={14} /> WhatsApp con imagen
+              </button>
+            ) : (
+              <a className="btn btn-primary btn-sm" href={enlaceWhatsAppNota(nota, telefono)} target="_blank" rel="noopener noreferrer">
+                <MessageCircle size={14} /> WhatsApp
+              </a>
+            )}
+            {/* El número que no está en los contactos: abrir su chat (luego se le comparte la imagen). */}
+            {conImagen && (telefono ?? '').replace(/\D/g, '').length >= 9 && (
+              <a className="btn btn-ghost btn-sm" href={enlaceWhatsAppNota(nota, telefono)} target="_blank" rel="noopener noreferrer">
+                Abrir chat del cliente
+              </a>
+            )}
           </span>
         </>
       ))}

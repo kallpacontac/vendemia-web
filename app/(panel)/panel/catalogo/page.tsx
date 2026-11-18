@@ -397,7 +397,7 @@ export default function Catalogo() {
       <div className="wrap">
         <Topbar titulo="Catálogo" sub={items.length ? `${activos} de ${items.length} visibles para Mia` : 'Lo único que Mia puede vender'}
           accionesTitulo={tab === 'catalogo' ? <button type="button" className="btn btn-primary catalogo-add" aria-expanded={creando} onClick={() => setCreando((v) => !v)}>
-            <Plus size={17} /> Añadir <span className="catalogo-add__noun">{v.item}</span>
+            <Plus size={17} /> Añadir
           </button> : undefined} />
 
         {/*

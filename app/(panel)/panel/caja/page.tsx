@@ -34,7 +34,7 @@
  * adelantos incluidos (categoría «adelanto»), en vez de un libro de préstamos
  * aparte.
  */
-import { Suspense, useEffect, useMemo, useState } from 'react';
+import { Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { QrCode, Receipt, Wallet } from 'lucide-react';
@@ -78,6 +78,7 @@ import type { ResultadoMarcarPagado } from '@/lib/supabase/commands';
 import type { LineaCobro } from '@/modules/facturacion/ui/BoletaDelCobro';
 import ComprobanteDelCobro from '@/modules/facturacion/ui/ComprobanteDelCobro';
 import { supabase } from '@/lib/supabase/client';
+import { guiarA } from '@/lib/panel/guiar';
 import { demoActivo } from '@/lib/panel/demo';
 
 /*
@@ -297,10 +298,34 @@ function Caja() {
     [trabajadores],
   );
 
+  /**
+   * Después de cobrar o de registrar un pago: la tarjeta «Último cobro» con Nota de venta /
+   * Boleta electrónica, en Cobrar Y en Cierre del día, y la vista baja hasta ella (18-nov, The 24/7:
+   * «coloco Guardar y no me aparece nada para enviar el comprobante, nota de venta nada»).
+   */
+  const refCobrada = useRef<HTMLElement>(null);
+  async function ofrecerComprobante(c: Cita, importe: number) {
+    if (!(importe > 0)) return;
+    const cli = c.lead_id ? (await clientesDe(companyId ?? '', [c.lead_id]))[0] : undefined;
+    const servicio = c.service || 'Servicio';
+    setCobrada({
+      id: c.id,
+      texto: `${soles(importe)} · ${servicio}`,
+      lineas: [{ descripcion: servicio, cantidad: 1, precio: importe }],
+      tel: (cli?.phone ?? '').replace(/\D/g, '').slice(-9),
+      cliente: cli?.name ?? '',
+      atendio: c.employee_id ? (nombrePorBarbero.get(c.employee_id) ?? '') : '',
+    });
+    window.setTimeout(() => guiarA(refCobrada.current), 60);
+  }
+
   async function cobrar(c: Cita, metodo: MetodoPago, foto?: FotoPago) {
     setEnVuelo(c.id);
-    // Antes de releer: después del cobro la fila ya no está en la cola.
-    const importe = calculo?.listos.find((f) => f.cita.id === c.id)?.importe ?? 0;
+    // Antes de releer: después del cobro la fila ya no está en la cola. La de «Listos» o la de
+    // «Esperando pago» (antes solo se miraba la cola, y en Esperando pago salía 0: sin comprobante).
+    const importe = calculo?.listos.find((f) => f.cita.id === c.id)?.importe
+      ?? calculo?.esperando.find((f) => f.cita.id === c.id)?.importe
+      ?? 0;
     const r = await comando<ResultadoMarcarPagado>(
       'marcar_pagado',
       // La foto del pago, si el negocio la usa (datos 0010): Postgres la vuelve a revisar.
@@ -319,18 +344,7 @@ function Caja() {
     // El celular, solo de ESTE cliente y solo al cobrarlo: para su boleta por WhatsApp y su sello.
     const cli = r && c.lead_id ? (await clientesDe(companyId ?? '', [c.lead_id]))[0] : undefined;
     const tel = cli?.phone ?? '';
-    if (r && importe > 0) {
-      // Una línea: el servicio por lo cobrado (con lo que se le sumó). Con el botón se puede desglosar.
-      const servicio = c.service || 'Servicio';
-      setCobrada({
-        id: c.id,
-        texto: `${soles(importe)} · ${servicio}`,
-        lineas: [{ descripcion: servicio, cantidad: 1, precio: importe }],
-        tel: tel.replace(/\D/g, '').slice(-9),
-        cliente: cli?.name ?? '',
-        atendio: c.employee_id ? (nombrePorBarbero.get(c.employee_id) ?? '') : '',
-      });
-    }
+    if (r) await ofrecerComprobante(c, importe);
     // La tarjeta de fidelidad, sola: si su celular tiene tarjeta, su sello (una vez por cita).
     if (r && companyId) {
       const total = Number(datos?.movimientos.find((m) => m.fuente === 'appointment' && m.movimiento_id === c.id)?.importe ?? 0);
@@ -386,8 +400,8 @@ function Caja() {
           />
         )}
 
-        {!cierre && cobrada && companyId && (
-          <section className="card caja-boleta" aria-label="Comprobante del último cobro">
+        {cobrada && companyId && (
+          <section ref={refCobrada} className="card caja-boleta" aria-label="Comprobante del último cobro">
             <span className="muted">Último cobro: <b>{cobrada.texto}</b></span>
             <ComprobanteDelCobro companyId={companyId} refCobro={{ tipo: 'cita', id: cobrada.id }} lineas={cobrada.lineas} telefono={cobrada.tel}
               cliente={cobrada.cliente} atendio={cobrada.atendio} />
@@ -466,6 +480,7 @@ function Caja() {
                             sugerido={pagos ? pagos.saldo : importe}
                             alCerrar={() => setPagando(null)}
                             alGuardar={releer}
+                            alPagado={(m) => void ofrecerComprobante(cita, m)}
                           />
                         </div>
                       )}
@@ -601,6 +616,7 @@ function Caja() {
                       sugerido={importe}
                       alCerrar={() => setPagando(null)}
                       alGuardar={releer}
+                      alPagado={(m) => void ofrecerComprobante(cita, m)}
                     />
                   </div>
                 )}

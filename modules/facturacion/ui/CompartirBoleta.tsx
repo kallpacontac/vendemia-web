@@ -9,7 +9,7 @@
 import { useEffect, useState } from 'react';
 import { Check, Link2, MessageCircle, Printer, Share2 } from 'lucide-react';
 import type { ComprobanteGuardado } from '../dominio/tipos';
-import { compartible, enlaceComprobante, enlaceWhatsApp, imprimir, textoWhatsApp } from './api';
+import { compartible, compartirArchivos, compartirImagen, enlaceComprobante, enlaceWhatsApp, imprimir, precargarImagen, textoWhatsApp } from './api';
 
 export default function CompartirBoleta({
   c,
@@ -29,6 +29,14 @@ export default function CompartirBoleta({
   const [puedeCompartir, setPuedeCompartir] = useState(false);
   const [copiado, setCopiado] = useState(false);
   useEffect(() => setPuedeCompartir(typeof navigator !== 'undefined' && typeof navigator.share === 'function'), []);
+  // Con imagen (Android): la del ticket, bajada antes del toque (api.ts, precargarImagen).
+  const [conImagen, setConImagen] = useState(false);
+  useEffect(() => setConImagen(compartirArchivos()), []);
+  const ruta = `/comprobante/${c.id}`;
+  const archivo = `${c.serie}-${c.numero}`;
+  useEffect(() => {
+    if (conImagen && compartible(c)) void precargarImagen(ruta, archivo);
+  }, [conImagen, c, ruta, archivo]);
 
   if (!compartible(c)) return null;
   const nombre = `${c.tipo === 'factura' ? 'Factura' : 'Boleta'} ${c.serie}-${c.numero}`;
@@ -41,6 +49,11 @@ export default function CompartirBoleta({
     }
   };
   const compartir = async () => {
+    // Primero con la IMAGEN del ticket; si no se puede, el texto con el enlace.
+    if (conImagen) {
+      const r = await compartirImagen(await precargarImagen(ruta, archivo), textoWhatsApp(c));
+      if (r !== 'no') return;
+    }
     try {
       await navigator.share({ title: nombre, text: textoWhatsApp(c) });
     } catch {
@@ -70,9 +83,9 @@ export default function CompartirBoleta({
         {!compacto && ' WhatsApp'}
       </a>
       {puedeCompartir ? (
-        <button type="button" className="btn btn-ghost btn-sm" onClick={compartir} title="Compartir">
+        <button type="button" className={`btn ${conImagen ? 'btn-primary' : 'btn-ghost'} btn-sm`} onClick={compartir} title={conImagen ? 'WhatsApp con la imagen de la boleta' : 'Compartir'}>
           <Share2 size={14} />
-          {!compacto && ' Compartir'}
+          {!compacto && (conImagen ? ' WhatsApp con imagen' : ' Compartir')}
         </button>
       ) : (
         <button type="button" className="btn btn-ghost btn-sm" onClick={copiar} title="Copiar el enlace de la boleta">

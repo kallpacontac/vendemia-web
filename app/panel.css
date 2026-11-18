@@ -2557,3 +2557,27 @@ nav.chip-tabs[aria-label="Caja"] a{flex-shrink:0;white-space:nowrap}
 .aviso-quien .btn{min-height:44px}
 .aviso-boton{width:100%;min-height:52px;font-size:16px;justify-content:center}
 .aviso-acciones{display:grid;gap:8px}
+
+/* Equipo › documentos del empleado (DocumentosEmpleado). */
+.emp-docs{display:grid;gap:8px;margin-top:12px}
+.emp-doc{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;border:1px solid var(--line);border-radius:14px;background:var(--bg-card)}
+.emp-doc__que{display:inline-flex;align-items:center;gap:8px;min-width:0}
+.emp-doc__que svg{color:var(--brand-txt)}
+.emp-doc__que small{font-size:12px}
+.emp-doc__ok{color:#16A34A;font-weight:700}
+.emp-doc__acciones{display:inline-flex;align-items:center;gap:8px}
+.emp-doc__acciones .btn{min-height:44px}
+@media (max-width:520px){.emp-doc__acciones{width:100%}.emp-doc__acciones .btn{flex:1;justify-content:center}}
+
+/* Cobrar ticket › «¿Quién lo atendió?»: los barberos grandes, repartidos a lo ancho (el cajero los encuentra). */
+.ticket-paso .ticket-chips[aria-label="Barbero"]{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+.ticket-paso .ticket-chips[aria-label="Barbero"] .ticket-chip{min-height:64px;font-size:18px;font-weight:800;justify-content:center;text-align:center;border-radius:16px}
+@media (max-width:620px){.ticket-paso .ticket-chips[aria-label="Barbero"]{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+/* Los pasos con aire: el resaltado va DENTRO del paso (padding), no pegado al borde de la tarjeta. */
+.ticket-paso,.gc-campo{padding:12px 14px;margin:0 -2px}
+.ticket-paso--ahora,.gc-campo--ahora{box-shadow:none;background:var(--brand-soft,#FFEFE7)}
+.ticket-paso--ahora.guia-pulso{animation:guia-pulso 1.3s ease-out}
+.ticket-cuerpo{padding:8px 20px 16px}
+.ticket-pie{padding:16px 22px 20px}
+.gc{padding:20px 22px !important}

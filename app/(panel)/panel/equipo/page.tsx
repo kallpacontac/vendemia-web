@@ -52,6 +52,7 @@ import Topbar from '@/components/panel/Topbar';
 import AvisarCliente from '@/components/panel/AvisarCliente';
 import { useSesion } from '@/components/panel/Sesion';
 import { useSedes } from '@/components/panel/SelectorSede';
+import DocumentosEmpleado from '@/components/panel/DocumentosEmpleado';
 import { soloLeeLoDelDueno } from '@/lib/panel/roles';
 import { useAvisar, useComando } from '@/components/panel/Avisos';
 import { useCargar } from '@/components/panel/useCargar';
@@ -435,6 +436,9 @@ interface DatosEmpleado {
   telefono: string;
   dni: string;
   sedes: string[];
+  /** Rutas en el cubo privado «empleados-docs» (datos 0019). '' = sin subir. */
+  dni_foto?: string;
+  cv?: string;
 }
 const SIN_DATOS: DatosEmpleado = { telefono: '', dni: '', sedes: [] };
 const sedeCortaDe = (n: string) => n.split(' · ')[0];
@@ -703,6 +707,9 @@ function Ficha({
                 {sedesNegocio.length > 1 ? (sedesSel.length ? 'Solo en las sedes marcadas. ' : 'Sin marcar ninguna sede = trabaja en todas. ') : ''}
                 Teléfono y DNI solo los ven el dueño y el administrador.
               </small>
+              {/* La foto del DNI y el CV (datos 0019): privados, se suben al momento. */}
+              <DocumentosEmpleado companyId={t.company_id} employeeId={t.id} dniFoto={datos.dni_foto ?? ''} cv={datos.cv ?? ''}
+                alCambiar={() => alCambiarDatos?.()} />
             </div>
           )}
 
