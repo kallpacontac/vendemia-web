@@ -11,7 +11,7 @@
  *   /panel/comprobantes?nuevo=boleta&concepto=Corte&monto=35&ref=cita:abc123
  */
 import { useEffect, useState } from 'react';
-import { FilePlus2, MessageCircle, Printer, RefreshCw, Settings, Ban, ExternalLink } from 'lucide-react';
+import { FilePlus2, RefreshCw, Settings, Ban, ExternalLink } from 'lucide-react';
 import Link from 'next/link';
 import SubnavCaja from '@/components/panel/SubnavCaja';
 import Topbar from '@/components/panel/Topbar';
@@ -23,7 +23,8 @@ import { esAppointmentFamily } from '@/lib/panel/modo';
 import { INFO_PROVEEDOR } from '../dominio/proveedoresInfo';
 import { NOMBRE_DOC_CLIENTE } from '../dominio/catalogos';
 import type { ComprobanteGuardado, TipoComprobante } from '../dominio/tipos';
-import { actuar, imprimir, leerAjustes, leerComprobantes, SinTablas, soles2, textoWhatsApp } from './api';
+import { actuar, leerAjustes, leerComprobantes, SinTablas, soles2 } from './api';
+import CompartirBoleta from './CompartirBoleta';
 import NuevoComprobante, { type Prellenado } from './NuevoComprobante';
 import { EstadoPill } from './EstadoPill';
 import '../estilos/facturacion.css';
@@ -118,14 +119,6 @@ export default function PanelComprobantes() {
       avisar((e as Error).message, 'error');
     } finally {
       setOcupado(null);
-    }
-  }
-
-  async function imprimirUno(c: ComprobanteGuardado) {
-    try {
-      await imprimir(c, ajustes?.ticket_ancho ?? 80);
-    } catch (e) {
-      avisar((e as Error).message, 'error');
     }
   }
 
@@ -235,22 +228,7 @@ export default function PanelComprobantes() {
                     </div>
                     <div className="fe-item__monto">{soles2(c.totales.total)}</div>
                     <div className="fe-item__acciones">
-                      {['aceptado', 'anulado', 'anulando', 'pendiente'].includes(c.estado) && (
-                        <button className="btn btn-ghost btn-sm" onClick={() => imprimirUno(c)} title="Imprimir">
-                          <Printer size={14} />
-                        </button>
-                      )}
-                      {c.estado === 'aceptado' && (
-                        <a
-                          className="btn btn-ghost btn-sm"
-                          href={`https://wa.me/?text=${encodeURIComponent(textoWhatsApp(c))}`}
-                          target="_blank"
-                          rel="noopener"
-                          title="Enviar por WhatsApp"
-                        >
-                          <MessageCircle size={14} />
-                        </a>
-                      )}
+                      <CompartirBoleta c={c} ancho={ajustes?.ticket_ancho ?? 80} compacto alError={(m) => avisar(m, 'error')} />
                       {c.pdfUrl && (
                         <a className="btn btn-ghost btn-sm" href={c.pdfUrl} target="_blank" rel="noopener" title="PDF del proveedor">
                           <ExternalLink size={14} />

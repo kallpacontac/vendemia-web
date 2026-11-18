@@ -1,0 +1,58 @@
+/* «Pendientes» del panel principal (components/panel/Pendientes.tsx). */
+.pendientes {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 12px;
+  margin: 0 0 18px;
+}
+.pendiente {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-height: 72px;
+  padding: 14px 16px;
+  border-radius: var(--r-md, 16px);
+  border: 1px solid var(--line, #EAEAE6);
+  background: var(--bg-card, #fff);
+  color: var(--ink, #0A0A0A);
+  text-decoration: none;
+  transition: border-color .15s ease, transform .15s ease;
+}
+.pendiente:hover { border-color: currentColor; }
+.pendiente:focus-visible { outline: 3px solid var(--brand, #FF4900); outline-offset: 2px; }
+.pendiente__icono { flex: none; }
+.pendiente__texto { display: flex; flex-direction: column; gap: 3px; min-width: 0; flex: 1; }
+.pendiente__texto b { font-size: 15.5px; line-height: 1.25; }
+.pendiente__texto span { font-size: 13.5px; color: var(--ink-soft, #5C5C5C); }
+.pendiente__ir { flex: none; color: var(--ink-mute, #93938C); }
+
+/* Dinero sin confirmar o algo que falló: ámbar, como el aviso de «por verificar». */
+.pendiente--aviso { background: #FFF8E6; border-color: #F5DFA6; }
+.pendiente--aviso .pendiente__icono,
+.pendiente--aviso .pendiente__texto b { color: #8A5200; }
+/* Trabajo del día: el tono de la marca, suave. */
+.pendiente--tarea { background: var(--brand-soft, #FFEFE7); border-color: #FFD6C2; }
+.pendiente--tarea .pendiente__icono,
+.pendiente--tarea .pendiente__texto b { color: var(--brand-txt, #CC3A00); }
+
+@media (prefers-reduced-motion: reduce) { .pendiente { transition: none; } }
+@media (max-width: 520px) {
+  .pendientes { grid-template-columns: 1fr; gap: 8px; }
+}
+
+/* «Por pagar a tu equipo» en Comisiones (components/panel/CierresPorPagar.tsx). */
+.cierres { margin-bottom: 18px; }
+.cierres .card-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.cierres__vacio { margin: 6px 0 0; }
+.cierres__lista { list-style: none; margin: 8px 0 0; padding: 0; }
+.cierres__fila { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; padding: 12px 0; border-top: 1px solid var(--line, #EAEAE6); }
+.cierres__fila:first-child { border-top: 0; }
+.cierres__quien { display: flex; flex-direction: column; gap: 2px; flex: 1 1 200px; min-width: 0; }
+.cierres__monto { font-size: 17px; white-space: nowrap; }
+.cierres__monto--debe { color: #B42318; font-size: 14px; }
+.cierres__pagar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; flex-basis: 100%; }
+.cierres__pagar .filters { margin: 0; flex: 1 1 auto; }
+.cierres__hechos { margin-top: 10px; font-size: 13.5px; }
+.cierres__hechos summary { cursor: pointer; color: var(--ink-soft, #5C5C5C); padding: 6px 0; }
+.cierres__hechos ul { list-style: none; margin: 4px 0 0; padding: 0; }
+.cierres__hechos li { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px; padding: 6px 0; }

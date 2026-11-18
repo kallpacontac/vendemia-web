@@ -10,7 +10,7 @@ import { useState } from 'react';
 import { KeyRound, Save } from 'lucide-react';
 import { useAvisar } from '@/components/panel/Avisos';
 import { INFO_PROVEEDOR } from '../dominio/proveedoresInfo';
-import { erroresEmisor, rucValido, soloDigitos } from '../dominio/validar';
+import { erroresEmisor, rucValido, soloDigitos, TOPE_BOLETA_SIN_DOCUMENTO } from '../dominio/validar';
 import { PROVEEDORES, type IdProveedor } from '../dominio/tipos';
 import { guardarAjustes, tasaTexto, type Ajustes } from './api';
 
@@ -60,6 +60,7 @@ export default function AjustesFacturacion({
       provincia: a.provincia, distrito: a.distrito, serie_boleta: a.serie_boleta.toUpperCase(),
       serie_factura: a.serie_factura.toUpperCase(), igv_tipo: a.igv_tipo, igv_porcentaje: a.igv_porcentaje,
       leyenda_amazonia: a.igv_tipo === 'exonerado' ? a.leyenda_amazonia ?? '2001' : null, ticket_ancho: a.ticket_ancho,
+      al_cobrar: a.al_cobrar,
     };
     // Solo si lo cambió: así no se pisa lo que ya avanzó la serie.
     if (ultimos.boleta !== String(inicial.ultimo_boleta)) datos.ultimo_boleta = Number(ultimos.boleta) || 0;
@@ -279,6 +280,21 @@ export default function AjustesFacturacion({
             <option value={58}>58 mm</option>
           </select>
         </label>
+        <label>
+          <span className="field-label">Al cobrar en Caja</span>
+          <select className="select" value={a.al_cobrar} disabled={!esDueno}
+            onChange={(e) => poner('al_cobrar', e.target.value as Ajustes['al_cobrar'])}>
+            <option value="preguntar">Botón «Emitir boleta»</option>
+            <option value="automatico">Emitir la boleta sola</option>
+            <option value="no">Nada (la hago aquí)</option>
+          </select>
+        </label>
+        {a.al_cobrar === 'automatico' && (
+          <p className="full muted fe-ayuda">
+            Cada cobro de Caja saca su boleta sin documento, hasta S/{TOPE_BOLETA_SIN_DOCUMENTO}. Si pasa de eso, o el
+            cliente pide boleta con DNI o factura, se hace con el botón. Solo la emite el dueño o el administrador.
+          </p>
+        )}
       </div>
 
       {esDueno && (

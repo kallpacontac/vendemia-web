@@ -75,6 +75,8 @@ const ajustesZ = z.object({
   igv_porcentaje: z.number().positive().max(30),
   leyenda_amazonia: z.enum(['2001', '2002', 'ambas']).nullable(),
   ticket_ancho: z.union([z.literal(58), z.literal(80)]),
+  /** sql/0003: qué pasa al cobrar en Caja. Sin la 0003, solo vale el de siempre («preguntar»). */
+  al_cobrar: z.enum(['no', 'preguntar', 'automatico']).optional(),
   ultimo_boleta: z.number().int().min(0).optional(),
   ultimo_factura: z.number().int().min(0).optional(),
 });
@@ -210,12 +212,22 @@ async function guardarAjustes(jwt: string, p: Extract<Pedido, { accion: 'guardar
   }
   if (d.activo && info.real && token === '') throw new Problema('No se puede quitar el token y dejar las boletas activas.');
 
-  return rpc<Fila>(sb, 'factura_ajustes_guardar', {
+  const guardado = await rpc<Fila>(sb, 'factura_ajustes_guardar', {
     p_company: p.companyId,
     p_datos: d,
     p_token_cifrado: token,
     p_token_pista: pista,
   });
+  if (!d.al_cobrar || d.al_cobrar === guardado.al_cobrar) return guardado;
+  try {
+    await rpc(sb, 'factura_al_cobrar_guardar', { p_company: p.companyId, p_modo: d.al_cobrar });
+  } catch (e) {
+    const falta = e instanceof ErrorRpc && (e.code === 'PGRST202' || e.code === '42883' || /find the function/i.test(e.message));
+    if (!falta) throw e;
+    if (d.al_cobrar !== 'preguntar') throw new Problema('Para elegir qué pasa al cobrar falta instalar la SQL 0003 de boletas.');
+    return guardado;
+  }
+  return rpc<Fila>(sb, 'factura_ajustes_leer', { p_company: p.companyId });
 }
 
 async function emitir(jwt: string, p: Extract<Pedido, { accion: 'emitir' }>) {

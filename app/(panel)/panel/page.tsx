@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import Topbar from '@/components/panel/Topbar';
 import ResumenNegocio from '@/components/panel/ResumenNegocio';
+import Pendientes from '@/components/panel/Pendientes';
 import { useSesion } from '@/components/panel/Sesion';
 import { useCargar } from '@/components/panel/useCargar';
 import { useSondeo } from '@/components/panel/useSondeo';
@@ -149,6 +150,9 @@ export default function Dashboard() {
           </div>
           }
         />
+
+        {/* Lo que hay que hacer hoy (Pagos por verificar, por cobrar, boletas…). Sale solo si hay algo. */}
+        <Pendientes companyId={companyId} />
 
         {error && <div className="dashboard-error" role="alert">No se pudo actualizar el resumen. {datos ? 'Mostramos la última lectura disponible.' : 'Reintenta para consultar las cifras.'}<button type="button" onClick={releer}>Reintentar</button></div>}
 

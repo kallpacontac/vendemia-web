@@ -15,6 +15,10 @@ servidor/       La ruta POST /api/facturacion y el cifrado de tokens (AES-256-GC
 ui/             La pantalla, el formulario, los Ajustes y la impresión.
 sql/0001        Tablas y funciones. El número lo da Postgres; «aceptado» solo lo escribe el servidor.
 sql/0002        Amazonía «servicios y productos»: cada comprobante lleva la leyenda (2001/2002) de lo vendido.
+sql/0003        «Al cobrar» (no / preguntar / automático) y factura_publica para el enlace /comprobante/<id>.
+ui/BoletaDelCobro   La boleta de un cobro en Caja (Cobrar ticket, Listos para cobrar).
+ui/CompartirBoleta  WhatsApp (al celular del cliente), Compartir o Copiar enlace, Imprimir.
+ui/VerComprobante   La página pública del enlace: el ticket con QR y «Guardar en PDF».
 ```
 
 **Cambiar el proveedor de un local:** en Ajustes. No hay que tocar código. Cada proveedor guarda su propio token, y lo ya emitido se consulta y anula con el proveedor con el que salió.
@@ -25,14 +29,14 @@ sql/0002        Amazonía «servicios y productos»: cada comprobante lleva la l
 
 ## Para ponerlo en marcha
 
-1. Aplicar `sql/0001_facturacion.sql` (deshacer: `scripts/facturacion-0001-deshacer.sql`) y luego `sql/0002_servicios_y_productos.sql` (deshacer: `scripts/facturacion-0002-deshacer.sql`).
+1. Aplicar `sql/0001_facturacion.sql` (deshacer: `scripts/facturacion-0001-deshacer.sql`) luego `sql/0002_servicios_y_productos.sql` y `sql/0003_boleta_al_cobrar.sql` (cada una con su `scripts/facturacion-000N-deshacer.sql`).
 2. Servidor: usa `FACTURACION_CLAVE` (≥ 32 caracteres) para cifrar los tokens; si no está, usa `FIDELIZA_SERVER_KEY`, que ya existe. Rotar la que se usó obliga a volver a pegar los tokens.
 3. Probar con los sandbox: [docs/pruebas-facturacion.md](../../docs/pruebas-facturacion.md).
 
 ## Pruebas
 
 - `npm run test:facturacion`: IGV, letras, RUC y los JSON de cada proveedor.
-- `pruebas/sql_pglite.mjs`: la SQL contra Postgres (PGlite), 0001 + 0002, 45 casos.
+- `pruebas/sql_pglite.mjs`: la SQL contra Postgres (PGlite), 0001 + 0002 + 0003, 56 casos.
 
 ## Lo que NO hace todavía
 

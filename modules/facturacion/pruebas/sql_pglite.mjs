@@ -161,4 +161,41 @@ r = await q(`select has_function_privilege('authenticated','public.factura_srv_c
   has_function_privilege('authenticated','public.factura_rol(text,boolean)','execute') e`);
 const g = r.rows[0];
 ok('permisos', g.a === false && g.b === true && g.c === false && g.d === false && g.e === false);
+// ── 0003: al cobrar en Caja y el enlace público ──
+if (process.argv.some((f) => /0003_/.test(f))) {
+  await set('dueno');
+  await q(`select factura_ajustes_guardar('c1', $1::jsonb, null, null)`, [JSON.stringify({ ...sinUltimo, activo: true })]);
+  r = await q(`select factura_ajustes_leer('c1') v`);
+  ok('al cobrar: por defecto «preguntar»', r.rows[0].v.al_cobrar === 'preguntar');
+  await q(`select factura_al_cobrar_guardar('c1', 'automatico')`);
+  r = await q(`select factura_ajustes_leer('c1') v`);
+  ok('al cobrar: el dueño lo pone en automático', r.rows[0].v.al_cobrar === 'automatico');
+  await espera('al cobrar: modo inventado', () => q(`select factura_al_cobrar_guardar('c1', 'siempre')`), /no emitir, preguntar o emitir sola/);
+  await espera('al cobrar: negocio sin datos', () => q(`select factura_al_cobrar_guardar('c9', 'no')`), /No tienes acceso|Guarda primero/);
+  await q(`select factura_ajustes_guardar('c1', $1::jsonb, null, null)`, [JSON.stringify({ ...sinUltimo, activo: true })]);
+  r = await q(`select factura_ajustes_leer('c1') v`);
+  ok('al cobrar: guardar los demás Ajustes no lo pisa', r.rows[0].v.al_cobrar === 'automatico');
+  await set('admin');
+  await espera('al cobrar: el admin no lo cambia', () => q(`select factura_al_cobrar_guardar('c1', 'no')`), /solo lo cambia el dueño/);
+
+  // El enlace público: sin sesión, solo lo que llegó a SUNAT, sin lo interno.
+  await set('');
+  r = await q(`select factura_publica($1) v`, [id1]);
+  const pub = r.rows[0].v;
+  ok('público: el aceptado se ve', pub && pub.serie === 'B001' && pub.estado && Number(pub.ticket_ancho) === 80);
+  ok('público: sin clave, quién lo emitió ni el negocio', pub && !('clave' in pub) && !('emitido_por' in pub) && !('company_id' in pub));
+  await set('admin');
+  const x = await q(`select factura_reservar('c1', $1::jsonb) v`, [doc('clave-0040', 'boleta', 18)]).catch((e) => e);
+  if (!(x instanceof Error)) {
+    await set('');
+    r = await q(`select factura_publica($1) v`, [x.rows[0].v.id]);
+    ok('público: el que no llegó a SUNAT, no', r.rows[0].v === null);
+  }
+  r = await q(`select factura_publica('00000000-0000-0000-0000-000000000000') v`);
+  ok('público: id que no existe → nada', r.rows[0].v === null);
+  r = await q(`select has_function_privilege('anon','public.factura_publica(uuid)','execute') a,
+    has_function_privilege('anon','public.factura_al_cobrar_guardar(text,text)','execute') b`);
+  ok('público: anon lee el enlace pero no toca Ajustes', r.rows[0].a === true && r.rows[0].b === false);
+}
+
 console.log(fallos ? `\n${fallos} FALLOS` : '\nTODO BIEN');

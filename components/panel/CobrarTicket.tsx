@@ -32,6 +32,7 @@ import { supabase } from '@/lib/supabase/client';
 import { sumarSelloDeCita, type SelloResultado } from '@/components/panel/selloDeCita';
 import type { ItemCatalogo, Trabajador } from '@/lib/supabase/queries';
 import type { Sede } from '@/modules/tu-pagina/dominio/adelantoCitas';
+import BoletaDelCobro, { type LineaCobro } from '@/modules/facturacion/ui/BoletaDelCobro';
 
 const soloDigitos = (s: string) => s.replace(/\D/g, '');
 const claveSede = (c: string) => `vm-ticket-sede:${c}`;
@@ -79,7 +80,7 @@ export default function CobrarTicket({
   const [nombre, setNombre] = useState('');
   const [enviando, setEnviando] = useState(false);
   /** Lo último cobrado y lo que pasó con su tarjeta de fidelidad. */
-  const [hecho, setHecho] = useState<{ texto: string; tel: string; sello: SelloResultado } | null>(null);
+  const [hecho, setHecho] = useState<{ texto: string; tel: string; sello: SelloResultado; id?: string; lineas?: LineaCobro[] } | null>(null);
 
   const total = items.reduce((t, id) => t + Number(porId.get(id)?.price ?? 0), 0);
   const cuenta = (id: string) => items.filter((x) => x === id).length;
@@ -153,7 +154,21 @@ export default function CobrarTicket({
     // La tarjeta de fidelidad, sola: si el celular tiene tarjeta, su sello (una vez por ticket).
     const sello = pagado === undefined ? null : await sumarSelloDeCita(companyId, telLimpio, r.id, Number(r.total));
     if (sello) avisar(sello.texto, sello.tono);
-    setHecho({ texto, tel: telLimpio.length >= 9 ? telLimpio : '', sello });
+    setHecho({
+      texto,
+      tel: telLimpio.length >= 9 ? telLimpio : '',
+      sello,
+      // Lo cobrado, para su boleta. Si el cobro no entró, sin boleta: primero se cobra.
+      ...(pagado === undefined ? {} : {
+        id: r.id,
+        lineas: [...new Set(items)].map((i) => ({
+          descripcion: porId.get(i)?.name ?? '',
+          cantidad: cuenta(i),
+          precio: Number(porId.get(i)?.price ?? 0),
+          producto: porId.get(i)?.tipo === 'producto',
+        })),
+      }),
+    });
     setItems([]);
     setTel('');
     setNombre('');
@@ -181,6 +196,10 @@ export default function CobrarTicket({
             <Link className="btn btn-ghost btn-sm" href={`/panel/fideliza/caja?q=${hecho.tel.slice(-9)}`}>
               <Gift size={14} /> Sumar a su tarjeta
             </Link>
+          )}
+          {/* La boleta del cobro: sola o con su botón, según Ajustes › Boletas (modules/facturacion). */}
+          {hecho.id && hecho.lineas && (
+            <BoletaDelCobro companyId={companyId} refCobro={{ tipo: 'cita', id: hecho.id }} lineas={hecho.lineas} telefono={hecho.tel} />
           )}
         </div>
       )}

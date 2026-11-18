@@ -8,13 +8,14 @@
  * y se reintenta, Postgres devuelve el mismo comprobante en vez de otro número.
  */
 import { useMemo, useState } from 'react';
-import { CheckCircle2, FileText, MessageCircle, Plus, Printer, Trash2, XCircle } from 'lucide-react';
+import { CheckCircle2, FileText, Plus, Trash2, XCircle } from 'lucide-react';
 import { useCargar } from '@/components/panel/useCargar';
 import { getCatalogo } from '@/lib/supabase/queries';
 import { calcular, leyendasDe } from '../dominio/montos';
 import { erroresCliente, erroresLineas, soloDigitos, TOPE_BOLETA_SIN_DOCUMENTO } from '../dominio/validar';
 import type { ComprobanteGuardado, RegimenIgv, TipoComprobante, TipoDocCliente } from '../dominio/tipos';
-import { emitir, imprimir, nuevaClave, soles2 as soles, tasaTexto, textoWhatsApp, type Ajustes } from './api';
+import { emitir, nuevaClave, soles2 as soles, tasaTexto, type Ajustes } from './api';
+import CompartirBoleta from './CompartirBoleta';
 import { EstadoPill } from './EstadoPill';
 
 interface LineaForm {
@@ -28,6 +29,12 @@ export interface Prellenado {
   concepto?: string;
   monto?: number;
   ref?: { tipo: string; id: string };
+  /** Desde Caja: el detalle del cobro, línea por línea. */
+  lineas?: { descripcion: string; cantidad: number; precio: number }[];
+  /** Desde Caja: la del cobro (claveDeCobro), para no sacar dos boletas del mismo. */
+  clave?: string;
+  /** Desde Caja: el celular del cliente, para mandarle la boleta a su WhatsApp. */
+  telefono?: string;
 }
 
 const num = (s: string) => Number(String(s).replace(',', '.'));
@@ -56,15 +63,17 @@ export default function NuevoComprobante({
   alCerrar: () => void;
   alEmitir: (c: ComprobanteGuardado) => void;
 }) {
-  const [clave] = useState(nuevaClave);
+  const [clave] = useState(() => prellenado?.clave ?? nuevaClave());
   const [tipo, setTipo] = useState<TipoComprobante>(prellenado?.tipo ?? 'boleta');
   const [tipoDoc, setTipoDoc] = useState<TipoDocCliente>(prellenado?.tipo === 'factura' ? 'ruc' : 'sin_documento');
   const [numDoc, setNumDoc] = useState('');
   const [nombre, setNombre] = useState('');
   const [direccion, setDireccion] = useState('');
-  const [lineas, setLineas] = useState<LineaForm[]>([
-    { descripcion: prellenado?.concepto ?? '', cantidad: '1', precio: prellenado?.monto ? String(prellenado.monto) : '' },
-  ]);
+  const [lineas, setLineas] = useState<LineaForm[]>(() =>
+    prellenado?.lineas?.length
+      ? prellenado.lineas.map((l) => ({ descripcion: l.descripcion, cantidad: String(l.cantidad), precio: String(l.precio) }))
+      : [{ descripcion: prellenado?.concepto ?? '', cantidad: '1', precio: prellenado?.monto ? String(prellenado.monto) : '' }],
+  );
   const [intentado, setIntentado] = useState(false);
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState('');
@@ -138,14 +147,6 @@ export default function NuevoComprobante({
       setEnviando(false);
     }
   }
-
-  const imprimirYa = async (c: ComprobanteGuardado) => {
-    try {
-      await imprimir(c, ajustes.ticket_ancho);
-    } catch (e) {
-      setError((e as Error).message);
-    }
-  };
 
   return (
     <div className="modal-fondo" onClick={enviando ? undefined : alCerrar}>
@@ -344,17 +345,7 @@ export default function NuevoComprobante({
         <div className="modal__pie">
           {hecho ? (
             <>
-              <a
-                className="btn btn-ghost"
-                href={`https://wa.me/?text=${encodeURIComponent(textoWhatsApp(hecho))}`}
-                target="_blank"
-                rel="noopener"
-              >
-                <MessageCircle size={15} /> WhatsApp
-              </a>
-              <button className="btn btn-ghost" onClick={() => imprimirYa(hecho)} disabled={hecho.estado === 'error'}>
-                <Printer size={15} /> Imprimir
-              </button>
+              <CompartirBoleta c={hecho} ancho={ajustes.ticket_ancho} telefono={prellenado?.telefono} alError={setError} />
               <button className="btn btn-primary" onClick={alCerrar}>Listo</button>
             </>
           ) : (

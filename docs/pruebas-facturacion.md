@@ -6,6 +6,7 @@ Nada de esto se probó todavía contra los proveedores: el código sigue su docu
 
 - [x] SQL `modules/facturacion/sql/0001_facturacion.sql` aplicada (14-nov).
 - [ ] SQL `modules/facturacion/sql/0002_servicios_y_productos.sql` aplicada (sin ella, guardar «Servicios y productos» en Ajustes da error).
+- [ ] SQL `modules/facturacion/sql/0003_boleta_al_cobrar.sql` aplicada (sin ella, «Al cobrar» solo deja «Botón» y el enlace de la boleta no abre).
 - [ ] Desplegado (o `npm run dev`) con `FIDELIZA_SERVER_KEY` puesta.
 - [ ] Panel › **Boletas y facturas** › Ajustes: proveedor «Prueba local», RUC y razón social de prueba, activar. Emitir una boleta y **imprimirla**: debe salir con «DOCUMENTO DE PRUEBA».
 
@@ -35,7 +36,17 @@ Nada de esto se probó todavía contra los proveedores: el código sigue su docu
   - Las bajas ya pasan la validación, pero beta respondió «No se pudo encolar el pedido (2059)» las tres veces. Reintentar otro día y llegar hasta «Anulado».
 - [ ] Lo mismo desde el panel (Kallpa › Boletas y facturas › Ajustes con el token de la empresa).
 
-## 3 · Antes de producción con un local real
+## 3 · Desde la Caja (sql/0003)
+
+- [ ] Ajustes › «Al cobrar en Caja: Emitir la boleta sola». Caja › Cobrar ticket con corte + cera → debajo de «Último» sale «Boleta B001-n · Aceptado» con WhatsApp, Compartir/Copiar enlace e Imprimir.
+- [ ] Mismo cobro con cliente (celular): WhatsApp abre SU chat con el texto y el enlace.
+- [ ] Abrir el enlace en otro celular, sin sesión: sale el ticket con QR y «Guardar en PDF o imprimir».
+- [ ] «Listos para cobrar» → cobrar → tarjeta «Último cobro» con su boleta.
+- [ ] «Botón «Emitir boleta»»: el formulario se abre con el detalle puesto; emitir dos veces devuelve la misma boleta (misma clave del cobro).
+- [ ] Un cobro de más de S/700 en automático: no sale sola, sale el botón (pide DNI).
+- [ ] Un cajero empleado (no admin): no ve nada de boletas y el cobro sigue igual.
+
+## 4 · Antes de producción con un local real
 
 - [ ] Que su contador confirme el régimen: 18 %, restaurante u hotel MYPE (MYPE ≤ 1.700 UIT, ≥ 70 % de ingresos de restaurante/hotel/hospedaje, sin vinculadas) o exonerado Amazonía (Iquitos). La tasa MYPE la cambia Vendemia sola por fecha: 10,5 % en 2026, 15 % en 2027, 18 % desde 2028.
 - [ ] Serie nueva (B002/F002) si el local ya emite con otro sistema, o poner el último número que emitió.

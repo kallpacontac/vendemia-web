@@ -10,6 +10,8 @@ import { comprobanteDe } from '../dominio/fila';
 import { textoQr, ticketHtml } from '../dominio/impreso';
 import type { ComprobanteGuardado, IdProveedor, LineaEntrada, Cliente, TipoComprobante } from '../dominio/tipos';
 
+export type AlCobrar = 'no' | 'preguntar' | 'automatico';
+
 export interface Ajustes {
   company_id: string;
   activo: boolean;
@@ -35,6 +37,8 @@ export interface Ajustes {
   igv_tasa_cambio: { desde: string; tasa: number } | null;
   leyenda_amazonia: '2001' | '2002' | 'ambas' | null;
   ticket_ancho: 58 | 80;
+  /** sql/0003: qué pasa al cobrar en Caja. Sin la 0003 llega vacío y vale «preguntar». */
+  al_cobrar: AlCobrar;
   rol: 'dueno' | 'admin';
   configurado: boolean;
   /** proveedor → últimos 4 caracteres del token guardado. */
@@ -64,7 +68,50 @@ function normalizar(a: Ajustes): Ajustes {
     igv_tasa_hoy: Number(a.igv_tasa_hoy),
     igv_tasa_cambio: c ? { desde: String(c.desde), tasa: Number(c.tasa) } : null,
     ticket_ancho: Number(a.ticket_ancho) === 58 ? 58 : 80,
+    al_cobrar: a.al_cobrar === 'no' || a.al_cobrar === 'automatico' ? a.al_cobrar : 'preguntar',
   };
+}
+
+/**
+ * Los Ajustes para la Caja, una vez por negocio y pantalla. null = no hay boletas aquí:
+ * apagadas, sin la SQL, o quien cobra no es dueño ni administrador (factura_rol).
+ */
+const ajustesCaja = new Map<string, Promise<Ajustes | null>>();
+export function ajustesParaCobro(companyId: string): Promise<Ajustes | null> {
+  let p = ajustesCaja.get(companyId);
+  if (!p) {
+    p = leerAjustes(companyId)
+      .then((a) => (a.activo && a.al_cobrar !== 'no' ? a : null))
+      .catch(() => null);
+    ajustesCaja.set(companyId, p);
+    // Si cambian los Ajustes, la Caja se entera al volver a abrirse (5 min como mucho).
+    setTimeout(() => ajustesCaja.delete(companyId), 5 * 60_000);
+  }
+  return p;
+}
+
+/** La misma clave para el mismo cobro: si se pulsa dos veces, Postgres devuelve la misma boleta. */
+export const claveDeCobro = (tipo: string, id: string) => `cobro-${tipo}-${id}`.slice(0, 64);
+
+/** Lo que se puede enseñar fuera del panel: lo que ya llegó a SUNAT. */
+export const compartible = (c: ComprobanteGuardado) => ['pendiente', 'aceptado', 'anulando', 'anulado'].includes(c.estado);
+
+/** El enlace público de la boleta (app/comprobante/[id]): el ticket con su QR, sin entrar al panel. */
+export const enlaceComprobante = (c: { id: string }) =>
+  `${typeof window !== 'undefined' ? window.location.origin : 'https://vendemias.com'}/comprobante/${c.id}`;
+
+/** wa.me al celular del cliente si se sabe (9 dígitos → +51), y si no, a elegir contacto. */
+export function enlaceWhatsApp(c: ComprobanteGuardado, telefono?: string): string {
+  const d = (telefono ?? '').replace(/\D/g, '');
+  const numero = d.length === 9 ? `51${d}` : d.length >= 11 ? d : '';
+  return `https://wa.me/${numero}?text=${encodeURIComponent(textoWhatsApp(c))}`;
+}
+
+export async function leerPublico(id: string): Promise<{ c: ComprobanteGuardado; ancho: 58 | 80 } | null> {
+  const { data, error } = await supabase().rpc('factura_publica', { p_id: id });
+  if (error || !data) return null;
+  const f = data as Record<string, unknown>;
+  return { c: comprobanteDe(f), ancho: Number(f.ticket_ancho) === 58 ? 58 : 80 };
 }
 
 /** 10.5 → «10,5». */
@@ -141,7 +188,8 @@ export function textoWhatsApp(c: ComprobanteGuardado): string {
     `${c.emisor.nombreComercial || c.emisor.razonSocial} · RUC ${c.emisor.ruc}`,
     `Total: S/ ${c.totales.total.toFixed(2)}`,
   ];
-  if (c.pdfUrl) lineas.push(c.pdfUrl);
+  if (compartible(c)) lineas.push(`Mírala aquí: ${enlaceComprobante(c)}`);
+  else if (c.pdfUrl) lineas.push(c.pdfUrl);
   return lineas.join('\n');
 }
 

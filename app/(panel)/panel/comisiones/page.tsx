@@ -29,6 +29,7 @@ import Link from 'next/link';
 import { AlertTriangle, ChevronDown, ChevronUp, Download, Percent, Scissors, Wallet } from 'lucide-react';
 import Topbar from '@/components/panel/Topbar';
 import SubnavCaja from '@/components/panel/SubnavCaja';
+import CierresPorPagar from '@/components/panel/CierresPorPagar';
 import { useSesion } from '@/components/panel/Sesion';
 import { useCargar } from '@/components/panel/useCargar';
 import { diaMes, soles } from '@/lib/panel/format';
@@ -51,7 +52,7 @@ const REGLA: Record<Regla, string> = {
 };
 
 export default function Comisiones() {
-  const { companyId, compania } = useSesion();
+  const { companyId, compania, esDueno } = useSesion();
   const [periodo, setPeriodo] = useState<Periodo>('quincena');
   const [abierto, setAbierto] = useState<string | null>(null);
   const { desde, hasta } = rango(periodo);
@@ -126,6 +127,9 @@ export default function Comisiones() {
       <div className="wrap">
         <Topbar titulo="Caja" sub="Cuánto le toca a cada barbero, por lo que atendió" />
         <SubnavCaja />
+
+        {/* Lo que se le debe a cada uno desde su último pago, y «Pagar» (datos 0014). */}
+        {companyId && <CierresPorPagar companyId={companyId} esDueno={esDueno} />}
 
         <div className="filters" style={{ marginBottom: 16 }}>
           {PERIODOS.map(([k, txt]) => (

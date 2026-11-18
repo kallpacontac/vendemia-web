@@ -72,6 +72,7 @@ import {
   type Cita,
 } from '@/lib/supabase/queries';
 import type { ResultadoMarcarPagado } from '@/lib/supabase/commands';
+import BoletaDelCobro, { type LineaCobro } from '@/modules/facturacion/ui/BoletaDelCobro';
 
 /** Sugerencias para la categoría. Texto libre: el negocio puede escribir otra. */
 const CATEGORIAS = ['Adelanto', 'Insumos', 'Alquiler', 'Servicios (luz, agua, internet)', 'Sueldos', 'Otros'];
@@ -88,6 +89,8 @@ export default function Caja() {
   const [pagando, setPagando] = useState<string | null>(null);
   /** «Cobrar ticket» abierto: el cliente llegó a caja con el ticket del barbero (0031). */
   const [ticket, setTicket] = useState(false);
+  /** El último cobro de «Listos para cobrar», para su boleta (modules/facturacion/ui/BoletaDelCobro). */
+  const [cobrada, setCobrada] = useState<{ id: string; texto: string; lineas: LineaCobro[]; tel: string } | null>(null);
 
   // Con 2 sedes o más: «Todas · sede A · sede B», la misma elección que en la Agenda.
   const sedes = useSedes(companyId);
@@ -240,6 +243,8 @@ export default function Caja() {
 
   async function cobrar(c: Cita, metodo: MetodoPago, foto?: FotoPago) {
     setEnVuelo(c.id);
+    // Antes de releer: después del cobro la fila ya no está en la cola.
+    const importe = calculo?.listos.find((f) => f.cita.id === c.id)?.importe ?? 0;
     const r = await comando<ResultadoMarcarPagado>(
       'marcar_pagado',
       // La foto del pago, si el negocio la usa (datos 0010): Postgres la vuelve a revisar.
@@ -255,6 +260,16 @@ export default function Caja() {
         'ok',
       );
     setEnVuelo(null);
+    if (r && importe > 0) {
+      // Una línea: el servicio por lo cobrado (con lo que se le sumó). Con el botón se puede desglosar.
+      const servicio = c.service || 'Servicio';
+      setCobrada({
+        id: c.id,
+        texto: `${soles(importe)} · ${servicio}`,
+        lineas: [{ descripcion: servicio, cantidad: 1, precio: importe }],
+        tel: (datos?.leads.find((l) => l.id === c.lead_id)?.phone ?? '').replace(/\D/g, '').slice(-9),
+      });
+    }
     // La tarjeta de fidelidad, sola: si su celular tiene tarjeta, su sello (una vez por cita).
     if (r && companyId) {
       const tel = datos?.leads.find((l) => l.id === c.lead_id)?.phone;
@@ -298,6 +313,13 @@ export default function Caja() {
             alCerrar={() => setTicket(false)}
             alListo={releer}
           />
+        )}
+
+        {cobrada && companyId && (
+          <section className="card caja-boleta" aria-label="Boleta del último cobro">
+            <span className="muted">Último cobro: <b>{cobrada.texto}</b></span>
+            <BoletaDelCobro companyId={companyId} refCobro={{ tipo: 'cita', id: cobrada.id }} lineas={cobrada.lineas} telefono={cobrada.tel} />
+          </section>
         )}
 
         {/* ── Listos para cobrar: lo que ya se atendió. Es la cola del mostrador. ── */}
