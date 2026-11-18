@@ -49,9 +49,17 @@ export function calcular(lineas: LineaEntrada[], r: RegimenIgv): { lineas: Linea
   };
 }
 
-/** Las leyendas del catálogo 52 que exige el régimen (hoy, solo la de Amazonía). */
-export const leyendasDe = (r: RegimenIgv): string[] =>
-  r.tipo === 'exonerado' && r.leyendaAmazonia ? [r.leyendaAmazonia] : [];
+/**
+ * Las leyendas del catálogo 52 que exige el régimen (hoy, solo la de Amazonía).
+ * Con «ambas», las que se pidan para este comprobante (2001 y/o 2002); vacío si
+ * no se pidió ninguna válida, y entonces no se emite. Es la misma regla que
+ * factura_leyendas en sql/0002.
+ */
+export function leyendasDe(r: RegimenIgv, pedidas: readonly string[] = []): string[] {
+  if (r.tipo !== 'exonerado' || !r.leyendaAmazonia) return [];
+  if (r.leyendaAmazonia !== 'ambas') return [r.leyendaAmazonia];
+  return (['2001', '2002'] as const).filter((c) => pedidas.includes(c));
+}
 
 /** Mismo dinero, al céntimo. Para comprobar que nadie tocó los montos guardados. */
 export const mismoMonto = (a: number, b: number) => aCentimos(a) === aCentimos(b);

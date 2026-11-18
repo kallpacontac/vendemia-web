@@ -60,7 +60,7 @@ export function regimenDe(a: Fila): RegimenIgv {
   return {
     tipo: exonerado ? 'exonerado' : 'gravado',
     porcentaje: exonerado ? 0 : tasa || 18,
-    leyendaAmazonia: exonerado && (ley === '2001' || ley === '2002') ? ley : null,
+    leyendaAmazonia: exonerado && (ley === '2001' || ley === '2002' || ley === 'ambas') ? ley : null,
   };
 }
 

@@ -4,13 +4,14 @@
  * con la tasa MYPE por fecha (37/37):
  *
  *   mkdir /tmp/pg && cd /tmp/pg && npm i @electric-sql/pglite@0.2.17
- *   cp <repo>/modules/facturacion/pruebas/sql_pglite.mjs . && node sql_pglite.mjs <repo>/modules/facturacion/sql/0001_facturacion.sql
+ *   cp <repo>/modules/facturacion/pruebas/sql_pglite.mjs . && node sql_pglite.mjs <repo>/modules/facturacion/sql/0001_facturacion.sql <repo>/modules/facturacion/sql/0002_servicios_y_productos.sql
  *
  * No es dependencia del proyecto a propósito: solo hace falta para tocar la SQL.
  */
 import { PGlite } from '@electric-sql/pglite';
 import { readFileSync } from 'node:fs';
-const sql = readFileSync(process.argv[2], 'utf8').replace(/notify pgrst[^;]*;/, '');
+// Todas las SQL que se pasen, en orden (0001, 0002…).
+const sql = process.argv.slice(2).map((f) => readFileSync(f, 'utf8').replace(/notify pgrst[^;]*;/g, '')).join(';\n');
 const db = new PGlite();
 const q = (s, p) => db.query(s, p);
 const ex = (s) => db.exec(s);
@@ -98,6 +99,31 @@ ok('exonerado: tasa de hoy 0 y sin cambio', Number(r.rows[0].v.igv_tasa_hoy) ===
 r = await q(`select factura_reservar('c1', $1::jsonb) v`, [doc('clave-0010', 'boleta', 0)]);
 r = await q(`select igv_porcentaje, leyendas from comprobantes_electronicos where id = $1`, [r.rows[0].v.id]);
 ok('exonerado: 0 % y leyenda 2002', Number(r.rows[0].igv_porcentaje) === 0 && r.rows[0].leyendas[0] === '2002');
+
+// ── 0002: servicios y productos en la Amazonía ──
+await set('dueno');
+await q(`select factura_ajustes_guardar('c1', $1::jsonb, null, null)`, [JSON.stringify({ ...sinUltimo, igv_tipo: 'exonerado', leyenda_amazonia: 'ambas' })]);
+await set('admin');
+r = await q(`select factura_ajustes_leer('c1') v`);
+ok('ambas: se guarda', r.rows[0].v.leyenda_amazonia === 'ambas');
+const ultimoAntes = Number((await q(`select ultimo from factura_series where company_id = 'c1' and serie = 'B001'`)).rows[0].ultimo);
+await espera('ambas: sin decir qué se vendió no emite', () => q(`select factura_reservar('c1', $1::jsonb)`, [doc('clave-0030', 'boleta', 0)]), /servicios, productos o los dos/);
+await espera('ambas: con leyenda inventada no emite', () => q(`select factura_reservar('c1', $1::jsonb)`, [JSON.stringify({ ...JSON.parse(doc('clave-0031', 'boleta', 0)), leyendas: ['1000'] })]), /servicios, productos o los dos/);
+ok('ambas: el rechazo no gastó número', Number((await q(`select ultimo from factura_series where company_id = 'c1' and serie = 'B001'`)).rows[0].ultimo) === ultimoAntes);
+r = await q(`select factura_reservar('c1', $1::jsonb) v`, [JSON.stringify({ ...JSON.parse(doc('clave-0032', 'boleta', 0)), leyendas: ['2002'] })]);
+r = await q(`select leyendas from comprobantes_electronicos where id = $1`, [r.rows[0].v.id]);
+ok('ambas: solo servicio → 2002', JSON.stringify(r.rows[0].leyendas) === '["2002"]');
+r = await q(`select factura_reservar('c1', $1::jsonb) v`, [JSON.stringify({ ...JSON.parse(doc('clave-0033', 'boleta', 0)), leyendas: ['2002', '2001', '2002'] })]);
+r = await q(`select leyendas from comprobantes_electronicos where id = $1`, [r.rows[0].v.id]);
+ok('ambas: los dos → 2001 y 2002, sin repetir', JSON.stringify(r.rows[0].leyendas) === '["2001", "2002"]' || JSON.stringify(r.rows[0].leyendas) === '["2001","2002"]');
+await set('dueno');
+await q(`select factura_ajustes_guardar('c1', $1::jsonb, null, null)`, [JSON.stringify({ ...sinUltimo, igv_tipo: 'exonerado', leyenda_amazonia: '2002' })]);
+await set('admin');
+r = await q(`select factura_reservar('c1', $1::jsonb) v`, [JSON.stringify({ ...JSON.parse(doc('clave-0034', 'boleta', 0)), leyendas: ['2001'] })]);
+r = await q(`select leyendas from comprobantes_electronicos where id = $1`, [r.rows[0].v.id]);
+ok('fija 2002: no hace caso a lo pedido', JSON.stringify(r.rows[0].leyendas) === '["2002"]');
+await set('dueno');
+await espera('leyenda inventada en Ajustes', () => q(`select factura_ajustes_guardar('c1', $1::jsonb, null, null)`, [JSON.stringify({ ...sinUltimo, igv_tipo: 'exonerado', leyenda_amazonia: '2003' })]), /leyenda_amazonia_check/);
 
 // ── Restaurante u hotel MYPE: la tasa la pone la fecha ──
 r = await q(`select factura_tasa_mype('2025-12-31') a, factura_tasa_mype('2026-01-01') b, factura_tasa_mype('2026-12-31') c,

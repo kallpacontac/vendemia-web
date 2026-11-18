@@ -164,6 +164,18 @@ test('régimen: de Ajustes manda la tasa de hoy (mype); de un comprobante, la su
   assert.deepEqual(exo, { tipo: 'exonerado', porcentaje: 0, leyendaAmazonia: '2002' });
 });
 
+test('leyendas: una fija, «ambas» según lo vendido, nada si no es exonerado', () => {
+  const { leyendasDe } = cargar('modules/facturacion/dominio/montos.ts');
+  const { regimenDe } = cargar('modules/facturacion/dominio/fila.ts');
+  const ambas = regimenDe({ igv_tipo: 'exonerado', igv_porcentaje: 18, igv_tasa_hoy: 0, leyenda_amazonia: 'ambas' });
+  assert.equal(ambas.leyendaAmazonia, 'ambas');
+  assert.deepEqual(leyendasDe(ambas, ['2002']), ['2002']);
+  assert.deepEqual(leyendasDe(ambas, ['2002', '2001', '2002']), ['2001', '2002']);
+  assert.deepEqual(leyendasDe(ambas, ['1000']), []);
+  assert.deepEqual(leyendasDe(AMAZONIA, ['2001']), ['2002']);
+  assert.deepEqual(leyendasDe(G18, ['2001']), []);
+});
+
 test('Lucode: factura lleva vencimiento (contado = mismo día); boleta no', () => {
   const f = cuerpoLucode(doc(G18, 'factura', { tipoDoc: 'ruc', numDoc: '20100070970', nombre: 'SUPERMERCADOS PERUANOS', direccion: '' }));
   assert.equal(f.fecha_de_vencimiento, '2026-11-11');

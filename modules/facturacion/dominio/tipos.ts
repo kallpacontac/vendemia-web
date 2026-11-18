@@ -59,8 +59,12 @@ export interface RegimenIgv {
   tipo: 'gravado' | 'exonerado';
   /** 18, o la tasa reducida de restaurantes y hoteles MYPE. Ignorado si exonerado. */
   porcentaje: number;
-  /** Amazonía (Ley 27037): 2001 bienes, 2002 servicios. Solo con exonerado. */
-  leyendaAmazonia: '2001' | '2002' | null;
+  /**
+   * Amazonía (Ley 27037): 2001 bienes, 2002 servicios. Solo con exonerado.
+   * «ambas»: el local vende las dos cosas y cada comprobante lleva la de lo
+   * que se vendió en él (sql/0002).
+   */
+  leyendaAmazonia: '2001' | '2002' | 'ambas' | null;
 }
 
 export interface Totales {

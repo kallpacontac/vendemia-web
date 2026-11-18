@@ -33,7 +33,7 @@ export interface Ajustes {
   igv_tasa_hoy: number;
   /** Solo «mype»: el próximo cambio de tasa. */
   igv_tasa_cambio: { desde: string; tasa: number } | null;
-  leyenda_amazonia: '2001' | '2002' | null;
+  leyenda_amazonia: '2001' | '2002' | 'ambas' | null;
   ticket_ancho: 58 | 80;
   rol: 'dueno' | 'admin';
   configurado: boolean;
@@ -101,6 +101,8 @@ export async function emitir(p: {
   tipo: TipoComprobante;
   cliente: Cliente;
   lineas: LineaEntrada[];
+  /** Solo con leyenda «ambas» (Amazonía): '2001' bienes, '2002' servicios. */
+  leyendas?: ('2001' | '2002')[];
   ref?: { tipo: string; id: string };
 }): Promise<ComprobanteGuardado> {
   const r = await llamar<{ comprobante: Record<string, unknown> }>({ accion: 'emitir', ...p });

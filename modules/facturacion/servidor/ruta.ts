@@ -23,7 +23,7 @@ import { deUsuario, servidor, rpc, ErrorRpc } from '@/modules/fideliza/servidor/
 import { FaltaConfiguracion } from '@/modules/fideliza/servidor/entorno';
 import { log } from '@/modules/fideliza/servidor/http';
 import { comprobanteDe, emisorDe, regimenDe } from '../dominio/fila';
-import { calcular, mismoMonto } from '../dominio/montos';
+import { calcular, leyendasDe, mismoMonto } from '../dominio/montos';
 import { erroresCliente, erroresEmisor, erroresLineas, rucValido, soloDigitos } from '../dominio/validar';
 import { PROVEEDORES, type Cliente, type ComprobanteGuardado, type LineaEntrada, type Respuesta } from '../dominio/tipos';
 import { proveedor, type Credencial } from '../proveedores';
@@ -73,7 +73,7 @@ const ajustesZ = z.object({
   serie_factura: z.string().regex(/^F[A-Z0-9]{3}$/, 'La serie de facturas es F y 3 caracteres (F001).'),
   igv_tipo: z.enum(['gravado', 'mype', 'exonerado']),
   igv_porcentaje: z.number().positive().max(30),
-  leyenda_amazonia: z.enum(['2001', '2002']).nullable(),
+  leyenda_amazonia: z.enum(['2001', '2002', 'ambas']).nullable(),
   ticket_ancho: z.union([z.literal(58), z.literal(80)]),
   ultimo_boleta: z.number().int().min(0).optional(),
   ultimo_factura: z.number().int().min(0).optional(),
@@ -94,6 +94,8 @@ const pedidoZ = z.discriminatedUnion('accion', [
     tipo: z.enum(['boleta', 'factura']),
     cliente: clienteZ,
     lineas: z.array(lineaZ).min(1).max(100),
+    /** Solo si el local tiene «ambas» leyendas de Amazonía: las de este comprobante. */
+    leyendas: z.array(z.enum(['2001', '2002'])).max(2).optional(),
     ref: z.object({ tipo: z.string().max(20), id: z.string().max(80) }).optional(),
   }),
   z.object({ accion: z.enum(['consultar', 'reintentar']), companyId: company, id: z.string().uuid() }),
@@ -230,6 +232,10 @@ async function emitir(jwt: string, p: Extract<Pedido, { accion: 'emitir' }>) {
   const regimen = regimenDe(a);
   const { lineas, totales } = calcular(entrada, regimen);
   const problemas = [...erroresLineas(entrada), ...erroresCliente(p.tipo, cliente, totales.total)];
+  const leyendas = leyendasDe(regimen, p.leyendas);
+  if (regimen.leyendaAmazonia === 'ambas' && !leyendas.length) {
+    problemas.push('Di si vendiste servicios, productos o los dos (va como leyenda en el comprobante).');
+  }
   if (problemas.length) throw new Problema(problemas.join(' '));
 
   const r = await rpc<{ id: string; repetido: boolean }>(sb, 'factura_reservar', {
@@ -245,6 +251,7 @@ async function emitir(jwt: string, p: Extract<Pedido, { accion: 'emitir' }>) {
       total: totales.total,
       // Postgres comprueba que sea la tasa de hoy antes de dar número.
       igv_porcentaje: regimen.porcentaje,
+      leyendas,
       ref_tipo: p.ref?.tipo ?? '',
       ref_id: p.ref?.id ?? '',
     },

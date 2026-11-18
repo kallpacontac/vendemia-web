@@ -11,7 +11,7 @@ import { useMemo, useState } from 'react';
 import { CheckCircle2, FileText, MessageCircle, Plus, Printer, Trash2, XCircle } from 'lucide-react';
 import { useCargar } from '@/components/panel/useCargar';
 import { getCatalogo } from '@/lib/supabase/queries';
-import { calcular } from '../dominio/montos';
+import { calcular, leyendasDe } from '../dominio/montos';
 import { erroresCliente, erroresLineas, soloDigitos, TOPE_BOLETA_SIN_DOCUMENTO } from '../dominio/validar';
 import type { ComprobanteGuardado, RegimenIgv, TipoComprobante, TipoDocCliente } from '../dominio/tipos';
 import { emitir, imprimir, nuevaClave, soles2 as soles, tasaTexto, textoWhatsApp, type Ajustes } from './api';
@@ -31,6 +31,14 @@ export interface Prellenado {
 }
 
 const num = (s: string) => Number(String(s).replace(',', '.'));
+
+/** Con la leyenda «ambas» (Amazonía): qué se vendió en ESTE comprobante. */
+type Vendido = 'servicio' | 'producto' | 'los_dos';
+const LEYENDAS_DE: Record<Vendido, ('2001' | '2002')[]> = {
+  servicio: ['2002'],
+  producto: ['2001'],
+  los_dos: ['2001', '2002'],
+};
 
 export default function NuevoComprobante({
   companyId,
@@ -61,6 +69,8 @@ export default function NuevoComprobante({
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState('');
   const [hecho, setHecho] = useState<ComprobanteGuardado | null>(null);
+  /** null = lo que digan las líneas (catálogo); se fija en cuanto la persona elige. */
+  const [vendidoElegido, setVendidoElegido] = useState<Vendido | null>(null);
 
   const { datos: catalogo } = useCargar(() => getCatalogo(companyId).catch(() => []), [companyId]);
   const precios = useMemo(() => {
@@ -68,12 +78,27 @@ export default function NuevoComprobante({
     for (const c of catalogo ?? []) if (c.activo && c.price) m.set(c.name, Number(c.price));
     return m;
   }, [catalogo]);
+  const esProducto = useMemo(() => {
+    const m = new Map<string, boolean>();
+    // Sin tipo, vale lo del negocio: servicio en uno de citas (ZZ), producto en una tienda.
+    for (const c of catalogo ?? []) m.set(c.name, c.tipo ? c.tipo === 'producto' : unidad === 'NIU');
+    return m;
+  }, [catalogo, unidad]);
 
   const regimen: RegimenIgv = {
     tipo: ajustes.igv_tipo === 'exonerado' ? 'exonerado' : 'gravado',
     porcentaje: ajustes.igv_tasa_hoy,
     leyendaAmazonia: ajustes.igv_tipo === 'exonerado' ? ajustes.leyenda_amazonia : null,
   };
+  const ambas = regimen.tipo === 'exonerado' && regimen.leyendaAmazonia === 'ambas';
+  const vendidoSugerido: Vendido = (() => {
+    const tipos = new Set(
+      lineas.filter((l) => l.descripcion.trim()).map((l) => esProducto.get(l.descripcion) ?? unidad === 'NIU'),
+    );
+    return tipos.size === 2 ? 'los_dos' : tipos.has(true) ? 'producto' : 'servicio';
+  })();
+  const vendido = vendidoElegido ?? vendidoSugerido;
+  const leyendas = leyendasDe(regimen, ambas ? LEYENDAS_DE[vendido] : []) as ('2001' | '2002')[];
   const entrada = lineas.map((l) => ({ descripcion: l.descripcion, cantidad: num(l.cantidad), precio: num(l.precio), unidad }));
   const { totales } = calcular(entrada.map((l) => ({ ...l, cantidad: l.cantidad || 0, precio: l.precio || 0 })), regimen);
   const cliente = { tipoDoc, numDoc: tipoDoc === 'ce' ? numDoc.trim() : soloDigitos(numDoc), nombre, direccion };
@@ -104,7 +129,7 @@ export default function NuevoComprobante({
     if (problemas.length) return;
     setEnviando(true);
     try {
-      const c = await emitir({ companyId, clave, tipo, cliente, lineas: entrada, ref: prellenado?.ref });
+      const c = await emitir({ companyId, clave, tipo, cliente, lineas: entrada, leyendas: ambas ? leyendas : undefined, ref: prellenado?.ref });
       setHecho(c);
       alEmitir(c);
     } catch (e) {
@@ -272,6 +297,25 @@ export default function NuevoComprobante({
             >
               <Plus size={14} /> Otra línea
             </button>
+
+            {ambas && (
+              <>
+                <span className="field-label" style={{ marginTop: 14 }}>Qué vendiste (va como leyenda de la Amazonía)</span>
+                <div className="filters">
+                  {(
+                    [
+                      ['servicio', 'Servicio'],
+                      ['producto', 'Producto'],
+                      ['los_dos', 'Los dos'],
+                    ] as const
+                  ).map(([v, texto]) => (
+                    <div key={v} className={`fpill ${vendido === v ? 'active' : ''}`} onClick={() => setVendidoElegido(v)}>
+                      {texto}
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
 
             <table className="fe-totales">
               <tbody>

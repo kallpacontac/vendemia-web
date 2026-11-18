@@ -223,10 +223,11 @@ export default function AjustesFacturacion({
               className="select"
               value={a.leyenda_amazonia ?? '2001'}
               disabled={!esDueno}
-              onChange={(e) => poner('leyenda_amazonia', e.target.value as '2001' | '2002')}
+              onChange={(e) => poner('leyenda_amazonia', e.target.value as '2001' | '2002' | 'ambas')}
             >
               <option value="2001">Bienes (tienda, comida para llevar…)</option>
               <option value="2002">Servicios (salón, restaurante, cancha…)</option>
+              <option value="ambas">Servicios y productos (p. ej. barbería que vende ceras)</option>
             </select>
           </label>
         )}

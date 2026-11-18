@@ -14,8 +14,16 @@
  * (por línea y totales), la leyenda 1000 («SON … SOLES») y el emisor completo
  * con ubigeo en cada comprobante.
  *
- * Leído de su swagger.json el 11-nov-2026. Sin probar contra SUNAT beta: lo
- * marcado «VERIFICAR» son supuestos que hay que confirmar en las pruebas.
+ * Leído de su swagger.json el 11-nov-2026. PROBADO contra SUNAT beta el
+ * 16-nov-2026 con la empresa de prueba de Kallpa (RUC 20608585541, certificado
+ * gratuito de APIsPerú, usuario MODDATOS):
+ *   · Aceptadas: boleta sin DNI (tipo 0 / 00000000), boleta con DNI, boleta
+ *     exonerada con leyenda 2002 y factura al 10,5 %. Reenviar el mismo número
+ *     también responde «aceptada».
+ *   · /invoice/status responde «Unauthorized» en beta (la consulta de CDR de
+ *     SUNAT solo existe en producción).
+ *   · Bajas: pasan la validación de SUNAT, pero beta respondió siempre «No se
+ *     pudo encolar el pedido (2059)». Falta verlas terminar.
  */
 import { CODIGO_COMPROBANTE, CODIGO_DOC_CLIENTE, LEYENDAS } from '../dominio/catalogos';
 import { montoEnLetras } from '../dominio/letras';
@@ -50,7 +58,7 @@ function empresa(e: Emisor) {
   };
 }
 
-/** Cliente sin documento (boleta < S/700). VERIFICAR con SUNAT beta: hay POS que usan '-' en vez de '0'. */
+/** Cliente sin documento (boleta < S/700): tipo 0 con 00000000, aceptado por SUNAT beta el 16-nov-2026. */
 function cliente(d: ComprobanteListo) {
   const sinDoc = d.cliente.tipoDoc === 'sin_documento';
   return {
@@ -200,6 +208,9 @@ export const apisperu: Proveedor = {
                 clienteTipo: cliente(d).tipoDoc,
                 clienteNro: cliente(d).numDoc,
                 total: d.totales.total,
+                // Sin esto SUNAT beta rechaza: «El XML no contiene el tag de la tasa del tributo de la línea».
+                // Exonerado: con 0 da 3504 «la tasa no corresponde al valor esperado» (16-nov-2026) → la general.
+                porcentajeIgv: d.regimen.tipo === 'exonerado' ? 18 : d.regimen.porcentaje,
                 mtoOperGravadas: d.totales.opGravadas,
                 mtoOperExoneradas: d.totales.opExoneradas,
                 mtoOperInafectas: 0,
