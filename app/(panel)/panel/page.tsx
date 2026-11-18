@@ -5,10 +5,7 @@ import Link from 'next/link';
 import {
   CalendarDays,
   ChevronRight,
-  MessageCircle,
   Scissors,
-  Sparkles,
-  TrendingUp,
   User,
 } from 'lucide-react';
 import Topbar from '@/components/panel/Topbar';
@@ -20,7 +17,7 @@ import { useSondeo } from '@/components/panel/useSondeo';
 import { cuando, hora, intent, isoLocal, soles } from '@/lib/panel/format';
 import { esAppointmentFamily } from '@/lib/panel/modo';
 import { quienDeCita, quienEnUnaLinea } from '@/lib/panel/ficha';
-import { anterior, rangoDe, total } from '@/lib/panel/serie';
+import { anterior, rangoDe } from '@/lib/panel/serie';
 import { cap, vocabulario } from '@/lib/panel/vocabulario';
 import {
   getCitas,
@@ -89,7 +86,6 @@ export default function Dashboard() {
   const conCitas = esAppointmentFamily(modo);
   const serie = datos?.serie ?? [];
   const serieAnterior = datos?.serieAnterior ?? [];
-  const actividad = total(serie, conCitas ? 'citas' : 'pedidos');
   const metricaHoy = datos?.metricas[0];
   const pendientes = metricaHoy?.escalations_pending ?? 0;
   const porPagar = datos?.porPagar ?? 0;
@@ -151,8 +147,8 @@ export default function Dashboard() {
           }
         />
 
-        {/* Lo que hay que hacer hoy (Pagos por verificar, por cobrar, boletas…). Sale solo si hay algo. */}
-        <Pendientes companyId={companyId} />
+        {/* Lo PRIMERO: lo que necesita atención (por cobrar, sin marcar, por pagar…), con la campana. */}
+        <Pendientes companyId={companyId} conversaciones={pendientes} />
 
         {error && <div className="dashboard-error" role="alert">No se pudo actualizar el resumen. {datos ? 'Mostramos la última lectura disponible.' : 'Reintenta para consultar las cifras.'}<button type="button" onClick={releer}>Reintentar</button></div>}
 
@@ -208,62 +204,6 @@ export default function Dashboard() {
               Ver {conCitas ? v.agenda.toLowerCase() : 'pedidos'} <ChevronRight size={14} />
             </Link>
           </article>
-          <article className="card dash-conversations-card">
-            <div className="dash-section-head">
-              <div>
-                <span className="dash-eyebrow">Clientes</span>
-                <h3>Conversaciones recientes</h3>
-              </div>
-              <Link className="dash-text-link" href="/panel/mensajes">Ver todas</Link>
-            </div>
-            {recientes.length === 0 ? (
-              <div className="dash-empty dash-empty--small"><p>Todavía no hay conversaciones.</p></div>
-            ) : (
-              <div className="conversation-grid">
-                {recientes.map((l) => {
-                  const it = intent(l.intent);
-                  return (
-                    <Link key={l.id} href={`/panel/mensajes?lead=${l.id}`} className="conversation-row">
-                      <span className="conversation-avatar" style={{ background: it.color }}>{(l.name || l.phone).slice(0, 2).toUpperCase()}</span>
-                      <span className="conversation-info"><b>{l.name || l.phone}</b><small>{l.ultimoMensaje}</small></span>
-                      <span className="conversation-meta"><em className={`badge-pill ${it.cls}`}>{it.short}</em><small>{cuando(l.ultimoAt)}</small></span>
-                    </Link>
-                  );
-                })}
-              </div>
-            )}
-          </article>
-
-          <article className="card dash-action-card">
-            <div className="dash-section-head">
-              <div>
-                <span className="dash-eyebrow">Prioridades</span>
-                <h3>Lo que necesita atención</h3>
-              </div>
-              <Sparkles size={18} className="section-icon" />
-            </div>
-            <div className="action-list">
-              <Link href="/panel/mensajes" className="action-row">
-                <span className="action-row__icon action-row__icon--orange"><MessageCircle size={17} /></span>
-                <span><b>{pendientes} conversaciones pendientes</b><small>Consultas que necesitan intervención</small></span>
-                <ChevronRight size={16} />
-              </Link>
-              <Link href="/panel/retargeting" className="action-row">
-                <span className="action-row__icon action-row__icon--teal"><TrendingUp size={17} /></span>
-                <span><b>Seguimiento de clientes</b><small>Revisa oportunidades para volver a contactar</small></span>
-                <ChevronRight size={16} />
-              </Link>
-              <Link href={conCitas ? '/panel/agenda' : '/panel/pedidos'} className="action-row">
-                <span className="action-row__icon action-row__icon--violet"><CalendarDays size={17} /></span>
-                <span>
-                  <b>{conCitas ? v.sesion === 'clase' ? 'Organiza tus clases' : `${agendaHoy.length} atenciones programadas hoy` : `${actividad} pedidos ${seleccion.frase}`}</b>
-                  <small>{conCitas ? 'Organiza la jornada antes de empezar' : 'Revisa preparación, cobro y entrega'}</small>
-                </span>
-                <ChevronRight size={16} />
-              </Link>
-            </div>
-          </article>
-
           <article className="card dash-services-card">
             <div className="dash-section-head">
               <div>
@@ -290,6 +230,31 @@ export default function Dashboard() {
           </article>
 
 
+          <article className="card dash-conversations-card">
+            <div className="dash-section-head">
+              <div>
+                <span className="dash-eyebrow">Clientes</span>
+                <h3>Conversaciones recientes</h3>
+              </div>
+              <Link className="dash-text-link" href="/panel/mensajes">Ver todas</Link>
+            </div>
+            {recientes.length === 0 ? (
+              <div className="dash-empty dash-empty--small"><p>Todavía no hay conversaciones.</p></div>
+            ) : (
+              <div className="conversation-grid">
+                {recientes.map((l) => {
+                  const it = intent(l.intent);
+                  return (
+                    <Link key={l.id} href={`/panel/mensajes?lead=${l.id}`} className="conversation-row">
+                      <span className="conversation-avatar" style={{ background: it.color }}>{(l.name || l.phone).slice(0, 2).toUpperCase()}</span>
+                      <span className="conversation-info"><b>{l.name || l.phone}</b><small>{l.ultimoMensaje}</small></span>
+                      <span className="conversation-meta"><em className={`badge-pill ${it.cls}`}>{it.short}</em><small>{cuando(l.ultimoAt)}</small></span>
+                    </Link>
+                  );
+                })}
+              </div>
+            )}
+          </article>
         </section>
         </>}
       </div>

@@ -27,7 +27,9 @@ import Topbar from '@/components/panel/Topbar';
 import { supabase } from '@/lib/supabase/client';
 import { useSesion } from '@/components/panel/Sesion';
 import { useCargar } from '@/components/panel/useCargar';
+import Link from 'next/link';
 import { calcularComisiones } from '@/lib/panel/comisiones';
+import { desdeDeCuentas, solesExactos } from '@/lib/panel/cierres';
 import { diaMes, hora, isoLocal, soles } from '@/lib/panel/format';
 import { PERIODOS, rango, type Periodo } from '@/lib/panel/periodos';
 import {
@@ -44,7 +46,6 @@ export default function MiComision() {
   // Los mismos periodos que ve el dueño en Comisiones: así las dos cifras cuadran.
   const [periodo, setPeriodo] = useState<Periodo>('quincena');
   const { desde, hasta } = rango(periodo);
-  const hoyIso = isoLocal(new Date());
 
   const { datos, cargando, error } = useCargar(async () => {
     if (!companyId) return null;
@@ -58,15 +59,11 @@ export default function MiComision() {
     // Solo las suyas. Una cita sin asignar no es de nadie: no le cuenta a él.
     const mias = ficha ? citas.filter((c) => c.employee_id === ficha) : [];
     const ids = mias.map((c) => c.id);
-    const [lineas, congeladas, adelantos] = await Promise.all([
-      getServiciosDeCitas(ids),
-      getComisionesCongeladas(ids),
-      // Sus adelantos de estas fechas (datos 0013). Sin la 0013, ninguno.
-      supabase().rpc('mis_adelantos', { p_company: companyId, p_desde: desde, p_hasta: hasta })
-        .then(({ data, error }) => (error || !data ? { total: 0, filas: [] } : (data as { total: number; filas: { fecha: string; concepto: string; importe: number }[] }))),
-    ]);
-    return { ficha, mias, lineas, congeladas, fichas, catalogo, adelantos };
+    const [lineas, congeladas] = await Promise.all([getServiciosDeCitas(ids), getComisionesCongeladas(ids)]);
+    return { ficha, mias, lineas, congeladas, fichas, catalogo };
   }, [companyId, desde, hasta]);
+
+  const cobro = useCargar(() => (companyId ? porCobrar(companyId) : Promise.resolve(null)), [companyId]);
 
   const resumen = useMemo(() => {
     if (!datos?.ficha) return null;
@@ -80,23 +77,56 @@ export default function MiComision() {
       datos.congeladas,
     );
     const yo = r.profesionales.find((p) => p.employeeId === datos.ficha) ?? null;
-    const deHoy = (yo?.lineas ?? []).filter((l) => l.cita.slot_start.startsWith(hoyIso));
     return {
       pct: Number(mia?.comision_pct ?? 0),
       yo,
       sinMarcar: r.sinMarcar,
-      // Lo de hoy, aparte: es lo que el barbero mira al cerrar el día.
-      hoy: periodo !== 'hoy' && desde <= hoyIso && hoyIso <= hasta
-        ? { comision: deHoy.reduce((t, l) => t + l.comision, 0), citas: new Set(deHoy.map((l) => l.cita.id)).size }
-        : null,
     };
-  }, [datos, hoyIso, periodo, desde, hasta]);
+  }, [datos]);
 
   return (
     <main className="main">
       <div className="wrap">
-        <Topbar titulo="Mi comisión" sub="Lo que llevas ganado con las citas que atendiste" />
+        <Topbar titulo="Mi comisión" sub="Lo que te deben y lo que has ganado" />
 
+        {error && <p className="vacio">No se pudo cargar tu comisión: {error}</p>}
+        {cargando && !datos && <p className="vacio">Calculando…</p>}
+
+        {datos && !datos.ficha && (
+          <p className="equipo-aviso">
+            <b>Todavía no tienes una ficha enlazada.</b> Sin ella no hay citas tuyas que contar. Pídele al dueño o al
+            administrador que te la ponga en Ajustes › Acceso del equipo.
+          </p>
+        )}
+
+        {/* ── POR COBRAR: lo que te deben hoy, el mismo número que ve el dueño ── */}
+        {cobro.datos && (
+          <section className="card mi-cobro" aria-label="Por cobrar">
+            <small className="mi-cobro__rotulo">{cobro.datos.aCobrar < 0 ? 'Debes' : 'Por cobrar'}</small>
+            <b className={`mi-cobro__monto${cobro.datos.aCobrar < 0 ? ' mi-cobro__monto--debe' : ''}`}>{solesExactos(Math.abs(cobro.datos.aCobrar))}</b>
+            <p className="mi-cobro__cuenta">
+              {cobro.datos.atenciones} {cobro.datos.atenciones === 1 ? 'atención' : 'atenciones'} · comisión {solesExactos(cobro.datos.comision)}
+              {cobro.datos.adelantado > 0 && <> · <span className="mi-cobro__menos">adelantos − {solesExactos(cobro.datos.adelantado)}</span></>}
+            </p>
+            {cobro.datos.aCobrar < 0 && <p className="mi-cobro__nota">Se te adelantó más de lo que llevas: se descuenta de lo próximo.</p>}
+            <div className="mi-cobro__pie">
+              <span>Hoy llevas <b>{soles(cobro.datos.hoy)}</b></span>
+              {cobro.datos.ultimo
+                ? <span>Último pago: <b>{solesExactos(cobro.datos.ultimo.pagado)}</b> el {diaMes(new Date(cobro.datos.ultimo.pagado_at))} ({cobro.datos.ultimo.metodo})</span>
+                : <span className="muted">Desde el {diaMes(new Date(`${cobro.datos.desde}T12:00`))}</span>}
+            </div>
+            {resumen && resumen.sinMarcar.citas > 0 && (
+              <p className="mi-cobro__ojo">
+                {resumen.sinMarcar.citas} {resumen.sinMarcar.citas === 1 ? 'cita pasada no cuenta' : 'citas pasadas no cuentan'} hasta que
+                marques si vino. <Link href="/panel/mi-agenda">Márcalas en Mi agenda</Link>.
+              </p>
+            )}
+          </section>
+        )}
+
+        {resumen && (
+          <>
+            <h2 className="mi-seccion">Lo que has ganado</h2>
         <div className="filters" role="tablist" aria-label="Periodo" style={{ marginBottom: 14 }}>
           {PERIODOS.map(([k, txt]) => (
             <button key={k} type="button" role="tab" aria-selected={periodo === k} className={`fpill ${periodo === k ? 'active' : ''}`}
@@ -109,48 +139,14 @@ export default function MiComision() {
           </span>
         </div>
 
-        {error && <p className="vacio">No se pudo cargar tu comisión: {error}</p>}
-        {cargando && !datos && <p className="vacio">Calculando…</p>}
-
-        {datos && !datos.ficha && (
-          <p className="equipo-aviso">
-            <b>Todavía no tienes una ficha enlazada.</b> Sin ella no hay citas tuyas que contar. Pídele al dueño o al
-            administrador que te la ponga en Ajustes › Acceso del equipo.
-          </p>
-        )}
-
-        {resumen && (
-          <>
             <div className="card mia-grupo">
-              <small className="muted" style={{ fontSize: 12.5, fontWeight: 700 }}>Lo que te toca · {PERIODOS.find(([k]) => k === periodo)?.[1].toLowerCase()}</small>
+              <small className="muted" style={{ fontSize: 12.5, fontWeight: 700 }}>{PERIODOS.find(([k]) => k === periodo)?.[1]}</small>
               <h3 style={{ fontSize: 30, margin: '2px 0 4px' }}>{soles(resumen.yo?.comision ?? 0)}</h3>
               <p className="muted" style={{ fontSize: 13 }}>
                 {resumen.yo?.citas ?? 0} {resumen.yo?.citas === 1 ? 'atención' : 'atenciones'}
                 {resumen.yo ? ` · ${soles(resumen.yo.facturado)} en servicios` : ''}
                 {resumen.pct > 0 && ` · tu comisión general es del ${resumen.pct}%`}
               </p>
-              {(datos?.adelantos.total ?? 0) > 0 && (
-                <div className="mi-recibe">
-                  <span>Comisión <b>{soles(resumen.yo?.comision ?? 0)}</b></span>
-                  <span className="mi-recibe__menos">Adelantos <b>− {soles(Number(datos?.adelantos.total ?? 0))}</b></span>
-                  <span className="mi-recibe__total">Vas a recibir <b>{soles((resumen.yo?.comision ?? 0) - Number(datos?.adelantos.total ?? 0))}</b></span>
-                </div>
-              )}
-              {resumen.hoy && (
-                <p style={{ fontSize: 13.5, marginTop: 8 }}>
-                  Hoy: <b>{soles(resumen.hoy.comision)}</b>{' '}
-                  <span className="muted">({resumen.hoy.citas} {resumen.hoy.citas === 1 ? 'atención' : 'atenciones'})</span>
-                </p>
-              )}
-              <p className="muted" style={{ fontSize: 12, marginTop: 8 }}>
-                Cuenta cada cliente que marcaste «Atendido» (o que la caja cobró a tu nombre), con la misma cuenta que ve el dueño.
-              </p>
-              {resumen.sinMarcar.citas > 0 && (
-                <p className="muted" style={{ fontSize: 12.5, marginTop: 8 }}>
-                  Tienes {resumen.sinMarcar.citas} {resumen.sinMarcar.citas === 1 ? 'cita pasada' : 'citas pasadas'} sin
-                  marcar si el cliente vino. Hasta que se marquen no cuentan: hazlo en Mi agenda.
-                </p>
-              )}
             </div>
 
             <div className="card mia-grupo">
@@ -180,4 +176,50 @@ export default function MiComision() {
       </div>
     </main>
   );
+}
+
+/**
+ * Lo que se le debe al barbero ahora: la MISMA cuenta que «Por pagar a tu equipo» del dueño
+ * (lib/panel/cierres.ts): la comisión de sus citas atendidas que ningún pago cubre, menos sus
+ * adelantos que ningún pago descontó, desde el mismo día (desdeDeCuentas). Sus pagos y adelantos
+ * llegan por mi_por_cobrar (datos 0015); sin ella, null y la tarjeta no sale.
+ */
+async function porCobrar(companyId: string) {
+  const { data, error } = await supabase().rpc('mi_por_cobrar', { p_company: companyId });
+  if (error || !data) return null;
+  const d = data as {
+    ficha: string | null;
+    primero: string | null;
+    cierres: { citas: string[]; adelantos: string[]; pagado: number; metodo: string; pagado_at: string }[];
+    adelantos: { id: string; fecha: string; importe: number }[];
+  };
+  if (!d.ficha) return null;
+  const hoy = new Date();
+  const desde = desdeDeCuentas(d.primero, hoy);
+  const [citas, fichas, catalogo] = await Promise.all([
+    getCitasDelPeriodo(companyId, desde, isoLocal(hoy)),
+    getEquipoFichas(companyId),
+    getCatalogoDelEquipo(companyId),
+  ]);
+  const pagadas = new Set(d.cierres.flatMap((c) => c.citas));
+  const mias = citas.filter((c) => c.employee_id === d.ficha);
+  const ids = mias.map((c) => c.id);
+  const [lineas, congeladas] = await Promise.all([getServiciosDeCitas(ids), getComisionesCongeladas(ids)]);
+  const pct = fichas.find((f) => f.es_la_tuya)?.comision_pct ?? 0;
+  const r = calcularComisiones(mias, lineas, catalogo, [{ id: d.ficha, comision_pct: pct }], hoy, congeladas);
+  const todas = r.profesionales.find((p) => p.employeeId === d.ficha)?.lineas ?? [];
+  const lineasSinPagar = todas.filter((l) => !pagadas.has(l.cita.id));
+  const hoyIso = isoLocal(hoy);
+  const comision = Math.round(lineasSinPagar.reduce((t, l) => t + l.comision, 0) * 100) / 100;
+  const adelantado = Math.round(d.adelantos.filter((g) => g.fecha >= desde).reduce((t, g) => t + Number(g.importe ?? 0), 0) * 100) / 100;
+  return {
+    desde,
+    comision,
+    adelantado,
+    aCobrar: Math.round((comision - adelantado) * 100) / 100,
+    atenciones: new Set(lineasSinPagar.map((l) => l.cita.id)).size,
+    // Lo de hoy, pagado o no: lo que mira al cerrar el día.
+    hoy: todas.filter((l) => l.cita.slot_start.startsWith(hoyIso)).reduce((t, l) => t + l.comision, 0),
+    ultimo: d.cierres[0] ? { ...d.cierres[0], pagado: Number(d.cierres[0].pagado) } : null,
+  };
 }

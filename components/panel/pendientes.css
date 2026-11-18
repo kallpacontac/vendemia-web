@@ -1,43 +1,109 @@
-/* «Pendientes» del panel principal (components/panel/Pendientes.tsx). */
-.pendientes {
+/* «Lo que necesita atención» del panel principal (components/panel/Pendientes.tsx). */
+.atencion { margin: 0 0 18px; padding: 18px 18px 16px !important; }
+.atencion__cab { display: flex; align-items: center; gap: 12px; }
+.atencion__cab h2 { margin: 0; font-size: 19px; line-height: 1.2; letter-spacing: -.01em; }
+.atencion__cab small { display: block; margin-top: 2px; font-size: 13.5px; color: var(--ink-soft, #5C5C5C); }
+.atencion--suena .atencion__cab small { color: #8A5200; font-weight: 600; }
+.atencion__timbre {
+  position: relative; flex: none; display: grid; place-items: center;
+  width: 46px; height: 46px; border-radius: 50%;
+  background: #FFF3D6; color: #E08A00;
+}
+.atencion__timbre .campana { color: #E08A00; }
+/* El timbre: además de balancearse, suelta ondas cuando suena. */
+.atencion--suena .atencion__timbre::before,
+.atencion--suena .atencion__timbre::after {
+  content: ''; position: absolute; inset: 0; border-radius: 50%;
+  border: 2px solid #F2B544; opacity: 0;
+  animation: timbre-onda 2.8s ease-out infinite;
+}
+.atencion--suena .atencion__timbre::after { animation-delay: .25s; }
+@keyframes timbre-onda {
+  0%, 62% { transform: scale(1); opacity: 0; }
+  66% { opacity: .9; }
+  100% { transform: scale(1.75); opacity: 0; }
+}
+.atencion__timbre--ok { background: #E8F6EE; color: #1A8A4A; }
+.atencion__timbre--calma { background: var(--brand-soft, #FFEFE7); color: var(--brand-txt, #CC3A00); }
+
+.atencion__lista {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-  gap: 12px;
-  margin: 0 0 18px;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 440px), 1fr));
+  gap: 10px;
+  margin-top: 14px;
 }
 .pendiente {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  min-height: 72px;
-  padding: 14px 16px;
+  display: flex; align-items: center; gap: 14px;
+  min-height: 76px; padding: 12px 14px;
   border-radius: var(--r-md, 16px);
   border: 1px solid var(--line, #EAEAE6);
   background: var(--bg-card, #fff);
   color: var(--ink, #0A0A0A);
   text-decoration: none;
-  transition: border-color .15s ease, transform .15s ease;
+  transition: border-color .15s ease, transform .15s ease, box-shadow .15s ease;
 }
-.pendiente:hover { border-color: currentColor; }
+.pendiente:hover { transform: translateY(-1px); box-shadow: 0 6px 18px rgba(0, 0, 0, .06); }
+.pendiente:active { transform: scale(.99); }
 .pendiente:focus-visible { outline: 3px solid var(--brand, #FF4900); outline-offset: 2px; }
-.pendiente__icono { flex: none; }
+
+/* El ícono con su número encima, como la burbuja de una app. */
+.pendiente__icono {
+  position: relative; flex: none; display: grid; place-items: center;
+  width: 46px; height: 46px; border-radius: 14px;
+}
+.pendiente__n {
+  position: absolute; top: -7px; right: -9px;
+  min-width: 24px; height: 24px; padding: 0 6px; border-radius: 12px;
+  display: grid; place-items: center;
+  font-size: 13px; font-weight: 800; line-height: 1; font-style: normal; color: #fff;
+  border: 2px solid var(--bg-card, #fff);
+}
 .pendiente__texto { display: flex; flex-direction: column; gap: 3px; min-width: 0; flex: 1; }
-.pendiente__texto b { font-size: 15.5px; line-height: 1.25; }
-.pendiente__texto span { font-size: 13.5px; color: var(--ink-soft, #5C5C5C); }
-.pendiente__ir { flex: none; color: var(--ink-mute, #93938C); }
+.pendiente__texto b { font-size: 16px; line-height: 1.25; }
+.pendiente__texto span { font-size: 13px; line-height: 1.35; color: var(--ink-soft, #5C5C5C); }
+.pendiente__accion {
+  flex: none; display: inline-flex; align-items: center; gap: 2px;
+  min-height: 40px; padding: 0 10px 0 14px; border-radius: 999px;
+  font-size: 14px; font-weight: 700; white-space: nowrap;
+}
 
-/* Dinero sin confirmar o algo que falló: ámbar, como el aviso de «por verificar». */
-.pendiente--aviso { background: #FFF8E6; border-color: #F5DFA6; }
-.pendiente--aviso .pendiente__icono,
-.pendiente--aviso .pendiente__texto b { color: #8A5200; }
-/* Trabajo del día: el tono de la marca, suave. */
-.pendiente--tarea { background: var(--brand-soft, #FFEFE7); border-color: #FFD6C2; }
-.pendiente--tarea .pendiente__icono,
-.pendiente--tarea .pendiente__texto b { color: var(--brand-txt, #CC3A00); }
+/* YA: alguien espera. Ámbar, el ícono timbra (uno detrás de otro) y el botón va lleno. */
+.pendiente--ya { background: #FFFAEE; border-color: #F5DFA6; }
+.pendiente--ya:hover { border-color: #E9B949; }
+.pendiente--ya .pendiente__icono { background: #FFEBC2; color: #A35F00; }
+.pendiente--ya .pendiente__icono svg {
+  transform-origin: 50% 10%;
+  animation: campana-suena 2.8s ease-in-out infinite;
+  animation-delay: calc(var(--i, 0) * .18s);
+}
+.pendiente--ya .pendiente__n { background: #E5484D; }
+.pendiente--ya .pendiente__accion { background: var(--brand, #FF4900); color: #fff; }
 
-@media (prefers-reduced-motion: reduce) { .pendiente { transition: none; } }
-@media (max-width: 520px) {
-  .pendientes { grid-template-columns: 1fr; gap: 8px; }
+/* LUEGO: se puede hacer más tarde. Quieto, sobrio. */
+.pendiente--luego .pendiente__icono { background: var(--brand-soft, #FFEFE7); color: var(--brand-txt, #CC3A00); }
+.pendiente--luego .pendiente__n { background: var(--ink, #0A0A0A); }
+.pendiente--luego .pendiente__accion { background: var(--brand-soft, #FFEFE7); color: var(--brand-txt, #CC3A00); }
+.pendiente--luego:hover { border-color: #FFC9AE; }
+
+@media (prefers-reduced-motion: reduce) {
+  .pendiente { transition: none; }
+  .pendiente--ya .pendiente__icono svg,
+  .atencion--suena .atencion__timbre::before,
+  .atencion--suena .atencion__timbre::after { animation: none; }
+}
+@media (max-width: 620px) {
+  .atencion { padding: 14px 12px 12px !important; margin-bottom: 12px; }
+  .atencion__cab h2 { font-size: 17px; }
+  .atencion__lista { grid-template-columns: 1fr; gap: 8px; margin-top: 12px; }
+  .pendiente { gap: 12px; padding: 12px; min-height: 70px; }
+  .pendiente__texto b { font-size: 15px; }
+  .pendiente__texto span { font-size: 12.5px; }
+  .pendiente__accion { padding: 0 8px 0 12px; font-size: 13.5px; }
+}
+@media (max-width: 380px) {
+  /* En los teléfonos más angostos el verbo se queda en la flecha. */
+  .pendiente__accion { font-size: 0; padding: 0 8px; gap: 0; }
+  .pendiente__accion svg { width: 18px; height: 18px; }
 }
 
 /* «Por pagar a tu equipo» en Comisiones (components/panel/CierresPorPagar.tsx). */

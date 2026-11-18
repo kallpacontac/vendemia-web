@@ -76,6 +76,33 @@ import {
 } from '@/lib/supabase/queries';
 import type { ResultadoMarcarPagado } from '@/lib/supabase/commands';
 import BoletaDelCobro, { type LineaCobro } from '@/modules/facturacion/ui/BoletaDelCobro';
+import { supabase } from '@/lib/supabase/client';
+import { demoActivo } from '@/lib/panel/demo';
+
+/*
+ * Qué se consulta y cuándo (The 24/7, 18-nov: «las citas y los tickets son lo que se genera
+ * constantemente; clientes, equipo y catálogo difícil cambian»):
+ *   · CADA 20 s, solo lo que se mueve: las citas y tickets del día, sus cobros y los gastos.
+ *     Los pedidos, solo si hoy entró dinero de alguno (en la barbería, nunca).
+ *   · UNA VEZ, al abrir la Caja: el equipo (botones de barberos) y el catálogo (servicios y
+ *     productos). Ver `fijos` en Caja().
+ *   · Clientes: en «Cobrar», NINGUNO (el cajero reconoce el ticket por barbero y servicio). Solo
+ *     el celular del que se está cobrando, en ese momento (boleta por WhatsApp y sello de su
+ *     tarjeta), y los nombres en el «Cierre del día», que es el reporte. Los ya vistos se
+ *     recuerdan (`conocidos`) y no se vuelven a pedir.
+ */
+type ClienteCaja = { id: string; name: string | null; phone: string | null };
+const conocidos = new Map<string, ClienteCaja>();
+async function clientesDe(companyId: string, ids: (string | null | undefined)[]): Promise<ClienteCaja[]> {
+  if (demoActivo()) return getLeads(companyId, 500);
+  const unicos = [...new Set(ids.filter((x): x is string => !!x))];
+  const faltan = unicos.filter((id) => !conocidos.has(`${companyId}:${id}`));
+  if (faltan.length) {
+    const { data, error } = await supabase().from('leads').select('id,name,phone').eq('company_id', companyId).in('id', faltan);
+    if (!error) for (const l of (data ?? []) as ClienteCaja[]) conocidos.set(`${companyId}:${l.id}`, l);
+  }
+  return unicos.map((id) => conocidos.get(`${companyId}:${id}`)).filter((l): l is ClienteCaja => !!l);
+}
 
 
 export default function CajaPagina() {
@@ -116,19 +143,29 @@ function Caja() {
   const sedes = useSedes(companyId);
   const [sede] = useSedeElegida(companyId, sedes);
 
+  // Equipo y catálogo: una vez al abrir la Caja, no en cada vuelta (ver arriba).
+  const fijos = useCargar(async () => {
+    if (!companyId) return null;
+    return Promise.all([getTrabajadores(companyId).catch(() => []), getCatalogo(companyId).catch(() => [])]);
+  }, [companyId]);
+  const trabajadores = useMemo(() => fijos.datos?.[0] ?? [], [fijos.datos]);
+  const catalogo = useMemo(() => fijos.datos?.[1] ?? [], [fijos.datos]);
+
   const { datos, cargando, error, releer } = useCargar(async () => {
     if (!companyId) return null;
-    const [todosMovimientos, todasCitas, pedidos, todosGastos, leads, trabajadores, catalogo] = await Promise.all([
+    const [todosMovimientos, todasCitas, todosGastos] = await Promise.all([
       getMovimientos(companyId, dia, dia),
       getCitasDelPeriodo(companyId, dia, dia),
-      getPedidos(companyId, 500),
       getGastos(companyId, dia),
-      getLeads(companyId, 500),
-      getTrabajadores(companyId).catch(() => []),
-      getCatalogo(companyId).catch(() => []),
     ]);
-    const pagos = await getPagosCaja(companyId, dia, todosMovimientos);
-    if (!sede) return { dia, sede, movimientos: todosMovimientos, citas: todasCitas, pedidos, gastos: todosGastos, leads, pagos, trabajadores, catalogo };
+    const [pagos, pedidos] = await Promise.all([
+      getPagosCaja(companyId, dia, todosMovimientos),
+      todosMovimientos.some((m) => m.fuente !== 'appointment') ? getPedidos(companyId, 500) : Promise.resolve([]),
+    ]);
+    // Cobrar: ningún cliente (el cajero reconoce el ticket por barbero y servicio). Solo el Cierre,
+    // que es el reporte, pone nombres.
+    const leads = cierre ? await clientesDe(companyId, [...todasCitas.map((c) => c.lead_id), ...pagos.pagosDelDia.map((p) => p.lead_id)]) : [];
+    if (!sede) return { dia, sede, movimientos: todosMovimientos, citas: todasCitas, pedidos, gastos: todosGastos, leads, pagos };
 
     // Una sede: solo el dinero de SUS citas (por la sede de cada cita, también la de un adelanto
     // pagado hoy para otro día). Pedidos y gastos no tienen sede: se ven en «Todas».
@@ -147,10 +184,8 @@ function Caja() {
       gastos: [] as typeof todosGastos,
       leads,
       pagos: { ...pagos, pagosDelDia: pagos.pagosDelDia.filter((p) => suya(p.appointment_id)) },
-      trabajadores,
-      catalogo,
     };
-  }, [companyId, dia, sede]);
+  }, [companyId, dia, sede, cierre]);
 
   // Lo que el barbero acaba de marcar «Atendido» tiene que aparecer solo, sin recargar: el cliente
   // ya viene caminando hacia la caja con su ticket. Solo hoy, y con la pestaña a la vista.
@@ -257,8 +292,8 @@ function Caja() {
     [datos],
   );
   const nombrePorBarbero = useMemo(
-    () => new Map((datos?.trabajadores ?? []).map((t) => [t.id, t.name])),
-    [datos],
+    () => new Map(trabajadores.map((t) => [t.id, t.name])),
+    [trabajadores],
   );
 
   async function cobrar(c: Cita, metodo: MetodoPago, foto?: FotoPago) {
@@ -280,6 +315,8 @@ function Caja() {
         'ok',
       );
     setEnVuelo(null);
+    // El celular, solo de ESTE cliente y solo al cobrarlo: para su boleta por WhatsApp y su sello.
+    const tel = r && c.lead_id ? ((await clientesDe(companyId ?? '', [c.lead_id]))[0]?.phone ?? '') : '';
     if (r && importe > 0) {
       // Una línea: el servicio por lo cobrado (con lo que se le sumó). Con el botón se puede desglosar.
       const servicio = c.service || 'Servicio';
@@ -287,12 +324,11 @@ function Caja() {
         id: c.id,
         texto: `${soles(importe)} · ${servicio}`,
         lineas: [{ descripcion: servicio, cantidad: 1, precio: importe }],
-        tel: (datos?.leads.find((l) => l.id === c.lead_id)?.phone ?? '').replace(/\D/g, '').slice(-9),
+        tel: tel.replace(/\D/g, '').slice(-9),
       });
     }
     // La tarjeta de fidelidad, sola: si su celular tiene tarjeta, su sello (una vez por cita).
     if (r && companyId) {
-      const tel = datos?.leads.find((l) => l.id === c.lead_id)?.phone;
       const total = Number(datos?.movimientos.find((m) => m.fuente === 'appointment' && m.movimiento_id === c.id)?.importe ?? 0);
       const sello = await sumarSelloDeCita(companyId, tel, c.id, total);
       if (sello) avisar(sello.texto, sello.tono);
@@ -330,15 +366,15 @@ function Caja() {
         )}
 
         {!cierre && gasto && (
-          <GastosCaja modo="formulario" dia={hoy} gastos={[]} trabajadores={datos?.trabajadores ?? []} soloTodas={false}
+          <GastosCaja modo="formulario" dia={hoy} gastos={[]} trabajadores={trabajadores} soloTodas={false}
             alCambiar={releer} alCerrar={() => setGasto(false)} />
         )}
 
         {!cierre && ticket && companyId && datos && dia === hoy && (
           <CobrarTicket
             companyId={companyId}
-            trabajadores={datos.trabajadores}
-            catalogo={datos.catalogo}
+            trabajadores={trabajadores}
+            catalogo={catalogo}
             sedes={sedes}
             sedeInicial={sede}
             alCerrar={() => setTicket(false)}
@@ -357,7 +393,7 @@ function Caja() {
         {!cierre && calculo && companyId && (
           <ListosParaCobrar
             companyId={companyId}
-            catalogo={datos?.catalogo ?? []}
+            catalogo={catalogo}
             filas={calculo.listos}
             barbero={(id) => nombrePorBarbero.get(id)}
             cliente={(id) => nombrePorLead.get(id)}
@@ -508,7 +544,7 @@ function Caja() {
             )}
 
             {/* ── Gastos y adelantos: todo lo que sale de la caja, en un sitio (datos 0013) ── */}
-            <GastosCaja dia={dia} gastos={datos?.gastos ?? []} trabajadores={datos?.trabajadores ?? []} soloTodas={Boolean(sede)} alCambiar={releer} />
+            <GastosCaja dia={dia} gastos={datos?.gastos ?? []} trabajadores={trabajadores} soloTodas={Boolean(sede)} alCambiar={releer} />
 
           </div>
         )}

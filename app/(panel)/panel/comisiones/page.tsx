@@ -131,7 +131,9 @@ export default function Comisiones() {
         {/* Lo que se le debe a cada uno desde su último pago, y «Pagar» (datos 0014). */}
         {companyId && <CierresPorPagar companyId={companyId} esDueno={esDueno} />}
 
-        <div className="filters" style={{ marginBottom: 16 }}>
+        {/* Debajo, para consultar: lo que ganó cada uno en un periodo (no lo que se le debe). */}
+        <h2 className="mi-seccion" style={{ marginTop: 18 }}>Lo ganado por periodo</h2>
+        <div className="filters" style={{ marginBottom: 16, paddingLeft: 0 }}>
           {PERIODOS.map(([k, txt]) => (
             <button key={k} type="button" aria-pressed={periodo === k} className={`fpill ${periodo === k ? 'active' : ''}`} onClick={() => setPeriodo(k)}>
               {txt}
@@ -281,8 +283,10 @@ export default function Comisiones() {
           )}
         </div>
 
-        {/* 1 y 3 · Lo que hace que esta cifra no cuadre con otras, dicho antes de que alguien lo pregunte. */}
-        <div className="muted" style={{ fontSize: 12.5, lineHeight: 1.7, marginTop: 14 }}>
+        {/* 1 y 3 · Lo que hace que esta cifra no cuadre con otras: plegado, para quien lo pregunte. */}
+        <details className="caja-como">
+        <summary>¿Cómo se calcula?</summary>
+        <div className="muted" style={{ fontSize: 12.5, lineHeight: 1.7, marginTop: 8 }}>
           <p>
             <b>Por qué es menos que los ingresos:</b> aquí solo cuentan las citas marcadas como atendidas. Los
             ingresos de Métricas cuentan también las confirmadas que todavía no han ocurrido.
@@ -292,6 +296,7 @@ export default function Comisiones() {
             quien figura en la cita. <b>La venta de productos no genera comisión:</b> no consta quién la hizo.
           </p>
         </div>
+        </details>
       </div>
     </main>
   );

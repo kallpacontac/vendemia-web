@@ -25,7 +25,8 @@
  * precio (día o noche) lo pone Postgres; las semanas que no caben se saltan y
  * se dicen. Ver agenda_crear_cita en modules/tu-pagina/sql/0011.
  */
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { guiarA } from '@/lib/panel/guiar';
 import { ElegirFecha, ElegirHora, fechaEnPalabras } from './FechaHora';
 import { CalendarPlus, Check, Search, UserPlus, X } from 'lucide-react';
 import AvisarCliente from './AvisarCliente';
@@ -78,7 +79,7 @@ const CLAVES_DIA: ClaveDia[] = ['sunday', 'monday', 'tuesday', 'wednesday', 'thu
 
 /**
  * Las horas que se pueden elegir ese día: de la apertura hasta que el servicio quepa antes del cierre,
- * cada 15 min (Alvaro, 17-nov: «filtra el reloj para que esté dentro de los horarios»). null = no hay
+ * cada 30 min (Alvaro, 17-nov: «filtra el reloj para que esté dentro de los horarios»). null = no hay
  * horario guardado (se usa el reloj libre); [] = ese día está cerrado.
  */
 function horasDelDia(horario: Horario | undefined, fecha: string, minutos: number): string[] | null {
@@ -90,7 +91,8 @@ function horasDelDia(horario: Horario | undefined, fecha: string, minutos: numbe
   if (!t) return [];
   const fin = Math.min(t.cierra, 1440) - Math.max(minutos, 5);
   const out: string[] = [];
-  for (let x = Math.ceil(t.abre / 15) * 15; x <= fin; x += 15) out.push(hhmm(x));
+  // Cada 30 min (18-nov: «son muchos botones»): la hora exacta, con «Ahora».
+  for (let x = Math.ceil(t.abre / 30) * 30; x <= fin; x += 30) out.push(hhmm(x));
   return out;
 }
 
@@ -169,7 +171,7 @@ export default function NuevaCita({
    * enseñar una opción que siempre falla.
    */
   const servicios = useMemo(
-    () => catalogo.filter((c) => c.activo && json<FranjaRecurrente[]>(c.schedule_slots, []).length === 0 && !(canchas && c.tipo === 'producto')),
+    () => catalogo.filter((c) => c.activo && json<FranjaRecurrente[]>(c.schedule_slots, []).length === 0 && c.tipo !== 'producto'),
     [catalogo, canchas],
   );
   const turno = servicios.find((s) => s.id === itemId)?.duration_minutes || 60;
@@ -192,7 +194,7 @@ export default function NuevaCita({
   }, [canchas, horasPosibles, sede, capacidad, citas, fecha, minutosServicio, hora]);
   /** Hoy, solo de ahora en adelante; las de antes, si se pide (anotar a quien ya se atendió, 0030). */
   const [verPasadas, setVerPasadas] = useState(false);
-  const desde = fecha === hoy && !verPasadas ? hhmm(Math.floor(minutosLima() / 15) * 15) : '';
+  const desde = fecha === hoy && !verPasadas ? hhmm(Math.floor(minutosLima() / 30) * 30) : '';
   const horasVisibles = (horasPosibles ?? []).filter((h) => !desde || h >= desde || h === hora);
   const cerrado = (iso: string) => horasDelDia(horario, iso, 5)?.length === 0;
   const servicioElegido = servicios.find((x) => x.id === itemId);
@@ -325,6 +327,30 @@ export default function NuevaCita({
 
   const nombreSede = (n: string) => n.split(' · ')[0];
 
+  // La guía (18-nov): cada elección lleva la vista al siguiente campo (lib/panel/guiar.ts).
+  const refSede = useRef<HTMLDivElement>(null);
+  const refQuien = useRef<HTMLDivElement>(null);
+  const refHora = useRef<HTMLDivElement>(null);
+  const refCliente = useRef<HTMLDivElement>(null);
+  const ahoraCampo = !itemId ? 'servicio' : pideSede && !sede ? 'sede' : !hora ? 'hora' : '';
+  const elegirServicio = (id: string) => {
+    setItemId(id);
+    guiarA((pideSede && !sede ? refSede : activos.length ? refQuien : refHora).current);
+  };
+  const elegirSedeNc = (n: string) => {
+    setSede(n);
+    guiarA((activos.length ? refQuien : refHora).current);
+  };
+  const elegirQuien = (id: string) => {
+    setEmpId(id);
+    guiarA(refHora.current);
+  };
+  const elegirHoraNc = (h: string) => {
+    setHora(h);
+    guiarA(refCliente.current);
+  };
+  const clase = (campo: string) => `nc-campo${ahoraCampo === campo ? ' nc-campo--ahora' : ''}`;
+
   return (
     <div className="modal-fondo nc-fondo" role="presentation" onMouseDown={(e) => { if (e.target === e.currentTarget && !enviando) alCerrar(); }}>
       <div className="modal nc" role="dialog" aria-modal="true" aria-labelledby="nc-titulo">
@@ -338,12 +364,12 @@ export default function NuevaCita({
         <div className="nc-cuerpo">
           {aviso && <AvisarCliente {...aviso} alCerrar={() => setAviso(null)} />}
 
-          <div className="nc-campo">
+          <div className={clase('servicio')}>
             <span className="nc-rotulo">{canchas ? '¿Qué cancha?' : '¿Qué servicio?'}</span>
             <div className="nc-chips" role="radiogroup" aria-label={canchas ? 'Cancha' : 'Servicio'}>
               {servicios.map((x) => (
                 <button key={x.id} type="button" role="radio" aria-checked={itemId === x.id}
-                  className={`ticket-chip ticket-chip--item${itemId === x.id ? ' on' : ''}`} onClick={() => setItemId(x.id)}>
+                  className={`ticket-chip ticket-chip--item${itemId === x.id ? ' on' : ''}`} onClick={() => elegirServicio(x.id)}>
                   <span>{x.name}</span>
                   <small>{x.price != null ? soles(x.price) : '—'}{x.duration_minutes ? ` · ${x.duration_minutes} min` : ''}</small>
                 </button>
@@ -370,12 +396,12 @@ export default function NuevaCita({
           )}
 
           {pideSede && (
-            <div className="nc-campo">
+            <div ref={refSede} className={clase('sede')}>
               <span className="nc-rotulo">¿En qué sede?</span>
               <div className="nc-chips" role="radiogroup" aria-label="Sede">
                 {sedes.map((x) => (
                   <button key={x.nombre} type="button" role="radio" aria-checked={sede === x.nombre}
-                    className={`ticket-chip${sede === x.nombre ? ' on' : ''}`} onClick={() => setSede(x.nombre)}>
+                    className={`ticket-chip${sede === x.nombre ? ' on' : ''}`} onClick={() => elegirSedeNc(x.nombre)}>
                     {nombreSede(x.nombre)}
                   </button>
                 ))}
@@ -384,15 +410,15 @@ export default function NuevaCita({
           )}
 
           {activos.length > 0 && (
-            <div className="nc-campo">
+            <div ref={refQuien} className="nc-campo">
               <span className="nc-rotulo">¿Con quién?</span>
               <div className="nc-chips" role="radiogroup" aria-label="Profesional">
-                <button type="button" role="radio" aria-checked={empId === ''} className={`ticket-chip${empId === '' ? ' on' : ''}`} onClick={() => setEmpId('')}>
+                <button type="button" role="radio" aria-checked={empId === ''} className={`ticket-chip${empId === '' ? ' on' : ''}`} onClick={() => elegirQuien('')}>
                   Cualquiera
                 </button>
                 {activos.map((t) => (
                   <button key={t.id} type="button" role="radio" aria-checked={empId === t.id}
-                    className={`ticket-chip${empId === t.id ? ' on' : ''}`} onClick={() => setEmpId(t.id)}>
+                    className={`ticket-chip${empId === t.id ? ' on' : ''}`} onClick={() => elegirQuien(t.id)}>
                     {t.name}
                   </button>
                 ))}
@@ -406,7 +432,7 @@ export default function NuevaCita({
               min={ayerLima()} cerrado={canchas ? undefined : cerrado} />
           </div>
 
-          <div className="nc-campo">
+          <div ref={refHora} className={clase('hora')}>
             <span className="nc-rotulo">
               ¿A qué hora?
               {fecha === hoy && !canchas && (
@@ -415,7 +441,7 @@ export default function NuevaCita({
             </span>
             {horasPosibles ? (
               <>
-                <ElegirHora horas={horasVisibles} valor={hora} alCambiar={setHora} llenas={llenas} />
+                <ElegirHora horas={horasVisibles} valor={hora} alCambiar={elegirHoraNc} llenas={llenas} />
                 {/* Un interruptor, no una puerta de un solo sentido: se abre y se vuelve a cerrar. */}
                 {fecha === hoy && (verPasadas || horasVisibles.length < horasPosibles.length) && (
                   <button type="button" className={`nc-interruptor${verPasadas ? ' on' : ''}`} aria-pressed={verPasadas}
@@ -429,7 +455,7 @@ export default function NuevaCita({
             )}
           </div>
 
-          <div className="nc-campo">
+          <div ref={refCliente} className="nc-campo">
             <span className="nc-rotulo">¿Para quién? <span className="nc-opcional">opcional</span></span>
             {nuevo ? (
               <div className="nc-dos">

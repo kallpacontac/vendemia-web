@@ -65,3 +65,9 @@
 /* Caja: la tarjeta del último cobro de «Listos para cobrar», con su boleta. */
 .caja-boleta { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 14px; padding: 12px 16px; margin-bottom: 14px; }
 .caja-boleta .fe-cobro { margin-top: 0; }
+
+/* Facturación apagada: aviso con un solo botón (PanelComprobantes). */
+.fe-apagado { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 14px; margin: 4px 0 16px; border: 1px solid #F5DFA6 !important; background: #FFFAEE !important; }
+.fe-apagado b { font-size: 16px; }
+.fe-apagado p { margin: 4px 0 0; font-size: 13.5px; max-width: 560px; }
+.fe-apagado .btn { min-height: 46px; }

@@ -7,8 +7,9 @@
  *   · useMasVendidos: veces vendido cada ítem en los últimos 60 días (datos 0013). Sin la 0013,
  *     o si falla, todo vale 0 y se queda el orden del catálogo.
  *   · ordenarPorVentas: lo más vendido primero; a igualdad, el orden del catálogo.
- *   · FiltroProductos: con más de 8, arriba un buscador y las familias («Bebidas», «Productos de
- *     barbería») como botones; sin buscar, solo los 8 más vendidos y «Ver todos».
+ *   · FiltroProductos: con más de 4, arriba un buscador por nombre; sin buscar, solo los 4 más
+ *     vendidos y un «Ver todos» discreto. (18-nov: «hay demasiados productos, eso satura; que se
+ *     filtren por nombre». Las familias como botones eran otra fila más: fuera.)
  */
 import { useMemo, useState } from 'react';
 import { Search, X } from 'lucide-react';
@@ -33,7 +34,7 @@ export function ordenarPorVentas(items: ItemCatalogo[], ventas: Record<string, n
 }
 
 const sinTildes = (t: string) => t.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
-const TOPE = 8;
+const TOPE = 4;
 
 export default function FiltroProductos({
   productos,
@@ -46,19 +47,15 @@ export default function FiltroProductos({
   render: (lista: ItemCatalogo[]) => React.ReactNode;
 }) {
   const [q, setQ] = useState('');
-  const [familia, setFamilia] = useState('');
   const [todos, setTodos] = useState(false);
-  const familias = useMemo(
-    () => [...new Set(productos.map((p) => (p.familia ?? '').trim()).filter(Boolean))].sort(),
-    [productos],
-  );
   const muchos = productos.length > TOPE;
   const lista = useMemo(() => {
     const t = sinTildes(q.trim());
-    const filtrados = productos.filter((p) => (!familia || (p.familia ?? '').trim() === familia) && (!t || sinTildes(p.name).includes(t)));
+    // También por familia escrita («cerveza», «gel»): sin botones, el buscador lo cubre.
+    const filtrados = productos.filter((p) => !t || sinTildes(`${p.name} ${p.familia ?? ''}`).includes(t));
     return ordenarPorVentas(filtrados, ventas);
-  }, [productos, ventas, q, familia]);
-  const recortar = muchos && !q && !familia && !todos;
+  }, [productos, ventas, q]);
+  const recortar = muchos && !q && !todos;
   const visibles = recortar ? lista.slice(0, TOPE) : lista;
 
   return (
@@ -67,24 +64,15 @@ export default function FiltroProductos({
         <div className="pf-barra">
           <label className="pf-buscar">
             <Search size={16} aria-hidden="true" />
-            <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar producto…" aria-label="Buscar producto" />
+            <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Escribe: inca, cera, gel…" aria-label="Buscar producto por nombre" />
             {q && (
               <button type="button" aria-label="Borrar búsqueda" onClick={() => setQ('')}><X size={15} /></button>
             )}
           </label>
-          {familias.length > 1 && (
-            <div className="pf-familias" role="group" aria-label="Familia">
-              <button type="button" className={!familia ? 'on' : ''} aria-pressed={!familia} onClick={() => setFamilia('')}>Todos</button>
-              {familias.map((f) => (
-                <button key={f} type="button" className={familia === f ? 'on' : ''} aria-pressed={familia === f} onClick={() => setFamilia(familia === f ? '' : f)}>
-                  {f}
-                </button>
-              ))}
-            </div>
-          )}
         </div>
       )}
-      {recortar && <small className="pf-nota">Los más vendidos primero</small>}
+      {recortar && <small className="pf-nota">Los más pedidos</small>}
+      {todos && !q && <button type="button" className="pf-todos" onClick={() => setTodos(false)}>Ver menos</button>}
       {visibles.length ? render(visibles) : <p className="pf-vacio">Nada con «{q}».</p>}
       {recortar && lista.length > TOPE && (
         <button type="button" className="pf-todos" onClick={() => setTodos(true)}>Ver todos ({lista.length})</button>

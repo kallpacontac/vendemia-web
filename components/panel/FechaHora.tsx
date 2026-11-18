@@ -128,7 +128,14 @@ const TRAMOS: [string, (h: number) => boolean][] = [
   ['Tarde', (h) => h >= 12 && h < 18],
   ['Noche', (h) => h >= 18],
 ];
+const tramoDeHora = (h: string) => TRAMOS.findIndex(([, cabe]) => cabe(Number(h.slice(0, 2))));
 
+/**
+ * Las horas por franja, en pestañas «Mañana · Tarde · Noche» con cuántas hay libres (18-nov, The 24/7:
+ * «son muchos botones; fíltralo como la página»). Se abre en la franja de la hora elegida o, sin
+ * elegir, en la primera que tenga horas: hoy, como las pasadas no salen, es la de AHORA. Para
+ * regularizar (las pasadas a la vista) están todas las franjas a un toque.
+ */
 export function ElegirHora({
   horas,
   valor,
@@ -142,31 +149,48 @@ export function ElegirHora({
   /** Las que ya no tienen sitio. */
   llenas?: Set<string>;
 }) {
+  const porTramo = TRAMOS.map(([, cabe]) => horas.filter((h) => cabe(Number(h.slice(0, 2)))));
+  const conHoras = porTramo.map((l, i) => (l.length ? i : -1)).filter((i) => i >= 0);
+  const deValor = valor && horas.includes(valor) ? tramoDeHora(valor) : -1;
+  const [tramo, setTramo] = useState(deValor >= 0 ? deValor : (conHoras[0] ?? 0));
+  // Si la franja abierta se queda sin horas (otro día, otro servicio), a la de la hora elegida o a la primera.
+  const clave = conHoras.join();
+  useEffect(() => {
+    if (!porTramo[tramo]?.length) setTramo(deValor >= 0 ? deValor : (conHoras[0] ?? 0));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [clave]);
+  // «Ahora» o un cupo libre elegido desde fuera: su franja se abre sola.
+  useEffect(() => {
+    if (deValor >= 0) setTramo(deValor);
+  }, [deValor]);
+
   if (horas.length === 0) return <p className="fh-vacio">Ese día no hay horas: el local está cerrado o ya pasó la hora de cierre.</p>;
+  const lista = porTramo[tramo] ?? [];
   return (
-    <div className="fh-horas" role="radiogroup" aria-label="Hora">
-      {TRAMOS.map(([nombre, cabe]) => {
-        const del = horas.filter((h) => cabe(Number(h.slice(0, 2))));
-        if (!del.length) return null;
-        return (
-          <div key={nombre} className="fh-tramo">
-            <span className="fh-tramo__nombre">{nombre}</span>
-            <div className="fh-tramo__horas">
-              {del.map((h) => {
-                const llena = llenas?.has(h) ?? false;
-                return (
-                  <button key={h} type="button" role="radio" aria-checked={valor === h} disabled={llena && valor !== h}
-                    className={`fh-hora${valor === h ? ' on' : ''}${llena ? ' llena' : ''}`} onClick={() => alCambiar(h)}
-                    title={llena ? 'Lleno a esa hora' : undefined}>
-                    {hora12(h)}
-                    {llena && <small>lleno</small>}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        );
-      })}
+    <div className="fh-horas">
+      {conHoras.length > 1 && (
+        <div className="fh-tabs" role="tablist" aria-label="Franja del día">
+          {conHoras.map((i) => (
+            <button key={i} type="button" role="tab" aria-selected={tramo === i} className={tramo === i ? 'on' : ''} onClick={() => setTramo(i)}>
+              {TRAMOS[i][0]} <small>{porTramo[i].filter((h) => !llenas?.has(h)).length}</small>
+              {deValor === i && tramo !== i && <i className="fh-tabs__punto" aria-label="aquí está la hora elegida" />}
+            </button>
+          ))}
+        </div>
+      )}
+      <div className="fh-tramo__horas" role="radiogroup" aria-label={`Hora · ${TRAMOS[tramo]?.[0] ?? ''}`}>
+        {lista.map((h) => {
+          const llena = llenas?.has(h) ?? false;
+          return (
+            <button key={h} type="button" role="radio" aria-checked={valor === h} disabled={llena && valor !== h}
+              className={`fh-hora${valor === h ? ' on' : ''}${llena ? ' llena' : ''}`} onClick={() => alCambiar(h)}
+              title={llena ? 'Lleno a esa hora' : undefined}>
+              {hora12(h)}
+              {llena && <small>lleno</small>}
+            </button>
+          );
+        })}
+      </div>
     </div>
   );
 }

@@ -60,6 +60,16 @@ function inicioQuincena(hoy: Date): string {
   return isoLocal(new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate() >= 16 ? 16 : 1));
 }
 
+/**
+ * Desde qué día se cuenta lo «por pagar»: el primer cierre del negocio, como mucho 120 días atrás
+ * (lo de más lejos, si no se pagó, ya no se va a pagar por aquí); sin cierres, el inicio de la
+ * quincena. La MISMA regla para el dueño (Por pagar) y el barbero (Mi comisión › Por cobrar).
+ */
+export function desdeDeCuentas(primero: string | null, hoy: Date = new Date()): string {
+  const tope = isoLocal(new Date(hoy.getTime() - 120 * 86_400_000));
+  return primero ? (primero < tope ? tope : primero) : inicioQuincena(hoy);
+}
+
 /** null = sin la 0014, o quien mira no es dueño ni administrador. */
 export async function leerCierres(companyId: string): Promise<Cierre[] | null> {
   const { data, error } = await supabase().rpc('comision_cierres_leer', { p_company: companyId, p_dias: 400 });
@@ -92,9 +102,7 @@ export async function calcularPorPagar(
   hoy: Date = new Date(),
 ): Promise<{ porPagar: PorPagar[]; desde: string; nombres: Map<string, string> }> {
   const primero = cierres.reduce<string | null>((m, c) => (m === null || c.desde < m ? c.desde : m), null);
-  // Como mucho 120 días atrás: lo de más lejos, si no se pagó, ya no se va a pagar por aquí.
-  const tope = isoLocal(new Date(hoy.getTime() - 120 * 86_400_000));
-  const desde = primero ? (primero < tope ? tope : primero) : inicioQuincena(hoy);
+  const desde = desdeDeCuentas(primero, hoy);
   const hasta = isoLocal(hoy);
 
   const [citas, trabajadores, catalogo, adelantos] = await Promise.all([

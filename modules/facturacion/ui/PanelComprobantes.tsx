@@ -162,12 +162,28 @@ export default function PanelComprobantes() {
         <Topbar titulo="Caja" sub={sub} />
         <SubnavCaja />
 
-        {ajustes && (
+        {/* Apagado: un aviso y UN botón que lleva a activarlo, no dos botones muertos (The 24/7, 18-nov). */}
+        {!cargaAjustes.cargando && !ajustes?.activo && (
+          <div className="card fe-apagado">
+            <div>
+              <b>Las boletas electrónicas aún no están activadas</b>
+              <p className="muted">
+                Para emitir boletas y facturas a SUNAT desde aquí, actívalas una vez con los datos de tu RUC. Mientras tanto
+                puedes seguir cobrando en la Caja con normalidad.
+              </p>
+            </div>
+            <Link className="btn btn-primary" href="/panel/configuracion#facturacion">
+              <Settings size={16} /> Activar en Ajustes
+            </Link>
+          </div>
+        )}
+
+        {ajustes?.activo && (
           <div className="fe-barra">
-            <button className="btn btn-primary" onClick={() => abrir('boleta')} disabled={!ajustes.activo}>
+            <button className="btn btn-primary" onClick={() => abrir('boleta')}>
               <FilePlus2 size={16} /> Nueva boleta
             </button>
-            <button className="btn btn-ghost" onClick={() => abrir('factura')} disabled={!ajustes.activo}>
+            <button className="btn btn-ghost" onClick={() => abrir('factura')}>
               <FilePlus2 size={16} /> Nueva factura
             </button>
             <span className="fe-barra__info muted">

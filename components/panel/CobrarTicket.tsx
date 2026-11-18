@@ -18,10 +18,14 @@
  *   2 · `marcar_pagado`, el cobro de siempre: método, foto si el negocio la pide, caja del día.
  * Si el paso 2 falla, la atención ya está en «Listos para cobrar» y se cobra desde ahí: nada se
  * pierde ni se duplica.
+ *
+ * Guiado (18-nov): al abrir, la vista baja al ticket; cada toque la lleva al siguiente paso que
+ * falta (lib/panel/guiar.ts), y ese paso se ve resaltado. Al cobrar, vuelve arriba para el próximo.
  */
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { guiarA } from '@/lib/panel/guiar';
 import Link from 'next/link';
-import { Gift, Minus, Plus, Receipt, UserPlus, X } from 'lucide-react';
+import { Gift, Minus, Plus, Receipt, Search, UserPlus, X } from 'lucide-react';
 import { BotonCobrar } from '@/components/panel/BotonCobrar';
 import { cobrable } from '@/components/panel/ListosParaCobrar';
 import FiltroProductos, { ordenarPorVentas, useMasVendidos } from '@/components/panel/ProductosFiltro';
@@ -79,6 +83,50 @@ export default function CobrarTicket({
     }
   }, [companyId, sedeInicial, pideSede, sedes]);
   const [conCliente, setConCliente] = useState(false);
+  /**
+   * El cliente se BUSCA (18-nov: «el nombre es para el buscador»): por nombre o celular, y solo
+   * se consulta mientras se escribe. Elegido, va su celular (sello y boleta por WhatsApp); si no
+   * está, «Cliente nuevo» con celular y nombre.
+   */
+  const [modoCliente, setModoCliente] = useState<'buscar' | 'elegido' | 'nuevo'>('buscar');
+  const [busca, setBusca] = useState('');
+  const [encontrados, setEncontrados] = useState<{ id: string; name: string | null; phone: string | null }[]>([]);
+  useEffect(() => {
+    const t = busca.trim();
+    if (modoCliente !== 'buscar' || t.length < 2) {
+      setEncontrados([]);
+      return;
+    }
+    let vigente = true;
+    const espera = window.setTimeout(async () => {
+      const digitos = t.replace(/\D/g, '');
+      const esNumero = digitos.length >= 3 && digitos.length === t.replace(/[\s+-]/g, '').length;
+      // Sin comodines ni comas: es texto que va dentro de un filtro.
+      const texto = t.replace(/[%_,()*\\]/g, ' ').trim();
+      let q = supabase().from('leads').select('id,name,phone').eq('company_id', companyId).limit(6);
+      q = esNumero ? q.ilike('phone', `%${digitos.slice(-9)}%`) : q.ilike('name', `%${texto}%`);
+      const { data } = await q;
+      if (vigente) setEncontrados((data ?? []) as typeof encontrados);
+    }, 300);
+    return () => {
+      vigente = false;
+      window.clearTimeout(espera);
+    };
+  }, [busca, modoCliente, companyId]);
+  const elegirCliente = (l: { name: string | null; phone: string | null }) => {
+    setTel(soloDigitos(l.phone ?? '').slice(-9));
+    setNombre(l.name ?? '');
+    setModoCliente('elegido');
+    setBusca('');
+    irA(pasoQueFalta(barbero, items.length, sede));
+  };
+  const clienteNuevo = () => {
+    const d = soloDigitos(busca);
+    // Lo que ya escribió no se pierde: un número va al celular; un nombre, al nombre.
+    if (d.length >= 6) setTel(d.slice(-9));
+    else if (busca.trim()) setNombre(busca.trim());
+    setModoCliente('nuevo');
+  };
   const [tel, setTel] = useState('');
   const [nombre, setNombre] = useState('');
   const [enviando, setEnviando] = useState(false);
@@ -96,14 +144,46 @@ export default function CobrarTicket({
    * Tocar marca o desmarca (17-nov-2026: «que no se sume al darle varias veces»). La cantidad,
    * con − y + en la línea del ticket, abajo.
    */
-  const alternar = (id: string) => setItems((l) => (l.includes(id) ? l.filter((x) => x !== id) : [...l, id]));
+  const alternar = (id: string) => {
+    if (items.length === 0) irA(pasoQueFalta(barbero, 1, sede));
+    setItems((l) => (l.includes(id) ? l.filter((x) => x !== id) : [...l, id]));
+  };
   const stockDe = (id: string) => porId.get(id)?.stock ?? null;
   const quitarCliente = () => {
     setTel('');
     setNombre('');
     setConCliente(false);
+    setBusca('');
+    setModoCliente('buscar');
   };
   const telLimpio = soloDigitos(tel);
+
+  // ── La guía: qué paso toca, y llevar la vista ahí después de cada toque ──
+  const raiz = useRef<HTMLElement>(null);
+  const refBarbero = useRef<HTMLDivElement>(null);
+  const refItems = useRef<HTMLDivElement>(null);
+  const refSede = useRef<HTMLDivElement>(null);
+  const refPie = useRef<HTMLDivElement>(null);
+  const pasoQueFalta = (b: string, n: number, sd: string) =>
+    activos.length > 0 && !b ? 'barbero' : n === 0 ? 'items' : pideSede && !sd ? 'sede' : 'cobrar';
+  const ahora = pasoQueFalta(barbero, items.length, sede);
+  const irA = (paso: ReturnType<typeof pasoQueFalta>) =>
+    paso === 'barbero' ? guiarA(refBarbero.current)
+      : paso === 'items' ? guiarA(refItems.current)
+        : paso === 'sede' ? guiarA(refSede.current)
+          : guiarA(refPie.current, 'end');
+  // Al abrir: la vista baja al ticket (antes se quedaba arriba y había que buscarlo).
+  useEffect(() => {
+    guiarA(raiz.current);
+  }, []);
+  const elegirBarbero = (id: string) => {
+    setBarbero(id);
+    irA(pasoQueFalta(id, items.length, sede));
+  };
+  const elegirSede = (nombre: string) => {
+    setSede(nombre);
+    irA(pasoQueFalta(barbero, items.length, nombre));
+  };
 
   /** Lo que falta, dicho en una línea encima del botón. */
   const falta =
@@ -173,15 +253,15 @@ export default function CobrarTicket({
       }),
     });
     setItems([]);
-    setTel('');
-    setNombre('');
-    setConCliente(false);
+    quitarCliente();
     if (activos.length !== 1) setBarbero('');
     alListo();
+    // Cobrado: arriba, con «Último: …» a la vista y el paso 1 listo para el siguiente cliente.
+    guiarA(raiz.current);
   }
 
   return (
-    <section className="card ticket" aria-label="Cobrar ticket">
+    <section ref={raiz} className="card ticket" aria-label="Cobrar ticket">
       <div className="card-head">
         <h3><Receipt size={17} style={{ verticalAlign: -3 }} /> Cobrar ticket</h3>
         <button type="button" className="q-icon" aria-label="Cerrar" onClick={alCerrar} disabled={enviando}>
@@ -209,12 +289,12 @@ export default function CobrarTicket({
 
       <div className="ticket-cuerpo">
         {activos.length > 0 ? (
-          <div className="ticket-paso">
+          <div ref={refBarbero} className={`ticket-paso${ahora === 'barbero' ? ' ticket-paso--ahora' : ''}`}>
             <span className="ticket-rotulo">1 · ¿Quién lo atendió?</span>
             <div className="ticket-chips" role="radiogroup" aria-label="Barbero">
               {activos.map((t) => (
                 <button key={t.id} type="button" role="radio" aria-checked={barbero === t.id}
-                  className={`ticket-chip${barbero === t.id ? ' on' : ''}`} onClick={() => setBarbero(t.id)}>
+                  className={`ticket-chip${barbero === t.id ? ' on' : ''}`} onClick={() => elegirBarbero(t.id)}>
                   {t.name}
                 </button>
               ))}
@@ -227,7 +307,7 @@ export default function CobrarTicket({
           </p>
         )}
 
-        <div className="ticket-paso">
+        <div ref={refItems} className={`ticket-paso${ahora === 'items' ? ' ticket-paso--ahora' : ''}`}>
           <span className="ticket-rotulo">{activos.length > 0 ? '2 · ' : ''}¿Qué se hizo? <small>toca para elegir; la cantidad, abajo con − y +</small></span>
           <div className="ticket-chips">
             {servicios.map((c) => (
@@ -263,12 +343,12 @@ export default function CobrarTicket({
         </div>
 
         {pideSede && (
-          <div className="ticket-paso">
+          <div ref={refSede} className={`ticket-paso${ahora === 'sede' ? ' ticket-paso--ahora' : ''}`}>
             <span className="ticket-rotulo">¿En qué sede?</span>
             <div className="ticket-chips" role="radiogroup" aria-label="Sede">
               {sedes.map((s) => (
                 <button key={s.nombre} type="button" role="radio" aria-checked={sede === s.nombre}
-                  className={`ticket-chip${sede === s.nombre ? ' on' : ''}`} onClick={() => setSede(s.nombre)}>
+                  className={`ticket-chip${sede === s.nombre ? ' on' : ''}`} onClick={() => elegirSede(s.nombre)}>
                   {s.nombre.split(' · ')[0]}
                 </button>
               ))}
@@ -285,12 +365,43 @@ export default function CobrarTicket({
                   <X size={15} /> Quitar
                 </button>
               </span>
-              <div className="ticket-cliente">
-                <input className="input" inputMode="tel" placeholder="Celular · 987654321" value={tel} onChange={(e) => setTel(e.target.value)}
-                  aria-label="Celular del cliente" autoComplete="off" autoFocus />
-                <input className="input" placeholder="Nombre" value={nombre} onChange={(e) => setNombre(e.target.value)}
-                  aria-label="Nombre del cliente" autoComplete="off" />
-              </div>
+              {modoCliente === 'elegido' ? (
+                <div className="nc-elegido">
+                  <b>{nombre || 'Sin nombre'}</b>
+                  <span className="muted">{tel}</span>
+                  <button type="button" className="btn btn-ghost btn-sm" onClick={() => { setTel(''); setNombre(''); setModoCliente('buscar'); }}>Cambiar</button>
+                </div>
+              ) : modoCliente === 'nuevo' ? (
+                <>
+                  <div className="ticket-cliente">
+                    <input className="input" inputMode="tel" placeholder="Celular · 987654321" value={tel} onChange={(e) => setTel(e.target.value)}
+                      aria-label="Celular del cliente" autoComplete="off" autoFocus />
+                    <input className="input" placeholder="Nombre" value={nombre} onChange={(e) => setNombre(e.target.value)}
+                      aria-label="Nombre del cliente" autoComplete="off" />
+                  </div>
+                  <button type="button" className="nc-link" onClick={() => { setTel(''); setNombre(''); setModoCliente('buscar'); }}>
+                    <Search size={14} /> Buscar en mis clientes
+                  </button>
+                </>
+              ) : (
+                <>
+                  <div className="search nc-buscar">
+                    <Search size={16} />
+                    <input placeholder="Nombre o celular" value={busca} onChange={(e) => setBusca(e.target.value)}
+                      aria-label="Buscar cliente por nombre o celular" autoComplete="off" autoFocus />
+                  </div>
+                  {encontrados.map((l) => (
+                    <button type="button" key={l.id} className="buscador-res" onClick={() => elegirCliente(l)}>
+                      <b>{l.name || 'Sin nombre'}</b>
+                      <span className="muted">{soloDigitos(l.phone ?? '').slice(-9)}</span>
+                    </button>
+                  ))}
+                  {busca.trim().length >= 2 && encontrados.length === 0 && <small className="muted">Nadie con «{busca.trim()}».</small>}
+                  <button type="button" className="nc-link" onClick={clienteNuevo}>
+                    <UserPlus size={14} /> Es cliente nuevo
+                  </button>
+                </>
+              )}
             </>
           ) : (
             <button type="button" className="btn btn-ghost btn-sm" onClick={() => setConCliente(true)}>
@@ -301,7 +412,7 @@ export default function CobrarTicket({
       </div>
 
       {/* El ticket, como lo tiene el cliente en la mano, y el botón de cobrar debajo. */}
-      <div className="ticket-pie">
+      <div ref={refPie} className={`ticket-pie${ahora === 'cobrar' ? ' ticket-pie--listo' : ''}`}>
         {items.length > 0 && (
           <ul className="ticket-lineas">
             {[...new Set(items)].map((id) => (

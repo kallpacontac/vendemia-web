@@ -1,18 +1,37 @@
 'use client';
 
 /**
- * «Pendientes» · lo que hay que hacer hoy, arriba del panel principal (18-nov-2026).
+ * «Lo que necesita atención» · arriba del panel principal (18-nov-2026).
  *
  * Alvaro, con la captura de otro sistema: «que en el panel principal, que es donde entra por
- * defecto, tenga las acciones que tiene pendientes». Cada tarjeta dice cuántas hay y lleva
- * a la pantalla donde se resuelven; no se resuelve nada aquí (eso ya vive en Agenda y Caja).
+ * defecto, tenga las acciones que tiene pendientes». Y luego (The 24/7): «le interesa qué
+ * acciones tiene pendientes, por ejemplo por cobrar, más que las conversaciones; una animación
+ * como de timbre sobre lo que necesita atender, claro y entendible».
  *
- * Solo sale lo que tiene algo. Sin nada pendiente, no se pinta. Cada consulta aguanta que su
- * SQL no esté instalada o que el rol no la vea (cuenta 0), y se relee cada 30 s.
+ * Cada fila dice cuántas hay (número grande sobre el ícono), qué es, y un verbo (Cobrar, Marcar,
+ * Pagar…) que lleva a la pantalla donde se resuelve; aquí no se resuelve nada. En orden de
+ * urgencia: lo que tiene a alguien esperando AHORA (el cliente en el mostrador) primero, con la
+ * campana sonando; lo que puede esperar, después y quieto. Sin nada: «Todo al día».
+ *
+ * Cada consulta aguanta que su SQL no esté instalada o que el rol no la vea (cuenta 0), y se
+ * relee cada 30 s sin recargar.
  */
 import Link from 'next/link';
 import { useState } from 'react';
-import { AlertTriangle, ChevronRight, FileWarning, HandCoins, ReceiptText, RotateCcw, SearchCheck } from 'lucide-react';
+import {
+  AlertTriangle,
+  CalendarClock,
+  CheckCircle2,
+  ChevronRight,
+  FileWarning,
+  HandCoins,
+  ListChecks,
+  MessageCircle,
+  ReceiptText,
+  RotateCcw,
+  SearchCheck,
+} from 'lucide-react';
+import Campana from '@/components/panel/Campana';
 import { useCargar } from '@/components/panel/useCargar';
 import { useSondeo } from '@/components/panel/useSondeo';
 import { calcularPorPagar, leerCierres, solesExactos } from '@/lib/panel/cierres';
@@ -20,14 +39,16 @@ import { isoLocal } from '@/lib/panel/format';
 import { supabase } from '@/lib/supabase/client';
 import './pendientes.css';
 
-interface Pendiente {
+export interface Pendiente {
   clave: string;
   n: number;
   titulo: string;
   detalle: string;
   href: string;
-  /** aviso = dinero sin confirmar o algo que falló; tarea = trabajo del día. */
-  tono: 'aviso' | 'tarea';
+  /** ya = alguien espera ahora (suena la campana); luego = se puede hacer más tarde. */
+  tono: 'ya' | 'luego';
+  /** El verbo del botón: lo que se hace al tocar. */
+  accion: string;
   Icono: typeof AlertTriangle;
 }
 
@@ -69,11 +90,15 @@ function porPagarAlEquipo(companyId: string) {
   return v;
 }
 
-async function leer(companyId: string): Promise<Pendiente[]> {
+async function leer(companyId: string, conversaciones: number): Promise<Pendiente[]> {
   const sb = supabase();
   const hoy = isoLocal(new Date());
   const hace7 = isoLocal(new Date(Date.now() - 7 * 86_400_000));
-  const [porVerificar, porCotejar, listos, adelantos, boletas, equipo] = await Promise.all([
+  // `slot_start` es texto local («2026-11-18 16:00»): se compara como texto. Media hora de margen.
+  const margen = new Date(Date.now() - 30 * 60_000);
+  const hhmm = (d: Date) => `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+  const yaPaso = `${hoy} ${isoLocal(margen) === hoy ? hhmm(margen) : '00:00'}`;
+  const [porVerificar, porCotejar, listos, adelantos, boletas, equipo, sinMarcar] = await Promise.all([
     // Capturas subidas en la página que mira una persona (tu-pagina 0017/0021).
     cuenta(sb.rpc('comprobantes_panel', { p_company: companyId })),
     // Validadas solas, falta mirar si llegaron en la app del banco (0032).
@@ -92,61 +117,112 @@ async function leer(companyId: string): Promise<Pendiente[]> {
     ),
     // Comisión ganada desde el último pago, menos adelantos: un «cierre» por barbero (datos 0014).
     porPagarAlEquipo(companyId),
+    // Ya pasó su hora hoy y nadie dijo si vino: sin marcar no se cobra ni cuenta la comisión.
+    cuenta(
+      sb.from('appointments').select('id', { count: 'exact', head: true })
+        .eq('company_id', companyId).eq('status', 'confirmed').like('slot_start', `${hoy}%`).lt('slot_start', yaPaso),
+    ),
   ]);
 
+  // En orden de urgencia: el cliente esperando en el mostrador, primero.
   const todas: Pendiente[] = [
     {
-      clave: 'verificar', n: porVerificar, tono: 'aviso', Icono: AlertTriangle, href: '/panel/agenda',
-      titulo: `${plural(porVerificar, 'pago', 'pagos')} por verificar`,
-      detalle: 'Revisa la captura y apruébalo.',
+      clave: 'listos', n: listos, tono: 'ya', Icono: ReceiptText, href: '/panel/caja', accion: 'Cobrar',
+      titulo: `${plural(listos, 'cliente', 'clientes')} por cobrar`,
+      detalle: 'Ya atendidos hoy; falta cobrarles.',
     },
     {
-      clave: 'cotejar', n: porCotejar, tono: 'aviso', Icono: SearchCheck, href: '/panel/agenda',
+      clave: 'verificar', n: porVerificar, tono: 'ya', Icono: AlertTriangle, href: '/panel/agenda', accion: 'Revisar',
+      titulo: `${plural(porVerificar, 'pago', 'pagos')} por verificar`,
+      detalle: 'Mira la captura y apruébalo.',
+    },
+    {
+      clave: 'sinmarcar', n: sinMarcar, tono: 'ya', Icono: CalendarClock, href: '/panel/agenda', accion: 'Marcar',
+      titulo: `${plural(sinMarcar, 'cita pasó', 'citas pasaron')} sin marcar`,
+      detalle: 'Di si vino: sin eso no se cobra ni cuenta la comisión.',
+    },
+    {
+      clave: 'conversaciones', n: conversaciones, tono: 'ya', Icono: MessageCircle, href: '/panel/mensajes', accion: 'Responder',
+      titulo: `${plural(conversaciones, 'cliente espera', 'clientes esperan')} respuesta`,
+      detalle: 'Mia te pasó la conversación.',
+    },
+    {
+      clave: 'cierres', n: equipo.n, tono: 'luego', Icono: HandCoins, href: '/panel/comisiones', accion: 'Pagar',
+      titulo: `${solesExactos(equipo.total)} por pagar a tu equipo`,
+      detalle: `Comisión pendiente de ${plural(equipo.n, 'persona', 'personas')}.`,
+    },
+    {
+      clave: 'cotejar', n: porCotejar, tono: 'luego', Icono: SearchCheck, href: '/panel/agenda', accion: 'Cotejar',
       titulo: `${plural(porCotejar, 'pago', 'pagos')} por cotejar`,
       detalle: 'Mira en tu app si de verdad llegaron.',
     },
     {
-      clave: 'boletas', n: boletas, tono: 'aviso', Icono: FileWarning, href: '/panel/comprobantes',
-      titulo: `${plural(boletas, 'boleta', 'boletas')} por revisar`,
-      detalle: 'SUNAT aún no contesta o no salieron.',
-    },
-    {
-      clave: 'listos', n: listos, tono: 'tarea', Icono: ReceiptText, href: '/panel/caja',
-      titulo: `${plural(listos, 'cliente', 'clientes')} por cobrar`,
-      detalle: 'Ya atendidos hoy; falta el cobro.',
-    },
-    {
-      clave: 'cierres', n: equipo.n, tono: 'tarea', Icono: HandCoins, href: '/panel/comisiones',
-      titulo: `${plural(equipo.n, 'cierre', 'cierres')} por pagar`,
-      detalle: `${solesExactos(equipo.total)} a tu equipo.`,
-    },
-    {
-      clave: 'adelantos', n: adelantos, tono: 'tarea', Icono: RotateCcw, href: '/panel/agenda',
+      clave: 'adelantos', n: adelantos, tono: 'luego', Icono: RotateCcw, href: '/panel/agenda', accion: 'Reprogramar',
       titulo: `${plural(adelantos, 'adelanto', 'adelantos')} por reprogramar`,
       detalle: 'Pagaron y no vinieron: dales otra hora.',
+    },
+    {
+      clave: 'boletas', n: boletas, tono: 'luego', Icono: FileWarning, href: '/panel/comprobantes', accion: 'Ver',
+      titulo: `${plural(boletas, 'boleta', 'boletas')} por revisar`,
+      detalle: 'SUNAT aún no contesta o no salieron.',
     },
   ];
   return todas.filter((p) => p.n > 0);
 }
 
-export default function Pendientes({ companyId }: { companyId: string | null }) {
+export default function Pendientes({ companyId, conversaciones = 0 }: { companyId: string | null; conversaciones?: number }) {
   const [ronda, setRonda] = useState(0);
-  const { datos } = useCargar(() => (companyId ? leer(companyId) : Promise.resolve([])), [companyId, ronda]);
+  const { datos } = useCargar(
+    () => (companyId ? leer(companyId, conversaciones) : Promise.resolve([])),
+    [companyId, ronda, conversaciones],
+  );
   useSondeo(() => setRonda((r) => r + 1), 30_000, Boolean(companyId));
 
-  if (!datos?.length) return null;
+  return datos ? <VistaPendientes datos={datos} /> : null;
+}
+
+/** El dibujo, aparte de la consulta. */
+export function VistaPendientes({ datos }: { datos: Pendiente[] }) {
+  const urgentes = datos.filter((p) => p.tono === 'ya').length;
+  const hay = datos.length > 0;
+
   return (
-    <section className="pendientes" aria-label="Pendientes">
-      {datos.map(({ clave, titulo, detalle, href, tono, Icono }) => (
-        <Link key={clave} href={href} className={`pendiente pendiente--${tono}`}>
-          <Icono size={22} className="pendiente__icono" aria-hidden />
-          <span className="pendiente__texto">
-            <b>{titulo}</b>
-            <span>{detalle}</span>
-          </span>
-          <ChevronRight size={18} className="pendiente__ir" aria-hidden />
-        </Link>
-      ))}
+    <section className={`card atencion${urgentes ? ' atencion--suena' : ''}`} aria-label="Lo que necesita atención" aria-live="polite">
+      <div className="atencion__cab">
+        <span className={`atencion__timbre${!hay ? ' atencion__timbre--ok' : urgentes ? '' : ' atencion__timbre--calma'}`}>
+          {urgentes ? <Campana size={22} /> : hay ? <ListChecks size={21} aria-hidden /> : <CheckCircle2 size={22} aria-hidden />}
+        </span>
+        <div>
+          <h2>{hay ? 'Lo que necesita atención' : 'Todo al día'}</h2>
+          <small>
+            {!hay
+              ? 'Nada pendiente ahora. Cuando algo llegue, suena aquí solo.'
+              : urgentes
+                ? `${plural(urgentes, 'cosa no puede', 'cosas no pueden')} esperar`
+                : 'Nada urgente: cuando tengas un momento.'}
+          </small>
+        </div>
+      </div>
+
+      {hay && (
+        <div className="atencion__lista">
+          {datos.map(({ clave, n, titulo, detalle, href, tono, Icono, accion }, i) => (
+            <Link key={clave} href={href} className={`pendiente pendiente--${tono}`} style={{ ['--i' as string]: i }}>
+              <span className="pendiente__icono" aria-hidden>
+                <Icono size={20} />
+                <i className="pendiente__n">{n > 99 ? '99+' : n}</i>
+              </span>
+              <span className="pendiente__texto">
+                <b>{titulo}</b>
+                <span>{detalle}</span>
+              </span>
+              <span className="pendiente__accion">
+                {accion} <ChevronRight size={16} aria-hidden />
+              </span>
+            </Link>
+          ))}
+        </div>
+      )}
     </section>
   );
 }
