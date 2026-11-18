@@ -2524,3 +2524,12 @@ nav.chip-tabs[aria-label="Caja"] a{flex-shrink:0;white-space:nowrap}
 .emp-datos__dos label{display:grid;gap:4px}
 .emp-datos .ticket-chips{margin:4px 0 6px}
 @media (max-width:520px){.emp-datos__dos{grid-template-columns:minmax(0,1fr)}}
+
+/* Catálogo › Servicios / Productos estéticos / Comidas y bebidas: el filtro, grande y a la vista. */
+.catalogo-clases{display:flex;flex-wrap:wrap;gap:8px;margin:2px 0 12px;width:100%}
+.catalogo-clases button{min-height:46px;padding:0 18px;border-radius:999px;border:1.5px solid var(--line-2);background:var(--bg-card);
+  color:var(--ink);font:700 14.5px 'Plus Jakarta Sans';cursor:pointer;display:inline-flex;align-items:center;gap:8px}
+.catalogo-clases button small{font-size:12px;font-weight:700;color:var(--ink-mute)}
+.catalogo-clases button.on{background:var(--ink,#0A0A0A);border-color:var(--ink,#0A0A0A);color:#fff}
+.catalogo-clases button.on small{color:rgba(255,255,255,.7)}
+@media (max-width:620px){.catalogo-clases{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}.catalogo-clases button{flex:none;min-height:42px;padding:0 14px;font-size:13.5px}}

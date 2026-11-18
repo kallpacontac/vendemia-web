@@ -49,6 +49,7 @@
  * medias rompe agendas en silencio, y merece su propia pantalla. Se avisa en
  * lugar de fingir que no existe.
  */
+import { CATEGORIAS, categoriaDe, familiaParaGuardar, type Categoria } from '@/lib/panel/categoriaCatalogo';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import {
@@ -186,6 +187,8 @@ interface Borrador {
    * lo mismo. Ver CatalogRow.tipo.
    */
   tipo: '' | 'producto';
+  /** La familia («Bebidas», «Productos de barbería»): decide la clase (lib/panel/categoriaCatalogo). */
+  familia: string;
 }
 
 /** Lo que admite el bot para `vigencia_meses`: meses enteros, de 1 a 24. */
@@ -207,6 +210,7 @@ function borradorDe(it: ItemCatalogo): Borrador {
     comision_pct: it.comision_pct == null ? '' : String(it.comision_pct),
     comision_monto: it.comision_monto == null ? '' : String(it.comision_monto),
     tipo: it.tipo === 'producto' ? 'producto' : '',
+    familia: it.familia ?? '',
   };
 }
 
@@ -227,6 +231,8 @@ export default function Catalogo() {
    * ocultado por error queda inalcanzable y no hay manera de recuperarlo.
    */
   const [verOcultos, setVerOcultos] = useState(false);
+  /** Servicios / Productos estéticos / Comidas y bebidas ('' = todo). Solo en negocios de citas. */
+  const [categoria, setCategoria] = useState<'' | Categoria>('');
   const [soloSinFoto, setSoloSinFoto] = useState(false);
   const [abierto, setAbierto] = useState<string | null>(null);
   const [creando, setCreando] = useState(false);
@@ -290,12 +296,15 @@ export default function Catalogo() {
   const visibles = useMemo(() => {
     const q = busqueda.trim().toLowerCase();
     return items.filter((i) => {
+      if (categoria && categoriaDe(i) !== categoria) return false;
       if (!verOcultos && !i.activo) return false;
       if (soloSinFoto && (!i.activo || vista.medios[i.id]?.length)) return false;
       if (!q) return true;
       return i.name.toLowerCase().includes(q) || (i.description ?? '').toLowerCase().includes(q);
     });
-  }, [items, busqueda, verOcultos, soloSinFoto, vista.medios]);
+  }, [items, busqueda, verOcultos, soloSinFoto, vista.medios, categoria]);
+  const conClases = modo !== 'ecommerce';
+  const cuantosDe = (c: Categoria) => items.filter((i) => (verOcultos || i.activo) && categoriaDe(i) === c).length;
 
   const activos = items.filter((i) => i.activo).length;
   const sinFoto = items.filter((i) => i.activo && !(vista.medios[i.id]?.length)).length;
@@ -367,7 +376,13 @@ export default function Catalogo() {
        pide los productos por nombre, así que dos iguales la confunden. */
     await guardar(
       'upsert_catalog_item',
-      { item: { name: nombre, price: 0, is_active: 1, currency: 'PEN' } },
+      {
+        item: {
+          name: nombre, price: 0, is_active: 1, currency: 'PEN',
+          // Con una clase elegida arriba, nace en ella (un producto estético, una bebida).
+          ...(conClases && categoria && categoria !== 'servicio' ? familiaParaGuardar(categoria, '') : {}),
+        },
+      },
       `${cap(v.item)} añadid${v.aItem}`,
       () => {
         setCreando(false);
@@ -400,6 +415,19 @@ export default function Catalogo() {
           </button>
         </div>
 
+        {tab === 'catalogo' && conClases && items.length > 0 && (
+          <div className="catalogo-clases" role="tablist" aria-label="Qué mostrar">
+            <button type="button" role="tab" aria-selected={!categoria} className={!categoria ? 'on' : ''} onClick={() => setCategoria('')}>
+              Todo <small>{items.filter((i) => verOcultos || i.activo).length}</small>
+            </button>
+            {CATEGORIAS.map(({ clave, nombre }) => (
+              <button key={clave} type="button" role="tab" aria-selected={categoria === clave} className={categoria === clave ? 'on' : ''}
+                onClick={() => setCategoria(clave)}>
+                {nombre} <small>{cuantosDe(clave)}</small>
+              </button>
+            ))}
+          </div>
+        )}
         {tab === 'catalogo' && <div className="catalogo-filtros">
           <div className="search">
             <Search size={16} />
@@ -683,7 +711,7 @@ function Ficha({
           // Solo donde el formulario la enseña: en otros modos no significa nada.
           ...(esRecurrente ? { vigencia_meses: vigencia } : {}),
           // En una tienda todo es producto: no se manda y se queda en ''.
-          ...(esTienda ? {} : { tipo: f.tipo }),
+          ...(esTienda ? {} : { tipo: f.tipo, familia: f.familia }),
           // La comisión solo tiene sentido donde hay personal que atiende. Va
           // `null` explícito cuando se vacía: es lo que devuelve el servicio a
           // «usa la del trabajador» (el upsert es un PATCH).
@@ -825,27 +853,30 @@ function Ficha({
             {!esTienda && (
               <div className="full">
                 <label className="field-label">¿Qué es?</label>
-                <div className="opciones" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', marginTop: 0, gap: 8 }}>
-                  {(
-                    [
-                      ['', `Es ${v.aItem === 'a' ? 'una' : 'un'} ${v.item}`, modo === 'recurring_appointment' ? 'Se reserva: ocupa un cupo en un grupo.' : 'Se reserva: ocupa una hora en la agenda.'],
-                      ['producto', 'Es un producto', 'Se vende: va al carrito, con stock y envío o recojo. No ocupa hora.'],
-                    ] as ['' | 'producto', string, string][]
-                  ).map(([tipo, rotulo, pista]) => (
-                    <label key={tipo || 'servicio'} className={`opcion ${f.tipo === tipo ? 'on' : ''}`} style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
-                      <input
-                        type="radio"
-                        name={`tipo-${item.id}`}
-                        checked={f.tipo === tipo}
-                        onChange={() => set('tipo', tipo)}
-                        style={{ accentColor: 'var(--brand)', cursor: 'pointer', marginTop: 3 }}
-                      />
-                      <span>
-                        <b style={{ fontWeight: 700, fontSize: 13, display: 'block' }}>{rotulo}</b>
-                        <small className="muted" style={{ fontSize: 11.5 }}>{pista}</small>
-                      </span>
-                    </label>
-                  ))}
+                <div className="opciones" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', marginTop: 0, gap: 8 }}>
+                  {CATEGORIAS.map(({ clave, uno, pista }) => {
+                    const actual = categoriaDe({ tipo: f.tipo, familia: f.familia });
+                    return (
+                      <label key={clave} className={`opcion ${actual === clave ? 'on' : ''}`} style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+                        <input
+                          type="radio"
+                          name={`tipo-${item.id}`}
+                          checked={actual === clave}
+                          onChange={() => {
+                            const g = familiaParaGuardar(clave, f.familia);
+                            setF((x) => ({ ...x, tipo: g.tipo, familia: g.familia }));
+                          }}
+                          style={{ accentColor: 'var(--brand)', cursor: 'pointer', marginTop: 3 }}
+                        />
+                        <span>
+                          <b style={{ fontWeight: 700, fontSize: 13, display: 'block' }}>{clave === 'servicio' ? `Es ${v.aItem === 'a' ? 'una' : 'un'} ${v.item}` : uno}</b>
+                          <small className="muted" style={{ fontSize: 11.5 }}>
+                            {clave === 'servicio' && modo === 'recurring_appointment' ? 'Se reserva: ocupa un cupo en un grupo.' : pista}
+                          </small>
+                        </span>
+                      </label>
+                    );
+                  })}
                 </div>
                 {esProducto && (
                   <small className="muted" style={{ fontSize: 11.5, display: 'block', marginTop: 6 }}>
