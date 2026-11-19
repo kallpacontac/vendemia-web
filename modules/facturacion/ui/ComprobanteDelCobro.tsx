@@ -95,11 +95,7 @@ export default function ComprobanteDelCobro({
 
   const imprimir = () => {
     if (!nota) return;
-    try {
-      imprimirNota(nota);
-    } catch (e) {
-      setError((e as Error).message);
-    }
+    imprimirNota(nota).catch((e) => setError((e as Error).message));
   };
 
   return (

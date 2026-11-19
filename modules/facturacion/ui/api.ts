@@ -10,6 +10,7 @@ import { comprobanteDe } from '../dominio/fila';
 import { textoQr, ticketHtml } from '../dominio/impreso';
 import { notaDe, notaHtml, numeroNota, textoWhatsAppNota, type NotaVenta } from '../dominio/nota';
 import { ticketAImagen } from './ticketImagen';
+import { imprimeDirecto, imprimirDirecto } from './impresoraDirecta';
 import type { ComprobanteGuardado, IdProveedor, LineaEntrada, Cliente, TipoComprobante } from '../dominio/tipos';
 
 export type AlCobrar = 'no' | 'preguntar' | 'automatico';
@@ -170,6 +171,8 @@ export async function actuar(
 
 /** Abre el ticket en una ventana aparte y lanza la impresión (o «Guardar como PDF»). */
 export async function imprimir(c: ComprobanteGuardado, ancho: 58 | 80) {
+  // Con impresora directa (Ajustes › Boletas): sin ventana ni app de impresión de por medio.
+  if (imprimeDirecto()) return imprimirDirecto(imagenBoleta(c, ancho), ancho);
   // La ventana se abre YA, dentro del clic: si se abre después del await, el navegador la bloquea.
   const w = window.open('', '_blank', 'width=420,height=720');
   if (!w) throw new Error('El navegador bloqueó la ventana del ticket. Permite las ventanas emergentes de Vendemia.');
@@ -241,7 +244,8 @@ export function enlaceWhatsAppNota(n: NotaVenta, telefono?: string): string {
   return `https://wa.me/${numero}?text=${encodeURIComponent(textoWhatsAppNota(n, enlaceNota(n)))}`;
 }
 
-export function imprimirNota(n: NotaVenta) {
+export async function imprimirNota(n: NotaVenta) {
+  if (imprimeDirecto()) return imprimirDirecto(imagenNota(n), n.negocio.ticket_ancho === 58 ? 58 : 80);
   const w = window.open('', '_blank', 'width=420,height=720');
   if (!w) throw new Error('El navegador bloqueó la ventana del ticket. Permite las ventanas emergentes de Vendemia.');
   w.document.open();

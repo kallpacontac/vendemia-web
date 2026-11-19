@@ -89,3 +89,7 @@
 .caja-boleta .fe-cobro .btn,
 .ticket-hecho .fe-cobro .btn { width: 100%; min-height: 48px; justify-content: center; font-size: 15px; }
 .fe-elegir .fe-cobro__error { grid-column: 1 / -1; }
+
+/* Ajustes › Boletas › Impresora de este equipo */
+.fe-impresora { display: flex; flex-direction: column; gap: 6px; }
+.fe-impresora__fila { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; min-height: 38px; }

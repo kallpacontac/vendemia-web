@@ -14,6 +14,7 @@ import { INFO_PROVEEDOR } from '../dominio/proveedoresInfo';
 import { erroresEmisor, rucValido, soloDigitos, TOPE_BOLETA_SIN_DOCUMENTO } from '../dominio/validar';
 import { PROVEEDORES, type IdProveedor } from '../dominio/tipos';
 import { guardarAjustes, tasaTexto, type Ajustes } from './api';
+import ImpresoraDelEquipo from './ImpresoraDelEquipo';
 
 /** «2027-01-01» → «1 de enero de 2027». */
 const fechaLarga = (iso: string) =>
@@ -328,6 +329,8 @@ export default function AjustesFacturacion({
           </p>
         )}
       </div>
+
+      <ImpresoraDelEquipo ancho={a.ticket_ancho} negocio={a.nombre_comercial || a.razon_social} />
 
       {esDueno && (
         <div className="fe-pie">
