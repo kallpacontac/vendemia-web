@@ -43,6 +43,7 @@ import { PLANES, miles } from '@/lib/planes';
 import { getConsumo } from '@/lib/supabase/queries';
 import type { BusinessMode } from '@/lib/supabase/types';
 import { useLoQueHaceLaPagina } from '@/modules/tu-pagina/ui/secciones';
+import { RUTA_AJUSTES, ordenar, personalizado, useOrdenMenu, vaEnMas, type OrdenMenu } from '@/lib/panel/menu';
 
 const NAV = [
   { href: '/panel', icon: LayoutDashboard, label: 'Dashboard' },
@@ -116,6 +117,10 @@ const FIJAS_MOVIL_CITA = ['/panel/caja', RUTA_MI_AGENDA, RUTA_MI_COMISION, '/pan
 type Entrada = (typeof NAV)[number];
 
 /**
+ * El menú que le toca a esta persona en este negocio, ya ordenado y repartido entre lo que se ve
+ * y «Más». Lo usan la barra y el editor de Ajustes › Orden del menú (OrdenDelMenu.tsx), para que
+ * el editor enseñe exactamente lo que luego sale en la barra.
+ *
  * @param soloGlobal admin de plataforma sin membresías: solo puede abrir las
  *        pantallas que no dependen de una compañía. Enseñarle las otras siete
  *        sería ofrecerle siete pantallas en blanco. Ver lib/panel/rutas.ts.
@@ -124,27 +129,26 @@ type Entrada = (typeof NAV)[number];
  *        los diez ítems: es un parpadeo de un instante, no un hueco de
  *        seguridad, así que la duda se resuelve mostrando de más y no de
  *        menos. `null` si la compañía no tiene modo asignado: mismo criterio.
+ * @param ordenProbado el orden que se está editando en Ajustes, en vez del guardado.
  */
-export default function Sidebar({
-  pendientes = 0,
+export function useMenuDelPanel({
   soloGlobal = false,
   modo,
+  ordenProbado,
 }: {
-  pendientes?: number;
   soloGlobal?: boolean;
   modo?: BusinessMode | null;
+  ordenProbado?: OrdenMenu;
 }) {
-  const ruta = usePathname();
-  const { salir, compania, esAdminPlataforma, companyId, canchas } = useSesion();
+  const { compania, esAdminPlataforma, companyId, canchas } = useSesion();
   // Mi página puede reservar, vender o agendar envíos aunque el negocio sea de otro
   // tipo: entonces también le toca la Agenda o Pedidos, que es donde entra lo de la página.
   const pagina = useLoQueHaceLaPagina(soloGlobal ? null : companyId);
-  const [masAbierto, setMasAbierto] = useState(false);
+  const guardado = useOrdenMenu(soloGlobal ? null : companyId);
+  const orden = ordenProbado ?? guardado;
+  const conOrden = !soloGlobal && personalizado(orden);
 
-  // Al cambiar de pantalla la hoja se cierra: ya cumplió.
-  useEffect(() => setMasAbierto(false), [ruta]);
-
-  const nav = NAV.filter((n) => {
+  const permitidas = NAV.filter((n) => {
     if ('soloAdmin' in n && n.soloAdmin && !esAdminPlataforma) return false;
     if (soloGlobal) return esRutaGlobal(n.href);
     if ('sinEmpleado' in n && n.sinEmpleado && !puedeUsarAsistente(rolDeNegocio(compania?.rol))) return false;
@@ -158,38 +162,69 @@ export default function Sidebar({
     if (n.href === '/panel/pedidos' && (pagina.vende || pagina.envios)) return true;
     return n.sirveA(modo);
   });
+  const nav = conOrden ? ordenar(permitidas, orden) : permitidas;
 
-  // Negocio de citas: en la barra del teléfono, lo del mostrador (Agenda, Caja, Fideliza, Catálogo).
+  // Con orden propio: a la vista todo lo que no mandó a «Más», en su orden; en el teléfono, las
+  // cuatro primeras de esas (Ajustes va en «Más» del teléfono, como siempre).
   const fijasMovil = esCita(modo) ? FIJAS_MOVIL_CITA : FIJAS_MOVIL;
   const fijas = new Set(
-    nav
-      .filter((n) => fijasMovil.includes(n.href) && (n.href !== '/panel/mesas' || pagina.mesasFija))
+    (conOrden
+      ? nav.filter((n) => !vaEnMas(n.href, orden) && n.href !== RUTA_AJUSTES)
+      : // Negocio de citas: en la barra del teléfono, lo del mostrador (Agenda, Caja, Fideliza, Catálogo).
+        nav.filter((n) => fijasMovil.includes(n.href) && (n.href !== '/panel/mesas' || pagina.mesasFija))
+    )
       .slice(0, MAX_FIJAS_MOVIL)
       .map((n) => n.href),
   );
   const extra = nav.filter((n) => !fijas.has(n.href));
+
+  const rutaOperacion = esEcommerce(modo) ? '/panel/pedidos' : '/panel/agenda';
+  const rail = conOrden
+    ? nav.filter((n) => !vaEnMas(n.href, orden))
+    : nav.filter((n) =>
+        (esCita(modo)
+          // Barbería o salón: solo lo del día a día; Mia, mensajes y clientes, en «Más».
+          ? ['/panel', RUTA_MI_AGENDA, RUTA_MI_COMISION, RUTA_MI_CATALOGO, '/panel/agenda', '/panel/caja', '/panel/fideliza', '/panel/catalogo', '/panel/metricas', '/panel/configuracion']
+          : [...(pagina.mesasFija ? ['/panel/mesas'] : []), '/panel', RUTA_MI_AGENDA, RUTA_MI_COMISION, RUTA_MI_CATALOGO, '/panel/asistente', '/panel/mensajes', rutaOperacion, '/panel/leads', '/panel/caja', '/panel/configuracion']
+        ).includes(n.href),
+      );
+  const railExtra = nav.filter((n) => !rail.some((r) => r.href === n.href));
+
+  // «Agenda» en una barbería, «Clases» en una academia. Ver lib/panel/vocabulario.
+  const etiqueta = ({ href, label }: Entrada) =>
+    href === '/panel/agenda' ? vocabulario(modo, { canchas }).agenda : href === RUTA_MI_AGENDA && esRecurrente(modo) ? 'Mis clases' : label;
+
+  return { nav, rail, railExtra, fijas, extra, etiqueta, personalizado: conOrden };
+}
+
+export default function Sidebar({
+  pendientes = 0,
+  soloGlobal = false,
+  modo,
+}: {
+  pendientes?: number;
+  soloGlobal?: boolean;
+  modo?: BusinessMode | null;
+}) {
+  const ruta = usePathname();
+  const { salir, compania } = useSesion();
+  const { nav, rail, railExtra, fijas, extra, etiqueta } = useMenuDelPanel({ soloGlobal, modo });
+  const [masAbierto, setMasAbierto] = useState(false);
+
+  // Al cambiar de pantalla la hoja se cierra: ya cumplió.
+  useEffect(() => setMasAbierto(false), [ruta]);
+
   // El dashboard es prefijo de todo lo demás: solo coincide exacto.
   const esActivo = (href: string) =>
     href === '/panel' ? ruta === '/panel' : ruta.startsWith(href) || (href === '/panel/caja' && ruta.startsWith('/panel/comprobantes'));
   // Estando en una de las de «Más», es «Más» la que se ilumina: si no, en la
   // barra del teléfono no se vería dónde estás.
   const extraActiva = extra.some((n) => esActivo(n.href));
-
-  const rutaOperacion = esEcommerce(modo) ? '/panel/pedidos' : '/panel/agenda';
-  const rail = nav.filter((n) =>
-    (esCita(modo)
-      // Barbería o salón: solo lo del día a día; Mia, mensajes y clientes, en «Más».
-      ? ['/panel', RUTA_MI_AGENDA, RUTA_MI_COMISION, RUTA_MI_CATALOGO, '/panel/agenda', '/panel/caja', '/panel/fideliza', '/panel/catalogo', '/panel/metricas', '/panel/configuracion']
-      : [...(pagina.mesasFija ? ['/panel/mesas'] : []), '/panel', RUTA_MI_AGENDA, RUTA_MI_COMISION, RUTA_MI_CATALOGO, '/panel/asistente', '/panel/mensajes', rutaOperacion, '/panel/leads', '/panel/caja', '/panel/configuracion']
-    ).includes(n.href),
-  );
-  const railExtra = nav.filter((n) => !rail.some((r) => r.href === n.href));
   const railExtraActiva = railExtra.some((n) => esActivo(n.href));
 
-  const pintar = ({ href, icon: Icono, label: fijo }: Entrada, enHoja = false) => {
-    // «Agenda» en una barbería, «Clases» en una academia. Ver lib/panel/vocabulario.
-    const label =
-      href === '/panel/agenda' ? vocabulario(modo, { canchas }).agenda : href === RUTA_MI_AGENDA && esRecurrente(modo) ? 'Mis clases' : fijo;
+  const pintar = (n: Entrada, enHoja = false) => {
+    const { href, icon: Icono } = n;
+    const label = etiqueta(n);
     const clases = [
       'nav-item',
       esActivo(href) ? 'active' : '',

@@ -19,10 +19,16 @@
  *
  * El mensaje no se pinta a mano: llega por el espejo como cualquier otro. Si
  * no aparece, no se envió.
+ *
+ * SIN MIA (18-nov-2026, Alvaro): si el negocio no tiene el WhatsApp de Mia vinculado —no hay
+ * fila de salud o pide emparejar—, el bot no puede mandarlo. Se escribe igual, y el botón abre
+ * WhatsApp (wa.me) con ese número y el texto puesto: lo manda quien atiende desde su teléfono.
+ * Sin adjunto: wa.me solo lleva texto.
  */
 import { useMemo, useState } from 'react';
 import { MessageSquarePlus } from 'lucide-react';
 import { useSesion } from './Sesion';
+import { necesitaEmparejar, useSalud } from './Salud';
 import { useEnviarMensaje } from './useEnviarMensaje';
 import { BotonAdjunto, ChipAdjunto, useAdjunto } from './SelectorAdjunto';
 import { telefono as comoTelefono } from '@/lib/panel/format';
@@ -43,6 +49,10 @@ export function normalizarTelefono(raw: string): string {
 
 const valido = (d: string) => d.length >= 10 && d.length <= 15;
 
+/** El enlace de WhatsApp para escribirle a ese número con el texto ya puesto. */
+export const enlaceWhatsApp = (phone: string, texto: string) =>
+  `https://wa.me/${phone}${texto.trim() ? `?text=${encodeURIComponent(texto.trim())}` : ''}`;
+
 export function NuevoMensaje({
   leads,
   alEnviar,
@@ -54,6 +64,9 @@ export function NuevoMensaje({
   alCerrar: () => void;
 }) {
   const { companyId } = useSesion();
+  const salud = useSalud();
+  // Mia sin WhatsApp vinculado: se abre WhatsApp en vez de encolarlo al bot.
+  const sinMia = !salud.cargando && (salud.desconocido || necesitaEmparejar(salud.salud));
   const { enviar: enviarMensaje, enviando } = useEnviarMensaje();
   const { adjunto, subiendo, elegir, quitar } = useAdjunto(companyId);
   const [tel, setTel] = useState('');
@@ -64,10 +77,17 @@ export function NuevoMensaje({
     () => (valido(phone) ? leads.find((l) => soloDigitos(l.phone) === phone) ?? null : null),
     [leads, phone],
   );
-  const listo = valido(phone) && (texto.trim().length > 0 || !!adjunto) && !enviando && !subiendo;
+  const listo = sinMia
+    ? valido(phone) && texto.trim().length > 0
+    : valido(phone) && (texto.trim().length > 0 || !!adjunto) && !enviando && !subiendo;
 
   async function enviar() {
     if (!listo) return;
+    if (sinMia) {
+      window.open(enlaceWhatsApp(phone, texto), '_blank', 'noopener,noreferrer');
+      alCerrar();
+      return;
+    }
     const r = await enviarMensaje({ phone }, texto.trim(), adjunto, 'Mensaje enviado. Cuando conteste, sigue Mia.');
     if (r) alEnviar(phone, r.lead_id ?? existente?.id ?? null);
   }
@@ -113,17 +133,18 @@ export function NuevoMensaje({
             value={texto}
             onChange={(e) => setTexto(e.target.value)}
           />
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8 }}>
+          {!sinMia && <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8 }}>
             <BotonAdjunto alElegir={(f) => void elegir(f)} deshabilitado={enviando} subiendo={subiendo} />
             {adjunto ? (
               <ChipAdjunto adjunto={adjunto} alQuitar={quitar} />
             ) : (
               <span className="muted">{subiendo ? 'Subiendo el archivo…' : 'Adjuntar foto o documento'}</span>
             )}
-          </div>
+          </div>}
           <p className="muted" style={{ marginTop: 6 }}>
-            Sale por el WhatsApp del negocio. Mia queda activa: cuando el cliente conteste, sigue ella
-            sabiendo lo que le escribiste.
+            {sinMia
+              ? 'Mia todavía no está conectada a tu WhatsApp: al pulsar se abre WhatsApp con este número y tu mensaje listo para enviar.'
+              : 'Sale por el WhatsApp del negocio. Mia queda activa: cuando el cliente conteste, sigue ella sabiendo lo que le escribiste.'}
           </p>
         </div>
         <div className="modal__pie">
@@ -136,7 +157,7 @@ export function NuevoMensaje({
             disabled={!listo}
             onClick={() => void enviar()}
           >
-            {enviando ? 'Enviando…' : 'Enviar'}
+            {sinMia ? 'Abrir en WhatsApp' : enviando ? 'Enviando…' : 'Enviar'}
           </button>
         </div>
       </div>

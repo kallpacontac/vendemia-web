@@ -16,7 +16,8 @@
 import { Suspense, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Search } from 'lucide-react';
+import { Cake, Phone, Search } from 'lucide-react';
+import { fechaCumple } from '@/modules/fideliza/ui/CumpleCliente';
 import { useFideliza } from '@/modules/fideliza/ui/Contexto';
 import { Cargando, Fallo, Qr, SinPermiso, Vacio } from '@/modules/fideliza/ui/Estados';
 import { useAvisar } from '@/components/panel/Avisos';
@@ -50,6 +51,11 @@ interface Fila {
   wallet_state: string | null;
   verified_contact: boolean;
   phone: string | null;
+  /** 0021: la ficha en la lista (sin la 0021 no llegan y no se pintan). */
+  email?: string | null;
+  cumple?: string | null;
+  created_at?: string;
+  joined_via?: string;
   /** 0017: solo si el negocio tiene líneas. La principal primero. */
   lines?: Linea[] | null;
 }
@@ -58,6 +64,9 @@ interface Fila {
 const lineasDe = (f: Fila) => (f.lines && f.lines.length > 1 ? f.lines.filter((l) => l.status === 'active') : null);
 
 const POR_PAGINA = 25;
+
+/** Se unió en los últimos 7 días: sale con «Nuevo» (la 0021 los pone arriba). */
+const esNuevo = (f: Fila) => !!f.created_at && Date.now() - new Date(f.created_at).getTime() < 7 * 86400000;
 const FILTROS = [
   ['all', 'Todos'],
   ['reward', 'Con premio'],
@@ -383,9 +392,24 @@ function Lista() {
                     <Link className="fz-cl-nombre" href={`/panel/fideliza/clientes/${f.id}`}>
                       {f.alias ?? <span className="muted">Sin nombre</span>}
                     </Link>
-                    {f.phone && <div className="muted" style={{ fontSize: 12 }}>{f.phone}</div>}
-                    <div style={{ fontSize: 11.5 }} className={f.verified_contact ? '' : 'muted'}>
-                      {f.verified_contact ? '✓ Contacto verificado' : 'Contacto sin verificar'}
+                    {esNuevo(f) && (
+                      <span className="badge-pill b-new" style={{ marginLeft: 6 }}>
+                        Nuevo{f.joined_via === 'public' ? ' · desde tu página' : ''}
+                      </span>
+                    )}
+                    <div className="fz-cl-datos">
+                      {f.phone && (
+                        <span>
+                          <Phone size={12} aria-hidden="true" /> {f.phone}
+                          {f.verified_contact && <span title="Contacto verificado"> ✓</span>}
+                        </span>
+                      )}
+                      {f.cumple && (
+                        <span>
+                          <Cake size={12} aria-hidden="true" /> {fechaCumple(f.cumple)}
+                        </span>
+                      )}
+                      {f.email && <span>{f.email}</span>}
                     </div>
                     {f.status !== 'active' && <span className={`badge-pill ${f.status === 'deleted' ? 'b-mute' : 'b-hot'}`}>{f.status === 'deleted' ? 'Borrado' : 'Suspendido'}</span>}
                   </td>

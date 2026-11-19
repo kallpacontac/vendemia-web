@@ -5,6 +5,11 @@
  *
  * Solo cifras que salen de loyalty_metrics(). Sin metas inventadas, sin
  * flechas de tendencia que nadie ha calculado. Si no hay datos, se dice.
+ *
+ * 18-nov-2026 (Kallpa, que usa Fideliza a diario): con el club funcionando, arriba va lo de HOY y
+ * los premios por entregar (HoyEnElClub); los primeros pasos, el programa y el link, debajo. Las
+ * alertas de servidor, cron, Wallet y cola solo las ve el equipo de Vendemia: el dueño no puede
+ * arreglarlas y solo lo asustaban.
  */
 import Link from 'next/link';
 import { AlertTriangle, ExternalLink } from 'lucide-react';
@@ -12,6 +17,8 @@ import { useFideliza } from '@/modules/fideliza/ui/Contexto';
 import { Cargando, Cifra, Fallo } from '@/modules/fideliza/ui/Estados';
 import LinkPublico from '@/modules/fideliza/ui/LinkPublico';
 import PrimerosPasos, { type Paso } from '@/modules/fideliza/ui/PrimerosPasos';
+import HoyEnElClub from '@/modules/fideliza/ui/HoyEnElClub';
+import { useSesion } from '@/components/panel/Sesion';
 import { useCargar } from '@/components/panel/useCargar';
 import { accion, lecturas, type Enlace } from '@/modules/fideliza/cliente/api';
 import { urlNegocio, urlPlaca, urlPlacaQr } from '@/modules/fideliza/dominio/config';
@@ -41,11 +48,13 @@ const ESTADO_PROGRAMA: Record<string, [string, string]> = {
 
 export default function Resumen() {
   const { companyId, ajustes, puede, modo } = useFideliza();
+  const { esAdminPlataforma } = useSesion();
 
   const { datos, cargando, error, releer } = useCargar(async () => {
     if (!companyId) return null;
-    const [programas, config, m] = await Promise.all([
+    const [programas, lineas, config, m] = await Promise.all([
       lecturas.programas(companyId),
+      lecturas.lineas(companyId).catch(() => []),
       accion<{ servidor: boolean; wallet: boolean; push: boolean; cron: boolean }>('config.estado', {}),
       puede('metrics.read')
         ? accion<Metricas>('metricas', { companyId, from: haceDias(29), to: hoyLima() })
@@ -69,7 +78,7 @@ export default function Resumen() {
       modo === 'enlaces' && puede('metrics.read')
         ? await lecturas.contarEventos(companyId, ['device_open'], new Date(Date.now() - 30 * 86400000).toISOString())
         : null;
-    return { programas, vivo, version: versiones[0] ?? null, config, m, publicada: publicada ?? null, placas, visitas, aperturas };
+    return { programas, lineas: vivo ? lineas.filter((l) => l.parent_program_id === vivo.id) : [], vivo, version: versiones[0] ?? null, config, m, publicada: publicada ?? null, placas, visitas, aperturas };
   }, [companyId, ajustes?.default_profile_id, modo]);
 
   if (modo === 'nuevo' && puede('program.edit')) return <Bienvenida />;
@@ -124,20 +133,23 @@ export default function Resumen() {
     },
   ];
 
+  // Las técnicas (servidor, Wallet, cola, cron): solo el equipo de Vendemia.
+  const tecnicas: { texto: string; enlace?: string }[] = [];
   const alertas: { texto: string; enlace?: string }[] = [];
-  if (!config.servidor) alertas.push({ texto: 'Falta la clave del servidor de Fideliza: las páginas públicas y Wallet no funcionan (ver modules/fideliza/sql/README.md).' });
+  if (!config.servidor) tecnicas.push({ texto: 'Falta la clave del servidor de Fideliza: las páginas públicas y Wallet no funcionan (ver modules/fideliza/sql/README.md).' });
   if (!ajustes) alertas.push({ texto: 'Completa los datos del negocio (paso 1 del programa).', enlace: '/panel/fideliza/programa' });
   if (!vivo) alertas.push({ texto: 'Todavía no hay programa. Configúralo y publícalo.', enlace: '/panel/fideliza/programa' });
   if (vivo?.status === 'draft') alertas.push({ texto: 'El programa está en borrador: nadie puede unirse aún.', enlace: '/panel/fideliza/programa' });
   if (version?.valid_to && new Date(version.valid_to) < new Date())
     alertas.push({ texto: 'La regla del programa venció: las compras no suman. Publica una nueva.', enlace: '/panel/fideliza/programa' });
-  if (!config.wallet) alertas.push({ texto: 'Google Wallet no está configurado en el servidor: las tarjetas solo funcionan como web.' });
+  if (!config.wallet) tecnicas.push({ texto: 'Google Wallet no está configurado en el servidor: las tarjetas solo funcionan como web.' });
   if (m?.wallet.classes.some((c) => c.state === 'error'))
-    alertas.push({ texto: `La tarjeta de Google Wallet del programa dio error: ${m.wallet.classes.find((c) => c.state === 'error')?.last_error ?? ''}`, enlace: '/panel/fideliza/ajustes' });
-  if (m && m.outbox.overdue > 0) alertas.push({ texto: `${m.outbox.overdue} actualizaciones de Wallet o avisos llevan más de 15 minutos en cola.`, enlace: '/panel/fideliza/ajustes' });
-  if (m && m.outbox.dead > 0) alertas.push({ texto: `${m.outbox.dead} trabajos fallaron tras varios intentos y necesitan revisión.`, enlace: '/panel/fideliza/ajustes' });
-  if (!config.cron) alertas.push({ texto: 'Falta el secreto del cron: los reintentos automáticos y las campañas no corren solos.' });
+    tecnicas.push({ texto: `La tarjeta de Google Wallet del programa dio error: ${m.wallet.classes.find((c) => c.state === 'error')?.last_error ?? ''}`, enlace: '/panel/fideliza/ajustes' });
+  if (m && m.outbox.overdue > 0) tecnicas.push({ texto: `${m.outbox.overdue} actualizaciones de Wallet o avisos llevan más de 15 minutos en cola.`, enlace: '/panel/fideliza/ajustes' });
+  if (m && m.outbox.dead > 0) tecnicas.push({ texto: `${m.outbox.dead} trabajos fallaron tras varios intentos y necesitan revisión.`, enlace: '/panel/fideliza/ajustes' });
+  if (!config.cron) tecnicas.push({ texto: 'Falta el secreto del cron: los reintentos automáticos y las campañas no corren solos.' });
 
+  if (esAdminPlataforma) alertas.push(...tecnicas);
   const [estado, clase] = ESTADO_PROGRAMA[vivo?.status ?? 'draft'];
 
   if (modo === 'enlaces') {
@@ -192,26 +204,45 @@ export default function Resumen() {
     );
   }
 
+  const link = ajustes && (
+    <LinkPublico
+      slug={ajustes.slug}
+      nombre={ajustes.display_name}
+      programaActivo={programaActivo}
+      hayEnlaces={botones > 0}
+      placa={placaPrincipal}
+      cartel={{
+        color: ajustes.bg_color,
+        logo: ajustes.logo_url,
+        sello: selloValido((ajustes.page_style as Partial<Estilo> | null)?.sello),
+        meta: programaActivo ? version?.reward_threshold ?? null : null,
+        premio: programaActivo ? version?.reward_description ?? null : null,
+        unidad: version?.rule_type === 'points' ? 'puntos' : version?.rule_type === 'visits' ? 'visitas' : 'sellos',
+      }}
+    />
+  );
+
+  const conHoy = Boolean(vivo && vivo.status !== 'draft' && companyId && puede('members.read'));
+
   return (
     <>
-      {puede('program.edit') && <PrimerosPasos pasos={pasos} />}
-      {ajustes && (
-        <LinkPublico
-          slug={ajustes.slug}
-          nombre={ajustes.display_name}
-          programaActivo={programaActivo}
-          hayEnlaces={botones > 0}
-          placa={placaPrincipal}
-          cartel={{
-            color: ajustes.bg_color,
-            logo: ajustes.logo_url,
-            sello: selloValido((ajustes.page_style as Partial<Estilo> | null)?.sello),
-            meta: programaActivo ? version?.reward_threshold ?? null : null,
-            premio: programaActivo ? version?.reward_description ?? null : null,
-            unidad: version?.rule_type === 'points' ? 'puntos' : version?.rule_type === 'visits' ? 'visitas' : 'sellos',
-          }}
-        />
+      {conHoy && companyId && vivo && (
+        <HoyEnElClub companyId={companyId} programas={[vivo, ...datos.lineas]} puedeSumar={puede('ops.record')} />
       )}
+
+      {alertas.map((a) => (
+        <div key={a.texto} className="fz-panel-aviso" role="status">
+          <AlertTriangle size={16} />
+          <span style={{ flex: 1 }}>{a.texto}</span>
+          {a.enlace && (
+            <Link className="btn btn-ghost btn-sm" href={a.enlace}>
+              Ir
+            </Link>
+          )}
+        </div>
+      ))}
+
+      {puede('program.edit') && <PrimerosPasos pasos={pasos} />}
 
       <div className="card" style={{ marginBottom: 16 }}>
         <div className="fz-fila" style={{ justifyContent: 'space-between' }}>
@@ -223,7 +254,8 @@ export default function Resumen() {
             </div>
           </div>
           <div className="fz-fila">
-            {puede('ops.record') && (
+            {/* Con el club en marcha, «Buscar cliente y sumar» ya está arriba, en Hoy. */}
+            {puede('ops.record') && !conHoy && (
               <Link className="btn btn-primary btn-sm" href="/panel/fideliza/caja">
                 Registrar operación
               </Link>
@@ -242,18 +274,7 @@ export default function Resumen() {
         </div>
       </div>
 
-      {alertas.map((a) => (
-        <div key={a.texto} className="fz-panel-aviso" role="status">
-          <AlertTriangle size={16} />
-          <span style={{ flex: 1 }}>{a.texto}</span>
-          {a.enlace && (
-            <Link className="btn btn-ghost btn-sm" href={a.enlace}>
-              Ir
-            </Link>
-          )}
-        </div>
-      ))}
-
+      {link}
     </>
   );
 }

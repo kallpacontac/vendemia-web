@@ -21,7 +21,7 @@
  */
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
-import { Camera, CameraOff, Check, Gift, MonitorSmartphone, Plus, Search, ShoppingBag, Undo2, UserRound } from 'lucide-react';
+import { Camera, CameraOff, Check, Gift, MonitorSmartphone, Plus, ShoppingBag, Undo2, UserRound } from 'lucide-react';
 import { useFideliza } from '@/modules/fideliza/ui/Contexto';
 import CumpleCliente from '@/modules/fideliza/ui/CumpleCliente';
 import { useSesion } from '@/components/panel/Sesion';
@@ -124,6 +124,14 @@ export default function Caja() {
   const [candidatos, setCandidatos] = useState<MiembroCaja[]>([]);
   /** Varias tarjetas con ese nombre: se elige la de la persona que está delante. */
   const [porNombre, setPorNombre] = useState<{ id: string; public_code: string; alias: string | null; phone?: string | null }[]>([]);
+  /**
+   * Mientras escribe (18-nov-2026, Kallpa: «escanear y luego buscar por nombre no es práctico ni
+   * intuitivo»): con dos letras o cuatro cifras ya salen las tarjetas, y se toca la de la persona.
+   */
+  const [sugeridos, setSugeridos] = useState<{ id: string; public_code: string; alias: string | null; phone?: string | null }[]>([]);
+  /** El último cliente llegó por la cámara: solo entonces «Otro cliente» la vuelve a abrir. */
+  const porCamara = useRef(false);
+  const entrada = useRef<HTMLInputElement>(null);
   /** La tarjeta de la PERSONA, tal como la devuelve la base. */
   const [persona, setM] = useState<MiembroCaja | null>(null);
   /** 0017: la línea en la que se opera (null = la principal). */
@@ -256,6 +264,7 @@ export default function Caja() {
           if (valor) {
             if (navigator.vibrate) navigator.vibrate(60);
             setCamara(false);
+            porCamara.current = true;
             setQ(valor);
             void buscar(valor);
             break;
@@ -283,6 +292,25 @@ export default function Caja() {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [camara]);
+
+  useEffect(() => {
+    const t = q.trim();
+    // Un código o un token del QR no se sugiere: eso lo resuelve «buscar» de una.
+    if (!companyId || persona || t.length < 2 || /^(vdm-|vq)/i.test(t) || (/^\d+$/.test(t) && t.length < 4)) {
+      setSugeridos([]);
+      return;
+    }
+    let vigente = true;
+    const espera = setTimeout(() => {
+      void accion<{ rows: { id: string; public_code: string; alias: string | null; phone?: string | null }[] }>('miembro.buscar', { companyId, q: t, limit: 8 })
+        .then((r) => vigente && setSugeridos(r.rows))
+        .catch(() => vigente && setSugeridos([]));
+    }, 250);
+    return () => {
+      vigente = false;
+      clearTimeout(espera);
+    };
+  }, [q, companyId, persona]);
 
   if (!puede('ops.record')) return <SinPermiso que="la caja" />;
   if (!companyId) return <Cargando />;
@@ -339,6 +367,7 @@ export default function Caja() {
 
   function elegir(x: MiembroCaja) {
     setM(x);
+    setSugeridos([]);
     setCandidatos([]);
     setImporte('');
     setRef('');
@@ -472,7 +501,10 @@ export default function Caja() {
     setQ('');
     setImporte('');
     setRef('');
-    if (escanerPosible) setCamara(true);
+    setSugeridos([]);
+    // Como llegó el anterior: con la cámara, cámara; si lo buscó por nombre, al buscador.
+    if (porCamara.current && escanerPosible) setCamara(true);
+    else setTimeout(() => entrada.current?.focus(), 0);
   }
 
   async function crearCliente() {
@@ -596,40 +628,56 @@ export default function Caja() {
         </div>
       )}
 
-      <div className="card" style={{ marginBottom: 14 }}>
-        {camara && <video ref={video} className="fz-video" playsInline muted aria-label="Cámara para leer el QR" />}
-        <div className="fz-fila" style={{ marginTop: camara ? 10 : 0 }}>
-          <input
-            className="input fz-input-gran"
-            style={{ flex: 1 }}
-            placeholder="Código, celular o nombre"
-            value={q}
-            autoCapitalize="none"
-            onChange={(e) => setQ(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && void buscar()}
-            aria-label="Código de la tarjeta, celular o nombre"
-          />
-        </div>
+      <div className="card fz-busca" style={{ marginBottom: 14 }}>
+        <label className="field-label" htmlFor="fz-busca">¿A quién atiendes?</label>
+        <input
+          id="fz-busca"
+          ref={entrada}
+          className="input fz-input-gran"
+          placeholder="Escribe su nombre o celular"
+          value={q}
+          autoCapitalize="words"
+          autoComplete="off"
+          enterKeyHint="search"
+          onChange={(e) => {
+            porCamara.current = false;
+            setQ(e.target.value);
+            if (persona) setM(null);
+          }}
+          onKeyDown={(e) => e.key === 'Enter' && void buscar()}
+          aria-label="Nombre, celular o código de la tarjeta"
+        />
+        {buscando && <p className="fz-def">Buscando…</p>}
+        {sugeridos.length > 0 && !persona && (
+          <ul className="fz-sugeridos" aria-label="Tarjetas que coinciden">
+            {sugeridos.map((c) => (
+              <li key={c.id}>
+                <button type="button" onClick={() => { setSugeridos([]); setQ(c.alias ?? c.public_code); void buscar(c.public_code); }}>
+                  <UserRound size={18} aria-hidden="true" />
+                  <span>
+                    <b>{c.alias?.trim() || 'Sin nombre'}</b>
+                    <small>{c.phone ? `${c.phone} · ` : ''}<span className="fz-mono">{c.public_code}</span></small>
+                  </span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+        {q.trim().length >= 2 && !buscando && !sugeridos.length && !persona && !/^(vdm-|vq)/i.test(q.trim()) && (
+          <p className="fz-def">Si no sale, pulsa Enter para buscar por código o créale su tarjeta con «Nuevo cliente».</p>
+        )}
+        {camara && <video ref={video} className="fz-video" playsInline muted aria-label="Cámara para leer el QR" style={{ marginTop: 10 }} />}
         <div className="fz-col2" style={{ marginTop: 10 }}>
-          <button className="fz-gran fz-gran--ghost" onClick={() => void buscar()} disabled={buscando || !q.trim()}>
-            <Search size={18} /> {buscando ? 'Buscando…' : 'Buscar'}
-          </button>
-          {escanerPosible ? (
+          {escanerPosible && (
             <button className="fz-gran fz-gran--ghost" onClick={() => setCamara((c) => !c)}>
-              {camara ? <CameraOff size={18} /> : <Camera size={18} />} {camara ? 'Cerrar cámara' : 'Escanear QR'}
-            </button>
-          ) : (
-            <button className="fz-gran fz-gran--ghost" onClick={() => setAlta({ alias: '', phone: '', verificado: false, clave: nuevaClave() })}>
-              <Plus size={18} /> Nuevo cliente
+              {camara ? <CameraOff size={18} /> : <Camera size={18} />} {camara ? 'Cerrar cámara' : 'Escanear su QR'}
             </button>
           )}
-        </div>
-        {!escanerPosible && <p className="fz-def">Este navegador no puede usar la cámara (o la página no se abrió con https): escribe el código que sale bajo el QR.</p>}
-        {escanerPosible && (
-          <button className="btn btn-ghost btn-sm" style={{ marginTop: 10 }} onClick={() => setAlta({ alias: '', phone: '', verificado: false, clave: nuevaClave() })}>
-            <Plus size={14} /> Nuevo cliente
+          <button className="fz-gran fz-gran--ghost" onClick={() => setAlta({ alias: q.trim() && !/\d/.test(q) ? q.trim() : '', phone: /^[+\d\s]{6,}$/.test(q.trim()) ? q.trim() : '', verificado: false, clave: nuevaClave() })}>
+            <Plus size={18} /> Nuevo cliente
           </button>
-        )}
+        </div>
+        {!escanerPosible && <p className="fz-def">Este navegador no puede usar la cámara: busca por nombre, celular o el código que sale bajo el QR.</p>}
       </div>
 
       {porNombre.length > 1 && (

@@ -59,6 +59,7 @@ import {
 } from 'lucide-react';
 import Topbar from '@/components/panel/Topbar';
 import Equipo from '@/components/panel/Equipo';
+import OrdenDelMenu from '@/components/panel/OrdenDelMenu';
 import AdjuntosNota, {
   adjuntosNotaATexto,
   leerAdjuntosNota,
@@ -1256,6 +1257,8 @@ function Configuracion() {
               da, pero los comandos no los puede encolar. Al empleado ni se le
               pinta. Ver components/panel/Equipo.tsx. */}
           {(rol === 'dueno' || rol === 'admin' || esAdminPlataforma) && <details ref={seccionEquipo} className="cfg-advanced cfg-advanced--section"><summary>Acceso del equipo</summary><Equipo sinLista={datos?.miembros.length ?? 0} /></details>}
+          {/* El orden del menú del panel (datos 0020): dueño y administrador. */}
+          {(rol === 'dueno' || rol === 'admin' || esAdminPlataforma) && <OrdenDelMenu />}
           {/* La configuración de boletas y facturas: la pantalla de emitir está en Caja. */}
           {(rol === 'dueno' || rol === 'admin' || esAdminPlataforma) && <SeccionFacturacion />}
 
