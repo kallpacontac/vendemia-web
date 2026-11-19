@@ -62,6 +62,7 @@ import { cobradoSinConstancia, entradasDelDia, suma, type CitaCaja } from '@/lib
 import { esPuntual, selloCita, type SelloCita } from '@/lib/panel/adelantos';
 import { saldoDeVenta, type Saldo } from '@/lib/panel/saldo';
 import { cobroPorApuntar, etiquetaMetodo, type MetodoPago } from '@/lib/panel/metodosPago';
+import { metodoDeVuelto } from '@/lib/panel/vuelto';
 import { cap } from '@/lib/panel/vocabulario';
 import {
   getCatalogo,
@@ -246,6 +247,15 @@ function Caja() {
       const etiqueta = etiquetaMetodo(e.metodo);
       porMetodo.set(etiqueta, (porMetodo.get(etiqueta) ?? 0) + e.importe);
     }
+    // Un Yape o Plin de más con vuelto en efectivo (BotonCobrar, lib/panel/vuelto.ts): por la app
+    // entró también el vuelto, y salió del cajón como gasto. Así Yape cuadra con la app y el neto no cambia.
+    let devueltoPorApp = 0;
+    for (const g of datos.gastos) {
+      const m = metodoDeVuelto(g.categoria);
+      if (!m) continue;
+      porMetodo.set(m, (porMetodo.get(m) ?? 0) + g.importe);
+      devueltoPorApp += g.importe;
+    }
 
     // Las citas del día, cada una en su sitio: sin cobro apuntado (con o sin
     // pagos a cuenta), esperando el comprobante, o pagada sin hora.
@@ -268,7 +278,7 @@ function Caja() {
     const porAtender = porCobrar.filter((f) => f.cita.status !== 'completed');
     const pedidosSinConstancia = datos.movimientos.filter((m) => m.fuente === 'order' && cobradoSinConstancia(m));
 
-    const entro = entradas.reduce((t, e) => t + e.importe, 0);
+    const entro = entradas.reduce((t, e) => t + e.importe, 0) + devueltoPorApp;
     const aCuentaTotal = aCuenta.reduce((t, a) => t + Number(a.pago.amount ?? 0), 0);
     const gastado = datos.gastos.reduce((t, g) => t + g.importe, 0);
     return {
@@ -469,7 +479,7 @@ function Caja() {
                         <div className="confirmar-sellos">{sello && <Sello s={sello} />}</div>
                         <div className="confirmar-acciones">
                           <BotonPago abierto={pagando === cita.id} alPulsar={() => setPagando(pagando === cita.id ? null : cita.id)} />
-                          <BotonCobrar ocupado={enVuelo === cita.id} alCobrar={(m, foto) => void cobrar(cita, m, foto)} />
+                          <BotonCobrar ocupado={enVuelo === cita.id} total={pagos ? pagos.saldo : importe} alCobrar={(m, foto) => void cobrar(cita, m, foto)} />
                         </div>
                       </div>
                       {pagando === cita.id && (
@@ -605,7 +615,7 @@ function Caja() {
                   <div className="confirmar-sellos">{sello && <Sello s={sello} />}</div>
                   <div className="confirmar-acciones">
                     <BotonPago abierto={pagando === cita.id} alPulsar={() => setPagando(pagando === cita.id ? null : cita.id)} />
-                    <BotonCobrar ocupado={enVuelo === cita.id} alCobrar={(m, foto) => void cobrar(cita, m, foto)} />
+                    <BotonCobrar ocupado={enVuelo === cita.id} total={importe} alCobrar={(m, foto) => void cobrar(cita, m, foto)} />
                   </div>
                 </div>
                 {pagando === cita.id && (

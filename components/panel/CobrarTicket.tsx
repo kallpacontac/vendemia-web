@@ -451,7 +451,7 @@ export default function CobrarTicket({
         {falta ? (
           <p className="ticket-falta">Falta: {falta.charAt(0).toLowerCase() + falta.slice(1)}</p>
         ) : (
-          <BotonCobrar grande ocupado={enviando} etiqueta={enviando ? 'Cobrando…' : `Cobrar ${soles(total)}`} alCobrar={(m, f) => void cobrar(m, f)} />
+          <BotonCobrar grande total={total} ocupado={enviando} etiqueta={enviando ? 'Cobrando…' : `Cobrar ${soles(total)}`} alCobrar={(m, f) => void cobrar(m, f)} />
         )}
       </div>
     </section>

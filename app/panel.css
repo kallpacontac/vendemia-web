@@ -2617,3 +2617,20 @@ nav.chip-tabs[aria-label="Caja"] a{flex-shrink:0;white-space:nowrap}
 .emp-acceso__credencial>div:not(.emp-acceso__acciones){display:flex;justify-content:space-between;align-items:baseline;gap:10px;font-size:14px}
 .emp-acceso__credencial b{font-size:20px;letter-spacing:.02em;font-family:ui-monospace,Menlo,Consolas,monospace}
 @media (max-width:520px){.emp-acceso__dar{grid-template-columns:1fr}}
+
+/* ── Cobrar con vuelto (components/panel/BotonCobrar.tsx, lib/panel/vuelto.ts) ── */
+.vuelto{display:flex;flex-direction:column;gap:10px;width:100%;max-width:440px;margin-left:auto;padding:14px;border:1px solid var(--line);border-radius:var(--r-md);background:var(--bg-card);text-align:left}
+.vuelto__cab{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:15px}
+.vuelto__metodos{display:flex;gap:6px;flex-wrap:wrap}
+.vuelto__rotulo{font-size:13px;font-weight:600;color:var(--ink-soft)}
+.vuelto__billetes{display:grid;grid-template-columns:repeat(auto-fit,minmax(76px,1fr));gap:8px}
+.vuelto__billete{min-height:48px;border:1px solid var(--line-2);border-radius:var(--r-sm);background:var(--bg-soft);font:700 16px/1 var(--panel-font,inherit);color:var(--ink);cursor:pointer}
+.vuelto__billete.on{background:var(--ink);border-color:var(--ink);color:#fff}
+.vuelto__billete:focus-visible,.vuelto__otro:focus-visible{outline:3px solid var(--brand);outline-offset:2px}
+.vuelto__otro{min-height:48px;font-size:16px;text-align:center}
+.vuelto__monto{display:flex;align-items:baseline;justify-content:space-between;gap:10px;padding:10px 14px;border-radius:var(--r-sm);background:#E8FBF2;color:#0B7A4B}
+.vuelto__monto span{font-weight:600}
+.vuelto__monto b{font-size:28px;line-height:1}
+.vuelto__ok{min-height:50px;font-size:16px}
+.ticket-pie>.vuelto,.listo-acciones>.vuelto{max-width:none}
+@media (max-width:520px){.vuelto{max-width:none}}

@@ -127,7 +127,7 @@ export default function ListosParaCobrar({
               </div>
               <b className="listo-monto">{soles(pagos ? pagos.saldo : importe)}</b>
               <div className="listo-acciones">
-                <BotonCobrar grande ocupado={enVuelo === cita.id} etiqueta="Cobrar" alCobrar={(m, foto) => alCobrar(cita, m, foto)} />
+                <BotonCobrar grande ocupado={enVuelo === cita.id} etiqueta="Cobrar" total={pagos ? pagos.saldo : importe} alCobrar={(m, foto) => alCobrar(cita, m, foto)} />
                 <button type="button" className={`btn btn-ghost${esta === 'agregar' ? ' on' : ''}`} aria-expanded={esta === 'agregar'}
                   onClick={() => alternar(cita.id, 'agregar')} title="El ticket dice algo más: una barba, una cera…">
                   <Plus size={15} /> Agregar
