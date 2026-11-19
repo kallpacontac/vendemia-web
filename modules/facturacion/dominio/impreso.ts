@@ -42,6 +42,20 @@ export function textoQr(c: ComprobanteGuardado): string {
   ].join('|') + '|';
 }
 
+/**
+ * La HOJA del ticket = el rollo de la ticketera (19-nov-2026, The 24/7: al imprimir salía en A4).
+ * «@page{size:80mm auto}» no es CSS válido y el navegador lo ignora (A4). Aquí: el ancho del rollo
+ * y el largo justo del ticket, medido al cargar y otra vez justo antes de imprimir. Así la vista
+ * previa sale como el ticket y la ticketera corta donde termina, sin metro de papel en blanco.
+ * (El script no corre en la imagen para WhatsApp, ticketImagen.ts, que además quita @page.)
+ */
+export function paginaDelTicket(ancho: 58 | 80): string {
+  return `<style id="hoja">@page{size:${ancho}mm 200mm;margin:0}</style>
+<script>(function(){function f(){var b=document.body;if(!b)return;var px=Math.max(b.scrollHeight,b.getBoundingClientRect().height);
+var mm=Math.ceil(px*25.4/96)+4;var s=document.getElementById('hoja');if(s)s.textContent='@page{size:${ancho}mm '+mm+'mm;margin:0}';}
+if(document.readyState==='complete')f();else addEventListener('load',f);addEventListener('beforeprint',f);})();</script>`;
+}
+
 export interface OpcionesImpreso {
   ancho: 58 | 80;
   /** data:image/png;base64,… del QR (lo genera quien llama: en el navegador, la librería qrcode). */
@@ -88,8 +102,8 @@ export function ticketHtml(c: ComprobanteGuardado, o: OpcionesImpreso): string {
 
   return `<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>${esc(c.serie)}-${esc(c.numero)}</title>
+${paginaDelTicket(o.ancho)}
 <style>
-@page{size:${o.ancho}mm auto;margin:0}
 *{box-sizing:border-box}
 html,body{margin:0;background:#fff;color:#000}
 body{width:${o.ancho}mm;padding:3mm ${o.ancho === 58 ? 2 : 4}mm;font:${fuente}px/1.35 ui-monospace,Menlo,Consolas,monospace}

@@ -8,7 +8,7 @@
  * formato que la boleta, dominio/impreso.ts) y se manda por WhatsApp con su enlace /nota/<id>,
  * que WhatsApp muestra como la imagen del ticket (app/nota/[id]/opengraph-image.tsx).
  */
-import { cantidad, dinero, esc } from './impreso';
+import { cantidad, dinero, esc, paginaDelTicket } from './impreso';
 
 export interface NotaVenta {
   id: string;
@@ -53,8 +53,7 @@ export function notaHtml(n: NotaVenta): string {
   const lineas = n.lineas
     .map((l) => `<tr><td class="c">${esc(cantidad(l.cantidad))}</td><td>${esc(l.descripcion)}<br><small>P.U. ${dinero(l.precio)}</small></td><td class="r">${dinero(l.cantidad * l.precio)}</td></tr>`)
     .join('');
-  return `<!doctype html><html lang="es"><head><meta charset="utf-8"><title>${esc(numeroNota(n))}</title><style>
-@page{size:${ancho}mm auto;margin:0}
+  return `<!doctype html><html lang="es"><head><meta charset="utf-8"><title>${esc(numeroNota(n))}</title>${paginaDelTicket(ancho)}<style>
 *{box-sizing:border-box}
 body{width:${ancho}mm;padding:3mm ${ancho === 58 ? 2 : 4}mm;margin:0;font:${fuente}px/1.35 ui-monospace,Menlo,Consolas,monospace;color:#000}
 h1{font-size:1.25em;margin:0 0 2px;text-align:center}
