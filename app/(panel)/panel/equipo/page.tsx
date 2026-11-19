@@ -53,6 +53,7 @@ import AvisarCliente from '@/components/panel/AvisarCliente';
 import { useSesion } from '@/components/panel/Sesion';
 import { useSedes } from '@/components/panel/SelectorSede';
 import DocumentosEmpleado from '@/components/panel/DocumentosEmpleado';
+import AccesoEmpleado from '@/components/panel/AccesoEmpleado';
 import { soloLeeLoDelDueno } from '@/lib/panel/roles';
 import { useAvisar, useComando } from '@/components/panel/Avisos';
 import { useCargar } from '@/components/panel/useCargar';
@@ -213,6 +214,12 @@ export default function Equipo() {
     return error ? null : ((data ?? {}) as Record<string, DatosEmpleado>);
   }, [companyId, puedeFicha]);
   const sedesNegocio = useSedes(companyId).map((x) => x.nombre);
+  // Quién entra al panel y con qué usuario (datos 0021). Sin la 0021, null y la sección no sale.
+  const accesos = useCargar(async () => {
+    if (!companyId || !puedeFicha) return null;
+    const { data, error } = await supabase().rpc('equipo_accesos_leer', { p_company: companyId });
+    return error ? null : ((data ?? {}) as Record<string, { usuario: string }>);
+  }, [companyId, puedeFicha]);
   const sueldos = useCargar(async () => {
     if (!companyId || !esDueno) return null;
     const { data, error } = await supabase().rpc('empleado_sueldos_leer', { p_company: companyId });
@@ -321,6 +328,8 @@ export default function Equipo() {
             sueldo={sueldos.datos ? (sueldos.datos[t.id] ?? null) : undefined}
             alCambiarSueldo={sueldos.releer}
             datos={fichas.datos ? (fichas.datos[t.id] ?? SIN_DATOS) : undefined}
+            acceso={accesos.datos ? (accesos.datos[t.id]?.usuario ?? null) : undefined}
+            alCambiarAcceso={() => { accesos.releer(); fichas.releer(); }}
             sedesNegocio={sedesNegocio}
             alCambiarDatos={fichas.releer}
           />
@@ -458,6 +467,8 @@ function Ficha({
   datos,
   sedesNegocio = [],
   alCambiarDatos,
+  acceso,
+  alCambiarAcceso,
 }: {
   t: Trabajador;
   /** El equipo entero: hace falta para poder pasarle a otro las citas huérfanas. */
@@ -476,6 +487,9 @@ function Ficha({
   datos?: DatosEmpleado;
   sedesNegocio?: string[];
   alCambiarDatos?: () => void;
+  /** Su usuario del panel (datos 0021); null = sin acceso; undefined = no se muestra. */
+  acceso?: string | null;
+  alCambiarAcceso?: () => void;
 }) {
   const comando = useComando();
   const avisar = useAvisar();
@@ -673,6 +687,14 @@ function Ficha({
           <small className="muted" style={{ fontSize: 11.5 }}>
             Mia reconoce al profesional por este nombre cuando el cliente pide «con {t.name.split(' ')[0]}».
           </small>
+
+          {/* Acceso al panel (datos 0021): usuario = su celular, contraseña que se le pasa. */}
+          {acceso !== undefined && (
+            <div className="sec" style={{ marginTop: 14 }}>
+              <AccesoEmpleado companyId={t.company_id} employeeId={t.id} nombre={t.name} usuario={acceso}
+                telefono={datos?.telefono ?? ''} alCambiar={() => alCambiarAcceso?.()} />
+            </div>
+          )}
 
           {/* Sedes, teléfono y DNI (datos 0018): dueño y administrador. */}
           {datos !== undefined && (
