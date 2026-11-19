@@ -34,12 +34,12 @@ Cada paso dice qué tocar y **qué tienes que ver**. Si algo no se ve así, anot
 | 1.4 | Toca **Cobrar** | Te lleva a la Caja |
 | 1.5 | Mira la parte de abajo de Inicio | Agenda de hoy y «más vendidos» lado a lado; las conversaciones, al final |
 
-## 2 · Caja › Cobrar ticket (la guía que baja sola)
+## 2 · Caja › Cobrar (la guía que baja sola)
 
 | # | Haz esto | Tienes que ver |
 |---|---|---|
-| 2.1 | Entra a **Caja** | Carga rápido. Tres botones grandes: **Cobrar ticket · Escanear tarjeta · Gasto o adelanto** |
-| 2.2 | Toca **Cobrar ticket** | La pantalla **baja sola** al ticket. El paso **«1 · ¿Quién lo atendió?»** se ve resaltado (fondo naranja suave y un punto que late) |
+| 2.1 | Entra a **Caja** | Carga rápido. Tres botones grandes: **Cobrar · Escanear tarjeta · Gasto o adelanto** |
+| 2.2 | Toca **Cobrar** | La pantalla **baja sola** al ticket. El paso **«1 · ¿Quién lo atendió?»** se ve resaltado (fondo naranja suave y un punto que late) |
 | 2.3 | Toca un barbero | Baja sola a **«2 · ¿Qué se hizo?»**, que ahora es el resaltado |
 | 2.4 | Toca un servicio | Si hay 2 sedes y no hay una elegida arriba, baja a **«¿En qué sede?»**; si no, baja hasta el **Total y Cobrar** |
 | 2.5 | Toca otro servicio | La pantalla **no se mueve** (sigues eligiendo) y se suma al ticket |

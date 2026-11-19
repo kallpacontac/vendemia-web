@@ -371,7 +371,7 @@ function Caja() {
           <div className="caja-tres" role="group" aria-label="Qué hacer">
             <button type="button" className={`caja-tres__btn caja-tres__btn--principal${ticket ? ' on' : ''}`} aria-expanded={ticket}
               onClick={() => { setTicket((t) => !t); setGasto(false); }}>
-              <Receipt size={26} /> <span>{ticket ? 'Cerrar ticket' : 'Cobrar ticket'}</span>
+              <Receipt size={26} /> <span>{ticket ? 'Cancelar' : 'Cobrar'}</span>
             </button>
             <Link href="/panel/fideliza/caja?camara=1" className="caja-tres__btn">
               <QrCode size={26} /> <span>Escanear tarjeta</span>
@@ -430,7 +430,7 @@ function Caja() {
               <b><Campana size={16} /> Nadie esperando para pagar</b>
               <p className="muted">
                 Cuando el barbero marque «Atendido», el cliente sale aquí solo, sin recargar. ¿Llegó alguien con su ticket
-                y no está? Toca «Cobrar ticket».
+                y no está? Toca «Cobrar».
               </p>
             </div>
           </section>

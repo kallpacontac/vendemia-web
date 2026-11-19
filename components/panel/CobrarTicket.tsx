@@ -270,9 +270,9 @@ export default function CobrarTicket({
   }
 
   return (
-    <section ref={raiz} className="card ticket" aria-label="Cobrar ticket">
+    <section ref={raiz} className="card ticket" aria-label="Cobrar">
       <div className="card-head">
-        <h3><Receipt size={17} style={{ verticalAlign: -3 }} /> Cobrar ticket</h3>
+        <h3><Receipt size={17} style={{ verticalAlign: -3 }} /> Cobrar</h3>
         <button type="button" className="q-icon" aria-label="Cerrar" onClick={alCerrar} disabled={enviando}>
           <X size={16} />
         </button>
