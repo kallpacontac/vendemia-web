@@ -189,6 +189,10 @@ function MisCitas({ companyId }: { companyId: string }) {
     const [lineas, congeladas] = idsMias.length
       ? await Promise.all([getServiciosDeCitas(idsMias), getComisionesCongeladas(idsMias)]).catch(() => [[], []] as const)
       : ([[], []] as const);
+    // Su % en CADA vuelta: si el dueño se lo cambia, lo que gana se recalcula en 30 s, sin recargar.
+    const pct = suFicha
+      ? await getEquipoFichas(companyId).then((f) => Number(f.find((x) => x.es_la_tuya)?.comision_pct ?? 0)).catch(() => null)
+      : null;
     let saldos: Record<string, number> = {};
     if (cobra && citas.length) {
       const { data, error } = await supabase().rpc('empleado_saldos', { p_company: companyId, p_ids: citas.map((c) => c.id) });
@@ -196,14 +200,12 @@ function MisCitas({ companyId }: { companyId: string }) {
         saldos = Object.fromEntries(Object.entries(data as Record<string, unknown>).map(([k, n]) => [k, Number(n)]));
       }
     }
-    return { lunes, negocio, citas, clientes, saldos, lineas: [...lineas], congeladas: [...congeladas] };
+    return { lunes, negocio, citas, clientes, saldos, lineas: [...lineas], congeladas: [...congeladas], pct };
   }, [companyId, lunes, cobra]);
 
-  // Lo que casi no cambia: el catálogo (tarifas y qué es producto) y su % de comisión.
-  const fijos = useCargar(async () => {
-    const [catalogo, fichas] = await Promise.all([getCatalogoDelEquipo(companyId), getEquipoFichas(companyId)]);
-    return { catalogo, pct: Number(fichas.find((f) => f.es_la_tuya)?.comision_pct ?? 0) };
-  }, [companyId]);
+  // Lo que casi no cambia: el catálogo (tarifas y qué es producto). Se relee cada 5 min.
+  const fijos = useCargar(async () => ({ catalogo: await getCatalogoDelEquipo(companyId) }), [companyId]);
+  useSondeo(fijos.releer, 300_000);
 
   // Sin recargar: una cita nueva de la página, una que le asignan o una que la caja cobra
   // aparece sola, con lo que gana ya sumado (cada 30 s).
@@ -227,8 +229,9 @@ function MisCitas({ companyId }: { companyId: string }) {
   // cuenta que Mi comisión y que el dueño (calcularComisiones): aquí no se calcula aparte.
   const importes = useMemo(() => {
     const m = new Map<string, { precio: number; tuParte: number | null }>();
-    if (!datos || !fijos.datos || !ficha) return m;
-    const producto = new Set(fijos.datos.catalogo.filter((i) => i.tipo === 'producto').map((i) => i.id));
+    if (!datos || !ficha) return m;
+    const catalogo = fijos.datos?.catalogo ?? [];
+    const producto = new Set(catalogo.filter((i) => i.tipo === 'producto').map((i) => i.id));
     for (const l of datos.lineas) {
       if (producto.has(l.catalog_item_id ?? '')) continue;
       const x = m.get(l.appointment_id) ?? { precio: 0, tuParte: null };
@@ -238,8 +241,8 @@ function MisCitas({ companyId }: { companyId: string }) {
     const r = calcularComisiones(
       datos.citas.filter((c) => c.employee_id === ficha),
       datos.lineas,
-      fijos.datos.catalogo,
-      [{ id: ficha, comision_pct: fijos.datos.pct }],
+      catalogo,
+      [{ id: ficha, comision_pct: datos.pct ?? 0 }],
       new Date(),
       datos.congeladas,
     );
