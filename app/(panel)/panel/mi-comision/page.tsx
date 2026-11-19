@@ -27,6 +27,7 @@ import Topbar from '@/components/panel/Topbar';
 import { supabase } from '@/lib/supabase/client';
 import { useSesion } from '@/components/panel/Sesion';
 import { useCargar } from '@/components/panel/useCargar';
+import { useSondeo } from '@/components/panel/useSondeo';
 import Link from 'next/link';
 import { calcularComisiones } from '@/lib/panel/comisiones';
 import { desdeDeCuentas, solesExactos } from '@/lib/panel/cierres';
@@ -47,7 +48,7 @@ export default function MiComision() {
   const [periodo, setPeriodo] = useState<Periodo>('quincena');
   const { desde, hasta } = rango(periodo);
 
-  const { datos, cargando, error } = useCargar(async () => {
+  const { datos, cargando, error, releer } = useCargar(async () => {
     if (!companyId) return null;
     const [negocio, citas, fichas, catalogo] = await Promise.all([
       getMiNegocio(companyId),
@@ -64,6 +65,11 @@ export default function MiComision() {
   }, [companyId, desde, hasta]);
 
   const cobro = useCargar(() => (companyId ? porCobrar(companyId) : Promise.resolve(null)), [companyId]);
+  // Cada cita que la caja cobra suma sola, sin recargar (19-nov, The 24/7).
+  useSondeo(() => {
+    releer();
+    cobro.releer();
+  }, 30_000);
 
   const resumen = useMemo(() => {
     if (!datos?.ficha) return null;
@@ -154,7 +160,7 @@ export default function MiComision() {
               {!resumen.yo || resumen.yo.lineas.length === 0 ? (
                 <p className="vacio">No hay citas atendidas en estas fechas.</p>
               ) : (
-                resumen.yo.lineas.map((l, i) => (
+                [...resumen.yo.lineas].sort((a, b) => (b.cita.inicio?.getTime() ?? 0) - (a.cita.inicio?.getTime() ?? 0)).map((l, i) => (
                   <div className="mia-fila" key={i}>
                     <span className="mia-hora">{l.cita.inicio ? diaMes(l.cita.inicio) : '—'}</span>
                     <div className="mia-quien">

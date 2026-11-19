@@ -28,6 +28,7 @@ import { CORTE_DE_ROLES, corteDeRoles } from '@/lib/panel/roles';
 import { RUTA_MI_AGENDA, RUTA_MI_CATALOGO, RUTA_MI_COMISION, rutaPermitida } from '@/lib/panel/rutas';
 import { getEquipo } from '@/lib/supabase/queries';
 import { useCargar } from './useCargar';
+import { useOrdenMenu } from '@/lib/panel/menu';
 
 /**
  * ══════════════════════════════════════════════════════════════════════════
@@ -104,8 +105,10 @@ function SelectorCompania() {
 
 function NavegacionPanel() {
   const ruta = usePathname();
-  const { compania, esAdminPlataforma, rol } = useSesion();
+  const { compania, esAdminPlataforma, rol, companyId } = useSesion();
   const modo = compania?.business_mode;
+  // ¿El negocio le esconde Fideliza a su equipo? (datos 0022)
+  const fidelizaEquipo = useOrdenMenu(companyId ?? null).equipoFideliza ?? null;
 
   if (!compania && esAdminPlataforma) {
     return (
@@ -156,7 +159,7 @@ function NavegacionPanel() {
     // Las comisiones son de los negocios de citas, igual que en el menú.
     ...(esCita(modo) ? [{ href: RUTA_MI_COMISION, label: 'Mi comisión', rutas: [RUTA_MI_COMISION] }] : []),
     { href: RUTA_MI_CATALOGO, label: 'Catálogo', rutas: [RUTA_MI_CATALOGO] },
-    { href: '/panel/fideliza', label: 'Fideliza', rutas: ['/panel/fideliza'] },
+    ...(fidelizaEquipo === false ? [] : [{ href: '/panel/fideliza', label: 'Fideliza', rutas: ['/panel/fideliza'] }]),
   ];
   const visibles = rutaPermitida(RUTA_MI_AGENDA, rol)
     ? delEmpleado

@@ -18,6 +18,8 @@ import { supabase } from '@/lib/supabase/client';
 export interface OrdenMenu {
   orden: string[];
   enMas: string[];
+  /** ¿El empleado ve Fideliza? (datos 0022). null/undefined = como siempre (sí). */
+  equipoFideliza?: boolean | null;
 }
 
 export const SIN_ORDEN: OrdenMenu = { orden: [], enMas: [] };
@@ -53,9 +55,10 @@ export function ordenar<T extends { href: string }>(nav: T[], o: OrdenMenu): T[]
 export const vaEnMas = (href: string, o: OrdenMenu) => !SIEMPRE_A_LA_VISTA.includes(href) && o.enMas.includes(href);
 
 function leerRespuesta(data: unknown): OrdenMenu {
-  const d = (data ?? {}) as { orden?: unknown; en_mas?: unknown };
+  const d = (data ?? {}) as { orden?: unknown; en_mas?: unknown; equipo_fideliza?: unknown };
   const lista = (v: unknown) => (Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : []);
-  return { orden: lista(d.orden), enMas: lista(d.en_mas) };
+  const ve = typeof d.equipo_fideliza === 'boolean' ? d.equipo_fideliza : null;
+  return { orden: lista(d.orden), enMas: lista(d.en_mas), equipoFideliza: ve };
 }
 
 const clave = (companyId: string) => `vd:menu:${companyId}`;
@@ -96,7 +99,7 @@ export function useOrdenMenu(companyId: string | null): OrdenMenu {
         const o = leerRespuesta(data);
         setOrden(o);
         try {
-          localStorage.setItem(clave(companyId), JSON.stringify({ orden: o.orden, en_mas: o.enMas }));
+          localStorage.setItem(clave(companyId), JSON.stringify({ orden: o.orden, en_mas: o.enMas, equipo_fideliza: o.equipoFideliza ?? null }));
         } catch {
           /* sin almacenamiento: solo se pierde el arranque sin salto */
         }
@@ -119,6 +122,23 @@ export async function guardarOrdenMenu(companyId: string, o: OrdenMenu): Promise
   if (error) {
     if (error.code === 'PGRST202' || /menu_orden_guardar/.test(error.message ?? '')) {
       return 'Falta preparar la base para esto (datos 0020). Avísanos y lo activamos.';
+    }
+    return error.message;
+  }
+  window.dispatchEvent(new Event(EVENTO_MENU));
+  return null;
+}
+
+/**
+ * ¿El equipo ve Fideliza? (datos 0022; The 24/7, 19-nov-2026: «Fideliza no deberían verlo los
+ * empleados, que sea configurable»). Solo esconde: lo que el empleado puede hacer allí lo imponen
+ * los roles de Fideliza en la base.
+ */
+export async function guardarFidelizaEquipo(companyId: string, ve: boolean): Promise<string | null> {
+  const { error } = await supabase().rpc('menu_equipo_fideliza_guardar', { p_company: companyId, p_ve: ve });
+  if (error) {
+    if (error.code === 'PGRST202' || /menu_equipo_fideliza_guardar/.test(error.message ?? '')) {
+      return 'Falta preparar la base para esto (modules/datos/sql/0022_fideliza_para_el_equipo.sql).';
     }
     return error.message;
   }

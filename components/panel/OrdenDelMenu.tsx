@@ -14,7 +14,7 @@ import { useMenuDelPanel } from './Sidebar';
 import { useSesion } from './Sesion';
 import { useAvisar } from './Avisos';
 import { demoActivo } from '@/lib/panel/demo';
-import { FIJAS, RUTA_INICIO, SIEMPRE_A_LA_VISTA, SIN_ORDEN, guardarOrdenMenu, ordenar, type OrdenMenu } from '@/lib/panel/menu';
+import { FIJAS, RUTA_INICIO, SIEMPRE_A_LA_VISTA, SIN_ORDEN, guardarFidelizaEquipo, guardarOrdenMenu, ordenar, useOrdenMenu, type OrdenMenu } from '@/lib/panel/menu';
 
 export default function OrdenDelMenu() {
   const { companyId, compania } = useSesion();
@@ -31,6 +31,27 @@ export default function OrdenDelMenu() {
   const [borrador, setBorrador] = useState<OrdenMenu | null>(null);
   const [guardando, setGuardando] = useState(false);
   useEffect(() => setBorrador(null), [companyId]);
+  // ¿El equipo ve Fideliza? (datos 0022). null = como siempre (sí).
+  const guardadoFideliza = useOrdenMenu(companyId ?? null).equipoFideliza ?? null;
+  const [veFideliza, setVeFideliza] = useState<boolean | null>(null);
+  useEffect(() => setVeFideliza(null), [companyId, guardadoFideliza]);
+  const equipoVeFideliza = veFideliza ?? guardadoFideliza !== false;
+
+  async function cambiarFideliza(ve: boolean) {
+    if (demoActivo()) {
+      avisar('Estás en modo demo: no se guarda nada. Sal del modo demo para cambiar algo de verdad.', 'espera');
+      return;
+    }
+    if (!companyId) return;
+    setVeFideliza(ve);
+    const error = await guardarFidelizaEquipo(companyId, ve);
+    if (error) {
+      setVeFideliza(null);
+      avisar(error, 'error');
+      return;
+    }
+    avisar(ve ? '✓ Tu equipo ya ve Fideliza.' : '✓ Listo: tu equipo ya no ve Fideliza.', 'ok');
+  }
 
   const vista = borrador ?? actual;
   const lista = ordenar(nav, vista);
@@ -71,6 +92,13 @@ export default function OrdenDelMenu() {
     <details className="cfg-advanced cfg-advanced--section">
       <summary>Orden del menú</summary>
       <div className="menu-orden">
+        <label className="toggle-row">
+          <span className="t">
+            <b>Tu equipo ve Fideliza</b>
+            <small>Apagado, tus empleados (barberos) no lo ven en su menú. Tú y el administrador sí.</small>
+          </span>
+          <input type="checkbox" checked={equipoVeFideliza} onChange={(e) => void cambiarFideliza(e.target.checked)} />
+        </label>
         <p className="muted">
           Pon arriba lo que más usas. Lo que mandes a «Más» sigue ahí, a un toque. Vale para todo tu equipo.
         </p>

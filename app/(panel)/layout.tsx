@@ -7,6 +7,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { ProveedorSesion, useSesion } from '@/components/panel/Sesion';
 import { ProveedorAvisos } from '@/components/panel/Avisos';
 import Sidebar from '@/components/panel/Sidebar';
+import { useOrdenMenu } from '@/lib/panel/menu';
 import { ProveedorSalud } from '@/components/panel/Salud';
 import { BandaDemo } from '@/components/panel/Demo';
 import Link from 'next/link';
@@ -88,10 +89,12 @@ function Guardia({ children }: { children: React.ReactNode }) {
    * Dashboard sencillamente no es su portada.
    */
   const modo = compania?.business_mode;
-  const vetada = !sinCompania && !rutaPermitida(ruta, rol);
+  // Lo que el negocio esconde a su equipo (datos 0022), del mismo sitio que el orden del menú.
+  const fidelizaEquipo = useOrdenMenu(sinCompania ? null : companyId ?? null).equipoFideliza ?? null;
+  const vetada = !sinCompania && !rutaPermitida(ruta, rol, { fidelizaEquipo });
   useEffect(() => {
-    if (!cargando && vetada && ruta === '/panel') router.replace(inicioDe(rol, modo));
-  }, [cargando, vetada, ruta, rol, modo, router]);
+    if (!cargando && vetada && ruta === '/panel') router.replace(inicioDe(rol, modo, { fidelizaEquipo }));
+  }, [cargando, vetada, ruta, rol, modo, router, fidelizaEquipo]);
 
   if (cargando || reconectando || !session) {
     return (

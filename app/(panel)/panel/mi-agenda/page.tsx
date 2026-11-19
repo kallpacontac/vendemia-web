@@ -47,6 +47,7 @@
 import { Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Banknote, Check, ChevronLeft, ChevronRight, UserPlus, X } from 'lucide-react';
+import Link from 'next/link';
 import Topbar from '@/components/panel/Topbar';
 import AvisosDelEquipo from '@/components/panel/AvisosDelEquipo';
 import { useSesion } from '@/components/panel/Sesion';
@@ -62,10 +63,14 @@ import { pideRevision, selloCumplido } from '@/lib/panel/confirmacion';
 import { vocabulario } from '@/lib/panel/vocabulario';
 import { claveGrupo, hoyLima, ocupa, reservando } from '@/lib/panel/inscripciones';
 import { quienDeCita } from '@/lib/panel/ficha';
+import { calcularComisiones } from '@/lib/panel/comisiones';
 import {
   getCatalogoDelEquipo,
   getCitasDelPeriodo,
+  getComisionesCongeladas,
+  getEquipoFichas,
   getInscripcionesVivas,
+  getServiciosDeCitas,
   getMiNegocio,
   getMisClientes,
   type Cita,
@@ -177,6 +182,13 @@ function MisCitas({ companyId }: { companyId: string }) {
       getMisClientes(companyId),
     ]);
     // Lo que falta en cada una: solo si cobra, y la base decide cuáles le tocan.
+    // Sus citas: el precio de cada una y lo que gana (19-nov, The 24/7: «que en los barberos
+    // aparezcan las citas y el precio de los cortes, y su monto actualizado por cada cita cobrada»).
+    const suFicha = negocio?.tu_ficha ?? null;
+    const idsMias = suFicha ? citas.filter((c) => c.employee_id === suFicha).map((c) => c.id) : [];
+    const [lineas, congeladas] = idsMias.length
+      ? await Promise.all([getServiciosDeCitas(idsMias), getComisionesCongeladas(idsMias)]).catch(() => [[], []] as const)
+      : ([[], []] as const);
     let saldos: Record<string, number> = {};
     if (cobra && citas.length) {
       const { data, error } = await supabase().rpc('empleado_saldos', { p_company: companyId, p_ids: citas.map((c) => c.id) });
@@ -184,11 +196,18 @@ function MisCitas({ companyId }: { companyId: string }) {
         saldos = Object.fromEntries(Object.entries(data as Record<string, unknown>).map(([k, n]) => [k, Number(n)]));
       }
     }
-    return { lunes, negocio, citas, clientes, saldos };
+    return { lunes, negocio, citas, clientes, saldos, lineas: [...lineas], congeladas: [...congeladas] };
   }, [companyId, lunes, cobra]);
 
-  // Sin recargar: una cita nueva de la página o una que le asignan aparece sola (cada 45 s).
-  useSondeo(releer, 45_000);
+  // Lo que casi no cambia: el catálogo (tarifas y qué es producto) y su % de comisión.
+  const fijos = useCargar(async () => {
+    const [catalogo, fichas] = await Promise.all([getCatalogoDelEquipo(companyId), getEquipoFichas(companyId)]);
+    return { catalogo, pct: Number(fichas.find((f) => f.es_la_tuya)?.comision_pct ?? 0) };
+  }, [companyId]);
+
+  // Sin recargar: una cita nueva de la página, una que le asignan o una que la caja cobra
+  // aparece sola, con lo que gana ya sumado (cada 30 s).
+  useSondeo(releer, 30_000);
 
   // Al volver a la app desde WhatsApp u otra: lo de ahora, sin esperar a nada.
   useEffect(() => {
@@ -203,6 +222,37 @@ function MisCitas({ companyId }: { companyId: string }) {
   }, [releer]);
 
   const ficha = datos?.negocio?.tu_ficha ?? null;
+
+  // Por cita: el precio de sus servicios (sin productos) y, si ya la atendió, su parte. La MISMA
+  // cuenta que Mi comisión y que el dueño (calcularComisiones): aquí no se calcula aparte.
+  const importes = useMemo(() => {
+    const m = new Map<string, { precio: number; tuParte: number | null }>();
+    if (!datos || !fijos.datos || !ficha) return m;
+    const producto = new Set(fijos.datos.catalogo.filter((i) => i.tipo === 'producto').map((i) => i.id));
+    for (const l of datos.lineas) {
+      if (producto.has(l.catalog_item_id ?? '')) continue;
+      const x = m.get(l.appointment_id) ?? { precio: 0, tuParte: null };
+      x.precio += Number(l.price ?? 0);
+      m.set(l.appointment_id, x);
+    }
+    const r = calcularComisiones(
+      datos.citas.filter((c) => c.employee_id === ficha),
+      datos.lineas,
+      fijos.datos.catalogo,
+      [{ id: ficha, comision_pct: fijos.datos.pct }],
+      new Date(),
+      datos.congeladas,
+    );
+    for (const p of r.profesionales) {
+      for (const l of p.lineas) {
+        const x = m.get(l.cita.id) ?? { precio: 0, tuParte: null };
+        x.tuParte = Math.round(((x.tuParte ?? 0) + l.comision) * 100) / 100;
+        m.set(l.cita.id, x);
+      }
+    }
+    return m;
+  }, [datos, fijos.datos, ficha]);
+
   const cliente = useMemo(() => new Map((datos?.clientes ?? []).map((c) => [c.lead_id, c])), [datos]);
 
   // Las de la semana que me tocan: mías y sin asignar. Solo de la semana cargada:
@@ -240,6 +290,9 @@ function MisCitas({ companyId }: { companyId: string }) {
   const elegido = deIso(dia);
   const titulo = cap(`${dia === hoy ? 'hoy, ' : ''}${DIA_LARGO[elegido.getDay()]} ${elegido.getDate()} de ${MES_LARGO[elegido.getMonth()]}`);
   const porAtender = delDia.filter((c) => c.status === 'confirmed' || c.status === 'pending_payment').length;
+  const atendidasDia = delDia.filter((c) => importes.get(c.id)?.tuParte != null);
+  const ganadoDia = atendidasDia.reduce((t, c) => t + (importes.get(c.id)?.tuParte ?? 0), 0);
+  const cobradoDia = atendidasDia.reduce((t, c) => t + (importes.get(c.id)?.precio ?? 0), 0);
 
   return (
     <main className="main">
@@ -302,6 +355,17 @@ function MisCitas({ companyId }: { companyId: string }) {
           </p>
         )}
 
+        {ficha && atendidasDia.length > 0 && (
+          <section className="card mag-ganado" aria-label="Lo que ganaste este día" aria-live="polite">
+            <small>{dia === hoy ? 'Hoy llevas' : 'Este día ganaste'}</small>
+            <b>{soles(ganadoDia)}</b>
+            <span>
+              {atendidasDia.length} {atendidasDia.length === 1 ? 'atendida' : 'atendidas'} · {soles(cobradoDia)} en servicios ·{' '}
+              <Link href="/panel/mi-comision">Mi comisión</Link>
+            </span>
+          </section>
+        )}
+
         <section className="card mia-grupo">
           <div className="card-mini-head">
             <h3>{titulo}</h3>
@@ -346,6 +410,7 @@ function MisCitas({ companyId }: { companyId: string }) {
                 ocupado={enVuelo === c.id}
                 alMarcar={marcar}
                 falta={datos?.saldos[c.id] ?? 0}
+                importe={c.employee_id === ficha ? importes.get(c.id) : undefined}
                 cobrando={cobrando === c.id}
                 alCobrar={(abrir) => setCobrando(abrir ? c.id : null)}
                 companyId={companyId}
@@ -372,6 +437,7 @@ function FilaCita({
   ocupado,
   alMarcar,
   falta,
+  importe,
   cobrando,
   alCobrar,
   companyId,
@@ -387,6 +453,8 @@ function FilaCita({
   alMarcar: (c: Cita, vino: boolean) => void;
   /** Lo que le falta pagar; 0 = nada que cobrar, o este negocio no deja cobrar al empleado. */
   falta: number;
+  /** El precio de sus servicios y, ya atendida, lo que gana él. Solo en las suyas. */
+  importe?: { precio: number; tuParte: number | null };
   cobrando: boolean;
   alCobrar: (abrir: boolean) => void;
   companyId: string;
@@ -420,6 +488,12 @@ function FilaCita({
           )}
         </div>
         <b>{c.service || 'Sin servicio indicado'}</b>
+        {importe && importe.precio > 0 && (
+          <span className="mia-importe">
+            {soles(importe.precio)}
+            {importe.tuParte != null && <> · <b>Tu parte {soles(importe.tuParte)}</b></>}
+          </span>
+        )}
         <small>{quien.nombre}</small>
         {quien.deQuien && <small>{quien.deQuien}</small>}
         {c.sede && <small>{c.sede}</small>}

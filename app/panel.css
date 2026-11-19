@@ -2639,3 +2639,12 @@ nav.chip-tabs[aria-label="Caja"] a{flex-shrink:0;white-space:nowrap}
    botones debajo, a lo ancho (las reglas de los botones están en facturacion.css). */
 .ticket-hecho{display:grid;justify-content:stretch;gap:10px;padding:12px 14px;font-size:14px}
 .ticket-hecho>.btn{min-height:48px;justify-content:center}
+
+/* Mi agenda › el precio de cada cita y lo que gana el barbero (19-nov, The 24/7). */
+.mia-importe{display:inline-flex;flex-wrap:wrap;gap:4px;align-items:baseline;margin:2px 0;font-size:14px;font-weight:700;color:var(--ink,#151515)}
+.mia-importe b{color:#0B7A4B}
+.mag-ganado{display:grid;gap:2px;padding:14px 18px;margin-bottom:14px;background:#ECFDF3;border:1.5px solid #86EFAC}
+.mag-ganado small{font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:#15803D}
+.mag-ganado b{font-size:30px;line-height:1.1;color:#0B7A4B}
+.mag-ganado span{font-size:13.5px;color:#166534}
+.mag-ganado a{font-weight:700;color:#0B7A4B}

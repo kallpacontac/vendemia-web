@@ -91,10 +91,20 @@ const PANTALLAS: [string, (rol: RolNegocio | null) => boolean][] = [
   ['/panel/fabrica', () => true],
 ];
 
+/** Lo que cada negocio decide esconder a su equipo (datos 0022). */
+export interface AjustesDelEquipo {
+  /** false = el empleado no ve Fideliza. null/undefined = como siempre. */
+  fidelizaEquipo?: boolean | null;
+}
+
 /** ¿Esta persona tiene esta pantalla? */
-export function rutaPermitida(ruta: string, rol: RolNegocio | null): boolean {
+export function rutaPermitida(ruta: string, rol: RolNegocio | null, ajustes: AjustesDelEquipo = {}): boolean {
   const esDelEmpleado = ruta.startsWith('/panel/mi-');
   if (!rolesEnVigor()) return !esDelEmpleado;
+  // The 24/7 (19-nov-2026): Fideliza lo lleva la caja; el barbero no lo ve si el negocio lo dice.
+  if (rol === 'empleado' && ajustes.fidelizaEquipo === false && (ruta === '/panel/fideliza' || ruta.startsWith('/panel/fideliza/'))) {
+    return false;
+  }
   // El Dashboard (resumen del negocio y «Lo que necesita atención»): del dueño y, desde el
   // 18-nov-2026 (The 24/7, urgente), también del administrador, que lleva la caja.
   if (ruta === '/panel') return rolPuede(rol, 'metricas.ver') || rol === 'admin';
@@ -104,12 +114,13 @@ export function rutaPermitida(ruta: string, rol: RolNegocio | null): boolean {
 }
 
 /** A dónde va cada uno al entrar, y a dónde se le manda desde una pantalla que no es suya. */
-export function inicioDe(rol: RolNegocio | null, modo: BusinessMode | null | undefined): string {
+export function inicioDe(rol: RolNegocio | null, modo: BusinessMode | null | undefined, ajustes: AjustesDelEquipo = {}): string {
   if (!rolesEnVigor() || rol === 'dueno' || rol === null) return '/panel';
   // El administrador entra al Dashboard, como el dueño: ahí ve lo que necesita atención.
   if (rol === 'admin') return '/panel';
   // En una tienda o un restaurante no hay citas que atender: al empleado le
   // queda Fideliza, y lo que hace ahí es escanear tarjetas. Entra directo a la
   // caja, con el botón «Escanear QR» a mano (Alvaro, 27-oct-2026).
-  return esEcommerce(modo) ? '/panel/fideliza/caja' : RUTA_MI_AGENDA;
+  if (esEcommerce(modo)) return ajustes.fidelizaEquipo === false ? RUTA_MI_CATALOGO : '/panel/fideliza/caja';
+  return RUTA_MI_AGENDA;
 }

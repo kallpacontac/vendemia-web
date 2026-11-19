@@ -153,7 +153,7 @@ export function useMenuDelPanel({
     if (soloGlobal) return esRutaGlobal(n.href);
     if ('sinEmpleado' in n && n.sinEmpleado && !puedeUsarAsistente(rolDeNegocio(compania?.rol))) return false;
     // Lo que no es de su rol no se le ofrece. Antes del corte, sí a todo.
-    if (!rutaPermitida(n.href, rolDeNegocio(compania?.rol))) return false;
+    if (!rutaPermitida(n.href, rolDeNegocio(compania?.rol), { fidelizaEquipo: guardado.equipoFideliza })) return false;
     // modo == null cubre undefined (primer render) Y null (compañía sin modo
     // asignado): en los dos casos se enseña de más, nunca de menos.
     if (n.href === '/panel/mesas') return pagina.mesas;
