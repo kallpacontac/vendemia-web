@@ -2581,3 +2581,26 @@ nav.chip-tabs[aria-label="Caja"] a{flex-shrink:0;white-space:nowrap}
 .ticket-cuerpo{padding:8px 20px 16px}
 .ticket-pie{padding:16px 22px 20px}
 .gc{padding:20px 22px !important}
+
+/* Fideliza › Campañas: límites, secciones y «Mis avisos» (Campanas.tsx, MisAvisos.tsx). */
+.fz-limites{display:grid;gap:10px;margin-bottom:16px}
+.fz-limites h3{margin:0;font-size:16px}
+.fz-limites__dos{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px}
+.fz-limites__dos>div{padding:12px 14px;border-radius:14px;background:var(--bg-soft)}
+.fz-limites__dos small{display:block;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-mute);margin-bottom:4px}
+.fz-limites__dos ul{margin:0;padding-left:18px;display:grid;gap:4px;font-size:13.5px;line-height:1.45}
+.fz-seccion{margin:6px 0 10px}
+.fz-seccion h3,.mis-avisos__cab h3{margin:0;font-size:17px}
+.fz-seccion .muted{font-size:13px;font-weight:600}
+.mis-avisos{margin-top:22px;display:grid;gap:12px}
+.mis-avisos__cab{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px}
+.mis-avisos__cab .fz-def{margin:2px 0 0}
+.mis-avisos__crear{min-height:48px;font-size:15.5px}
+.mis-avisos__lista{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,340px),1fr));gap:12px}
+.mis-aviso{display:flex;flex-direction:column;gap:10px}
+.mis-aviso__info{display:flex;flex-direction:column;gap:6px;flex:1}
+.mis-aviso__regla{font-size:12.5px;font-weight:700;color:var(--brand-txt)}
+.mis-aviso__acciones{display:grid;grid-template-columns:1fr 1fr auto;gap:8px;align-items:center}
+.mis-aviso__acciones .btn{min-height:46px;justify-content:center}
+.mis-aviso__ojo{margin:8px 0 0;padding:10px 12px;border-radius:12px;background:#FFF8E6;border:1px solid #F5DFA6;color:#8A5200;font-size:13px;font-weight:600}
+@media (max-width:620px){.mis-avisos__crear{width:100%}}

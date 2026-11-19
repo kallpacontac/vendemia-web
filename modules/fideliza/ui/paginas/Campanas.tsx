@@ -21,7 +21,7 @@ import { useAvisar } from '@/components/panel/Avisos';
 import { useCargar } from '@/components/panel/useCargar';
 import { accion, lecturas, mensaje, type Campana } from '@/modules/fideliza/cliente/api';
 import { DEFINICIONES, type Metricas } from '@/modules/fideliza/dominio/metricas';
-import AvisoRapido from '@/modules/fideliza/ui/paginas/AvisoRapido';
+import MisAvisos from '@/modules/fideliza/ui/paginas/MisAvisos';
 
 type Plantilla = Campana['template'];
 const PLANTILLAS: { t: Plantilla; nombre: string; cuando: string; titulo: string; texto: string }[] = [
@@ -143,10 +143,35 @@ export default function Campanas() {
           Avisos push: <b>No configurado</b> (faltan las claves VAPID en el servidor). Las campañas se pueden preparar, pero no se enviará nada.
         </div>
       )}
-      {editable && companyId && <AvisoRapido companyId={companyId} push={datos.config.push} resumen={etapas('manual')} alEnviar={releer} />}
+      {/* Los límites, a la vista antes de nada (19-nov, The 24/7: «indicar los límites… para que el
+          cliente no se sature y desinstale»). Los del sistema los impone Postgres (fideliza 0014). */}
+      <div className="card fz-limites">
+        <h3>Para no cansar a tus clientes</h3>
+        <div className="fz-limites__dos">
+          <div>
+            <small>Lo pone el sistema</small>
+            <ul>
+              <li>Solo llega a quien <b>activó los avisos</b> en su tarjeta.</li>
+              <li>Solo de <b>09:00 a 20:00</b>: lo de fuera de hora sale a las 09:00.</li>
+              <li>Máximo <b>4 avisos por persona cada 30 días</b>, sumando automáticos y tuyos. Pasado el tope, a ese cliente no le llega.</li>
+              <li>«Te extrañamos», como mucho <b>una vez cada 90 días</b> por persona.</li>
+            </ul>
+          </div>
+          <div>
+            <small>Te recomendamos</small>
+            <ul>
+              <li>No más de <b>1 aviso tuyo por semana</b>.</li>
+              <li>No repetir el mismo aviso antes de <b>7 días</b> (te lo avisamos).</li>
+              <li>Mensajes cortos y con algo concreto: una promo, un día, un premio.</li>
+              <li>Quien recibe demasiados <b>desactiva los avisos o borra la tarjeta</b>, y ya no le llega nada.</li>
+            </ul>
+          </div>
+        </div>
+        <p className="fz-def" style={{ margin: 0 }}>{DEFINICIONES.campanas}</p>
+      </div>
 
-      <div className="fz-panel-aviso fz-panel-aviso--info">
-        Se envían solo a quien activó los avisos en su tarjeta, entre 09:00 y 20:00, como máximo {borr?.config.max_per_30d ?? 2} por persona cada 30 días. {DEFINICIONES.campanas}
+      <div className="fz-seccion">
+        <h3>Automáticos <span className="muted">· ya vienen hechos, salen solos</span></h3>
       </div>
 
       <div className="fz-grid">
@@ -178,6 +203,8 @@ export default function Campanas() {
           );
         })}
       </div>
+
+      {editable && companyId && <MisAvisos companyId={companyId} push={datos.config.push} resumen={etapas('manual')} alEnviar={releer} />}
 
       {abierta && borr && (
         <div className="modal-fondo" role="presentation" onMouseDown={(e) => { if (e.target === e.currentTarget && !guardando) setAbierta(null); }}>
