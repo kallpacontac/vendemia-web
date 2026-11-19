@@ -34,6 +34,19 @@
  *   · Una cita, un profesional: `appointment_services` no tiene employee_id,
  *     así que todo se le apunta a quien figure en la cita.
  *   · La venta de producto no genera comisión: no se sabe quién vendió.
+ *
+ * ── Solo servicios (19-nov-2026, The 24/7: «la comisión solo corresponde a los servicios, no a
+ * los productos») ──────────────────────────────────────────────────────────
+ * Desde Caja, el ticket lleva en la MISMA cita el corte y la cerveza o el gel, y el % del
+ * barbero se aplicaba a todo. Ahora una línea de producto (catalog.tipo = 'producto') no cuenta:
+ * ni comisión, ni facturado, ni sale en su lista. Una venta SOLO de productos tampoco es una
+ * atención. Va antes que la copia congelada: lo ya congelado con el 50 % de una cerveza no vale.
+ *
+ * ── «Sin tarifa» congelado no es una tarifa ──────────────────────────────
+ * Si al completarse la cita el barbero aún no tenía su %, se congelaba «sin» y se quedaba en
+ * S/ 0 para siempre aunque luego se le pusiera (The 24/7, Alexander: 8 atenciones, S/ 0). Ahora
+ * «sin» usa la tarifa de hoy. Un 0 puesto a propósito en el servicio se congela como «servicio»
+ * con valor 0, no como «sin», así que eso se respeta.
  */
 import type { AppointmentServiceRow, CatalogRow, ComisionCongeladaRow, EmployeeRow } from '@/lib/supabase/types';
 import type { Cita } from '@/lib/supabase/queries';
@@ -70,7 +83,7 @@ export interface ResumenComisiones {
 
 const redondear = (n: number) => Math.round(n * 100) / 100;
 
-type Tarifa = Pick<CatalogRow, 'comision_pct' | 'comision_monto'>;
+type Tarifa = Pick<CatalogRow, 'comision_pct' | 'comision_monto'> & { tipo?: CatalogRow['tipo'] };
 
 export function comisionDeLinea(
   precio: number,
@@ -130,7 +143,10 @@ export function calcularComisiones(
   let sinMarcarImporte = 0;
 
   for (const cita of citas) {
-    const suyas = lineasDe.get(cita.id) ?? [];
+    const todas = lineasDe.get(cita.id) ?? [];
+    // Solo los servicios (ver arriba): las líneas de producto no cuentan.
+    const suyas = todas.filter((l) => servicio.get(l.catalog_item_id ?? '')?.tipo !== 'producto');
+    if (todas.length > 0 && suyas.length === 0) continue;
     const importe = suyas.reduce((t, l) => t + Number(l.price ?? 0), 0);
 
     if (cita.status === 'confirmed' && cita.inicio && cita.inicio.getTime() < ahora.getTime()) {
@@ -151,7 +167,7 @@ export function calcularComisiones(
       // La copia vale si se congeló para quien figura hoy en la cita.
       const c = congeladaDe.get(l.id);
       const r =
-        c && (c.employee_id ?? '') === empleado
+        c && c.regla !== 'sin' && (c.employee_id ?? '') === empleado
           ? comisionCongelada(precio, c)
           : comisionDeLinea(precio, servicio.get(l.catalog_item_id ?? ''), pctDe.get(empleado) ?? 0);
       fila.facturado += precio;
