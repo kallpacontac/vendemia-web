@@ -2634,3 +2634,8 @@ nav.chip-tabs[aria-label="Caja"] a{flex-shrink:0;white-space:nowrap}
 .vuelto__ok{min-height:50px;font-size:16px}
 .ticket-pie>.vuelto,.listo-acciones>.vuelto{max-width:none}
 @media (max-width:520px){.vuelto{max-width:none}}
+
+/* Cobrar › «Último: …» con su comprobante (tablet, 19-nov): una columna; el texto arriba y los
+   botones debajo, a lo ancho (las reglas de los botones están en facturacion.css). */
+.ticket-hecho{display:grid;justify-content:stretch;gap:10px;padding:12px 14px;font-size:14px}
+.ticket-hecho>.btn{min-height:48px;justify-content:center}

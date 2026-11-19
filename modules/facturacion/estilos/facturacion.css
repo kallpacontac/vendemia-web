@@ -63,7 +63,7 @@
 @keyframes fe-girar { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { .fe-girar { animation: none; } }
 /* Caja: la tarjeta del último cobro de «Listos para cobrar», con su boleta. */
-.caja-boleta { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 14px; padding: 12px 16px; margin-bottom: 14px; }
+.caja-boleta { display: grid; gap: 10px; padding: 14px 16px; margin-bottom: 14px; }
 .caja-boleta .fe-cobro { margin-top: 0; }
 
 /* Facturación apagada: aviso con un solo botón (PanelComprobantes). */
@@ -72,10 +72,20 @@
 .fe-apagado p { margin: 4px 0 0; font-size: 13.5px; max-width: 560px; }
 .fe-apagado .btn { min-height: 46px; }
 
-/* Al cobrar: «Nota de venta / Boleta electrónica» y sus acciones, grandes y a lo ancho (ComprobanteDelCobro). */
-.fe-elegir { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 8px; width: 100%; }
-.fe-elegir > .fe-cobro__que { grid-column: 1 / -1; font-weight: 700; }
-.fe-elegir .btn { min-height: 48px; justify-content: center; font-size: 15px; }
-.fe-elegir .fe-cobro__acciones { grid-column: 1 / -1; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-.fe-elegir .fe-cobro__acciones .btn { width: 100%; }
-.fe-elegir > .fe-cobro { grid-column: 1 / -1; }
+/* Al cobrar: «Nota de venta / Boleta electrónica» y sus acciones, grandes y a lo ancho (ComprobanteDelCobro).
+   Tablet (19-nov): todo en rejilla, una fila por cosa; los botones del mismo ancho y alto, sin
+   quedarse colgados a un lado ni partirse en dos filas desparejas. */
+.fe-elegir,
+.caja-boleta > .fe-cobro,
+.ticket-hecho .fe-cobro { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 8px; width: 100%; margin-top: 0; }
+.fe-elegir > .fe-cobro { grid-column: 1 / -1; display: grid; grid-template-columns: 1fr; gap: 8px; margin: 0; }
+.fe-elegir .fe-cobro__que,
+.caja-boleta .fe-cobro__que,
+.ticket-hecho .fe-cobro__que { grid-column: 1 / -1; font-size: 14.5px; font-weight: 700; flex-wrap: wrap; }
+.fe-elegir .fe-cobro__acciones,
+.caja-boleta .fe-cobro__acciones,
+.ticket-hecho .fe-cobro__acciones { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; }
+.fe-elegir .btn,
+.caja-boleta .fe-cobro .btn,
+.ticket-hecho .fe-cobro .btn { width: 100%; min-height: 48px; justify-content: center; font-size: 15px; }
+.fe-elegir .fe-cobro__error { grid-column: 1 / -1; }
