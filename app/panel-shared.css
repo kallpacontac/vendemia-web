@@ -331,6 +331,10 @@ body .main .panel-header .topbar__actions { display: flex; flex-wrap: nowrap; wi
 .main--configuracion .cfg-advanced--section { margin: 0 0 18px; }
 .main--configuracion .cfg-advanced--section > .sec { margin: 16px; }
 .main--configuracion .nav-btns { margin-top: 16px; }
+/* Ajustes › «Tu equipo y tu panel», fuera del asistente */
+.main--configuracion .cfg-panel { margin-top: 18px; }
+.main--configuracion .cfg-panel__sub { font-size: 13.5px; margin: 4px 0 14px; }
+.main--configuracion .cfg-panel .cfg-advanced--section:last-child { margin-bottom: 0; }
 /* Ajustes › Orden del menú (components/panel/OrdenDelMenu.tsx) */
 .menu-orden { margin: 14px; }
 .menu-orden > p { font-size: 13px; margin: 0 0 12px; }

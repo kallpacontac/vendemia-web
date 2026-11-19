@@ -70,7 +70,7 @@ function AvisoCorteDeRoles() {
 
   return (
     <div className="wa-pill wa-pill--aviso">
-      <Link href="/panel/configuracion?paso=3&equipo=1">
+      <Link href="/panel/configuracion?equipo=1">
         El {corte.dia} cambia lo que ve tu equipo · <u>Revísalo</u>
       </Link>
       <button

@@ -6,7 +6,7 @@
  * a «Más» lo que no tocan. Vale para todo el equipo del negocio.
  *
  * Enseña la lista que sale en la barra (useMenuDelPanel, el mismo cálculo), así que lo que se ve
- * aquí es lo que se ve allí. El Dashboard no se mueve; Ajustes no se puede esconder.
+ * aquí es lo que se ve allí. El Dashboard va primero y Ajustes al final, antes de «Más»: no se mueven.
  */
 import { useEffect, useMemo, useState } from 'react';
 import { ArrowDown, ArrowUp, Eye, EyeOff } from 'lucide-react';
@@ -14,7 +14,7 @@ import { useMenuDelPanel } from './Sidebar';
 import { useSesion } from './Sesion';
 import { useAvisar } from './Avisos';
 import { demoActivo } from '@/lib/panel/demo';
-import { RUTA_INICIO, SIEMPRE_A_LA_VISTA, SIN_ORDEN, guardarOrdenMenu, ordenar, type OrdenMenu } from '@/lib/panel/menu';
+import { FIJAS, RUTA_INICIO, SIEMPRE_A_LA_VISTA, SIN_ORDEN, guardarOrdenMenu, ordenar, type OrdenMenu } from '@/lib/panel/menu';
 
 export default function OrdenDelMenu() {
   const { companyId, compania } = useSesion();
@@ -39,7 +39,8 @@ export default function OrdenDelMenu() {
   function mover(i: number, d: -1 | 1) {
     const hrefs = lista.map((n) => n.href);
     const j = i + d;
-    if (j < 1 || j >= hrefs.length) return; // el Dashboard (0) no se mueve
+    // El Dashboard (primero) y Ajustes (último) no se mueven, ni nadie pasa por encima de ellos.
+    if (j < 0 || j >= hrefs.length || FIJAS.includes(hrefs[i]) || FIJAS.includes(hrefs[j])) return;
     [hrefs[i], hrefs[j]] = [hrefs[j], hrefs[i]];
     setBorrador({ ...vista, orden: hrefs });
   }
@@ -75,7 +76,7 @@ export default function OrdenDelMenu() {
         </p>
         <ol className="menu-orden__lista">
           {lista.map((n, i) => {
-            const fijo = n.href === RUTA_INICIO;
+            const fijo = FIJAS.includes(n.href);
             const enMas = vista.enMas.includes(n.href) && !SIEMPRE_A_LA_VISTA.includes(n.href);
             const Icono = n.icon;
             return (
@@ -83,14 +84,14 @@ export default function OrdenDelMenu() {
                 <span className="menu-orden__ico"><Icono size={16} /></span>
                 <span className="menu-orden__txt">
                   {etiqueta(n)}
-                  {fijo && <small> · siempre primero</small>}
+                  {fijo && <small>{n.href === RUTA_INICIO ? ' · siempre primero' : ' · siempre al final, antes de «Más»'}</small>}
                 </span>
                 {!fijo && (
                   <span className="menu-orden__btns">
-                    <button type="button" className="btn btn-ghost btn-sm" aria-label={`Subir ${etiqueta(n)}`} disabled={i <= 1} onClick={() => mover(i, -1)}>
+                    <button type="button" className="btn btn-ghost btn-sm" aria-label={`Subir ${etiqueta(n)}`} disabled={i <= 0 || FIJAS.includes(lista[i - 1].href)} onClick={() => mover(i, -1)}>
                       <ArrowUp size={15} />
                     </button>
-                    <button type="button" className="btn btn-ghost btn-sm" aria-label={`Bajar ${etiqueta(n)}`} disabled={i >= lista.length - 1} onClick={() => mover(i, 1)}>
+                    <button type="button" className="btn btn-ghost btn-sm" aria-label={`Bajar ${etiqueta(n)}`} disabled={i >= lista.length - 1 || FIJAS.includes(lista[i + 1].href)} onClick={() => mover(i, 1)}>
                       <ArrowDown size={15} />
                     </button>
                     {!SIEMPRE_A_LA_VISTA.includes(n.href) && (

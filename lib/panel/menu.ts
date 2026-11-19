@@ -8,7 +8,8 @@
  *
  * Reglas que el panel fuerza aunque la base diga otra cosa:
  *   · el Dashboard va primero y siempre a la vista;
- *   · Ajustes siempre a la vista (si no, no hay cómo volver a cambiar el orden);
+ *   · Ajustes siempre a la vista y AL FINAL, justo antes de «Más» (Alvaro, 18-nov-2026); si no,
+ *     no habría cómo volver a cambiar el orden;
  *   · lo que no esté en la lista va detrás, en el orden de siempre: una pantalla nueva aparece sola.
  */
 import { useEffect, useState } from 'react';
@@ -29,10 +30,17 @@ export const EVENTO_MENU = 'vd:menu-orden';
 
 export const personalizado = (o: OrdenMenu) => o.orden.length > 0 || o.enMas.length > 0;
 
-/** `nav` en el orden elegido; lo que no está en `orden`, detrás y en su orden de siempre. */
+/** Las que no se mueven: el Dashboard primero y Ajustes el último. */
+export const FIJAS = [RUTA_INICIO, RUTA_AJUSTES];
+
+/**
+ * `nav` en el orden elegido; lo que no está en `orden`, detrás y en su orden de siempre.
+ * El Dashboard primero y Ajustes el último, diga lo que diga `orden`.
+ */
 export function ordenar<T extends { href: string }>(nav: T[], o: OrdenMenu): T[] {
   const pos = (href: string) => {
     if (href === RUTA_INICIO) return -1;
+    if (href === RUTA_AJUSTES) return Number.POSITIVE_INFINITY;
     const i = o.orden.indexOf(href);
     return i < 0 ? Number.MAX_SAFE_INTEGER : i;
   };

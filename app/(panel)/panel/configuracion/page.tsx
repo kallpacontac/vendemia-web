@@ -266,8 +266,8 @@ function Configuracion() {
 
   /**
    * `?equipo=1`: el aviso de la barra superior trae aquí al dueño. «Acceso del
-   * equipo» vive plegado dentro del paso 3, donde nadie lo iba a encontrar, así
-   * que se abre el paso, se despliega y se lleva a la vista.
+   * equipo» vive plegado en «Tu equipo y tu panel», debajo del asistente: se
+   * despliega y se lleva a la vista.
    *
    * Es un efecto y no solo el valor inicial: si ya estaba en Ajustes, el enlace
    * cambia la URL sin volver a montar la página.
@@ -290,8 +290,7 @@ function Configuracion() {
   const cargado = form !== null;
   useEffect(() => {
     if (!irAlEquipo) return;
-    setPaso(3);
-    // Tras el render del paso 3, que es cuando la sección existe.
+    // Tras el render, que es cuando la sección existe.
     const t = setTimeout(() => {
       const d = seccionEquipo.current;
       if (!d) return;
@@ -1252,15 +1251,6 @@ function Configuracion() {
             </div>
           </div>
 
-          {/* El dueño y el administrador gestionan (cada uno lo suyo). El admin
-              de la plataforma ve la lista, sin botones: `equipo_listar` se la
-              da, pero los comandos no los puede encolar. Al empleado ni se le
-              pinta. Ver components/panel/Equipo.tsx. */}
-          {(rol === 'dueno' || rol === 'admin' || esAdminPlataforma) && <details ref={seccionEquipo} className="cfg-advanced cfg-advanced--section"><summary>Acceso del equipo</summary><Equipo sinLista={datos?.miembros.length ?? 0} /></details>}
-          {/* El orden del menú del panel (datos 0020): dueño y administrador. */}
-          {(rol === 'dueno' || rol === 'admin' || esAdminPlataforma) && <OrdenDelMenu />}
-          {/* La configuración de boletas y facturas: la pantalla de emitir está en Caja. */}
-          {(rol === 'dueno' || rol === 'admin' || esAdminPlataforma) && <SeccionFacturacion />}
 
           <div className="nav-btns">
             <button className="btn btn-ghost" onClick={() => setPaso(2)}>
@@ -1340,6 +1330,26 @@ function Configuracion() {
             </button>
           </div>
         </div>
+
+        {/*
+          Fuera del asistente (18-nov-2026, Alvaro: «no tiene sentido» en «Cómo responde»): quién
+          entra al panel, el orden del menú y las boletas no cambian cómo responde Mia. Se ven en
+          cualquier paso y cada una se guarda sola. Dueño y administrador; el admin de la plataforma
+          ve la lista del equipo sin botones (`equipo_listar` se la da, pero los comandos no los
+          puede encolar). Al empleado ni se le pinta. Ver components/panel/Equipo.tsx.
+        */}
+        {(rol === 'dueno' || rol === 'admin' || esAdminPlataforma) && (
+          <section className="card cfg-panel" aria-labelledby="cfg-panel-titulo">
+            <div className="card-mini-head">
+              <h3 id="cfg-panel-titulo">Tu equipo y tu panel</h3>
+            </div>
+            <p className="muted cfg-panel__sub">Quién entra al panel, el orden del menú y tus boletas. No cambia cómo responde Mia.</p>
+            <details ref={seccionEquipo} className="cfg-advanced cfg-advanced--section"><summary>Acceso del equipo</summary><Equipo sinLista={datos?.miembros.length ?? 0} /></details>
+            <OrdenDelMenu />
+            {/* La pantalla de emitir está en Caja; aquí, su configuración. */}
+            <SeccionFacturacion />
+          </section>
+        )}
 
         {/* Fuera del asistente: no es configuración del bot sino de ESTE
             celular, y se guarda sola (no pasa por la barra de guardar). */}
