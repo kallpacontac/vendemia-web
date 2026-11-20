@@ -199,7 +199,9 @@ export function paginaDeEnlaces(o: {
       estiloEntrada = null;
     }
   }
-  const estilo = resolverEstilo(estiloEntrada);
+  // resolverEstilo solo devuelve lo visual: el portafolio se pasa aparte o la
+  // página pública lo pierde (htmlPagina lo lee de `estilo.portafolio`).
+  const estilo = { ...resolverEstilo(estiloEntrada), portafolio: estiloEntrada?.portafolio };
   const tipoDe = (l: EnlacePublico) => l.icon || deUrl(l.url, l.kind).tipo;
   const botones: BotonPagina[] = o.links
     .filter((l) => l.placement !== 'social')
