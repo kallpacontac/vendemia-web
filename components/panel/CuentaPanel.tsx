@@ -1,13 +1,15 @@
 'use client';
 
 import { useEffect, useId, useRef, useState } from 'react';
-import { ChevronDown, FlaskConical, KeyRound, LogOut, ShieldOff } from 'lucide-react';
+import { ChevronDown, FlaskConical, KeyRound, LogOut, QrCode, ShieldOff } from 'lucide-react';
 
 /** Menú de cuenta compartido: el contenedor no depende de la sesión para poder probarlo. */
-export default function CuentaPanel({ email, pie, demo, alDemo, alSalir, alSalirDeTodos, alCambiarClave }: {
+export default function CuentaPanel({ email, pie, demo, alDemo, alSalir, alSalirDeTodos, alCambiarClave, alQrClub }: {
   email: string; pie: string; demo: boolean; alDemo: () => void; alSalir: () => void;
   /** «Cambiar contraseña» (CambiarClave). Sin él, la opción no sale. */
   alCambiarClave?: () => void;
+  /** «QR del club» de Fideliza (QrDelClub). Sin club, la opción no sale. */
+  alQrClub?: () => void;
   /** «Cerrar sesión en todos los dispositivos». Sin él, la opción no sale. */
   alSalirDeTodos?: () => void;
 }) {
@@ -51,6 +53,9 @@ export default function CuentaPanel({ email, pie, demo, alDemo, alSalir, alSalir
       </button>
       {abierto && <div className="menu-cuenta" role="menu" aria-label="Opciones de usuario" id={id} ref={menu}>
         <div className="menu-cuenta__quien"><b>{email || 'Cuenta'}</b><small>{pie}</small></div>
+        {alQrClub && <button type="button" role="menuitem" className="menu-cuenta__item" onClick={() => { cerrar(); alQrClub(); }}>
+          <QrCode size={16} /> QR del club
+        </button>}
         <button type="button" role="menuitem" className="menu-cuenta__item" onClick={() => { cerrar(); alDemo(); }}>
           <FlaskConical size={16} /> {demo ? 'Salir del modo demo' : 'Modo demo'}
         </button>
