@@ -9,7 +9,7 @@ import { avisarPremio, avisarSello } from './avisos';
 import { drenar } from './worker';
 import { urlAyuda, urlSuelta } from '../dominio/botones';
 import { IDS_SELLO } from '../dominio/sellos';
-import { MAX_TRABAJOS } from '../dominio/portafolio';
+import { MAX_POSICION, MAX_TRABAJOS } from '../dominio/portafolio';
 
 /**
  * ══════════════════════════════════════════════════════════════════════════
@@ -282,7 +282,7 @@ export const ACCIONES = {
           portafolio: z
             .object({
               titulo: textoCorto(40).optional(),
-              posicion: z.enum(['arriba', 'abajo']).optional(),
+              posicion: z.union([z.enum(['arriba', 'abajo']), z.number().int().min(0).max(MAX_POSICION)]).optional(),
               trabajos: z
                 .array(
                   z

@@ -26,19 +26,35 @@ export interface TrabajoPortafolio {
 export interface Portafolio {
   /** El texto de la tarjeta. Por defecto, «Mi portafolio». */
   titulo?: string;
-  /** Dónde va en la lista: antes o después de los botones. */
-  posicion?: 'arriba' | 'abajo';
+  /**
+   * Dónde va en la lista: un número es cuántos botones VISIBLES van antes (se
+   * mueve con las flechas, como un botón más). 'arriba' / 'abajo' son de antes
+   * del 20-nov-2026 y se siguen leyendo: = 0 / = después del último.
+   */
+  posicion?: PosicionPortafolio;
   trabajos: TrabajoPortafolio[];
 }
 
+export type PosicionPortafolio = 'arriba' | 'abajo' | number;
+
 export const MAX_TRABAJOS = 12;
+/** Tope de la posición guardada (no hay páginas con más botones que esto). */
+export const MAX_POSICION = 60;
+
+const esLugar = (p: unknown): p is number => typeof p === 'number' && Number.isInteger(p) && p >= 0 && p <= MAX_POSICION;
+
+/** Cuántos botones van antes del portafolio, en una lista de `nBotones`. */
+export function lugarPortafolio(posicion: unknown, nBotones: number): number {
+  if (esLugar(posicion)) return Math.min(posicion, nBotones);
+  return posicion === 'abajo' ? nBotones : 0;
+}
 export const TITULO_PORTAFOLIO = 'Mi portafolio';
 
 const https = (u: unknown) => (typeof u === 'string' && /^https:\/\/[^\s"'<>]+$/.test(u.trim()) ? u.trim() : '');
 const texto = (t: unknown, max: number) => (typeof t === 'string' ? t.trim().slice(0, max) : '');
 
 /** Lo guardado (puede venir incompleto o de otra versión) → lo que se pinta. null = no hay portafolio. */
-export function resolverPortafolio(p: unknown): (Required<Pick<Portafolio, 'titulo' | 'posicion'>> & { trabajos: TrabajoPortafolio[] }) | null {
+export function resolverPortafolio(p: unknown): { titulo: string; posicion: PosicionPortafolio; trabajos: TrabajoPortafolio[] } | null {
   if (!p || typeof p !== 'object' || Array.isArray(p)) return null;
   const o = p as Partial<Portafolio>;
   const trabajos = (Array.isArray(o.trabajos) ? o.trabajos : [])
@@ -53,7 +69,7 @@ export function resolverPortafolio(p: unknown): (Required<Pick<Portafolio, 'titu
   if (!trabajos.length) return null;
   return {
     titulo: texto(o.titulo, 40) || TITULO_PORTAFOLIO,
-    posicion: o.posicion === 'abajo' ? 'abajo' : 'arriba',
+    posicion: esLugar(o.posicion) ? o.posicion : o.posicion === 'abajo' ? 'abajo' : 'arriba',
     trabajos,
   };
 }

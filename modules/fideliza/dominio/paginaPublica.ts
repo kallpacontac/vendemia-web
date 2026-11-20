@@ -15,7 +15,7 @@
 import { fotoEnCirculo } from './encuadre';
 import { icono } from './iconos';
 import { colorValido, esOscuro, mezcla, resolverEstilo, tintaSobre, type Estilo } from './estilo';
-import { cuantosTrabajos, resolverPortafolio } from './portafolio';
+import { cuantosTrabajos, lugarPortafolio, resolverPortafolio } from './portafolio';
 import { cssExpandir, SCRIPT_EXPANDIR } from './paginaExpandir';
 
 export interface BotonPagina {
@@ -236,8 +236,7 @@ export function htmlPagina(d: DatosPagina, o: { vista?: boolean; indexable?: boo
         .join('')}</nav>`
     : '';
 
-  const botones = d.botones
-    .map((b) => {
+  const listaBotones = d.botones.map((b) => {
       const sub = b.subtitulo ? `<small>${esc(b.subtitulo)}</small>` : '';
       const cls = `bt${b.destacado ? ' bt--dest' : ''}`;
       const contenido = tarjeta
@@ -255,8 +254,8 @@ export function htmlPagina(d: DatosPagina, o: { vista?: boolean; indexable?: boo
         return `<div class="xp" data-xp="agenda" data-agenda="${agenda}"><a class="${cls} ${tarjeta ? 'bt--tarjeta' : 'bt--pildora'} xp__bt" href="${esc(b.url)}" rel="noopener" aria-expanded="false">${contenido}</a><div class="xp__cuerpo" hidden></div></div>`;
       }
       return `<a class="${cls} ${tarjeta ? 'bt--tarjeta' : 'bt--pildora'}" href="${esc(b.url)}" rel="noopener"${alta ? ` data-fz-alta="${alta}"` : ''}>${contenido}</a>`;
-    })
-    .join('');
+    });
+  const botones = listaBotones.join('');
 
   /**
    * Quien ya tiene tarjeta en este teléfono (localStorage `fz:card:<slug>`, lo
@@ -336,6 +335,9 @@ export function htmlPagina(d: DatosPagina, o: { vista?: boolean; indexable?: boo
         })
         .join('')}</div></div></details>`
     : '';
+  // El portafolio es un botón más: va donde el dueño lo puso entre los suyos.
+  const k = pf ? lugarPortafolio(pf.posicion, listaBotones.length) : 0;
+  const lista = pf ? [...listaBotones.slice(0, k), portafolio, ...listaBotones.slice(k)].join('') : botones;
   const hayExpandibles = Boolean(portafolio) || botones.includes('class="xp"');
   const oscuroPanel = e.plantilla === 'oscura';
   const cssXp = hayExpandibles || !o.vista
@@ -478,7 +480,7 @@ ${o.vista ? 'a{pointer-events:none}.pago-abrir{pointer-events:none}' : ''}
 </style></head><body><main class="pg">
 <div class="portada"></div>
 <header class="cab">${avatar}<h1>${esc(d.nombre || 'Tu negocio')}</h1>${e.categoria ? `<p class="cat">${esc(e.categoria)}</p>` : ''}${d.bio ? `<p class="bio">${esc(d.bio)}</p>` : ''}${e.redes === 'arriba' ? redes : ''}</header>
-<section class="lista">${pf?.posicion === 'arriba' ? portafolio : ''}${botones || (o.vista && !portafolio ? '<p class="vacio">Aquí aparecerán tus botones</p>' : '')}${pf?.posicion === 'abajo' ? portafolio : ''}</section>
+<section class="lista">${lista || (o.vista ? '<p class="vacio">Aquí aparecerán tus botones</p>' : '')}</section>
 ${e.redes === 'abajo' ? redes : ''}
 <a class="pie" href="https://vendemias.com" rel="noopener" aria-label="Visitar Vendemia">Creado con Vendemia</a>
 </main>${modalPago}${scriptPago}${scriptMiTarjeta}${scriptExpandir}</body></html>`;

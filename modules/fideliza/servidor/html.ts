@@ -220,6 +220,9 @@ export function paginaDeEnlaces(o: {
       subtitulo: fraseRegla(o.programa),
       destacado: true,
     });
+    // Ese botón no lo puso el dueño: el portafolio sigue detrás de los mismos botones.
+    const pf = estilo.portafolio;
+    if (pf && typeof pf.posicion === 'number') estilo.portafolio = { ...pf, posicion: pf.posicion + 1 };
   }
   const html = htmlPagina(
     {

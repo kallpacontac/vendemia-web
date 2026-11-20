@@ -30,6 +30,7 @@ import { accion, ErrorFideliza, lecturas, mensaje } from '@/modules/fideliza/cli
 import { subirImagenMarca } from '@/modules/fideliza/cliente/imagenMarca';
 import EncuadrarFoto from '@/modules/fideliza/ui/EncuadrarFoto';
 import EditorPortafolio from '@/modules/fideliza/ui/EditorPortafolio';
+import { cuantosTrabajos, TITULO_PORTAFOLIO } from '@/modules/fideliza/dominio/portafolio';
 import { FIDELIZA_URL } from '@/modules/fideliza/dominio/config';
 import {
   BOTONES,
@@ -62,6 +63,20 @@ type Redes = Record<string, { activa: boolean; valor: string }>;
 
 const nuevaClave = () => Math.random().toString(36).slice(2);
 /** Icono propio (SVG nuestro, sin texto de usuarios). */
+/**
+ * El portafolio va entre los botones como uno más. En el editor su lugar es un
+ * índice de la lista completa (con los ocultos); lo que se guarda es cuántos
+ * botones VISIBLES van antes, que es lo que ve la página pública.
+ */
+const visiblesAntes = (bs: { visible: boolean }[], lugar: number) => bs.slice(0, lugar).filter((b) => b.visible).length;
+function lugarEnEditor(posicion: unknown, bs: { visible: boolean }[]): number {
+  if (posicion === 'abajo') return bs.length;
+  if (typeof posicion !== 'number' || posicion <= 0) return 0;
+  let vistos = 0;
+  for (let i = 0; i < bs.length; i++) if (bs[i].visible && ++vistos === posicion) return i + 1;
+  return bs.length;
+}
+
 const Icono = ({ tipo, tam = 18 }: { tipo: string; tam?: number }) => (
   <span className="fz-ico" style={{ width: tam, height: tam }} dangerouslySetInnerHTML={{ __html: ICONOS[tipo] ?? ICONOS.enlace }} />
 );
@@ -92,6 +107,8 @@ export default function MiPagina() {
   const [estilo, setEstilo] = useState<Estilo>({ plantilla: 'clasica' });
   const [redes, setRedes] = useState<Redes>({});
   const [botones, setBotones] = useState<Boton[]>([]);
+  /** Antes de qué botón va el portafolio (botones.length = al final). */
+  const [pfLugar, setPfLugar] = useState(0);
   const [slugTocado, setSlugTocado] = useState(false);
   const [menu, setMenu] = useState(false);
   const [ocupado, setOcupado] = useState(false);
@@ -150,10 +167,13 @@ export default function MiPagina() {
     }
     setRedes(r);
     setBotones(bs);
+    const guardado = (ajustes?.page_style as Partial<Estilo> | null | undefined)?.portafolio?.posicion;
+    setPfLugar(lugarEnEditor(guardado, bs));
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- page_style llega antes que datos (datos depende de ajustes)
   }, [datos]);
 
   // ── ¿Hay cambios sin publicar? ──
-  const huella = JSON.stringify({ negocio, estilo, redes, botones: botones.map(({ clave: _c, ...b }) => b) });
+  const huella = JSON.stringify({ negocio, estilo, redes, botones: botones.map(({ clave: _c, ...b }) => b), pfLugar });
   const [base, setBase] = useState<string | null>(null);
   const [tomarBase, setTomarBase] = useState(false);
   useEffect(() => {
@@ -182,7 +202,7 @@ export default function MiPagina() {
       bio: negocio.frase,
       logo: negocio.logo,
       color: negocio.color,
-      estilo,
+      estilo: estilo.portafolio ? { ...estilo, portafolio: { ...estilo.portafolio, posicion: visiblesAntes(botones, pfLugar) } } : estilo,
       redes: REDES.filter((d) => redes[d.tipo]?.activa).map((d) => ({ tipo: d.tipo, url: aUrl(d.tipo, redes[d.tipo].valor) || '#' })),
       botones: botones
         .filter((b) => b.visible)
@@ -194,7 +214,7 @@ export default function MiPagina() {
           destacado: b.destacado,
         })),
     }),
-    [negocio, estilo, redes, botones],
+    [negocio, estilo, redes, botones, pfLugar],
   );
   const vista = useMemo(() => htmlPagina(datosPagina, { vista: true }), [datosPagina]);
   const miniaturas = useMemo(
@@ -241,7 +261,10 @@ export default function MiPagina() {
   if (error) return <Fallo texto={error} reintentar={releer} />;
 
   const cambiar = (clave: string, c: Partial<Boton>) => setBotones((bs) => bs.map((b) => (b.clave === clave ? { ...b, ...c } : b)));
-  const mover = (i: number, d: -1 | 1) =>
+  const hayPf = (estilo.portafolio?.trabajos?.length ?? 0) > 0;
+  /** Sube o baja el botón i; si el portafolio está justo al lado, cambia de sitio con él. */
+  const mover = (i: number, d: -1 | 1) => {
+    if (hayPf && pfLugar === (d === -1 ? i : i + 1)) return setPfLugar(d === -1 ? i + 1 : i);
     setBotones((bs) => {
       const j = i + d;
       if (j < 0 || j >= bs.length) return bs;
@@ -249,6 +272,35 @@ export default function MiPagina() {
       [c[i], c[j]] = [c[j], c[i]];
       return c;
     });
+  };
+  const quitar = (i: number) => {
+    if (i < pfLugar) setPfLugar((l) => l - 1);
+    setBotones((bs) => bs.filter((_, j) => j !== i));
+  };
+  const filaPortafolio = hayPf && (
+    <div key="portafolio" className="fz-boton">
+      <div className="fz-fila" style={{ justifyContent: 'space-between' }}>
+        <span className="fz-fila" style={{ gap: 8, minWidth: 0 }}>
+          <Icono tipo="portafolio" />
+          <b style={{ fontSize: 13 }}>{estilo.portafolio?.titulo?.trim() || TITULO_PORTAFOLIO}</b>
+          <span className="badge-pill">Portafolio · {cuantosTrabajos(estilo.portafolio?.trabajos?.length ?? 0)}</span>
+        </span>
+        {editable && (
+          <span className="fz-fila" style={{ gap: 4 }}>
+            <button className="icon-btn" aria-label="Subir el portafolio" onClick={() => setPfLugar((l) => Math.max(0, l - 1))} disabled={pfLugar === 0}>
+              <ArrowUp size={15} />
+            </button>
+            <button className="icon-btn" aria-label="Bajar el portafolio" onClick={() => setPfLugar((l) => Math.min(botones.length, l + 1))} disabled={pfLugar >= botones.length}>
+              <ArrowDown size={15} />
+            </button>
+          </span>
+        )}
+      </div>
+      <small className="fz-def">
+        Al tocarlo se abren tus trabajos en una ventana. Los trabajos se cambian en <a href="#tu-portafolio">6 · Tu portafolio</a>.
+      </small>
+    </div>
+  );
   const anadir = (tipo: TipoBoton) => {
     const d = defDe(tipo);
     setBotones((bs) => [...bs, { clave: nuevaClave(), tipo, label: d.label, valor: '', visible: true, subtitulo: '', destacado: false }]);
@@ -384,7 +436,7 @@ export default function MiPagina() {
         const trabajos = (estilo.portafolio?.trabajos ?? [])
           .filter((t) => t.titulo.trim())
           .map((t) => ({ titulo: t.titulo.trim(), etiqueta: t.etiqueta?.trim() ?? '', url: t.url?.trim() ? urlSuelta(t.url) : '', imagen: t.imagen ?? '' }));
-        const portafolio = trabajos.length ? { titulo: estilo.portafolio?.titulo?.trim() ?? '', posicion: estilo.portafolio?.posicion ?? 'arriba', trabajos } : undefined;
+        const portafolio = trabajos.length ? { titulo: estilo.portafolio?.titulo?.trim() ?? '', posicion: visiblesAntes(botones, pfLugar), trabajos } : undefined;
         await accion('estilo.guardar', { companyId, estilo: { ...estilo, fondo: estilo.fondo ? urlSuelta(estilo.fondo) : '', categoria: estilo.categoria?.trim() ?? '', portafolio } });
         if (estilo.fondo) setEstilo((x) => ({ ...x, fondo: urlSuelta(x.fondo ?? '') }));
       } catch (e) {
@@ -704,7 +756,10 @@ export default function MiPagina() {
             {botones.map((b, i) => {
               const d = defDe(b.tipo);
               const url = b.tipo === 'tarjeta' ? '' : aUrl(b.tipo, b.valor);
-              return (
+              const pfArriba = hayPf && pfLugar === i;
+              const pfAbajo = hayPf && pfLugar === i + 1;
+              return [
+                pfArriba && filaPortafolio,
                 <div key={b.clave} className={`fz-boton ${b.visible ? '' : 'oculto'}`}>
                   <div className="fz-fila" style={{ justifyContent: 'space-between' }}>
                     <span className="fz-fila" style={{ gap: 8 }}>
@@ -717,13 +772,13 @@ export default function MiPagina() {
                         <button className="icon-btn" title={b.visible ? 'Ocultar' : 'Mostrar'} aria-label={b.visible ? 'Ocultar' : 'Mostrar'} onClick={() => cambiar(b.clave, { visible: !b.visible })}>
                           {b.visible ? <Eye size={15} /> : <EyeOff size={15} />}
                         </button>
-                        <button className="icon-btn" aria-label="Subir" onClick={() => mover(i, -1)} disabled={i === 0}>
+                        <button className="icon-btn" aria-label="Subir" onClick={() => mover(i, -1)} disabled={i === 0 && !pfArriba}>
                           <ArrowUp size={15} />
                         </button>
-                        <button className="icon-btn" aria-label="Bajar" onClick={() => mover(i, 1)} disabled={i === botones.length - 1}>
+                        <button className="icon-btn" aria-label="Bajar" onClick={() => mover(i, 1)} disabled={i === botones.length - 1 && !pfAbajo}>
                           <ArrowDown size={15} />
                         </button>
-                        <button className="icon-btn" aria-label="Quitar" onClick={() => setBotones((bs) => bs.filter((x) => x.clave !== b.clave))}>
+                        <button className="icon-btn" aria-label="Quitar" onClick={() => quitar(i)}>
                           <Trash2 size={15} />
                         </button>
                       </span>
@@ -762,9 +817,10 @@ export default function MiPagina() {
                       </label>
                     </div>
                   </details>
-                </div>
-              );
+                </div>,
+              ];
             })}
+            {hayPf && pfLugar >= botones.length && filaPortafolio}
             {editable && (
               <div style={{ position: 'relative' }}>
                 <button className="btn btn-ghost" onClick={() => setMenu((m) => !m)} aria-expanded={menu}>

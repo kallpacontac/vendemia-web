@@ -674,3 +674,25 @@ test('página pública: agenda y portafolio se abren en su sitio y su script se 
   assert.ok(html.includes('ventanaPf(xp)') && html.includes('.pf-modal'), 'con JavaScript, el portafolio se abre en una ventana');
   assert.ok(!html.includes('Desliza para ver'), 'en rejilla, sin carrusel de lado');
 });
+
+test('página pública: el portafolio es un botón más y va donde lo puso el dueño', () => {
+  const pf = cargar('modules/fideliza/dominio/portafolio.ts');
+  assert.equal(pf.lugarPortafolio('arriba', 4), 0);
+  assert.equal(pf.lugarPortafolio('abajo', 4), 4);
+  assert.equal(pf.lugarPortafolio(2, 4), 2);
+  assert.equal(pf.lugarPortafolio(9, 4), 4, 'si hay menos botones visibles, al final');
+  assert.equal(pf.lugarPortafolio(-1, 4), 0);
+  assert.equal(pf.resolverPortafolio({ posicion: 1.5, trabajos: [{ titulo: 'x' }] }).posicion, 'arriba');
+  const conLugar = (posicion) =>
+    pagina.htmlPagina({
+      nombre: 'Vendemia',
+      color: '#FF4900',
+      estilo: { plantilla: 'clasica', portafolio: { titulo: 'Proyectos', posicion, trabajos: [{ titulo: 'Kallpa' }] } },
+      redes: [],
+      botones: ['Uno', 'Dos', 'Tres'].map((label) => ({ tipo: 'web', label, url: 'https://vendemias.com' })),
+    });
+  const orden = (h) => [...h.matchAll(/<b>(Uno|Dos|Tres|Proyectos)<\/b>/g)].map((m) => m[1]).join(' ');
+  assert.equal(orden(conLugar(1)), 'Uno Proyectos Dos Tres');
+  assert.equal(orden(conLugar(0)), 'Proyectos Uno Dos Tres');
+  assert.equal(orden(conLugar('abajo')), 'Uno Dos Tres Proyectos', 'lo guardado antes del 20-nov se sigue leyendo');
+});

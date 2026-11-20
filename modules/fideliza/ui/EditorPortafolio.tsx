@@ -55,24 +55,15 @@ export default function EditorPortafolio({ valor, alCambiar, editable, companyId
   }
 
   return (
-    <section className="card">
+    <section className="card" id="tu-portafolio">
       <h3 className="fz-sec">6 · Tu portafolio</h3>
       <p className="muted" style={{ fontSize: 13.5, marginBottom: 10 }}>
-        Tus trabajos con foto. En tu página sale una tarjeta que, al tocarla, se abre y deja deslizar entre ellos.
+        Tus trabajos con foto. En tu página sale como un botón más y, al tocarlo, se abren en una ventana. Para cambiarlo de lugar, usa sus flechas en «5 · Tus botones».
       </p>
       {trabajos.length > 0 && (
-        <div className="fz-col2" style={{ marginBottom: 6 }}>
-          <div>
-            <label className="field-label">Texto de la tarjeta</label>
-            <input className="input" maxLength={40} value={p.titulo ?? ''} disabled={!editable} placeholder={TITULO_PORTAFOLIO} onChange={(ev) => poner({ titulo: ev.target.value })} />
-          </div>
-          <div>
-            <label className="field-label">Dónde va</label>
-            <select className="select" value={p.posicion ?? 'arriba'} disabled={!editable} onChange={(ev) => poner({ posicion: ev.target.value as Portafolio['posicion'] })}>
-              <option value="arriba">Antes de los botones</option>
-              <option value="abajo">Después de los botones</option>
-            </select>
-          </div>
+        <div style={{ marginBottom: 6 }}>
+          <label className="field-label">Texto del botón</label>
+          <input className="input" maxLength={40} value={p.titulo ?? ''} disabled={!editable} placeholder={TITULO_PORTAFOLIO} onChange={(ev) => poner({ titulo: ev.target.value })} />
         </div>
       )}
       <input
