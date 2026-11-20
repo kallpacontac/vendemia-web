@@ -12,7 +12,6 @@ import { ProveedorSalud } from '@/components/panel/Salud';
 import { BandaDemo } from '@/components/panel/Demo';
 import Link from 'next/link';
 import { RUTA_GLOBAL_POR_DEFECTO, esRutaGlobal, inicioDe, rutaPermitida } from '@/lib/panel/rutas';
-import { puedeVer } from '@/lib/panel/roles';
 import { guardarDestino, rutaActual, vieneDePlaca } from '@/lib/panel/destino';
 import { fuenteDeRuta } from '@/modules/fideliza/dominio/activacion';
 import AltaNegocio from '@/components/panel/AltaNegocio';
@@ -168,9 +167,9 @@ function Guardia({ children }: { children: React.ReactNode }) {
           </div>
         </main>
       )}
-      {/* Instalar la app y activar los avisos, abajo y sin ir a Ajustes. Los
-          avisos son del dueño y del administrador. */}
-      {!soloGlobal && puedeVer(rol, 'bot.ver') && <BannerApp />}
+      {/* Instalar la app y activar los avisos, abajo y sin ir a Ajustes. A todos
+          los del negocio: al equipo le llega lo de su agenda (avisos 0004). */}
+      {!soloGlobal && <BannerApp />}
     </>
   );
 }

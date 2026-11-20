@@ -5,66 +5,86 @@
  * EL AVISO DE ABAJO · instalar la app y activar los avisos, sin ir a Ajustes
  * ══════════════════════════════════════════════════════════════════════════
  *
- * Un dueño no va a ir a Ajustes a buscar «avisos». Así que se le ofrece aquí,
- * abajo, sin tapar nada, y en un solo toque. Lo que ofrece depende de dónde
- * está:
+ * Nadie va a ir a Ajustes a buscar «avisos». Así que se ofrece aquí, abajo,
+ * sin tapar nada, y en un solo toque. A TODOS los del negocio: dueño,
+ * administrador y equipo (al barbero le llega lo de su agenda, avisos 0004).
  *
- *   · Android, sin instalar  → «Instala Vendemia» (el diálogo nativo).
- *   · iPhone en Safari       → cómo añadirla a la pantalla de inicio, con una
- *                              flecha hacia el botón Compartir. En iPhone es
- *                              condición: sin instalar no hay avisos.
- *   · Instalada, o navegador que admite avisos y aún no los tiene
- *                            → «Activar avisos»: pide el permiso EN ESE TOQUE y
- *                              guarda todo con lo de por defecto.
+ * Mira el estado REAL cada vez que se entra (no lo que se recuerda): si borró
+ * la app, si se perdió la suscripción o si es la app nueva con el logo del
+ * negocio, vuelve a ofrecerlo. Lo que ofrece depende de dónde está:
  *
- *   · Chrome con «Sitio de escritorio» → cómo quitarlo. Va antes que todo y no
- *                              cuenta en la mesura: con eso puesto el panel se
- *                              ve en miniatura, y no es una oferta sino un fallo.
+ *   · Chrome con «Sitio de escritorio» → cómo quitarlo. Va antes que todo: con
+ *                              eso puesto el panel se ve en miniatura.
+ *   · iPhone sin instalar    → cómo añadirla a la pantalla de inicio. En iPhone
+ *                              es condición: sin instalar no hay avisos.
+ *   · Chrome ofrece instalar → «Instalar» (el diálogo nativo).
+ *   · Avisos sin activar     → «Activar»: pide el permiso EN ESE TOQUE. También
+ *                              si el permiso ya estaba dado pero este negocio no
+ *                              tiene la suscripción (p. ej. la app nueva).
+ *   · Avisos bloqueados      → dónde desbloquearlos.
+ *   · Android sin la oferta de Chrome y fuera de la app → «Ábrela desde su
+ *                              ícono, o instálala así». Chrome no la ofrece
+ *                              cuando ya está instalada: casi siempre es eso.
  *
- * Mesura: aparece a los 4 s (no de golpe al entrar), «Ahora no» lo esconde 7
- * días y tras dos «Ahora no» no vuelve. Si lo hizo, no vuelve nunca. Ajustes
- * sigue teniendo la versión completa (qué avisos, silencio, prueba).
+ * Mesura: aparece a los 4 s (no de golpe al entrar) y «Ahora no» lo esconde
+ * un día. Cuando ya está todo (instalada y con avisos), no sale. Ajustes sigue
+ * teniendo la versión completa (qué avisos, silencio, prueba).
  */
 import { useEffect, useState } from 'react';
-import { Bell, Download, EllipsisVertical, Share, X } from 'lucide-react';
+import { Bell, BellOff, Download, EllipsisVertical, Share, X } from 'lucide-react';
 import { useSesion } from './Sesion';
 import { useAvisar } from './Avisos';
 import { enModoApp, plataforma, useInstalarAndroid, vistaDeEscritorio } from './Instalable';
 import { activarAvisos, soportaAvisos, suscripcionActual } from '@/lib/panel/suscribirAvisos';
 import { iconoApp, nombreApp } from '@/lib/panel/marcaPropia';
 
-type Variante = 'escritorio' | 'instalar' | 'ios' | 'android-manual' | 'activar';
+type Variante = 'escritorio' | 'instalar' | 'ios' | 'android-manual' | 'activar' | 'bloqueados';
 
-const CLAVE = 'vm-banner-app';
-const SIETE_DIAS = 7 * 24 * 3600 * 1000;
+/*
+ * Clave nueva (antes `vm-banner-app`): la vieja guardaba «hecho» y «dos veces
+ * Ahora no» para siempre, y dejaba sin aviso a quien luego lo necesitaba.
+ */
+const CLAVE = 'vm-banner-app-2';
+const UN_DIA = 24 * 3600 * 1000;
 
-interface Memoria {
-  veces: number;
-  hasta: number;
-  hecho?: boolean;
-}
-
-function leer(): Memoria {
+function hastaGuardado(): number {
   try {
-    return { veces: 0, hasta: 0, ...JSON.parse(localStorage.getItem(CLAVE) ?? '{}') };
+    return Number(JSON.parse(localStorage.getItem(CLAVE) ?? '{}').hasta) || 0;
   } catch {
-    return { veces: 0, hasta: 0 };
+    return 0;
   }
 }
-function escribir(m: Memoria) {
+function guardarHasta(hasta: number) {
   try {
-    localStorage.setItem(CLAVE, JSON.stringify(m));
+    localStorage.setItem(CLAVE, JSON.stringify({ hasta }));
   } catch {
     /* ventana privada: solo dura esta visita */
   }
 }
-/** ¿Puede salir hoy? */
-const permitido = (m: Memoria) => !m.hecho && m.veces < 2 && Date.now() >= m.hasta;
+
+/** ¿Qué falta en ESTE celular para este negocio? null = nada. */
+async function queFalta(companyId: string, hayDialogo: boolean): Promise<Variante | null> {
+  const so = plataforma();
+  const app = enModoApp();
+  // iPhone: sin instalar no hay avisos, así que lo primero es instalar.
+  if (so === 'ios' && !app) return 'ios';
+  // Chrome (Android o computadora) ofrece instalar: el diálogo nativo.
+  if (!app && hayDialogo) return 'instalar';
+  if (soportaAvisos()) {
+    if (Notification.permission === 'denied') return 'bloqueados';
+    const actual = await suscripcionActual(companyId).catch(() => null);
+    if (!actual?.fila || Notification.permission !== 'granted') return 'activar';
+  }
+  // Android en el navegador sin oferta de Chrome: casi siempre ya está instalada.
+  if (so === 'android' && !app) return 'android-manual';
+  return null;
+}
 
 export default function BannerApp() {
   const { companyId, rol } = useSesion();
   // Con marca propia, la app se llama como el negocio (lib/panel/marcaPropia.ts).
   const app = nombreApp(companyId);
+  const delEquipo = rol === 'empleado';
   const avisar = useAvisar();
   const instalar = useInstalarAndroid();
   const [variante, setVariante] = useState<Variante | null>(null);
@@ -74,11 +94,11 @@ export default function BannerApp() {
   const [so, setSo] = useState<'ios' | 'android' | 'otra'>('otra');
 
   useEffect(() => {
-    // `?app=1`: borra lo recordado y lo enseña ya. Para probarlo, o para
-    // mandárselo a un cliente que dijo «Ahora no» y luego sí lo quiere.
+    // `?app=1`: lo enseña ya, aunque haya dicho «Ahora no». Para probarlo, o
+    // para mandárselo a alguien que dijo «Ahora no» y luego sí lo quiere.
     const url = new URL(location.href);
     if (url.searchParams.has('app')) {
-      escribir({ veces: 0, hasta: 0 });
+      guardarHasta(0);
       url.searchParams.delete('app');
       history.replaceState(null, '', url.pathname + url.search);
     }
@@ -90,27 +110,11 @@ export default function BannerApp() {
   useEffect(() => {
     if (!companyId) return;
     const conVista = !escritorioVisto && vistaDeEscritorio();
-    if (!conVista && !permitido(leer())) return;
+    if (!conVista && Date.now() < hastaGuardado()) return;
     let vivo = true;
     const reloj = setTimeout(async () => {
-      const so = plataforma();
-      setSo(so);
-      const app = enModoApp();
-      let v: Variante | null = null;
-      if (conVista) {
-        if (vivo) setVariante('escritorio');
-        return;
-      }
-      // Primero instalar (es lo que la deja a mano), luego los avisos.
-      if (so === 'ios' && !app) v = 'ios';
-      // Chrome (Android o computadora) ofreció instalar: el diálogo nativo.
-      else if (!app && instalar) v = 'instalar';
-      // Android sin oferta de Chrome (la rechazó antes, u otro navegador): a mano.
-      else if (so === 'android' && !app) v = 'android-manual';
-      else if (soportaAvisos() && Notification.permission === 'default') {
-        const actual = await suscripcionActual(companyId).catch(() => null);
-        if (!actual?.fila) v = 'activar';
-      }
+      setSo(plataforma());
+      const v = conVista ? 'escritorio' : await queFalta(companyId, Boolean(instalar));
       if (vivo) setVariante(v);
     }, 4000);
     return () => {
@@ -122,25 +126,20 @@ export default function BannerApp() {
 
   if (!variante) return null;
 
+  /** Se esconde un día. Al volver, se mira otra vez qué falta. */
   const ahoraNo = () => {
-    const m = leer();
-    escribir({ ...m, veces: m.veces + 1, hasta: Date.now() + SIETE_DIAS });
+    guardarHasta(Date.now() + UN_DIA);
+    setPasos(false);
     setVariante(null);
   };
   const entendidoEscritorio = () => {
     setEscritorioVisto(true);
     setVariante(null);
   };
-  const hecho = () => {
-    escribir({ ...leer(), hecho: true });
-    setVariante(null);
-  };
-
-  /** «Listo» tras los pasos: vuelve en 7 días si no la instaló, sin contar como un «Ahora no». */
-  const listo = () => {
-    escribir({ ...leer(), hasta: Date.now() + SIETE_DIAS });
+  /** Tras instalar o activar: ¿falta algo más? (p. ej. los avisos después de instalar). */
+  const siguiente = async () => {
     setPasos(false);
-    setVariante(null);
+    setVariante(companyId ? await queFalta(companyId, false) : null);
   };
 
   async function principal() {
@@ -152,8 +151,8 @@ export default function BannerApp() {
       const ok = await instalar();
       // Instalada o no, lo siguiente que vale la pena es activar los avisos:
       // funcionan igual en el navegador y en la app.
-      if (ok && soportaAvisos() && Notification.permission === 'default') setVariante('activar');
-      else if (!ok) ahoraNo();
+      if (ok) await siguiente();
+      else ahoraNo();
       return;
     }
     if (variante === 'activar' && companyId) {
@@ -162,19 +161,22 @@ export default function BannerApp() {
       setOcupado(false);
       if (r.ok) {
         avisar(
-          rol === 'empleado'
+          delEquipo
             ? 'Listo: te avisaremos de tus citas nuevas y antes de cada una.'
             : 'Listo: te avisaremos de pagos y reservas. Puedes elegir qué avisos en Ajustes.',
           'ok',
         );
-        hecho();
+        await siguiente();
       } else if (r.motivo === 'denegado') {
-        hecho(); // Rechazado: el navegador ya no deja volver a preguntar.
+        // Lo rechazó en el diálogo: ahora se explica cómo desbloquearlo.
+        setVariante(Notification.permission === 'denied' ? 'bloqueados' : null);
       } else {
         avisar(r.mensaje ?? 'No se pudieron activar los avisos.', 'error');
       }
     }
   }
+
+  const loQueGana = delEquipo ? 'tus citas nuevas y un aviso antes de cada una' : 'tus pagos y reservas al instante';
 
   return (
     <div className={`banner-app banner-app--${variante}`} role="dialog" aria-live="polite" aria-label={`${app} en tu celular`}>
@@ -186,8 +188,8 @@ export default function BannerApp() {
             <b>{so === 'otra' ? `Instala ${app} en tu computadora` : `Ten ${app} como app`}</b>
             <small>
               {so === 'otra'
-                ? 'Se abre en su propia ventana, como una app, y te avisa de pagos y reservas.'
-                : 'Ábrela desde su icono y recibe tus pagos y reservas al instante.'}
+                ? `Se abre en su propia ventana, como una app, y te avisa de ${delEquipo ? 'tus citas' : 'pagos y reservas'}.`
+                : `Ábrela desde su ícono y recibe ${loQueGana}.`}
             </small>
           </>
         )}
@@ -212,7 +214,7 @@ export default function BannerApp() {
         )}
         {variante === 'android-manual' && (
           <>
-            <b>Instala {app} en tu celular</b>
+            <b>Usa {app} desde su ícono</b>
             {pasos ? (
               <small>
                 1. Toca <EllipsisVertical size={13} aria-label="menú" /> arriba a la derecha.
@@ -220,7 +222,7 @@ export default function BannerApp() {
                 2. Elige <b>«Instalar app»</b> o <b>«Agregar a pantalla principal»</b>.
               </small>
             ) : (
-              <small>Ábrela desde su icono y recibe tus pagos y reservas al instante.</small>
+              <small>Si ya la tienes, ábrela desde el ícono de {app}. Si no, instálala en 2 pasos.</small>
             )}
           </>
         )}
@@ -231,17 +233,45 @@ export default function BannerApp() {
               <small>
                 1. Toca <Share size={13} aria-label="Compartir" /> <b>Compartir</b>, abajo.
                 <br />
-                2. Elige <b>«Añadir a pantalla de inicio»</b>.
+                2. Elige <b>«Añadir a pantalla de inicio»</b> y ábrela desde el ícono.
               </small>
             ) : (
-              <small>Así te llegan los avisos de pagos y reservas al instante.</small>
+              <small>En iPhone los avisos solo llegan desde la app. Así recibes {loQueGana}.</small>
             )}
           </>
         )}
         {variante === 'activar' && (
           <>
-            <b>Recibe tus pagos y reservas al instante</b>
-            <small>Solo lo que pide que hagas algo. De noche, un resumen por la mañana.</small>
+            <b>{delEquipo ? 'Activa los avisos de tus citas' : 'Recibe tus pagos y reservas al instante'}</b>
+            <small>
+              {delEquipo
+                ? 'Te avisamos de cada cita nueva, si te la mueven o cancelan, y 15 min antes.'
+                : 'Solo lo que pide que hagas algo. De noche, un resumen por la mañana.'}
+            </small>
+          </>
+        )}
+        {variante === 'bloqueados' && (
+          <>
+            <b>
+              <BellOff size={14} style={{ verticalAlign: -2 }} /> Los avisos de {app} están bloqueados
+            </b>
+            <small>
+              {so === 'ios' ? (
+                <>
+                  Abre <b>Ajustes</b> del iPhone → <b>Notificaciones</b> → <b>{app}</b> y activa{' '}
+                  <b>Permitir notificaciones</b>.
+                </>
+              ) : enModoApp() ? (
+                <>
+                  Mantén presionado el ícono de {app} → <b>Información de la app</b> → <b>Notificaciones</b> y actívalas.
+                </>
+              ) : (
+                <>
+                  Toca el candado o el ícono junto a la dirección, arriba → <b>Permisos</b> → <b>Notificaciones</b> →{' '}
+                  <b>Permitir</b>. Luego recarga.
+                </>
+              )}
+            </small>
           </>
         )}
       </div>
@@ -250,8 +280,12 @@ export default function BannerApp() {
           <button type="button" className="btn btn-primary btn-sm" onClick={entendidoEscritorio}>
             Entendido
           </button>
+        ) : variante === 'bloqueados' ? (
+          <button type="button" className="btn btn-primary btn-sm" onClick={ahoraNo}>
+            Entendido
+          </button>
         ) : (variante === 'ios' || variante === 'android-manual') && pasos && !instalar ? (
-          <button type="button" className="btn btn-primary btn-sm" onClick={listo}>
+          <button type="button" className="btn btn-primary btn-sm" onClick={ahoraNo}>
             Listo
           </button>
         ) : variante === 'ios' || variante === 'android-manual' ? (
@@ -264,7 +298,7 @@ export default function BannerApp() {
             {variante === 'instalar' ? 'Instalar' : ocupado ? 'Activando…' : 'Activar'}
           </button>
         )}
-        {variante !== 'escritorio' && !pasos && (
+        {variante !== 'escritorio' && variante !== 'bloqueados' && !pasos && (
           <button type="button" className="banner-app__no" onClick={ahoraNo}>
             Ahora no
           </button>
