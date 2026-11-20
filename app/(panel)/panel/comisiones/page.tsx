@@ -53,7 +53,7 @@ const REGLA: Record<Regla, string> = {
 
 export default function Comisiones() {
   const { companyId, compania, esDueno } = useSesion();
-  const [periodo, setPeriodo] = useState<Periodo>('quincena');
+  const [periodo, setPeriodo] = useState<Periodo>('semana');
   const [abierto, setAbierto] = useState<string | null>(null);
   const { desde, hasta } = rango(periodo);
 

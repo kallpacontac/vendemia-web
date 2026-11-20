@@ -62,3 +62,8 @@
   .cierres__fila > .btn-primary { flex-basis: 100%; }
   .cierres__pagar .btn-primary { flex: 1 1 100%; }
 }
+
+/* «Por pagar a tu equipo»: Semana / Semana anterior / Quincena / Mes (19-nov, The 24/7). */
+.cierres__filtro { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 4px 0 12px; }
+.cierres__filtro .fpill { min-height: 40px; }
+.cierres__rango { font-size: 12.5px; margin-left: 4px; }

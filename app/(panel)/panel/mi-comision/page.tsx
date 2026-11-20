@@ -45,7 +45,7 @@ import {
 export default function MiComision() {
   const { companyId } = useSesion();
   // Los mismos periodos que ve el dueño en Comisiones: así las dos cifras cuadran.
-  const [periodo, setPeriodo] = useState<Periodo>('quincena');
+  const [periodo, setPeriodo] = useState<Periodo>('semana');
   const { desde, hasta } = rango(periodo);
 
   const { datos, cargando, error, releer } = useCargar(async () => {

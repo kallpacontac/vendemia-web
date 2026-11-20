@@ -17,6 +17,7 @@ import { useAvisar } from '@/components/panel/Avisos';
 import { useCargar } from '@/components/panel/useCargar';
 import { calcularPorPagar, deshacerCierre, leerCierres, pagarCierre, solesExactos as soles, type MetodoCierre, type PorPagar } from '@/lib/panel/cierres';
 import { diaMes } from '@/lib/panel/format';
+import { rango, type Periodo } from '@/lib/panel/periodos';
 import './pendientes.css';
 
 const METODOS: [MetodoCierre, string][] = [
@@ -28,24 +29,33 @@ const METODOS: [MetodoCierre, string][] = [
 
 const fecha = (iso: string) => diaMes(new Date(`${iso.slice(0, 10)}T12:00:00`));
 
+/** Cierran cada semana (lunes a domingo); la semana anterior, para pagarla el lunes. */
+const FILTROS: [Periodo, string][] = [
+  ['semana', 'Esta semana'],
+  ['semana-anterior', 'Semana anterior'],
+  ['quincena', 'Quincena'],
+  ['mes', 'Mes'],
+];
+
 export default function CierresPorPagar({ companyId, esDueno }: { companyId: string; esDueno: boolean }) {
   const avisar = useAvisar();
   const [ronda, setRonda] = useState(0);
   const [abierto, setAbierto] = useState<string | null>(null);
   const [metodo, setMetodo] = useState<MetodoCierre>('efectivo');
   const [enVuelo, setEnVuelo] = useState(false);
+  const [periodo, setPeriodo] = useState<Periodo>('semana');
+  const fechas = rango(periodo);
 
   const { datos } = useCargar(async () => {
     const cierres = await leerCierres(companyId);
     if (!cierres) return null;
-    const { porPagar, desde, nombres } = await calcularPorPagar(companyId, cierres);
+    const { porPagar, desde, nombres } = await calcularPorPagar(companyId, cierres, new Date(), fechas);
     return { cierres, porPagar, desde, nombres };
-  }, [companyId, ronda]);
+  }, [companyId, ronda, fechas.desde, fechas.hasta]);
 
   if (!datos) return null;
-  const { porPagar, cierres, desde, nombres: nombreDe } = datos;
+  const { porPagar, cierres, nombres: nombreDe } = datos;
   const ultimos = cierres.slice(0, 5);
-  if (!porPagar.length && !ultimos.length) return null;
 
   async function pagar(p: PorPagar) {
     setEnVuelo(true);
@@ -76,11 +86,19 @@ export default function CierresPorPagar({ companyId, esDueno }: { companyId: str
     <section className="card cierres" aria-label="Por pagar a tu equipo">
       <div className="card-head">
         <h3><HandCoins size={17} style={{ verticalAlign: -3 }} /> Por pagar a tu equipo</h3>
-        <small className="muted">desde el {fecha(desde)}</small>
+      </div>
+      <div className="filters cierres__filtro" role="tablist" aria-label="Periodo">
+        {FILTROS.map(([k, txt]) => (
+          <button key={k} type="button" role="tab" aria-selected={periodo === k} className={`fpill ${periodo === k ? 'active' : ''}`}
+            onClick={() => setPeriodo(k)}>
+            {txt}
+          </button>
+        ))}
+        <span className="muted cierres__rango">del {fecha(fechas.desde)} al {fecha(fechas.hasta)}</span>
       </div>
 
       {porPagar.length === 0 ? (
-        <p className="muted cierres__vacio">Todo pagado. Lo que atiendan desde ahora sale aquí.</p>
+        <p className="muted cierres__vacio">Nada por pagar en estas fechas. Lo que atiendan sale aquí.</p>
       ) : (
         <ul className="cierres__lista">
           {porPagar.map((p) => (

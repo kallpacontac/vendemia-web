@@ -82,13 +82,15 @@ export async function leerCierres(companyId: string): Promise<Cierre[] | null> {
   }));
 }
 
-async function adelantosSinCerrar(companyId: string, desde: string): Promise<{ id: string; employee_id: string; importe: number }[]> {
-  const { data, error } = await supabase()
+async function adelantosSinCerrar(companyId: string, desde: string, hasta?: string): Promise<{ id: string; employee_id: string; importe: number }[]> {
+  let q = supabase()
     .from('gastos')
     .select('id, employee_id, importe')
     .eq('company_id', companyId)
     .eq('tipo', 'adelanto')
     .gte('fecha', desde);
+  if (hasta) q = q.lte('fecha', hasta);
+  const { data, error } = await q;
   // Sin la 0013 no hay columna tipo: sin adelantos.
   if (error) return [];
   return ((data ?? []) as { id: string; employee_id: string | null; importe: number }[])
@@ -100,16 +102,18 @@ export async function calcularPorPagar(
   companyId: string,
   cierres: Cierre[],
   hoy: Date = new Date(),
+  /** Solo lo de estas fechas (Semana / Quincena / Mes, The 24/7 19-nov). Sin él, todo lo pendiente. */
+  periodo?: { desde: string; hasta: string },
 ): Promise<{ porPagar: PorPagar[]; desde: string; nombres: Map<string, string> }> {
   const primero = cierres.reduce<string | null>((m, c) => (m === null || c.desde < m ? c.desde : m), null);
-  const desde = desdeDeCuentas(primero, hoy);
-  const hasta = isoLocal(hoy);
+  const desde = periodo ? periodo.desde : desdeDeCuentas(primero, hoy);
+  const hasta = periodo && periodo.hasta < isoLocal(hoy) ? periodo.hasta : isoLocal(hoy);
 
   const [citas, trabajadores, catalogo, adelantos] = await Promise.all([
     getCitasDelPeriodo(companyId, desde, hasta),
     getTrabajadores(companyId),
     getCatalogo(companyId),
-    adelantosSinCerrar(companyId, desde),
+    adelantosSinCerrar(companyId, desde, periodo ? hasta : undefined),
   ]);
   const ids = citas.map((c) => c.id);
   const [lineas, congeladas] = await Promise.all([getServiciosDeCitas(ids), getComisionesCongeladas(ids)]);
