@@ -3,12 +3,14 @@
 -- ═══════════════════════════════════════════════════════════════════════════════
 --
 --   ⚠️ BORRA TODO LO QUE SE MUEVE del negocio, no solo lo de prueba:
---      citas y tickets, cobros, capturas de pago, gastos y adelantos, pagos de comisión,
---      boletas (y la numeración vuelve a B001-1), pedidos, CLIENTES y sus conversaciones,
---      tarjetas de fidelidad con sus sellos, avisos y reclamos.
+--      citas y tickets, cobros, capturas de pago, gastos y adelantos, ingresos sin ticket,
+--      pagos de comisión, boletas y notas de venta (la numeración vuelve a B001-1 y NV-1),
+--      pedidos, CLIENTES y sus conversaciones, tarjetas de fidelidad con sus sellos, avisos y
+--      reclamos. (Confirmado con Alvaro el 19-nov, antes de abrir la caja de verdad.)
 --
---   SE QUEDA: catálogo y productos, barberos y sus horarios, Mi página y sedes, cuentas y
---   accesos, el diseño del Club 24/7 y sus premios, los ajustes de boletas, Google Calendar,
+--   SE QUEDA (la configuración): catálogo y productos, barberos con su %, sueldo, DNI, CV y
+--   sedes, sus horarios, Mi página y sedes, cuentas y accesos, el diseño del Club 24/7 y sus
+--   premios, las placas QR/NFC del mostrador, «Mis avisos» guardados, los ajustes de boletas, el orden del menú, Google Calendar,
 --   los celulares con avisos activados y el saldo de mensajes.
 --
 --   Cómo se usa:
@@ -32,15 +34,19 @@ declare
         'pending_payments', 'appointment_services', 'canchas_fijas_citas', 'canchas_fijas', 'appointments',
         'comision_cierres', 'gastos', 'cobro_ajustes', 'caja_ingresos',
         -- Boletas y facturas (la numeración también: vuelve a empezar)
-        'comprobantes_electronicos', 'factura_series',
+        'comprobantes_electronicos', 'factura_series', 'notas_venta',
         -- Pedidos y página
         'pedido_costos', 'envios', 'pedidos_web', 'reservas_web', 'mesa_llamados', 'mesa_carrito', 'orders',
         'pagina_avisame', 'pagina_idem', 'reclamos', 'avisos_stock',
         -- Clientes y conversaciones
         'borradores', 'escalations', 'conversation_events', 'messages', 'seguimientos', 'retargeting',
         -- Club 24/7: las tarjetas y sus sellos (el programa y los premios se quedan)
-        'loyalty_ledger', 'loyalty_redemptions', 'loyalty_transactions', 'loyalty_wallet_passes',
-        'loyalty_push_subscriptions', 'loyalty_device_claims', 'loyalty_devices', 'loyalty_birthday_sent',
+        -- Solo lo de cada CLIENTE (su tarjeta, sus sellos, sus premios ganados). La configuración del
+        -- club NO: programa y versiones (los premios que se ofrecen), sedes, equipo, enlaces, Mis
+        -- avisos, campañas, diseño de la tarjeta y las placas del mostrador.
+        'loyalty_ledger', 'loyalty_redemptions', 'loyalty_rewards', 'loyalty_transactions', 'loyalty_wallet_passes',
+        -- (las PLACAS del mostrador, loyalty_devices y sus altas, NO: son configuración)
+        'loyalty_push_subscriptions', 'loyalty_birthday_sent',
         'loyalty_birthdays', 'loyalty_consents', 'loyalty_campaign_events', 'loyalty_outbox', 'loyalty_public_events',
         'loyalty_rate_limits', 'loyalty_webhook_receipts', 'loyalty_audit_log', 'loyalty_members', 'loyalty_contacts',
         -- Registros del panel

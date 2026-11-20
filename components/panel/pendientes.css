@@ -65,5 +65,7 @@
 
 /* «Por pagar a tu equipo»: Semana / Semana anterior / Quincena / Mes (19-nov, The 24/7). */
 .cierres__filtro { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 4px 0 12px; }
+/* Dentro de la tarjeta, sin la caja de los filtros de página: alineado con el título y la lista. */
+.main .card.cierres .filters.cierres__filtro { padding: 0; border: 0; border-radius: 0; background: none; }
 .cierres__filtro .fpill { min-height: 40px; }
 .cierres__rango { font-size: 12.5px; margin-left: 4px; }
