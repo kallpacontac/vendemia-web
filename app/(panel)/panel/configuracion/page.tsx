@@ -40,6 +40,7 @@ import GoogleCalendar from '@/components/panel/GoogleCalendar';
 import {
   ArrowLeft,
   ArrowRight,
+  CalendarCheck,
   CalendarClock,
   Camera,
   Check,
@@ -47,6 +48,8 @@ import {
   ChevronUp,
   Clock,
   FileText,
+  Flag,
+  Hand,
   ListChecks,
   MessageSquare,
   Plus,
@@ -109,6 +112,19 @@ const PAGOS: { valor: TipoPago; etiqueta: string; pideNumero: boolean }[] = [
   { valor: 'cod', etiqueta: 'Contra entrega', pideNumero: false },
 ];
 
+/**
+ * Atajos del tono: rellenan el texto, no lo sustituyen por una lista cerrada.
+ * `bot_tone` entra tal cual en «TU TONO» del prompt, así que el dueño puede
+ * partir de uno y retocarlo. Escribirlo desde cero era la parte en blanco
+ * que más se quedaba sin rellenar.
+ */
+const TONOS: { etiqueta: string; texto: string }[] = [
+  { etiqueta: 'Cercano', texto: 'Cercano y cálido. Tutea al cliente, frases cortas y algún emoji, sin pasarse.' },
+  { etiqueta: 'Profesional', texto: 'Profesional y amable. Trata de usted, sin jerga ni emojis.' },
+  { etiqueta: 'Alegre', texto: 'Alegre y con jerga peruana. Tutea y usa emojis con moderación.' },
+  { etiqueta: 'Directo', texto: 'Directo y breve. Responde lo justo y lleva al cliente a reservar o comprar.' },
+];
+
 /** Lo que el formulario edita de `companies`. Todos están en la lista blanca del bot. */
 interface Formulario {
   name: string;
@@ -123,11 +139,23 @@ interface Formulario {
   require_payment_to_confirm: boolean;
   asumir_asistencia: boolean;
   verify_vouchers: boolean;
-  request_location: boolean;
-  proactive_venue: boolean;
+  /*
+   * Sin `request_location` ni `proactive_venue` (20-nov-2026). Siguen en la
+   * lista blanca del bot, pero desde af988a8 (se borró el árbol determinista)
+   * el bot no los lee en ningún sitio: el prompt pone «DÓNDE ESTAMOS» siempre
+   * que haya `location`. Dos interruptores que no hacían nada eran la peor
+   * opción: el dueño los apagaba y Mia seguía igual.
+   */
   delivery_type: 'delivery' | 'pickup' | 'both';
   bot_tone: string;
+  /**
+   * La columna VIEJA del saludo. No tiene campo propio en la pantalla: el bot
+   * usa `welcome_note` y solo si está vacío cae a esta (agent.prompt.ts,
+   * «AL SALUDAR»). Con las dos a la vista, el dueño rellenaba las dos y una no
+   * salía nunca. Ver saludoEnLaVieja y construirPatch().
+   */
   hook_question: string;
+  /** EL saludo, el único que se edita. Si en la base solo hay `hook_question`, se enseña esa. */
   welcome_note: string;
   closing_note: string;
   /** Hasta 3 fotos/vídeos/audios. Viajan como texto JSON (ver construirPatch). */
@@ -211,14 +239,26 @@ function construirPatch(
   pagos: MetodoPago[],
   preguntas: PreguntaObligatoria[],
   pideEmpleado: boolean,
+  saludoEnLaVieja: boolean,
 ): Record<string, string | number> {
+  /*
+   * Un solo saludo en pantalla, dos columnas detrás (ver Formulario.hook_question).
+   *  · Si el texto de pantalla ES el que vino de la columna vieja, `welcome_note`
+   *    se queda vacía: así abrir la pantalla no cuenta como cambio, y el bot sigue
+   *    saludando con la vieja como hasta ahora.
+   *  · Si se borra el saludo, se borran las dos: si no, el bot caería a la vieja
+   *    y seguiría saludando con un texto que el dueño cree haber quitado.
+   */
+  const saludo = form.welcome_note;
+  const welcome_note = saludoEnLaVieja && saludo === form.hook_question ? '' : saludo;
+  const hook_question = saludo.trim() ? form.hook_question : '';
   return {
     ...form,
+    welcome_note,
+    hook_question,
     require_payment_to_confirm: b01(form.require_payment_to_confirm),
     asumir_asistencia: b01(form.asumir_asistencia),
     verify_vouchers: b01(form.verify_vouchers),
-    request_location: b01(form.request_location),
-    proactive_venue: b01(form.proactive_venue),
     ask_employee: b01(pideEmpleado),
     // ⚠️ Los tres son `text` en el espejo, no jsonb.
     schedule: JSON.stringify(horario),
@@ -281,6 +321,8 @@ function Configuracion() {
   const [pagos, setPagos] = useState<MetodoPago[]>([]);
   const [preguntas, setPreguntas] = useState<PreguntaObligatoria[]>([]);
   const [pideEmpleado, setPideEmpleado] = useState(false);
+  /** Al cargar, el saludo solo estaba en `hook_question`. Ver construirPatch(). */
+  const [saludoEnLaVieja, setSaludoEnLaVieja] = useState(false);
   const [guardando, setGuardando] = useState(false);
   /** Qué nota tiene un adjunto subiéndose. Con alguno a medias no se guarda. */
   const [subiendo, setSubiendo] = useState({ welcome_media: false, closing_media: false });
@@ -344,24 +386,25 @@ function Configuracion() {
        * duda, la casilla dice la verdad conservadora.
        */
       verify_vouchers: e.verify_vouchers !== 0,
-      request_location: e.request_location === 1,
-      proactive_venue: e.proactive_venue === 1,
       delivery_type: e.delivery_type ?? 'pickup',
       bot_tone: e.bot_tone ?? '',
       hook_question: e.hook_question ?? '',
-      welcome_note: e.welcome_note ?? '',
+      // El mismo orden que el bot: manda `welcome_note`; si está vacía, la vieja.
+      welcome_note: e.welcome_note?.trim() ? e.welcome_note : (e.hook_question ?? ''),
       closing_note: e.closing_note ?? '',
       welcome_media: leerAdjuntosNota(e.welcome_media),
       closing_media: leerAdjuntosNota(e.closing_media),
       custom_rules: e.custom_rules ?? '',
       return_policy: e.return_policy ?? '',
     };
+    const vieja = !e.welcome_note?.trim() && Boolean(e.hook_question?.trim());
     setForm(inicial);
+    setSaludoEnLaVieja(vieja);
     setHorario(e.horario);
     setPagos(e.pagos);
     setPreguntas(e.preguntas);
     setPideEmpleado(e.pideEmpleado);
-    setOriginal(construirPatch(inicial, e.horario, e.pagos, e.preguntas, e.pideEmpleado));
+    setOriginal(construirPatch(inicial, e.horario, e.pagos, e.preguntas, e.pideEmpleado, vieja));
   }, [datos, form]);
 
   const set = <K extends keyof Formulario>(k: K, v: Formulario[K]) =>
@@ -380,11 +423,11 @@ function Configuracion() {
    */
   const patch = useMemo(() => {
     if (!form) return {};
-    const completo = construirPatch(form, horario, pagos, preguntas, pideEmpleado);
+    const completo = construirPatch(form, horario, pagos, preguntas, pideEmpleado, saludoEnLaVieja);
     return Object.fromEntries(
       Object.entries(completo).filter(([k, v]) => !original || v !== original[k]),
     );
-  }, [form, horario, pagos, preguntas, pideEmpleado, original]);
+  }, [form, horario, pagos, preguntas, pideEmpleado, saludoEnLaVieja, original]);
 
   /**
    * «Comprobante al cobrar» (datos 0010). NO va en el patch de `update_company`:
@@ -532,7 +575,7 @@ function Configuracion() {
      * `patch` viene del useMemo de arriba, el mismo que decide si se enseña la
      * barra de guardar. Deliberadamente no se recalcula aquí.
      */
-    const completo = construirPatch(form, horario, pagos, preguntas, pideEmpleado);
+    const completo = construirPatch(form, horario, pagos, preguntas, pideEmpleado, saludoEnLaVieja);
 
     if (!hayCambios) {
       avisar('No hay nada que guardar: no cambiaste ningún campo.');
@@ -612,11 +655,18 @@ function Configuracion() {
 
         <div className="stepper-card">
           <nav className="stepper" aria-label="Pasos de configuración">
+            {/*
+              Ordenados como avanza una conversación (20-nov-2026, Alvaro: «no hay
+              cohesión»): el negocio y su número → qué vende y cómo cobra → quién es
+              Mia, cómo saluda, sus reglas y cómo cierra → lo que pregunta antes de
+              cerrar. Lo que no cambia cómo responde Mia (la Caja, el equipo, el
+              menú) va en «Tu equipo y tu panel», debajo.
+            */}
             {[
               'Negocio',
               `${cap(vocabulario(form?.business_mode).items)} y cobros`,
               'Cómo responde',
-              'Preguntas extra',
+              'Antes de cerrar',
             ].map((txt, i) => (
                 <button
                   key={txt}
@@ -642,7 +692,6 @@ function Configuracion() {
             <p className="cfg-guide">Paso 1 de 4 · Identifica tu negocio y el número desde el que atenderá el asistente.</p>
             <div className="grid-form">
               <Campo etiqueta="Nombre del negocio" valor={form.name} alCambiar={(v) => set('name', v)} />
-              <Campo etiqueta="Nombre del asistente" valor={form.bot_name} alCambiar={(v) => set('bot_name', v)} />
               <div>
                 <label className="field-label">Tipo de negocio</label>
                 <select
@@ -680,92 +729,16 @@ function Configuracion() {
               <Campo etiqueta="Ubicación / distrito" valor={form.location} alCambiar={(v) => set('location', v)} />
             </div>
             <details className="cfg-advanced">
-              <summary>Opciones avanzadas de contacto y presentación</summary>
+              <summary>Teléfonos del dueño y del administrador</summary>
               <div className="grid-form">
                 <Campo etiqueta="Teléfono del dueño" valor={form.owner_phone} alCambiar={(v) => set('owner_phone', v)} bloqueado={delDueno} />
                 <Campo etiqueta="Teléfono admin (comandos)" valor={form.admin_phone} alCambiar={(v) => set('admin_phone', v)} bloqueado={delDueno} />
-                <div className="full">
-                  <label className="field-label">Descripción del negocio</label>
-                  <textarea className="textarea" value={form.business_description} onChange={(e) => set('business_description', e.target.value)} />
-                </div>
               </div>
             </details>
           </div>
 
-          {/*
-            «Comprobante al cobrar» (datos 0010, pedido de Alvaro el 10-nov-2026).
-            Es distinto de «Comprobantes de pago» del paso 2: aquel dice quién
-            revisa las capturas que manda el CLIENTE por WhatsApp; este, si
-            quien cobra desde el PANEL tiene que adjuntar la foto del pago.
-            Solo el dueño la cambia: «obligatoria» le protege de cobros
-            apuntados sin pruebas, y no puede apagarla otro.
-          */}
-          <div className="sec">
-            <h4>
-              <Camera /> Comprobante al cobrar
-            </h4>
-            <p className="cfg-guide">
-              Al registrar un cobro en la Caja, la Agenda o {vocabulario(form.business_mode, { canchas }).una}{' '}
-              {vocabulario(form.business_mode, { canchas }).reserva}, adjuntar la foto del Yape, Plin o transferencia. Se lee sola y
-              queda guardada con el pago.
-            </p>
-            {rol !== 'dueno' && rol !== null && (
-              <p className="muted" style={{ fontSize: 12.5, marginBottom: 8 }}>
-                Solo la cambia el dueño.
-              </p>
-            )}
-            {cobroFoto?.sinMigrar && (
-              <p className="muted" style={{ fontSize: 12.5, marginBottom: 8 }}>
-                Falta la actualización 0010 en la base de datos. Hasta entonces la foto solo sale en el tablero de canchas.
-              </p>
-            )}
-            {cobroFoto && !cobroFoto.sinMigrar && !cobroFoto.nube && (
-              <p className="muted" style={{ fontSize: 12.5, marginBottom: 8 }}>
-                La agenda de este negocio todavía la lleva el bot: la foto no tiene dónde guardarse con el cobro. Se
-                aplicará cuando la agenda pase a la nube.
-              </p>
-            )}
-            <div className="opciones opciones--3" role="radiogroup" aria-label="Comprobante al cobrar">
-              {MODOS_FOTO_PAGO.map((m) => (
-                <button
-                  key={m}
-                  type="button"
-                  className={`opcion ${fotoPago === m ? 'on' : ''}`}
-                  onClick={() => setFotoPago(m)}
-                  role="radio"
-                  aria-checked={fotoPago === m}
-                  disabled={fotoPago === null || (rol !== 'dueno' && rol !== null)}
-                >
-                  <b>{TEXTO_MODO[m].titulo}</b>
-                  <small>{TEXTO_MODO[m].detalle}</small>
-                  {m === 'apagada' && <span className="opcion__def">por defecto</span>}
-                </button>
-              ))}
-            </div>
-
-            {/*
-              «Los empleados cobran» (datos 0012, Alvaro 12-nov-2026). Apagado de
-              serie; lo enciende el equipo de Vendemia cuando el dueño lo pide. El
-              dueño lo ve, pero no lo toca: así no se enciende por descuido.
-            */}
-            {cobroFoto && !cobroFoto.sinMigrar && (
-              <div className="cfg-enlace" style={{ marginTop: 12 }}>
-                <div>
-                  <b>Los empleados {cobroFoto.empleadoCobra ? 'cobran' : 'no cobran'}</b>
-                  <small>
-                    {cobroFoto.empleadoCobra
-                      ? 'Desde Mi agenda cobran lo que falta de sus citas, siempre con foto (también en efectivo). Cada cobro sale en la Caja con su nombre.'
-                      : 'El cobro lo apunta la caja. Si quieres que tus empleados cobren (siempre con foto), pídeselo al equipo de Vendemia.'}
-                  </small>
-                </div>
-                {esAdminPlataforma && (
-                  <button type="button" className="btn btn-ghost btn-sm" onClick={() => void cambiarEmpleadoCobra(!cobroFoto.empleadoCobra)}>
-                    {cobroFoto.empleadoCobra ? 'Apagar' : 'Encender'}
-                  </button>
-                )}
-              </div>
-            )}
-          </div>
+          {/* Pegado al «WhatsApp del bot»: es el estado de ESE número, no cómo habla Mia (antes, en el paso 3). */}
+          <ConexionWhatsApp necesita={necesitaEmparejar(salud)} />
 
           <div className="nav-btns">
             <span />
@@ -861,33 +834,6 @@ function Configuracion() {
                   aria-checked={form.require_payment_to_confirm}
                 />
               </div>
-              {/*
-                Decisión de Alvaro (18-sep-2026): apagado por defecto. Con él
-                encendido, una cita a la que nadie dijo «no vino» se da por
-                atendida sola, y un plantón acaba pagando comisión. Solo en
-                citas puntuales: un grupo recurrente no tiene una hora que pase.
-              */}
-              {form.business_mode === 'appointment' && (
-                <details className="cfg-advanced">
-                  <summary>Automatización avanzada de asistencia</summary>
-                  <div className="toggle-row" style={{ marginTop: 12 }}>
-                  <div className="t">
-                    <b>Dar por atendida la cita si nadie dice lo contrario</b>
-                    <small>
-                      {form.asumir_asistencia
-                        ? 'Pasada la hora, la cita cuenta como atendida sola. Un plantón que no marques como «No vino» pagará comisión.'
-                        : 'Apagado: la cita espera a que marques «Vino» o «No vino» en la Agenda. Hasta entonces no genera comisión.'}
-                    </small>
-                  </div>
-                  <div
-                    className={`toggle ${form.asumir_asistencia ? 'on' : ''}`}
-                    onClick={() => set('asumir_asistencia', !form.asumir_asistencia)}
-                    role="switch"
-                    aria-checked={form.asumir_asistencia}
-                  />
-                  </div>
-                </details>
-              )}
             </div>
           )}
 
@@ -1087,42 +1033,12 @@ function Configuracion() {
               </p>
             )}
 
-            {/* Solo pide Maps quien entrega a domicilio: una cita no tiene «pedido»; el producto de un negocio de citas, sí. */}
-            {vendeProductos && (
-              <div className="toggle-row" style={{ marginTop: 14 }}>
-                <div className="t">
-                  <b>Pedir la ubicación para la entrega</b>
-                  <small>Mia pide el punto de Maps cuando el pedido es a domicilio</small>
-                </div>
-                <div
-                  className={`toggle ${form.request_location ? 'on' : ''}`}
-                  onClick={() => set('request_location', !form.request_location)}
-                  role="switch"
-                  aria-checked={form.request_location}
-                />
-              </div>
-            )}
             {/*
-              Un negocio de citas siempre tiene local al que ir. Uno de
-              ecommerce solo si recoge (delivery_type pickup/both) — con
-              delivery puro el bot no usa esto para nada.
+              Aquí estaban «Pedir la ubicación para la entrega» (request_location) y
+              «Mencionar la dirección del local» (proactive_venue). Se quitaron el
+              20-nov-2026: el bot no lee ninguno de los dos desde af988a8. Mia dice
+              la dirección cuando hay «Ubicación / distrito» en el paso 1.
             */}
-            {(esAppointmentFamily(form.business_mode) ||
-              (esEcommerce(form.business_mode) && form.delivery_type !== 'delivery')) && (
-              <div className="toggle-row">
-                <div className="t">
-                  <b>Mencionar la dirección del local</b>
-                  <small>La dice sin que se la pidan, en vez de esperar a que pregunten</small>
-                </div>
-                <div
-                  className={`toggle ${form.proactive_venue ? 'on' : ''}`}
-                  onClick={() => set('proactive_venue', !form.proactive_venue)}
-                  role="switch"
-                  aria-checked={form.proactive_venue}
-                />
-              </div>
-            )}
-
             {/*
               La duda razonable al tocar cualquiera de estos es "¿hay que
               reiniciar el bot?". Si no se contesta, alguien apaga el bot de un
@@ -1143,86 +1059,115 @@ function Configuracion() {
           </div>
         </div>
 
-        {/* ══ PASO 3 · PERSONALIDAD Y REGLAS ══ */}
+        {/* ══ PASO 3 · CÓMO RESPONDE ══ */}
+        {/*
+          En el orden en que lo vive el cliente y en el que lo lee el bot
+          (agent.prompt.ts): quién es → «QUÉ VENDE ESTE NEGOCIO» → «TU TONO» →
+          «AL SALUDAR» → «POLÍTICA» / «REGLAS DEL NEGOCIO» → la nota tras cerrar.
+          Antes el nombre y la descripción vivían en el paso 1 (la descripción,
+          plegada junto al teléfono admin), el saludo tenía dos campos y las
+          reglas estaban plegadas como «opcionales» aunque entran en todas las
+          conversaciones.
+        */}
         <div className={`card panel ${paso === 3 ? 'active' : ''}`}>
           <div className="sec">
             <h4>
-              <MessageSquare /> Personalidad
+              <MessageSquare /> Quién es {form.bot_name || 'Mia'}
             </h4>
-            <p className="cfg-guide">Paso 3 de 4 · Define el tono. Si necesitas mensajes específicos, despliega las opciones avanzadas.</p>
-            <label className="field-label">Tono del bot</label>
-            <textarea
-              className="textarea"
-              style={{ minHeight: 70 }}
-              placeholder="cercano, directo y con jerga peruana"
-              value={form.bot_tone}
-              onChange={(e) => set('bot_tone', e.target.value)}
-            />
-            <details className="cfg-advanced">
-              <summary>Mensajes personalizados (opcional)</summary>
-              <div className="grid-form">
-              <div>
-                <label className="field-label">Pregunta de enganche</label>
-                <input
-                  className="input"
-                  value={form.hook_question}
-                  onChange={(e) => set('hook_question', e.target.value)}
+            <p className="cfg-guide">
+              Paso 3 de 4 · En el orden en que lo vive tu cliente: quién le atiende, cómo le saluda, qué reglas sigue y
+              cómo se despide.
+            </p>
+            <div className="grid-form">
+              <Campo etiqueta="Nombre del asistente" valor={form.bot_name} alCambiar={(v) => set('bot_name', v)} />
+              <div className="full">
+                <label className="field-label">Qué vende tu negocio</label>
+                <textarea
+                  className="textarea"
+                  style={{ minHeight: 64 }}
+                  placeholder="Barbería: cortes clásicos y degradados, barba y afeitado con toalla caliente."
+                  value={form.business_description}
+                  onChange={(e) => set('business_description', e.target.value)}
                 />
+                <small className="muted" style={{ fontSize: 11.5 }}>
+                  Una o dos frases. Es lo primero que {form.bot_name || 'Mia'} lee: sin esto solo sabe el nombre del
+                  negocio.
+                </small>
               </div>
               <div className="full">
-                <label className="field-label">Saludo de bienvenida</label>
-                <input
-                  className="input"
-                  value={form.welcome_note}
-                  onChange={(e) => set('welcome_note', e.target.value)}
+                <label className="field-label">Tono</label>
+                <div className="tono-atajos" role="group" aria-label="Tonos de partida">
+                  {TONOS.map((t) => {
+                    const puesto = form.bot_tone.trim() === t.texto;
+                    return (
+                      <button
+                        key={t.etiqueta}
+                        type="button"
+                        className={`btn btn-ghost btn-sm ${puesto ? 'on' : ''}`}
+                        aria-pressed={puesto}
+                        onClick={() => {
+                          const actual = form.bot_tone.trim();
+                          // Un texto escrito a mano no se pisa sin preguntar; uno de los atajos, sí.
+                          const aMano = actual !== '' && !TONOS.some((x) => x.texto === actual);
+                          if (aMano && !window.confirm('Se reemplaza el tono que tenías escrito. ¿Seguro?')) return;
+                          set('bot_tone', t.texto);
+                        }}
+                      >
+                        {t.etiqueta}
+                      </button>
+                    );
+                  })}
+                </div>
+                <textarea
+                  className="textarea"
+                  style={{ minHeight: 70 }}
+                  placeholder="Cercano, directo y con jerga peruana."
+                  value={form.bot_tone}
+                  onChange={(e) => set('bot_tone', e.target.value)}
                 />
-                <AdjuntosNota
-                  companyId={companyId}
-                  lista={form.welcome_media}
-                  alCambiar={cambiarAdjuntos('welcome_media')}
-                  alSubir={alSubirSaludo}
-                  asistente={form.bot_name || 'Mia'}
-                  cuando={`Se envía junto con el primer mensaje que ${form.bot_name || 'Mia'} le escribe a cada cliente.`}
-                />
+                <small className="muted" style={{ fontSize: 11.5 }}>
+                  Elige uno para empezar y retócalo con tus palabras.
+                </small>
               </div>
-              <div className="full">
-                <label className="field-label">Nota de cierre</label>
-                <input
-                  className="input"
-                  value={form.closing_note}
-                  onChange={(e) => set('closing_note', e.target.value)}
-                />
-                <AdjuntosNota
-                  companyId={companyId}
-                  lista={form.closing_media}
-                  alCambiar={cambiarAdjuntos('closing_media')}
-                  alSubir={alSubirCierre}
-                  asistente={form.bot_name || 'Mia'}
-                  cuando={(() => {
-                    // Salta con una venta NUEVA: en academia también al inscribirse.
-                    const v = vocabulario(form.business_mode);
-                    const que = form.business_mode === 'recurring_appointment' ? 'una reserva o una inscripción' : `${v.una} ${v.reserva}`;
-                    return `Se envía cuando el ${v.persona} cierra ${que}.`;
-                  })()}
-                />
-              </div>
-              </div>
-            </details>
+            </div>
           </div>
 
-          <details className="cfg-advanced cfg-advanced--section">
-            <summary>Reglas y políticas personalizadas (opcional)</summary>
-            <div className="sec">
+          <div className="sec">
+            <h4>
+              <Hand /> Al saludar
+            </h4>
+            <label className="field-label">Saludo</label>
+            <textarea
+              className="textarea"
+              style={{ minHeight: 64 }}
+              placeholder={`¡Hola! Te escribe ${form.bot_name || 'Mia'} de ${form.name || 'tu negocio'}.`}
+              value={form.welcome_note}
+              onChange={(e) => set('welcome_note', e.target.value)}
+            />
+            <small className="muted" style={{ fontSize: 11.5 }}>
+              Lo dice con sus palabras en su primer mensaje a cada cliente, junto con la respuesta. Opcional.
+            </small>
+            <AdjuntosNota
+              companyId={companyId}
+              lista={form.welcome_media}
+              alCambiar={cambiarAdjuntos('welcome_media')}
+              alSubir={alSubirSaludo}
+              asistente={form.bot_name || 'Mia'}
+              cuando={`Se envía junto con el primer mensaje que ${form.bot_name || 'Mia'} le escribe a cada cliente.`}
+            />
+          </div>
+
+          <div className="sec">
             <h4>
               <FileText /> Reglas y política
             </h4>
             <div className="desfase" style={{ background: 'var(--brand-soft)', borderColor: '#FFD9C7', color: 'var(--brand-txt)' }}>
               Las reglas son para <b>cómo comportarse</b>, no para repetir horarios ni precios: eso
-              ya vive arriba, y si se contradicen Mia ofrece una hora que luego el sistema rechaza.
+              ya vive en el paso 2, y si se contradicen {form.bot_name || 'Mia'} ofrece una hora que luego el sistema rechaza.
             </div>
             <div className="grid-form">
               <div className="full">
-                <label className="field-label">Reglas personalizadas</label>
+                <label className="field-label">Reglas del negocio</label>
                 <textarea
                   className="textarea"
                   placeholder="Confirma siempre servicio y hora antes de cerrar. Si no sabes algo, dilo."
@@ -1231,53 +1176,49 @@ function Configuracion() {
                 />
               </div>
               <div className="full">
-                <label className="field-label">Política de cambios y devoluciones</label>
+                <label className="field-label">Política de cambios, cancelaciones y devoluciones</label>
                 <textarea
                   className="textarea"
                   style={{ minHeight: 64 }}
                   value={form.return_policy}
                   onChange={(e) => set('return_policy', e.target.value)}
                 />
-              </div>
-            </div>
-            </div>
-          </details>
-
-          <div className="sec">
-            <h4>
-              <Wifi /> Conexión de WhatsApp
-            </h4>
-            <div className="wa-box">
-              <div>
-                {/*
-                  Dos estados y ninguno habla del proceso. Antes había un
-                  tercero, "⚠️ Revisar", y debajo el `diagnostico` de la vista
-                  tal cual — que dice «La instancia no da señales» cuando el
-                  portátil está apagado. Eso no es algo que el dueño pueda
-                  revisar: es mantenimiento nuestro, y ponerlo aquí solo
-                  conseguía que abriera Ajustes preocupado.
-                  Ver components/panel/Salud.tsx.
-                */}
-                <b style={{ fontSize: 15 }}>
-                  {necesitaEmparejar(salud) ? '⚠️ Hay que volver a vincularlo' : '✅ Vinculado'}
-                </b>
-                <p className="muted" style={{ fontSize: 13, marginTop: 4, maxWidth: 420 }}>
-                  {necesitaEmparejar(salud)
-                    ? 'La sesión de WhatsApp se desvinculó. Escríbenos y quedamos para volver a conectarla: hace falta tu teléfono.'
-                    : 'El número está vinculado y Mia responde por él.'}
-                </p>
-                {/*
-                  Deliberadamente no hay botón de re-emparejar ni QR: quien
-                  escanea ese código se lleva la sesión de WhatsApp del negocio.
-                  Se hace en persona, con el portátil delante.
-                */}
-                <p className="muted" style={{ fontSize: 12, marginTop: 8, maxWidth: 420 }}>
-                  El emparejamiento del número se hace en persona, nunca desde el panel.
-                </p>
+                <small className="muted" style={{ fontSize: 11.5 }}>
+                  Si la dejas vacía, {form.bot_name || 'Mia'} usa una política estándar para tu tipo de negocio.
+                </small>
               </div>
             </div>
           </div>
 
+          <div className="sec">
+            <h4>
+              <Flag /> Al cerrar
+            </h4>
+            <label className="field-label">Nota de cierre</label>
+            <textarea
+              className="textarea"
+              style={{ minHeight: 64 }}
+              placeholder="Llega 10 minutos antes. Si no puedes venir, avísanos con un día de anticipación."
+              value={form.closing_note}
+              onChange={(e) => set('closing_note', e.target.value)}
+            />
+            <small className="muted" style={{ fontSize: 11.5 }}>
+              Qué traer, a qué hora llegar… Sale tal cual, al final del resumen de la venta. Opcional.
+            </small>
+            <AdjuntosNota
+              companyId={companyId}
+              lista={form.closing_media}
+              alCambiar={cambiarAdjuntos('closing_media')}
+              alSubir={alSubirCierre}
+              asistente={form.bot_name || 'Mia'}
+              cuando={(() => {
+                // Salta con una venta NUEVA: en academia también al inscribirse.
+                const v = vocabulario(form.business_mode);
+                const que = form.business_mode === 'recurring_appointment' ? 'una reserva o una inscripción' : `${v.una} ${v.reserva}`;
+                return `Se envía cuando el ${v.persona} cierra ${que}.`;
+              })()}
+            />
+          </div>
 
           <div className="nav-btns">
             <button className="btn btn-ghost" onClick={() => setPaso(2)}>
@@ -1289,25 +1230,17 @@ function Configuracion() {
           </div>
         </div>
 
-        {/* ══ PASO 4 · PREGUNTAS OBLIGATORIAS ══ */}
+        {/* ══ PASO 4 · ANTES DE CERRAR ══ */}
         <div className={`card panel ${paso === 4 ? 'active' : ''}`}>
-          <div className="sec">
-            <h4>
-              <ListChecks /> Preguntas obligatorias
-            </h4>
-            <p className="cfg-guide">Paso 4 de 4 · Opcional. Añade solo los datos que realmente necesitas antes de cerrar una reserva.</p>
-            <p className="muted" style={{ fontSize: 13, marginTop: -4, marginBottom: 12 }}>
-              Mia las hace <b>siempre</b>, en este orden, antes de cerrar. No son un guion de
-              conversación: son un filtro. Cada una puede descalificar al cliente, guardar un dato
-              en su ficha, o las dos cosas.
-            </p>
-            <Preguntas lista={preguntas} alCambiar={setPreguntas} />
-          </div>
+          <p className="cfg-guide">
+            Paso 4 de 4 · Opcional. Lo que {form.bot_name || 'Mia'} pregunta antes de cerrar{' '}
+            {vocabulario(form.business_mode).una} {vocabulario(form.business_mode).reserva}. Añade solo lo que de verdad necesitas.
+          </p>
 
           {/*
             El interruptor vive aquí, pegado al editor, y no en el paso 1 a
             propósito: es la trampa que hay que ver justo antes de escribir una
-            pregunta. Ver el aviso de abajo.
+            pregunta. Va ENCIMA del editor para que el aviso se lea antes.
           */}
           {form.business_mode === 'appointment' && (
             <div className="sec">
@@ -1342,6 +1275,18 @@ function Configuracion() {
             </div>
           )}
 
+          <div className="sec">
+            <h4>
+              <ListChecks /> Preguntas obligatorias
+            </h4>
+            <p className="muted" style={{ fontSize: 13, marginTop: -4, marginBottom: 12 }}>
+              Mia las hace <b>siempre</b>, en este orden, antes de cerrar. No son un guion de
+              conversación: son un filtro. Cada una puede descalificar al cliente, guardar un dato
+              en su ficha, o las dos cosas.
+            </p>
+            <Preguntas lista={preguntas} alCambiar={setPreguntas} />
+          </div>
+
           {/*
             Aquí estaba el ÚNICO botón de guardar de toda la pantalla, al final
             del paso 4. Para guardar un cambio del paso 1 había que pasar por
@@ -1361,7 +1306,8 @@ function Configuracion() {
         {/*
           Fuera del asistente (18-nov-2026, Alvaro: «no tiene sentido» en «Cómo responde»): quién
           entra al panel, el orden del menú y las boletas no cambian cómo responde Mia. Se ven en
-          cualquier paso y cada una se guarda sola. Dueño y administrador; el admin de la plataforma
+          cualquier paso y cada una se guarda sola, salvo «Caja y agenda», que va con la barra de
+          guardar porque son campos del mismo formulario. Dueño y administrador; el admin de la plataforma
           ve la lista del equipo sin botones (`equipo_listar` se la da, pero los comandos no los
           puede encolar). Al empleado ni se le pinta. Ver components/panel/Equipo.tsx.
         */}
@@ -1370,7 +1316,119 @@ function Configuracion() {
             <div className="card-mini-head">
               <h3 id="cfg-panel-titulo">Tu equipo y tu panel</h3>
             </div>
-            <p className="muted cfg-panel__sub">Quién entra al panel, el orden del menú y tus boletas. No cambia cómo responde Mia.</p>
+            <p className="muted cfg-panel__sub">Quién entra al panel, cómo se cobra en la caja, el orden del menú y tus boletas. No cambia cómo responde Mia.</p>
+            {/*
+              «Caja y agenda» (20-nov-2026): estaban en los pasos 1 y 2 del asistente y
+              ninguna cambia cómo responde Mia: una es de quien cobra desde el panel,
+              la otra de cuándo una cita cuenta para la comisión. Se guardan con la
+              barra de abajo, como el resto del formulario.
+            */}
+            <details className="cfg-advanced cfg-advanced--section">
+              <summary>Caja y agenda</summary>
+              {/*
+                «Comprobante al cobrar» (datos 0010, pedido de Alvaro el 10-nov-2026).
+                Es distinto de «Comprobantes de pago» del paso 2: aquel dice quién
+                revisa las capturas que manda el CLIENTE por WhatsApp; este, si
+                quien cobra desde el PANEL tiene que adjuntar la foto del pago.
+                Solo el dueño la cambia: «obligatoria» le protege de cobros
+                apuntados sin pruebas, y no puede apagarla otro.
+              */}
+              <div className="sec">
+                <h4>
+                  <Camera /> Comprobante al cobrar
+                </h4>
+                <p className="cfg-guide">
+                  Al registrar un cobro en la Caja, la Agenda o {vocabulario(form.business_mode, { canchas }).una}{' '}
+                  {vocabulario(form.business_mode, { canchas }).reserva}, adjuntar la foto del Yape, Plin o transferencia. Se lee sola y
+                  queda guardada con el pago.
+                </p>
+                {rol !== 'dueno' && rol !== null && (
+                  <p className="muted" style={{ fontSize: 12.5, marginBottom: 8 }}>
+                    Solo la cambia el dueño.
+                  </p>
+                )}
+                {cobroFoto?.sinMigrar && (
+                  <p className="muted" style={{ fontSize: 12.5, marginBottom: 8 }}>
+                    Falta la actualización 0010 en la base de datos. Hasta entonces la foto solo sale en el tablero de canchas.
+                  </p>
+                )}
+                {cobroFoto && !cobroFoto.sinMigrar && !cobroFoto.nube && (
+                  <p className="muted" style={{ fontSize: 12.5, marginBottom: 8 }}>
+                    La agenda de este negocio todavía la lleva el bot: la foto no tiene dónde guardarse con el cobro. Se
+                    aplicará cuando la agenda pase a la nube.
+                  </p>
+                )}
+                <div className="opciones opciones--3" role="radiogroup" aria-label="Comprobante al cobrar">
+                  {MODOS_FOTO_PAGO.map((m) => (
+                    <button
+                      key={m}
+                      type="button"
+                      className={`opcion ${fotoPago === m ? 'on' : ''}`}
+                      onClick={() => setFotoPago(m)}
+                      role="radio"
+                      aria-checked={fotoPago === m}
+                      disabled={fotoPago === null || (rol !== 'dueno' && rol !== null)}
+                    >
+                      <b>{TEXTO_MODO[m].titulo}</b>
+                      <small>{TEXTO_MODO[m].detalle}</small>
+                      {m === 'apagada' && <span className="opcion__def">por defecto</span>}
+                    </button>
+                  ))}
+                </div>
+
+                {/*
+                  «Los empleados cobran» (datos 0012, Alvaro 12-nov-2026). Apagado de
+                  serie; lo enciende el equipo de Vendemia cuando el dueño lo pide. El
+                  dueño lo ve, pero no lo toca: así no se enciende por descuido.
+                */}
+                {cobroFoto && !cobroFoto.sinMigrar && (
+                  <div className="cfg-enlace" style={{ marginTop: 12 }}>
+                    <div>
+                      <b>Los empleados {cobroFoto.empleadoCobra ? 'cobran' : 'no cobran'}</b>
+                      <small>
+                        {cobroFoto.empleadoCobra
+                          ? 'Desde Mi agenda cobran lo que falta de sus citas, siempre con foto (también en efectivo). Cada cobro sale en la Caja con su nombre.'
+                          : 'El cobro lo apunta la caja. Si quieres que tus empleados cobren (siempre con foto), pídeselo al equipo de Vendemia.'}
+                      </small>
+                    </div>
+                    {esAdminPlataforma && (
+                      <button type="button" className="btn btn-ghost btn-sm" onClick={() => void cambiarEmpleadoCobra(!cobroFoto.empleadoCobra)}>
+                        {cobroFoto.empleadoCobra ? 'Apagar' : 'Encender'}
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+              {/*
+                Decisión de Alvaro (18-sep-2026): apagado por defecto. Con él
+                encendido, una cita a la que nadie dijo «no vino» se da por
+                atendida sola, y un plantón acaba pagando comisión. Solo en
+                citas puntuales: un grupo recurrente no tiene una hora que pase.
+              */}
+              {form.business_mode === 'appointment' && (
+                <div className="sec">
+                  <h4>
+                    <CalendarCheck /> Asistencia
+                  </h4>
+                  <div className="toggle-row">
+                    <div className="t">
+                      <b>Dar por atendida la cita si nadie dice lo contrario</b>
+                      <small>
+                        {form.asumir_asistencia
+                          ? 'Pasada la hora, la cita cuenta como atendida sola. Un plantón que no marques como «No vino» pagará comisión.'
+                          : 'Apagado: la cita espera a que marques «Vino» o «No vino» en la Agenda. Hasta entonces no genera comisión.'}
+                      </small>
+                    </div>
+                    <div
+                      className={`toggle ${form.asumir_asistencia ? 'on' : ''}`}
+                      onClick={() => set('asumir_asistencia', !form.asumir_asistencia)}
+                      role="switch"
+                      aria-checked={form.asumir_asistencia}
+                    />
+                  </div>
+                </div>
+              )}
+            </details>
             <details ref={seccionEquipo} className="cfg-advanced cfg-advanced--section"><summary>Acceso del equipo</summary><Equipo sinLista={datos?.miembros.length ?? 0} /></details>
             <OrdenDelMenu />
             {/* La pantalla de emitir está en Caja; aquí, su configuración. */}
@@ -1605,6 +1663,48 @@ function Preguntas({
         <Plus size={15} /> Añadir pregunta
       </button>
     </>
+  );
+}
+
+/**
+ * El estado del número de WhatsApp. Vivía en el paso 3 («Cómo responde») y no
+ * cambia cómo responde Mia: es del número, así que va en el paso 1, debajo de
+ * «WhatsApp del bot».
+ */
+function ConexionWhatsApp({ necesita }: { necesita: boolean }) {
+  return (
+    <div className="sec">
+      <h4>
+        <Wifi /> Conexión de WhatsApp
+      </h4>
+      <div className="wa-box">
+        <div>
+          {/*
+            Dos estados y ninguno habla del proceso. Antes había un
+            tercero, "⚠️ Revisar", y debajo el `diagnostico` de la vista
+            tal cual — que dice «La instancia no da señales» cuando el
+            portátil está apagado. Eso no es algo que el dueño pueda
+            revisar: es mantenimiento nuestro, y ponerlo aquí solo
+            conseguía que abriera Ajustes preocupado.
+            Ver components/panel/Salud.tsx.
+          */}
+          <b style={{ fontSize: 15 }}>{necesita ? '⚠️ Hay que volver a vincularlo' : '✅ Vinculado'}</b>
+          <p className="muted" style={{ fontSize: 13, marginTop: 4, maxWidth: 420 }}>
+            {necesita
+              ? 'La sesión de WhatsApp se desvinculó. Escríbenos y quedamos para volver a conectarla: hace falta tu teléfono.'
+              : 'El número está vinculado y Mia responde por él.'}
+          </p>
+          {/*
+            Deliberadamente no hay botón de re-emparejar ni QR: quien
+            escanea ese código se lleva la sesión de WhatsApp del negocio.
+            Se hace en persona, con el portátil delante.
+          */}
+          <p className="muted" style={{ fontSize: 12, marginTop: 8, maxWidth: 420 }}>
+            El emparejamiento del número se hace en persona, nunca desde el panel.
+          </p>
+        </div>
+      </div>
+    </div>
   );
 }
 

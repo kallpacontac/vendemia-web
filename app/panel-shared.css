@@ -323,6 +323,9 @@ body .main .panel-header .topbar__actions { display: flex; flex-wrap: nowrap; wi
 .main--configuracion .sec { margin-bottom: 20px; }
 .main--configuracion .sec h4 { font-size: 16px; font-weight: 600; margin-bottom: 5px; }
 .main--configuracion .cfg-guide { margin: 0 0 16px; color: var(--ink-soft); font-size: 13px; line-height: 1.5; }
+/* Atajos del tono (paso 3): rellenan el texto; el puesto se marca como una opción elegida. */
+.main--configuracion .tono-atajos { display: flex; flex-wrap: wrap; gap: 6px; margin: 2px 0 8px; }
+.main--configuracion .tono-atajos .btn.on { border-color: var(--brand); background: var(--brand-soft); color: var(--brand-txt); }
 .main--configuracion .cfg-advanced { margin-top: 18px; border: 1px solid var(--line); border-radius: 13px; background: #fafaf8; }
 .main--configuracion .cfg-advanced > summary { cursor: pointer; padding: 13px 15px; font-size: 13px; font-weight: 600; color: #54574f; }
 .main--configuracion .cfg-advanced > summary:hover { color: var(--ink); }
