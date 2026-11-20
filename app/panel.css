@@ -2695,7 +2695,11 @@ nav.chip-tabs[aria-label="Caja"] a{flex-shrink:0;white-space:nowrap}
 
 /* Formularios de gastos e ingresos (Caja): todo con el MISMO margen interior — cabecera, campos y
    «Guardar» alineados —, el importe a lo ancho y menos relleno en el celular (20-nov, The 24/7). */
-.gc-form{padding:14px 12px}
+.gc-form{padding:14px 12px;grid-template-columns:minmax(0,1fr)}
+.gc-form>*,.gc-campo>*{min-width:0}
+.gc-monto input{width:100%;min-width:0}
+/* Un campo dentro de otro («¿De qué sede?» bajo «¿De quién?»): sin doble margen. */
+.gc-campo .gc-campo{padding:0;margin:6px 0 0}
 .gc-cab,.gc-fin{padding:0 14px}
 .gc-monto{max-width:none}
 .gc-campo .input{width:100%}
