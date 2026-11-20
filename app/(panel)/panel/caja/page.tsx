@@ -224,7 +224,8 @@ function Caja() {
     if (!sede) return porBarbero({ dia, sede, movimientos: todosMovimientos, citas: todasCitas, pedidos, gastos: todosGastos, leads, pagos, ingresos });
 
     // Una sede: solo el dinero de SUS citas (por la sede de cada cita, también la de un adelanto
-    // pagado hoy para otro día). Pedidos y gastos no tienen sede: se ven en «Todas».
+    // pagado hoy para otro día), y sus gastos y adelantos (datos 0028). Pedidos y gastos de todo el
+    // negocio, en «Todas».
     const sedeDe = await sedesDeCitas([
       ...todosMovimientos.filter((m) => m.fuente === 'appointment').map((m) => m.movimiento_id),
       ...pagos.pagosDelDia.map((p) => p.appointment_id ?? ''),
@@ -237,7 +238,7 @@ function Caja() {
       movimientos: todosMovimientos.filter((m) => m.fuente === 'appointment' && suya(m.movimiento_id)),
       citas: todasCitas.filter((c) => (c.sede ?? '') === sede),
       pedidos,
-      gastos: [] as typeof todosGastos,
+      gastos: todosGastos.filter((g) => ((g as { sede?: string }).sede ?? '') === sede),
       ingresos: ingresos ? ingresos.filter((i) => (i.sede ?? '') === sede) : null,
       leads,
       pagos: { ...pagos, pagosDelDia: pagos.pagosDelDia.filter((p) => suya(p.appointment_id)) },
@@ -488,6 +489,7 @@ function Caja() {
 
         {!cierre && gasto && (
           <GastosCaja modo="formulario" dia={hoy} gastos={[]} trabajadores={trabajadores} soloTodas={false}
+            sedes={sedes.map((x) => x.nombre)} sedeElegida={sede}
             alCambiar={releer} alCerrar={() => setGasto(false)} />
         )}
 
@@ -693,7 +695,7 @@ function Caja() {
             {/* ── Gastos y adelantos: todo lo que sale de la caja, en un sitio (datos 0013). En el
                 Cierre los apunta solo el dueño (The 24/7, 19-nov). ── */}
             <GastosCaja dia={dia} gastos={datos?.gastos ?? []} trabajadores={trabajadores} soloTodas={Boolean(sede)} alCambiar={releer}
-              puedeApuntar={esDueno} />
+              puedeApuntar={esDueno} sedes={sedes.map((x) => x.nombre)} sedeElegida={sede} />
 
           </div>
         )}

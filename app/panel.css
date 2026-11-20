@@ -2692,3 +2692,18 @@ nav.chip-tabs[aria-label="Caja"] a{flex-shrink:0;white-space:nowrap}
   .mia-acciones{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr))}
   .mia-acciones .btn{width:100%;min-height:46px;justify-content:center}
 }
+
+/* Formularios de gastos e ingresos (Caja): todo con el MISMO margen interior — cabecera, campos y
+   «Guardar» alineados —, el importe a lo ancho y menos relleno en el celular (20-nov, The 24/7). */
+.gc-form{padding:14px 12px}
+.gc-cab,.gc-fin{padding:0 14px}
+.gc-monto{max-width:none}
+.gc-campo .input{width:100%}
+@media (max-width:620px){
+  .gc-form{padding:10px 6px;gap:10px}
+  .gc-campo{padding:10px 10px}
+  .gc-cab,.gc-fin{padding:0 10px}
+  .gc-cab b{font-size:15px}
+}
+/* En dos columnas (celular), la última suelta ocupa la fila entera: no queda media fila vacía. */
+@media (max-width:480px){.ticket-chips>:last-child:nth-child(odd){grid-column:1/-1}}

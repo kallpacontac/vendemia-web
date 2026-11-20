@@ -24,6 +24,7 @@ import { guiarA } from '@/lib/panel/guiar';
 import { Check, Plus, Trash2, X } from 'lucide-react';
 import ComboPanel from '@/components/panel/ComboPanel';
 import { useAvisar, useComando } from '@/components/panel/Avisos';
+import { sedeCorta } from '@/components/panel/SelectorSede';
 import { useSesion } from '@/components/panel/Sesion';
 import { aplicarOAnotar, nuevoId } from '@/lib/panel/sinConexion/subir';
 import { diaMes, soles } from '@/lib/panel/format';
@@ -42,7 +43,10 @@ const RAPIDOS: { texto: string; descuenta: boolean | null }[] = [
 const NEGOCIO = '·negocio·';
 const PERSONAL = '·personal·';
 
-type Gasto = Pick<GastoRow, 'id' | 'concepto' | 'categoria' | 'importe'> & Partial<Pick<GastoRow, 'tipo' | 'employee_id'>>;
+type Gasto = Pick<GastoRow, 'id' | 'concepto' | 'categoria' | 'importe'> & Partial<Pick<GastoRow, 'tipo' | 'employee_id'>> & {
+  /** La sede (datos 0028). '' = de todo el negocio. */
+  sede?: string;
+};
 
 export default function GastosCaja({
   dia,
@@ -53,11 +57,13 @@ export default function GastosCaja({
   modo = 'completo',
   alCerrar,
   puedeApuntar = true,
+  sedes = [],
+  sedeElegida = '',
 }: {
   dia: string;
   gastos: Gasto[];
   trabajadores: Trabajador[];
-  /** Mirando una sede: los gastos son de todo el negocio y la lista solo sale en «Todas». */
+  /** Mirando UNA sede: la lista trae solo los de esa sede (los de todo el negocio, en «Todas»). */
   soloTodas: boolean;
   alCambiar: () => void;
   /**
@@ -68,6 +74,10 @@ export default function GastosCaja({
   alCerrar?: () => void;
   /** false: solo la lista (en el Cierre, gastos y adelantos los apunta el dueño; The 24/7, 19-nov). */
   puedeApuntar?: boolean;
+  /** Las sedes del negocio (nombres). Con 2 o más, el gasto del negocio puede ir a una (datos 0028). */
+  sedes?: string[];
+  /** La sede elegida arriba: el formulario la trae puesta. */
+  sedeElegida?: string;
 }) {
   const comando = useComando();
   const avisar = useAvisar();
@@ -84,6 +94,11 @@ export default function GastosCaja({
   const [concepto, setConcepto] = useState('');
   const [quien, setQuien] = useState(NEGOCIO);
   const [descuenta, setDescuenta] = useState(true);
+  // La sede (20-nov, The 24/7): el adelanto toma la de su barbero (en la base); el gasto del negocio
+  // la elige, opcional: sin elegir es de todo el negocio (la luz, los insumos compartidos).
+  const conSedes = sedes.length >= 2;
+  const [sedeGasto, setSedeGasto] = useState(sedeElegida);
+  useEffect(() => setSedeGasto(sedeElegida), [sedeElegida]);
   const [guardando, setGuardando] = useState(false);
   const [borrando, setBorrando] = useState<string | null>(null);
 
@@ -104,6 +119,7 @@ export default function GastosCaja({
     setConcepto('');
     setQuien(NEGOCIO);
     setDescuenta(true);
+    setSedeGasto(sedeElegida);
   }
 
   async function guardar() {
@@ -119,6 +135,8 @@ export default function GastosCaja({
       importe: monto,
       tipo,
       employee_id: esBarbero ? quien : '',
+      // Para un barbero, la deduce la base (su sede); si no, la elegida o '' (todo el negocio).
+      sede: conSedes && !esBarbero ? sedeGasto : '',
     };
     const exito = tipo === 'adelanto' ? `Adelanto a ${nombre.get(quien) ?? 'el barbero'} apuntado: se descuenta de su comisión.` : 'Gasto apuntado.';
     // Dueño o administrador: también sin conexión (datos 0025, components/panel/SinConexion.tsx).
@@ -237,6 +255,22 @@ export default function GastosCaja({
                 { value: PERSONAL, label: 'Personal', detalle: 'retiro del dueño' },
                 ...activos.map((t) => ({ value: t.id, label: t.name, detalle: 'barbero' })),
               ]} />
+            {conSedes && !esBarbero && (
+              <div className="gc-campo" style={{ marginTop: 6 }}>
+                <span>¿De qué sede? <small className="muted" style={{ fontWeight: 600 }}>(opcional)</small></span>
+                <div className="ticket-chips" role="radiogroup" aria-label="Sede del gasto">
+                  {['', ...sedes].map((n) => (
+                    <button key={n || 'todo'} type="button" role="radio" aria-checked={sedeGasto === n}
+                      className={`ticket-chip${sedeGasto === n ? ' on' : ''}`} onClick={() => setSedeGasto(n)}>
+                      {n ? sedeCorta(n) : 'Todo el negocio'}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+            {esBarbero && conSedes && (
+              <small className="muted">Va a la sede de {nombre.get(quien) ?? 'su barbero'} (la de su ficha).</small>
+            )}
             {esBarbero && (
               <label className="gc-descuenta">
                 <input type="checkbox" checked={descuenta} onChange={(e) => setDescuenta(e.target.checked)} />
@@ -260,10 +294,8 @@ export default function GastosCaja({
         </div>
       )}
 
-      {soloForm ? null : soloTodas ? (
-        <p className="vacio">Los gastos son de todo el negocio: la lista se ve en «Todas las sedes».</p>
-      ) : gastos.length === 0 ? (
-        <p className="vacio">Sin gastos este día.</p>
+      {soloForm ? null : gastos.length === 0 ? (
+        <p className="vacio">{soloTodas ? 'Sin gastos de esta sede. Los de todo el negocio se ven en «Todas las sedes».' : 'Sin gastos este día.'}</p>
       ) : (
         <>
           {gastos.map((g) => {
@@ -272,7 +304,7 @@ export default function GastosCaja({
               <div className="kv-fila gc-fila" key={g.id}>
                 <span>
                   {g.concepto}
-                  <small className={`gc-tipo ${e.clase}`}>{e.texto}</small>
+                  <small className={`gc-tipo ${e.clase}`}>{e.texto}{conSedes && !soloTodas && g.sede ? ` · ${sedeCorta(g.sede)}` : ''}</small>
                 </span>
                 <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
                   <b>{soles(Number(g.importe))}</b>
