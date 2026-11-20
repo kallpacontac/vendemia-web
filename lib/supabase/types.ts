@@ -64,6 +64,12 @@ export interface DiaHorario {
   closed?: boolean;
   slot_minutes?: number;
   capacity?: number;
+  /**
+   * El descanso del día, «HH:MM» (el almuerzo de 13:00 a 14:30). En ese rato no hay turno.
+   * Lo respetan diaQueCubre (lib/panel/medianoche.ts) y v2_dia_que_cubre (datos 0027).
+   */
+  break_start?: string;
+  break_end?: string;
 }
 
 export type Horario = Partial<Record<ClaveDia, DiaHorario>>;

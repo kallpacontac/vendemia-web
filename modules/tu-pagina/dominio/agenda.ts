@@ -22,7 +22,7 @@
  * más de la regla. Es deliberado y temporal: ver docs/PLAN-TU-PAGINA.md.
  */
 import type { ClaveDia, Horario } from '@/lib/supabase/types';
-import { abiertoEn, diaQueCubre, tramoDe } from '@/lib/panel/medianoche';
+import { abiertoEn, descansoDe, diaQueCubre, tramoDe } from '@/lib/panel/medianoche';
 
 const CLAVES: ClaveDia[] = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
 
@@ -200,6 +200,11 @@ export type EstadoDelHorario =
 export function estadoDelHorario(h: Horario, fecha: string, minuto: number): EstadoDelHorario | null {
   const cubre = diaQueCubre(h, CLAVES[diaSemana(fecha)], minuto);
   if (cubre?.close) return { abierto: true, cierra: cubre.close };
+  // En el almuerzo: vuelve hoy, al terminar (no «mañana»).
+  const pausa = descansoDe(h[CLAVES[diaSemana(fecha)]]);
+  if (pausa && minuto >= pausa.desde && minuto < pausa.hasta) {
+    return { abierto: false, abre: aHora(pausa.hasta), enDias: 0, diaSemana: diaSemana(fecha) };
+  }
   // Hasta 7 días: con un solo día abierto a la semana, el próximo puede ser el mismo día de la semana que viene.
   for (let enDias = 0; enDias <= 7; enDias++) {
     const dia = diaSemana(sumarDias(fecha, enDias));

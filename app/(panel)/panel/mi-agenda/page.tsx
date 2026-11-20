@@ -50,6 +50,7 @@ import { Banknote, Check, ChevronLeft, ChevronRight, UserPlus, X } from 'lucide-
 import Link from 'next/link';
 import Topbar from '@/components/panel/Topbar';
 import AvisosDelEquipo from '@/components/panel/AvisosDelEquipo';
+import QrDelClub from '@/components/panel/QrDelClub';
 import { useSesion } from '@/components/panel/Sesion';
 import { useAvisar, useComando } from '@/components/panel/Avisos';
 import FotoDelPago from '@/components/panel/FotoDelPago';
@@ -303,6 +304,9 @@ function MisCitas({ companyId }: { companyId: string }) {
         <Topbar titulo="Mi agenda" sub={`Tus ${palabras} y las que aún no tienen a nadie`} />
 
         <AvisosDelEquipo companyId={companyId} />
+
+        {/* El QR del club de Fideliza, para enseñárselo al cliente en la silla (20-nov-2026). */}
+        <QrDelClub companyId={companyId} />
 
         {/* La semana, con el calendario del panel (.cal): hoy relleno, un punto en los días con citas. */}
         <section className="card mag-semana" aria-label="Semana">

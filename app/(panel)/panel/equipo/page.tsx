@@ -28,7 +28,8 @@
  *     de guardar, al guardar (la lista del bot, `citas_afectadas`) y después,
  *     en cada ausencia, mientras sigan sin moverse.
  */
-import { useMemo, useRef, useState } from 'react';
+import { Fragment, useMemo, useRef, useState } from 'react';
+import AlmuerzoDia, { errorDeDescanso } from '@/components/panel/AlmuerzoDia';
 import Link from 'next/link';
 import {
   AlertTriangle,
@@ -109,6 +110,8 @@ function errorDeHorario(h: Horario): string | null {
     const d = h[clave]!;
     if (!d.open || !d.close) return `${nombre}: falta la hora de abrir o la de cerrar`;
     if (d.open >= d.close) return `${nombre}: abre (${d.open}) a la misma hora o después de cerrar (${d.close})`;
+    const almuerzo = errorDeDescanso(nombre, d);
+    if (almuerzo) return almuerzo;
     abiertos++;
   }
   if (abiertos === 0) {
@@ -123,7 +126,10 @@ function serializar(h: Horario): string {
   for (const { clave } of DIAS) {
     const d = h[clave];
     if (!d) continue;
-    out[clave] = d.closed ? { closed: true } : { open: d.open, close: d.close };
+    out[clave] = d.closed
+      ? { closed: true }
+      // El almuerzo viaja solo si tiene principio y fin (datos 0027).
+      : { open: d.open, close: d.close, ...(d.break_start && d.break_end ? { break_start: d.break_start, break_end: d.break_end } : {}) };
   }
   return JSON.stringify(out);
 }
@@ -133,7 +139,8 @@ function resumen(h: Horario): string {
   const grupos = new Map<string, string[]>();
   for (const { clave, corto } of DIAS) {
     if (!abierto(h, clave)) continue;
-    const franja = `${h[clave]!.open}–${h[clave]!.close}`;
+    const d = h[clave]!;
+    const franja = `${d.open}–${d.close}${d.break_start && d.break_end ? ` (almuerzo ${d.break_start}–${d.break_end})` : ''}`;
     grupos.set(franja, [...(grupos.get(franja) ?? []), corto]);
   }
   return [...grupos].map(([franja, dias]) => `${dias.join(' ')} ${franja}`).join(' · ') || 'Sin días abiertos';
@@ -144,7 +151,11 @@ function copiaDe(h: Horario): Horario {
   const out: Horario = {};
   for (const { clave } of DIAS) {
     out[clave] = abierto(h, clave)
-      ? { open: h[clave]!.open ?? '09:00', close: h[clave]!.close ?? '19:00' }
+      ? {
+          open: h[clave]!.open ?? '09:00',
+          close: h[clave]!.close ?? '19:00',
+          ...(h[clave]!.break_start && h[clave]!.break_end ? { break_start: h[clave]!.break_start, break_end: h[clave]!.break_end } : {}),
+        }
       : { closed: true };
   }
   return out;
@@ -761,7 +772,8 @@ function Ficha({
                 const d = horario[clave];
                 const on = abierto(horario, clave);
                 return (
-                  <div className={`sched-row ${on ? '' : 'off'}`} key={clave}>
+                  <Fragment key={clave}>
+                  <div className={`sched-row ${on ? '' : 'off'}`}>
                     <b>{dia}</b>
                     <input
                       type="time"
@@ -793,6 +805,22 @@ function Ficha({
                       }
                     />
                   </div>
+                  {/* Su almuerzo (datos 0027): cada barbero el suyo, para que no salgan todos a la vez. */}
+                  <AlmuerzoDia
+                    dia={d}
+                    abierto={on}
+                    alCambiar={(nuevo) => setHorario((h) => ({ ...h, [clave]: nuevo }))}
+                    alTodos={(desde, hasta) =>
+                      setHorario((h) => {
+                        const out = { ...h };
+                        for (const { clave: k } of DIAS) {
+                          if (abierto(out, k)) out[k] = { ...out[k], break_start: desde, break_end: hasta };
+                        }
+                        return out;
+                      })
+                    }
+                  />
+                  </Fragment>
                 );
               })}
           </div>

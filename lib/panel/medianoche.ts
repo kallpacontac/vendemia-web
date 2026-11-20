@@ -40,9 +40,22 @@ export const claveAnterior = (clave: ClaveDia): ClaveDia => CLAVES[(CLAVES.index
  * El día cuyo horario cubre el minuto `min` (0–1439) del día `clave`: el
  * propio, o el anterior si cerró pasada la medianoche. null = cerrado.
  */
+/** El descanso del día en minutos (13:00–14:30 → 780–870). null = sin descanso, o mal escrito. */
+export function descansoDe(d: DiaHorario | undefined): { desde: number; hasta: number } | null {
+  const hhmm = /^([01]\d|2[0-3]):[0-5]\d$/;
+  if (!d?.break_start || !d.break_end || !hhmm.test(d.break_start) || !hhmm.test(d.break_end)) return null;
+  const desde = aMinutos(d.break_start);
+  const hasta = aMinutos(d.break_end);
+  return hasta > desde ? { desde, hasta } : null;
+}
+
+/** Igual que v2_dia_que_cubre (datos 0027): en el descanso, el día no cubre ese minuto. */
 export function diaQueCubre(h: Horario, clave: ClaveDia, min: number): DiaHorario | null {
   const hoy = tramoDe(h[clave]);
-  if (hoy && min >= hoy.abre && min < hoy.cierra) return h[clave]!;
+  if (hoy && min >= hoy.abre && min < hoy.cierra) {
+    const pausa = descansoDe(h[clave]);
+    return pausa && min >= pausa.desde && min < pausa.hasta ? null : h[clave]!;
+  }
   const ayer = tramoDe(h[claveAnterior(clave)]);
   if (ayer && ayer.cierra > 1440 && min + 1440 < ayer.cierra) return h[claveAnterior(clave)]!;
   return null;

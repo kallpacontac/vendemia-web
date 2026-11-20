@@ -31,7 +31,8 @@
  *     El emparejamiento se hace en persona. Si `status = needs_qr`, lo único
  *     que puede hacer el panel es avisar.
  */
-import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Fragment, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import AlmuerzoDia, { errorDeDescanso } from '@/components/panel/AlmuerzoDia';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import AvisosCelular from '@/components/panel/AvisosCelular';
@@ -496,6 +497,15 @@ function Configuracion() {
       return;
     }
 
+    // El almuerzo, dentro del día y con principio y fin (AlmuerzoDia, datos 0027).
+    for (const { clave, nombre } of DIAS) {
+      const e = errorDeDescanso(nombre, horario[clave]);
+      if (e) {
+        avisar(e, 'error');
+        return;
+      }
+    }
+
     // Una pregunta sin texto no se puede hacer. Y `required` sin `field_key` no
     // tiene dónde guardar la respuesta: limpiar() lo tira, así que mejor
     // decirlo aquí que dejar que desaparezca en silencio.
@@ -889,7 +899,8 @@ function Configuracion() {
               const d = horario[clave];
               const abierto = Boolean(d && !d.closed);
               return (
-                <div className={`sched-row ${abierto ? '' : 'off'}`} key={clave}>
+                <Fragment key={clave}>
+                <div className={`sched-row ${abierto ? '' : 'off'}`}>
                   <b>{nombre}</b>
                   <input
                     type="time"
@@ -924,6 +935,22 @@ function Configuracion() {
                     }
                   />
                 </div>
+                {/* El almuerzo del día (datos 0027): en ese rato no se ofrecen horas. */}
+                <AlmuerzoDia
+                  dia={d}
+                  abierto={abierto}
+                  alCambiar={(nuevo) => setHorario((h) => ({ ...h, [clave]: nuevo }))}
+                  alTodos={(desde, hasta) =>
+                    setHorario((h) => {
+                      const out = { ...h };
+                      for (const { clave: k } of DIAS) {
+                        if (out[k] && !out[k]!.closed) out[k] = { ...out[k], break_start: desde, break_end: hasta };
+                      }
+                      return out;
+                    })
+                  }
+                />
+                </Fragment>
               );
             })}
             <p className="muted" style={{ fontSize: 12, marginTop: 10 }}>
