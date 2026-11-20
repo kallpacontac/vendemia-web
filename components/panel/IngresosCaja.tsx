@@ -24,6 +24,8 @@ export interface IngresoCaja {
   metodo: MetodoPago;
   /** La sede del cajón donde entró (datos 0024). '' = del negocio. */
   sede?: string;
+  /** De qué barbero es (datos 0026). '' = del negocio. No suma a su comisión. */
+  employee_id?: string;
 }
 
 const METODOS: MetodoPago[] = ['cash', 'yape', 'plin', 'bank_transfer'];
@@ -43,6 +45,8 @@ export default function IngresosCaja({
   esDueno,
   sedes = [],
   sedeElegida = '',
+  barberos = [],
+  barberoElegido = '',
   alCambiar,
   incrustado = false,
 }: {
@@ -54,6 +58,10 @@ export default function IngresosCaja({
   sedes?: string[];
   /** La sede elegida arriba ('' = todas): el formulario la trae puesta. */
   sedeElegida?: string;
+  /** El equipo activo: «¿De quién?» (datos 0026). Vacío = no se pregunta. */
+  barberos?: { id: string; name: string }[];
+  /** El barbero que se mira en el Cierre ('' = todos): el formulario lo trae puesto. */
+  barberoElegido?: string;
   alCambiar: () => void;
   /** Dentro de la tarjeta «Entró, por método» del Cierre: sin tarjeta propia. */
   incrustado?: boolean;
@@ -66,6 +74,9 @@ export default function IngresosCaja({
   const pideSede = sedes.length >= 2;
   const [sede, setSede] = useState(sedeElegida);
   useEffect(() => setSede(sedeElegida), [sedeElegida]);
+  const [barbero, setBarbero] = useState(barberoElegido);
+  useEffect(() => setBarbero(barberoElegido), [barberoElegido]);
+  const nombreBarbero = new Map(barberos.map((b) => [b.id, b.name]));
   const [guardando, setGuardando] = useState(false);
   const [borrando, setBorrando] = useState<string | null>(null);
   const raiz = useRef<HTMLDivElement>(null);
@@ -87,6 +98,7 @@ export default function IngresosCaja({
     setConcepto('');
     setMetodo('cash');
     setSede(sedeElegida);
+    setBarbero(barberoElegido);
   }
 
   async function guardar() {
@@ -94,7 +106,8 @@ export default function IngresosCaja({
     setGuardando(true);
     const { error } = await supabase().rpc('caja_ingreso_guardar', {
       p_company: companyId,
-      p_datos: { dia, concepto: concepto.trim(), importe: monto, metodo, sede: pideSede ? sede : '' },
+      // employee_id solo si se eligió: así sigue funcionando sin la 0026 (lo ignoraría igual).
+      p_datos: { dia, concepto: concepto.trim(), importe: monto, metodo, sede: pideSede ? sede : '', ...(barbero ? { employee_id: barbero } : {}) },
     });
     setGuardando(false);
     if (error) {
@@ -172,6 +185,20 @@ export default function IngresosCaja({
             </div>
           )}
 
+          {barberos.length > 0 && (
+            <div className="gc-campo">
+              <span>¿De quién? <small className="muted">opcional</small></span>
+              <div className="ticket-chips" role="radiogroup" aria-label="De quién">
+                {[{ id: '', name: 'Del negocio' }, ...barberos].map((b) => (
+                  <button key={b.id || 'negocio'} type="button" role="radio" aria-checked={barbero === b.id}
+                    className={`ticket-chip${barbero === b.id ? ' on' : ''}`} onClick={() => setBarbero(b.id)}>
+                    {b.name}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
           <div className="gc-campo">
             <span>¿Con qué?</span>
             <div className="ticket-chips" role="radiogroup" aria-label="Método">
@@ -204,7 +231,11 @@ export default function IngresosCaja({
             <div className="kv-fila gc-fila" key={i.id}>
               <span>
                 {i.concepto}
-                <small className="gc-tipo">{METODO_LABEL[i.metodo] ?? i.metodo}{pideSede && !sedeElegida && i.sede ? ` · ${i.sede}` : ''}</small>
+                <small className="gc-tipo">
+                  {METODO_LABEL[i.metodo] ?? i.metodo}
+                  {pideSede && !sedeElegida && i.sede ? ` · ${i.sede}` : ''}
+                  {!barberoElegido && i.employee_id ? ` · ${nombreBarbero.get(i.employee_id) ?? 'barbero'}` : ''}
+                </small>
               </span>
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
                 <b>{soles(i.importe)}</b>

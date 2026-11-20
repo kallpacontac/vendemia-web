@@ -111,6 +111,18 @@ async function clientesDe(companyId: string, ids: (string | null | undefined)[])
 }
 
 
+/** De qué barbero es cada cita (para el Cierre de uno): de 300 en 300, como sedesDeCitas. */
+async function barberosDeCitas(ids: string[]): Promise<Map<string, string>> {
+  const unicos = [...new Set(ids.filter(Boolean))];
+  const mapa = new Map<string, string>();
+  for (let i = 0; i < unicos.length; i += 300) {
+    const { data, error } = await supabase().from('appointments').select('id, employee_id').in('id', unicos.slice(i, i + 300));
+    if (error) throw error;
+    for (const a of (data ?? []) as { id: string; employee_id?: string | null }[]) mapa.set(a.id, a.employee_id ?? '');
+  }
+  return mapa;
+}
+
 export default function CajaPagina() {
   return (
     <Suspense fallback={<main className="main"><div className="wrap"><p className="vacio">Cargando la caja…</p></div></main>}>
@@ -152,6 +164,8 @@ function Caja() {
   // Con 2 sedes o más: «Todas · sede A · sede B», la misma elección que en la Agenda.
   const sedes = useSedes(companyId);
   const [sede] = useSedeElegida(companyId, sedes);
+  /** El Cierre de un barbero ('' = todos). Solo en «Cierre del día». */
+  const [barbero, setBarbero] = useState('');
 
   // Equipo y catálogo: una vez al abrir la Caja, no en cada vuelta (ver arriba).
   const fijos = useCargar(async () => {
@@ -160,6 +174,7 @@ function Caja() {
   }, [companyId]);
   const trabajadores = useMemo(() => fijos.datos?.[0] ?? [], [fijos.datos]);
   const catalogo = useMemo(() => fijos.datos?.[1] ?? [], [fijos.datos]);
+  const barberosActivos = useMemo(() => trabajadores.filter((t) => t.activo).map((t) => ({ id: t.id, name: t.name })), [trabajadores]);
 
   const { datos, cargando, error, releer } = useCargar(async () => {
     if (!companyId) return null;
@@ -178,7 +193,35 @@ function Caja() {
     // Ingresos sin ticket del día (datos 0023), solo en el Cierre. Cada uno con su sede (0024):
     // mirando una sede, solo los suyos. null = sin la 0023: la tarjeta no sale.
     const ingresos = cierre ? await leerIngresosCaja(companyId, dia) : null;
-    if (!sede) return { dia, sede, movimientos: todosMovimientos, citas: todasCitas, pedidos, gastos: todosGastos, leads, pagos, ingresos };
+
+    /*
+     * El Cierre de UN barbero (The 24/7, 20-nov-2026: «el ingreso y cierre por barbero»), encima de la
+     * sede: lo que entró por SUS citas (también un adelanto pagado hoy para otro día), sus ingresos sin
+     * ticket (datos 0026) y sus adelantos. Pedidos y gastos del negocio no son de nadie: en «Todos».
+     */
+    const elBarbero = cierre ? barbero : '';
+    async function porBarbero<T extends { movimientos: typeof todosMovimientos; citas: typeof todasCitas; pedidos: typeof pedidos;
+      gastos: typeof todosGastos; ingresos: typeof ingresos; pagos: typeof pagos }>(base: T) {
+      if (!elBarbero) return { ...base, barbero: '' };
+      const deQuien = await barberosDeCitas([
+        ...base.movimientos.filter((m) => m.fuente === 'appointment').map((m) => m.movimiento_id),
+        ...base.pagos.pagosDelDia.map((p) => p.appointment_id ?? ''),
+      ]);
+      for (const c of todasCitas) deQuien.set(c.id, c.employee_id ?? '');
+      const suyo = (id: string | null | undefined) => !!id && deQuien.get(id) === elBarbero;
+      return {
+        ...base,
+        barbero: elBarbero,
+        movimientos: base.movimientos.filter((m) => m.fuente === 'appointment' && suyo(m.movimiento_id)),
+        citas: base.citas.filter((c) => (c.employee_id ?? '') === elBarbero),
+        pedidos: [] as typeof pedidos,
+        gastos: todosGastos.filter((g) => g.tipo === 'adelanto' && g.employee_id === elBarbero),
+        ingresos: base.ingresos ? base.ingresos.filter((i) => (i.employee_id ?? '') === elBarbero) : null,
+        pagos: { ...base.pagos, pagosDelDia: base.pagos.pagosDelDia.filter((p) => suyo(p.appointment_id)) },
+      };
+    }
+
+    if (!sede) return porBarbero({ dia, sede, movimientos: todosMovimientos, citas: todasCitas, pedidos, gastos: todosGastos, leads, pagos, ingresos });
 
     // Una sede: solo el dinero de SUS citas (por la sede de cada cita, también la de un adelanto
     // pagado hoy para otro día). Pedidos y gastos no tienen sede: se ven en «Todas».
@@ -188,7 +231,7 @@ function Caja() {
     ]);
     for (const c of todasCitas) sedeDe.set(c.id, c.sede ?? '');
     const suya = (id: string | null | undefined) => !!id && sedeDe.get(id) === sede;
-    return {
+    return porBarbero({
       dia,
       sede,
       movimientos: todosMovimientos.filter((m) => m.fuente === 'appointment' && suya(m.movimiento_id)),
@@ -198,15 +241,15 @@ function Caja() {
       ingresos: ingresos ? ingresos.filter((i) => (i.sede ?? '') === sede) : null,
       leads,
       pagos: { ...pagos, pagosDelDia: pagos.pagosDelDia.filter((p) => suya(p.appointment_id)) },
-    };
-  }, [companyId, dia, sede, cierre]);
+    });
+  }, [companyId, dia, sede, cierre, barbero]);
 
   // Lo que el barbero acaba de marcar «Atendido» tiene que aparecer solo, sin recargar: el cliente
   // ya viene caminando hacia la caja con su ticket. Solo hoy, y con la pestaña a la vista.
   useSondeo(releer, 20_000, dia === hoy);
 
   const calculo = useMemo(() => {
-    if (!datos || datos.dia !== dia || datos.sede !== sede) return null;
+    if (!datos || datos.dia !== dia || datos.sede !== sede || datos.barbero !== (cierre ? barbero : '')) return null;
     const metodoCita = new Map(datos.citas.map((c) => [c.id, c.metodo_pago ?? '']));
     const metodoPedido = new Map(datos.pedidos.map((p) => [p.id, p.payment_method ?? '']));
     for (const [id, m] of datos.pagos.metodoCita) if (!metodoCita.has(id)) metodoCita.set(id, m);
@@ -315,7 +358,7 @@ function Caja() {
       gastado,
       neto: entro - gastado,
     };
-  }, [datos, dia, sede, anotadasIds]);
+  }, [datos, dia, sede, anotadasIds, barbero, cierre]);
 
   const nombrePorLead = useMemo(
     // El cliente de mostrador no tiene nombre ni teléfono: '' para que se lea «Cliente», no «—».
@@ -498,6 +541,24 @@ function Caja() {
 
         {cierre && <CajaResumen dia={dia} hoy={hoy} alDia={setDia} calculo={calculo} />}
 
+        {/* Por barbero (20-nov-2026): el cierre de cada uno, para cuadrar con lo que entrega. */}
+        {cierre && barberosActivos.length > 0 && (
+          <div className="filters" role="tablist" aria-label="Barbero" style={{ margin: "12px 0 4px", padding: 0 }}>
+            {[{ id: '', name: 'Todos' }, ...barberosActivos].map((b) => (
+              <button key={b.id || 'todos'} type="button" role="tab" aria-selected={barbero === b.id}
+                className={`fpill ${barbero === b.id ? 'active' : ''}`} onClick={() => setBarbero(b.id)}>
+                {b.name}
+              </button>
+            ))}
+          </div>
+        )}
+        {cierre && barbero && (
+          <p className="agenda-sede-aviso">
+            Viendo solo a <b>{nombrePorBarbero.get(barbero) ?? 'este barbero'}</b>: lo que entró por sus atenciones, sus
+            ingresos sin ticket y sus adelantos.
+          </p>
+        )}
+
         {error && <p className="vacio">No se pudo cargar la caja: {error}</p>}
         {cargando && !datos && <p className="vacio">Cargando la caja…</p>}
 
@@ -595,7 +656,8 @@ function Caja() {
               {/* Ingresos sin ticket, aquí dentro: solo el dueño los apunta (datos 0023). */}
               {companyId && datos?.ingresos && (
                 <IngresosCaja companyId={companyId} dia={dia} ingresos={datos.ingresos} esDueno={esDueno}
-                  sedes={sedes.map((x) => x.nombre)} sedeElegida={sede} alCambiar={releer} incrustado />
+                  sedes={sedes.map((x) => x.nombre)} sedeElegida={sede} barberos={barberosActivos} barberoElegido={barbero}
+                  alCambiar={releer} incrustado />
               )}
             </div>
 
