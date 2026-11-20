@@ -12,14 +12,17 @@ import { isoLocal } from './format';
 
 export type Periodo = 'hoy' | 'semana' | 'semana-anterior' | 'quincena' | 'quincena-anterior' | 'mes' | 'mes-anterior';
 
+/**
+ * Los botones de periodo: cinco, los mismos en Comisiones (Por pagar y Lo ganado) y en Mi comisión
+ * (Alvaro, 20-nov-2026: «reduce los filtros»; antes eran siete y no cabían en una fila). Quincena y
+ * mes son los de ahora; `quincena-anterior` y `mes-anterior` siguen en `rango` pero sin botón.
+ */
 export const PERIODOS: [Periodo, string][] = [
   ['hoy', 'Hoy'],
   ['semana', 'Esta semana'],
   ['semana-anterior', 'Semana anterior'],
-  ['quincena', 'Esta quincena'],
-  ['quincena-anterior', 'Quincena anterior'],
-  ['mes', 'Este mes'],
-  ['mes-anterior', 'Mes anterior'],
+  ['quincena', 'Quincena'],
+  ['mes', 'Mes'],
 ];
 
 export function rango(p: Periodo, hoy = new Date()): { desde: string; hasta: string } {

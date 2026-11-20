@@ -133,14 +133,16 @@ export default function Comisiones() {
 
         {/* Debajo, para consultar: lo que ganó cada uno en un periodo (no lo que se le debe). */}
         <h2 className="mi-seccion" style={{ marginTop: 18 }}>Lo ganado por periodo</h2>
-        <div className="filters" style={{ marginBottom: 16, paddingLeft: 0 }}>
+        <div className="filters" style={{ marginBottom: 16, padding: '10px 12px' }}>
           {PERIODOS.map(([k, txt]) => (
             <button key={k} type="button" aria-pressed={periodo === k} className={`fpill ${periodo === k ? 'active' : ''}`} onClick={() => setPeriodo(k)}>
               {txt}
             </button>
           ))}
           <span className="muted" style={{ fontSize: 12.5, alignSelf: 'center', marginLeft: 6 }}>
-            del {diaMes(new Date(`${desde}T12:00`))} al {diaMes(new Date(`${hasta}T12:00`))}
+            {desde === hasta
+              ? diaMes(new Date(`${desde}T12:00`))
+              : `del ${diaMes(new Date(`${desde}T12:00`))} al ${diaMes(new Date(`${hasta}T12:00`))}`}
           </span>
         </div>
 

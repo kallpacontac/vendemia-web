@@ -17,7 +17,7 @@ import { useAvisar } from '@/components/panel/Avisos';
 import { useCargar } from '@/components/panel/useCargar';
 import { calcularPorPagar, deshacerCierre, leerCierres, pagarCierre, solesExactos as soles, type MetodoCierre, type PorPagar } from '@/lib/panel/cierres';
 import { diaMes } from '@/lib/panel/format';
-import { rango, type Periodo } from '@/lib/panel/periodos';
+import { PERIODOS, rango, type Periodo } from '@/lib/panel/periodos';
 import './pendientes.css';
 
 const METODOS: [MetodoCierre, string][] = [
@@ -29,14 +29,8 @@ const METODOS: [MetodoCierre, string][] = [
 
 const fecha = (iso: string) => diaMes(new Date(`${iso.slice(0, 10)}T12:00:00`));
 
-/** Cierran cada semana (lunes a domingo); la semana anterior, para pagarla el lunes. */
-const FILTROS: [Periodo, string][] = [
-  ['hoy', 'Hoy'],
-  ['semana', 'Esta semana'],
-  ['semana-anterior', 'Semana anterior'],
-  ['quincena', 'Quincena'],
-  ['mes', 'Mes'],
-];
+/** Cierran cada semana (lunes a domingo); la semana anterior, para pagarla el lunes. Los mismos que «Lo ganado». */
+const FILTROS = PERIODOS;
 
 export default function CierresPorPagar({ companyId, esDueno }: { companyId: string; esDueno: boolean }) {
   const avisar = useAvisar();
