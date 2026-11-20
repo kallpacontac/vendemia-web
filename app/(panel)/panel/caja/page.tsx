@@ -42,6 +42,7 @@ import CajaResumen from '@/components/panel/CajaResumen';
 import CobrarTicket from '@/components/panel/CobrarTicket';
 import Campana from '@/components/panel/Campana';
 import GastosCaja from '@/components/panel/GastosCaja';
+import IngresosCaja, { leerIngresosCaja } from '@/components/panel/IngresosCaja';
 import ListosParaCobrar from '@/components/panel/ListosParaCobrar';
 import { useSondeo } from '@/components/panel/useSondeo';
 import { sumarSelloDeCita } from '@/components/panel/selloDeCita';
@@ -117,7 +118,8 @@ export default function CajaPagina() {
 }
 
 function Caja() {
-  const { companyId } = useSesion();
+  const { companyId, rol } = useSesion();
+  const esDueno = rol === 'dueno';
   const v = useVocabulario();
   const comando = useComando();
   const avisar = useAvisar();
@@ -168,7 +170,10 @@ function Caja() {
     // Cobrar: ningún cliente (el cajero reconoce el ticket por barbero y servicio). Solo el Cierre,
     // que es el reporte, pone nombres.
     const leads = cierre ? await clientesDe(companyId, [...todasCitas.map((c) => c.lead_id), ...pagos.pagosDelDia.map((p) => p.lead_id)]) : [];
-    if (!sede) return { dia, sede, movimientos: todosMovimientos, citas: todasCitas, pedidos, gastos: todosGastos, leads, pagos };
+    // Ingresos sueltos del día (datos 0023), solo en el Cierre y en «Todas»: son de todo el negocio,
+    // como los gastos. null = sin la 0023: la tarjeta no sale.
+    const ingresos = cierre && !sede ? await leerIngresosCaja(companyId, dia) : null;
+    if (!sede) return { dia, sede, movimientos: todosMovimientos, citas: todasCitas, pedidos, gastos: todosGastos, leads, pagos, ingresos };
 
     // Una sede: solo el dinero de SUS citas (por la sede de cada cita, también la de un adelanto
     // pagado hoy para otro día). Pedidos y gastos no tienen sede: se ven en «Todas».
@@ -185,6 +190,7 @@ function Caja() {
       citas: todasCitas.filter((c) => (c.sede ?? '') === sede),
       pedidos,
       gastos: [] as typeof todosGastos,
+      ingresos: null,
       leads,
       pagos: { ...pagos, pagosDelDia: pagos.pagosDelDia.filter((p) => suya(p.appointment_id)) },
     };
@@ -256,6 +262,13 @@ function Caja() {
       porMetodo.set(m, (porMetodo.get(m) ?? 0) + g.importe);
       devueltoPorApp += g.importe;
     }
+    // Ingresos sueltos (datos 0023): entraron al cajón o a la app sin ticket.
+    let ingresosSueltos = 0;
+    for (const i of datos.ingresos ?? []) {
+      const etiqueta = etiquetaMetodo(i.metodo);
+      porMetodo.set(etiqueta, (porMetodo.get(etiqueta) ?? 0) + i.importe);
+      ingresosSueltos += i.importe;
+    }
 
     // Las citas del día, cada una en su sitio: sin cobro apuntado (con o sin
     // pagos a cuenta), esperando el comprobante, o pagada sin hora.
@@ -278,7 +291,7 @@ function Caja() {
     const porAtender = porCobrar.filter((f) => f.cita.status !== 'completed');
     const pedidosSinConstancia = datos.movimientos.filter((m) => m.fuente === 'order' && cobradoSinConstancia(m));
 
-    const entro = entradas.reduce((t, e) => t + e.importe, 0) + devueltoPorApp;
+    const entro = entradas.reduce((t, e) => t + e.importe, 0) + devueltoPorApp + ingresosSueltos;
     const aCuentaTotal = aCuenta.reduce((t, a) => t + Number(a.pago.amount ?? 0), 0);
     const gastado = datos.gastos.reduce((t, g) => t + g.importe, 0);
     return {
@@ -542,6 +555,11 @@ function Caja() {
                   guardara el método.
                 </p>
               )}
+              {/* Ingresos sin ticket, aquí dentro: solo el dueño los apunta (datos 0023). */}
+              {companyId && (sede || datos?.ingresos) && (
+                <IngresosCaja companyId={companyId} dia={dia} ingresos={datos?.ingresos ?? []} esDueno={esDueno}
+                  soloTodas={Boolean(sede)} alCambiar={releer} incrustado />
+              )}
             </div>
 
             {/* ── A cuenta: entró, pero lo que paga sigue por cobrar ── */}
@@ -573,8 +591,10 @@ function Caja() {
               </div>
             )}
 
-            {/* ── Gastos y adelantos: todo lo que sale de la caja, en un sitio (datos 0013) ── */}
-            <GastosCaja dia={dia} gastos={datos?.gastos ?? []} trabajadores={trabajadores} soloTodas={Boolean(sede)} alCambiar={releer} />
+            {/* ── Gastos y adelantos: todo lo que sale de la caja, en un sitio (datos 0013). En el
+                Cierre los apunta solo el dueño (The 24/7, 19-nov). ── */}
+            <GastosCaja dia={dia} gastos={datos?.gastos ?? []} trabajadores={trabajadores} soloTodas={Boolean(sede)} alCambiar={releer}
+              puedeApuntar={esDueno} />
 
           </div>
         )}

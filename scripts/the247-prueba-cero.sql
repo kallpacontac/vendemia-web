@@ -30,7 +30,7 @@ declare
         -- Citas, cobros y caja
         'comisiones_congeladas', 'costos_congelados', 'cita_consumos', 'comprobantes_cobro', 'comprobantes_web',
         'pending_payments', 'appointment_services', 'canchas_fijas_citas', 'canchas_fijas', 'appointments',
-        'comision_cierres', 'gastos', 'cobro_ajustes',
+        'comision_cierres', 'gastos', 'cobro_ajustes', 'caja_ingresos',
         -- Boletas y facturas (la numeración también: vuelve a empezar)
         'comprobantes_electronicos', 'factura_series',
         -- Pedidos y página

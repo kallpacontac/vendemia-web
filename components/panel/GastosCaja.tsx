@@ -50,6 +50,7 @@ export default function GastosCaja({
   alCambiar,
   modo = 'completo',
   alCerrar,
+  puedeApuntar = true,
 }: {
   dia: string;
   gastos: Gasto[];
@@ -63,6 +64,8 @@ export default function GastosCaja({
    */
   modo?: 'completo' | 'formulario';
   alCerrar?: () => void;
+  /** false: solo la lista (en el Cierre, gastos y adelantos los apunta el dueño; The 24/7, 19-nov). */
+  puedeApuntar?: boolean;
 }) {
   const comando = useComando();
   const activos = useMemo(() => trabajadores.filter((t) => t.activo), [trabajadores]);
@@ -163,7 +166,7 @@ export default function GastosCaja({
     <div ref={raiz} className={`card gc${soloForm ? ' gc--solo' : ''}`}>
       {!soloForm && <div className="card-mini-head">
         <h3>Gastos y adelantos</h3>
-        {!abierto && (
+        {!abierto && puedeApuntar && (
           <button type="button" className="btn btn-primary" onClick={() => setAbierto(true)}>
             <Plus size={16} /> Gasto
           </button>
@@ -249,9 +252,11 @@ export default function GastosCaja({
                 </span>
                 <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
                   <b>{soles(Number(g.importe))}</b>
-                  <button type="button" className="q-icon" aria-label={`Borrar ${g.concepto}`} disabled={borrando === g.id} onClick={() => void borrar(g)}>
-                    <Trash2 size={15} />
-                  </button>
+                  {puedeApuntar && (
+                    <button type="button" className="q-icon" aria-label={`Borrar ${g.concepto}`} disabled={borrando === g.id} onClick={() => void borrar(g)}>
+                      <Trash2 size={15} />
+                    </button>
+                  )}
                 </span>
               </div>
             );
@@ -261,6 +266,7 @@ export default function GastosCaja({
           </p>
         </>
       )}
+      {!soloForm && !puedeApuntar && <p className="muted" style={{ fontSize: 12, marginTop: 6 }}>En el cierre, los gastos y adelantos los apunta el dueño.</p>}
     </div>
   );
 }

@@ -2648,3 +2648,8 @@ nav.chip-tabs[aria-label="Caja"] a{flex-shrink:0;white-space:nowrap}
 .mag-ganado b{font-size:30px;line-height:1.1;color:#0B7A4B}
 .mag-ganado span{font-size:13.5px;color:#166534}
 .mag-ganado a{font-weight:700;color:#0B7A4B}
+
+/* Cierre › «Entró, por método» › Ingresos sin ticket (IngresosCaja incrustado). */
+.gc--dentro{margin-top:14px;padding-top:12px;border-top:1px dashed var(--line-2)}
+.gc--dentro .card-mini-head{margin-bottom:6px}
+.gc--dentro .card-mini-head .btn{min-height:44px}
