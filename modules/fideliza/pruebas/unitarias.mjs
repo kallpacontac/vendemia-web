@@ -400,7 +400,7 @@ test('18 · guardar el acceso a historias pasa la validación sin enseñar detal
 test('19 · la ruta pública resuelve el estilo guardado y nunca usa caché de página', () => {
   const servidor = readFileSync(join(raiz, 'modules/fideliza/servidor/html.ts'), 'utf8');
   const ruta = readFileSync(join(raiz, 'app/(fideliza)/n/[slug]/route.ts'), 'utf8');
-  assert.match(servidor, /const estilo = resolverEstilo\(estiloEntrada\)/);
+  assert.match(servidor, /const estilo = \{ \.\.\.resolverEstilo\(estiloEntrada\), portafolio: estiloEntrada\?\.portafolio \}/, 'el portafolio no se pierde al resolver el estilo');
   assert.match(servidor, /'X-Vendemia-Template': estilo\.plantilla/);
   assert.match(ruta, /export const revalidate = 0/);
 });
@@ -671,4 +671,6 @@ test('página pública: agenda y portafolio se abren en su sitio y su script se 
   const vista = pagina.htmlPagina(datos, { vista: true });
   assert.ok(!vista.includes('<script>'), 'la vista previa del panel no lleva el motor');
   assert.ok(vista.includes('<details class="xp"'), 'pero el portafolio se abre igual (sin JavaScript)');
+  assert.ok(html.includes('ventanaPf(xp)') && html.includes('.pf-modal'), 'con JavaScript, el portafolio se abre en una ventana');
+  assert.ok(!html.includes('Desliza para ver'), 'en rejilla, sin carrusel de lado');
 });

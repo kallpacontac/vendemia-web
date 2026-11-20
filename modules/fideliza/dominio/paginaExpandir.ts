@@ -41,8 +41,9 @@ ${Array.from({ length: 14 }, (_, i) => `.lista>:nth-child(${i + 1}){animation-de
 }
 @keyframes xp-sube{from{opacity:0;transform:translateY(14px)}}`
     : '';
+  const vars = `--xp-acc:${c.acc};--xp-acc-ink:${c.accInk};--xp-bg:${c.bg};--xp-ink:${c.ink};--xp-muted:${c.muted};--xp-linea:${c.linea};--xp-suave:${c.suave}`;
   return `${entrada}
-.xp{--xp-acc:${c.acc};--xp-acc-ink:${c.accInk};--xp-bg:${c.bg};--xp-ink:${c.ink};--xp-muted:${c.muted};--xp-linea:${c.linea};--xp-suave:${c.suave};border-radius:${c.radio};position:relative}
+.xp{${vars};border-radius:${c.radio};position:relative}
 .xp>summary{list-style:none}.xp>summary::-webkit-details-marker{width:0;height:0;font-size:0}
 .xp__bt .fl svg{transition:transform .45s cubic-bezier(.2,.8,.2,1)}
 .xp.abierto,.xp[open]{box-shadow:0 22px 50px rgba(10,10,10,.16)}
@@ -53,21 +54,34 @@ ${Array.from({ length: 14 }, (_, i) => `.lista>:nth-child(${i + 1}){animation-de
 .xp-cargando i{display:block;height:14px;border-radius:7px;background:linear-gradient(90deg,var(--xp-suave),var(--xp-linea),var(--xp-suave));background-size:200% 100%;animation:xp-brillo 1.2s linear infinite}
 .xp-cargando i:nth-child(1){height:120px;border-radius:14px}.xp-cargando i:nth-child(3){width:60%}
 @keyframes xp-brillo{to{background-position:-200% 0}}
-/* Portafolio */
-.pf{display:flex;gap:12px;overflow-x:auto;scroll-snap-type:x mandatory;scroll-padding-inline:16px;margin:-2px -16px 0;padding:2px 16px 4px;scrollbar-width:none;-webkit-overflow-scrolling:touch}
-.pf::-webkit-scrollbar{width:0;height:0}
-.pf__it{flex:0 0 74%;max-width:270px;scroll-snap-align:start;position:relative;display:block;aspect-ratio:4/5;border-radius:16px;overflow:hidden;color:#fff;text-decoration:none;background:linear-gradient(150deg,${c.acc},#14110F);isolation:isolate}
+/* Portafolio: rejilla de 2 columnas. Con JavaScript se abre en una ventana encima
+   de la página (.pf-modal); sin él, o en la vista previa del panel, en su sitio. */
+.pf{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.pf__it{position:relative;display:block;aspect-ratio:4/5;border-radius:14px;overflow:hidden;color:#fff;text-decoration:none;background:linear-gradient(150deg,${c.acc},#14110F);isolation:isolate}
+.pf-modal{${vars};width:min(520px,calc(100% - 32px));max-height:88vh;max-height:88dvh;padding:0;border:0;border-radius:${c.radio};background:var(--xp-bg);color:var(--xp-ink);box-shadow:0 24px 70px rgba(0,0,0,.32);font:15px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;overflow:hidden}
+.pf-modal[open]{display:flex;flex-direction:column}
+.pf-modal::backdrop{background:rgba(10,10,10,.56);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px)}
+@media (prefers-reduced-motion:no-preference){.pf-modal[open]{animation:pf-entra .28s cubic-bezier(.2,.8,.2,1)}}
+@keyframes pf-entra{from{opacity:0;transform:translateY(18px) scale(.98)}}
+.pf-modal__cab{display:flex;align-items:center;gap:12px;padding:16px 16px 12px}
+.pf-modal__cab div{flex:1;min-width:0}
+.pf-modal__cab h2{font-size:18px;line-height:1.2}
+.pf-modal__cab small{color:var(--xp-muted);font-size:13px}
+.pf-modal__x{width:38px;height:38px;flex:none;border:1px solid var(--xp-linea);border-radius:50%;display:grid;place-items:center;background:transparent;color:inherit;font:400 26px/1 system-ui;cursor:pointer}
+.pf-modal__x:focus-visible,.pf-modal .pf__it:focus-visible{outline:3px solid var(--xp-acc);outline-offset:2px}
+.pf-modal .pf{padding:0 16px 16px;overflow-y:auto;overscroll-behavior:contain}
+html:has(.pf-modal[open]){overflow:hidden}
+@media(max-width:520px){.pf-modal{width:calc(100% - 24px);margin:auto auto 12px}}
 .pf__it img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:-2;transition:transform .7s cubic-bezier(.2,.8,.2,1)}
 .pf__it::after{content:"";position:absolute;inset:0;z-index:-1;background:linear-gradient(180deg,rgba(0,0,0,0) 30%,rgba(0,0,0,.55) 62%,rgba(0,0,0,.9))}
 .pf__it:active img{transform:scale(1.04)}
 @media(hover:hover){.pf__it:hover img{transform:scale(1.05)}}
 .pf__ini{position:absolute;inset:0;display:grid;place-items:center;font:800 64px/1 system-ui;opacity:.35;z-index:-1}
-.pf__tx{position:absolute;left:14px;right:14px;bottom:13px}
-.pf__tx b{display:block;font-size:16.5px;line-height:1.2}
-.pf__tx small{display:block;margin-top:3px;font-size:12.5px;opacity:.85}
-.pf__ir{position:absolute;top:10px;right:10px;width:32px;height:32px;border-radius:50%;display:grid;place-items:center;background:rgba(255,255,255,.92);color:#14110F}
-.pf__ir svg{width:16px;height:16px}
-.pf__pie{margin-top:10px;font-size:12px;color:var(--xp-muted);text-align:center}
+.pf__tx{position:absolute;left:11px;right:11px;bottom:10px}
+.pf__tx b{display:block;font-size:14.5px;line-height:1.2}
+.pf__tx small{display:block;margin-top:2px;font-size:12px;opacity:.85}
+.pf__ir{position:absolute;top:8px;right:8px;width:28px;height:28px;border-radius:50%;display:grid;place-items:center;background:rgba(255,255,255,.92);color:#14110F}
+.pf__ir svg{width:14px;height:14px}
 /* Agenda */
 .ag-ficha{display:grid;gap:8px}
 .ag-cabeza{display:flex;align-items:center;gap:12px}
@@ -206,10 +220,34 @@ function cerrar(xp){
   xp._anim=a;
   a.onfinish=function(){marcar(xp,false);xp.style.overflow='';if(c.getAnimations)c.getAnimations().forEach(function(x){x.cancel();});xp._anim=null;};
 }
+/** El portafolio, en una ventana encima de la página (no crece en su sitio). */
+function ventanaPf(xp){
+  if(!xp._dlg){
+    var d=el('dialog','pf-modal'),cab=el('div','pf-modal__cab'),t=el('div');
+    var b=btDe(xp),nom=b.querySelector('.tx b'),cnt=b.querySelector('.tx small');
+    var h=el('h2','',nom?nom.textContent:'');h.id='pf-titulo';t.appendChild(h);
+    if(cnt)t.appendChild(el('small','',cnt.textContent));
+    var x=el('button','pf-modal__x','\\u00d7');x.type='button';x.setAttribute('aria-label','Cerrar');
+    x.onclick=function(){d.close();};
+    cab.appendChild(t);cab.appendChild(x);d.appendChild(cab);
+    d.appendChild(xp.querySelector('.pf'));
+    d.setAttribute('aria-labelledby','pf-titulo');
+    d.addEventListener('click',function(ev){if(ev.target===d)d.close();});
+    d.addEventListener('close',function(){b.setAttribute('aria-expanded','false');});
+    document.body.appendChild(d);
+    xp._dlg=d;
+  }
+  document.querySelectorAll('.xp.abierto').forEach(function(o){cerrar(o);});
+  xp._dlg.showModal();
+  btDe(xp).setAttribute('aria-expanded','true');
+  xp._dlg.querySelector('.pf').scrollTop=0;
+  entrar(xp._dlg.querySelectorAll('.pf__it'),'');
+}
 document.querySelectorAll('.xp').forEach(function(xp){
   btDe(xp).addEventListener('click',function(ev){
     if(ev.metaKey||ev.ctrlKey||ev.shiftKey||ev.button===1)return;
     ev.preventDefault();
+    if(xp.getAttribute('data-xp')==='portafolio'&&typeof HTMLDialogElement==='function'){ventanaPf(xp);return;}
     if(estaAbierto(xp))cerrar(xp);else abrir(xp);
   });
 });

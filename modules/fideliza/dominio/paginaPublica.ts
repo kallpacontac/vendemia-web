@@ -334,7 +334,7 @@ export function htmlPagina(d: DatosPagina, o: { vista?: boolean; indexable?: boo
             ? `<a class="pf__it" href="${esc(t.url)}" target="_blank" rel="noopener">${dentro}<span class="pf__ir" aria-hidden="true">${icono('flecha')}</span></a>`
             : `<div class="pf__it">${dentro}</div>`;
         })
-        .join('')}</div>${pf.trabajos.length > 1 ? '<p class="pf__pie">Desliza para ver más →</p>' : ''}</div></details>`
+        .join('')}</div></div></details>`
     : '';
   const hayExpandibles = Boolean(portafolio) || botones.includes('class="xp"');
   const oscuroPanel = e.plantilla === 'oscura';
