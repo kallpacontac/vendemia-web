@@ -18,6 +18,7 @@ import { BotNoResponde, encolar, encolarSinEsperar, type TipoComando } from '@/l
 import { useSesion } from './Sesion';
 import { useSalud } from './Salud';
 import { demoActivo } from '@/lib/panel/demo';
+import { esErrorDeRed, marcarSinRed } from '@/lib/panel/sinConexion/red';
 
 type Tono = 'ok' | 'error' | 'espera';
 
@@ -163,6 +164,10 @@ export function useComando() {
            * llegue, sin que nadie tenga que recargar la página.
            */
           refrescar?.();
+        } else if (esErrorDeRed(e)) {
+          // No llegó: sin conexión. Lo de la Caja va por su bandeja (SinConexion.tsx); esto no.
+          marcarSinRed();
+          avisar('Sin conexión: esto necesita internet. Inténtalo cuando vuelva la señal.', 'error');
         } else {
           // Aquí NO: el comando falló de verdad y no hay nada nuevo que leer.
           avisar(e instanceof Error ? e.message : 'No se pudo aplicar el cambio', 'error');

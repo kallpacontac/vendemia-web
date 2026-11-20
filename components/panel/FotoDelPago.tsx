@@ -12,6 +12,9 @@
 import { useState } from 'react';
 import { Camera, X } from 'lucide-react';
 import { useAvisar } from '@/components/panel/Avisos';
+import { useSesion } from '@/components/panel/Sesion';
+import { esErrorDeRed, marcarSinRed, sinRed } from '@/lib/panel/sinConexion/red';
+import { puedeSinConexion } from '@/lib/panel/sinConexion/subir';
 import { supabase } from '@/lib/supabase/client';
 import { achicarImagen } from '@/lib/achicarImagen';
 import { soles } from '@/lib/panel/format';
@@ -40,7 +43,18 @@ export default function FotoDelPago({ companyId, foto, obligatoria = false, alFo
   alLeyendo?: (leyendo: boolean) => void;
 }) {
   const avisar = useAvisar();
+  const { rol } = useSesion();
   const [leyendo, setLeyendo] = useState(false);
+
+  /** Sin red (dueño o admin): la foto se queda en el celular y se sube con el cobro. */
+  async function guardarEnCelular(archivo: File) {
+    const blob = await achicarImagen(archivo);
+    alFoto({
+      url: URL.createObjectURL(blob), hash: '', operacion: '', leida: false, decision: 'revisar',
+      motivo: 'Sin conexión: la foto queda en este celular y se revisa al subir el cobro.',
+      monto: null, metodo: '', destino: '', local: blob,
+    });
+  }
 
   function marcarLeyendo(v: boolean) {
     setLeyendo(v);
@@ -55,9 +69,15 @@ export default function FotoDelPago({ companyId, foto, obligatoria = false, alFo
     }
     marcarLeyendo(true);
     try {
+      if (sinRed() && puedeSinConexion(rol)) return await guardarEnCelular(archivo);
       const { data } = await supabase().auth.getSession();
       const token = data.session?.access_token;
       if (!token) {
+        // Con la sesión guardada pero sin poder renovarla: es la red (ver sesionSinConexion).
+        if (puedeSinConexion(rol)) {
+          marcarSinRed();
+          return await guardarEnCelular(archivo);
+        }
         avisar('Tu sesión terminó. Vuelve a entrar al panel.', 'error');
         return;
       }
@@ -74,7 +94,16 @@ export default function FotoDelPago({ companyId, foto, obligatoria = false, alFo
         url: j.url, hash: j.hash, operacion: j.operacion ?? '', leida: j.leida, decision: j.decision,
         motivo: j.motivo ?? '', monto: j.monto ?? null, metodo: j.metodo ?? '', destino: j.destino ?? '',
       });
-    } catch {
+    } catch (e) {
+      if (esErrorDeRed(e)) marcarSinRed();
+      if (puedeSinConexion(rol)) {
+        try {
+          await guardarEnCelular(archivo);
+          return;
+        } catch {
+          /* abajo, el aviso */
+        }
+      }
       avisar('Sin conexión. Revisa tu internet e inténtalo otra vez.', 'error');
     } finally {
       marcarLeyendo(false);

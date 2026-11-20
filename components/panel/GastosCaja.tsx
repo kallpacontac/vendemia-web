@@ -23,7 +23,9 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { guiarA } from '@/lib/panel/guiar';
 import { Check, Plus, Trash2, X } from 'lucide-react';
 import ComboPanel from '@/components/panel/ComboPanel';
-import { useComando } from '@/components/panel/Avisos';
+import { useAvisar, useComando } from '@/components/panel/Avisos';
+import { useSesion } from '@/components/panel/Sesion';
+import { aplicarOAnotar, nuevoId } from '@/lib/panel/sinConexion/subir';
 import { diaMes, soles } from '@/lib/panel/format';
 import type { Trabajador } from '@/lib/supabase/queries';
 import type { GastoRow } from '@/lib/supabase/types';
@@ -68,6 +70,8 @@ export default function GastosCaja({
   puedeApuntar?: boolean;
 }) {
   const comando = useComando();
+  const avisar = useAvisar();
+  const { session, rol, companyId } = useSesion();
   const activos = useMemo(() => trabajadores.filter((t) => t.activo), [trabajadores]);
   const nombre = useMemo(() => new Map(trabajadores.map((t) => [t.id, t.name])), [trabajadores]);
   const soloForm = modo === 'formulario';
@@ -106,21 +110,41 @@ export default function GastosCaja({
     if (falta || guardando) return;
     setGuardando(true);
     const tipo = quien === PERSONAL ? 'personal' : esBarbero && descuenta ? 'adelanto' : 'negocio';
-    const r = await comando(
-      'upsert_gasto',
+    // Con id hecho aquí: guardarlo dos veces (la red se cortó al enviar) es guardarlo una.
+    const gasto = {
+      id: nuevoId(),
+      fecha: dia,
+      concepto: concepto.trim(),
+      categoria: RAPIDOS.some((x) => x.texto === concepto.trim()) ? concepto.trim() : '',
+      importe: monto,
+      tipo,
+      employee_id: esBarbero ? quien : '',
+    };
+    const exito = tipo === 'adelanto' ? `Adelanto a ${nombre.get(quien) ?? 'el barbero'} apuntado: se descuenta de su comisión.` : 'Gasto apuntado.';
+    // Dueño o administrador: también sin conexión (datos 0025, components/panel/SinConexion.tsx).
+    const via = await aplicarOAnotar(
       {
-        gasto: {
-          fecha: dia,
-          concepto: concepto.trim(),
-          categoria: RAPIDOS.some((x) => x.texto === concepto.trim()) ? concepto.trim() : '',
-          importe: monto,
-          tipo,
-          employee_id: esBarbero ? quien : '',
-        },
+        company: companyId ?? '',
+        usuario: session?.user?.id ?? '',
+        tipo: 'gasto',
+        datos: { gasto },
+        resumen: { texto: tipo === 'adelanto' ? `Adelanto · ${nombre.get(quien) ?? 'barbero'}` : gasto.concepto, importe: monto, salida: true },
       },
-      tipo === 'adelanto' ? `Adelanto a ${nombre.get(quien) ?? 'el barbero'} apuntado: se descuenta de su comisión.` : 'Gasto apuntado.',
-      alCambiar,
+      rol,
     );
+    let r: unknown;
+    if (via.como === 'aplicada') {
+      avisar(exito, 'ok');
+      alCambiar();
+      r = via.r;
+    } else if (via.como === 'anotada') {
+      avisar('Sin conexión: el gasto quedó guardado en este celular y se sube solo al volver la conexión.', 'espera');
+      r = true;
+    } else if (via.como === 'error') {
+      avisar(via.mensaje, 'error');
+    } else {
+      r = await comando('upsert_gasto', { gasto }, exito, alCambiar);
+    }
     setGuardando(false);
     if (r) {
       limpiar();

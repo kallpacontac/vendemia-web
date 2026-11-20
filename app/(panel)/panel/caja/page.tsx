@@ -40,6 +40,8 @@ import Link from 'next/link';
 import { QrCode, Receipt, Wallet } from 'lucide-react';
 import CajaResumen from '@/components/panel/CajaResumen';
 import CobrarTicket from '@/components/panel/CobrarTicket';
+import { PendientesCaja, useSinConexion } from '@/components/panel/SinConexion';
+import { aplicarOAnotar } from '@/lib/panel/sinConexion/subir';
 import Campana from '@/components/panel/Campana';
 import GastosCaja from '@/components/panel/GastosCaja';
 import IngresosCaja, { leerIngresosCaja } from '@/components/panel/IngresosCaja';
@@ -118,7 +120,10 @@ export default function CajaPagina() {
 }
 
 function Caja() {
-  const { companyId, rol } = useSesion();
+  const { companyId, rol, session } = useSesion();
+  // Cobros hechos sin conexión en este celular, aún sin subir (components/panel/SinConexion.tsx).
+  const { ops: anotadas } = useSinConexion();
+  const anotadasIds = useMemo(() => new Set(anotadas.map((o) => o.citaId).filter((x): x is string => !!x)), [anotadas]);
   const esDueno = rol === 'dueno';
   const v = useVocabulario();
   const comando = useComando();
@@ -299,17 +304,18 @@ function Caja() {
       aCuentaTotal,
       aCuenta,
       porMetodo: [...porMetodo.entries()].sort((a, b) => b[1] - a[1]),
-      porCobrar: porAtender,
+      // Lo cobrado sin conexión en este celular ya no se ofrece (va en «Anotado sin conexión»).
+      porCobrar: porAtender.filter((f) => !anotadasIds.has(f.cita.id)),
       // Lo que falta: el precio entero, o lo que queda tras lo pagado a cuenta.
-      porCobrarTotal: porAtender.reduce((t, x) => t + (x.pagos ? x.pagos.saldo : x.importe), 0),
-      listos,
+      porCobrarTotal: porAtender.filter((f) => !anotadasIds.has(f.cita.id)).reduce((t, x) => t + (x.pagos ? x.pagos.saldo : x.importe), 0),
+      listos: listos.filter((f) => !anotadasIds.has(f.cita.id)),
       esperando,
       sinHora,
       pedidosSinConstancia,
       gastado,
       neto: entro - gastado,
     };
-  }, [datos, dia, sede]);
+  }, [datos, dia, sede, anotadasIds]);
 
   const nombrePorLead = useMemo(
     // El cliente de mostrador no tiene nombre ni teléfono: '' para que se lea «Cliente», no «—».
@@ -348,14 +354,42 @@ function Caja() {
     // «Esperando pago» (antes solo se miraba la cola, y en Esperando pago salía 0: sin comprobante).
     const importe = calculo?.listos.find((f) => f.cita.id === c.id)?.importe
       ?? calculo?.esperando.find((f) => f.cita.id === c.id)?.importe
+      ?? calculo?.porCobrar.find((f) => f.cita.id === c.id)?.importe
       ?? 0;
-    const r = await comando<ResultadoMarcarPagado>(
-      'marcar_pagado',
-      // La foto del pago, si el negocio la usa (datos 0010): Postgres la vuelve a revisar.
-      { tipo: 'appointment', id: c.id, metodo_pago: metodo, ...(foto ? { foto: fotoParaCobro(foto) } : {}) },
-      undefined,
-      releer,
+    // La foto del pago, si el negocio la usa (datos 0010): Postgres la vuelve a revisar.
+    const fotoCobro = fotoParaCobro(foto ?? null);
+    // Dueño o administrador: con id propio, y sin conexión al celular (datos 0025, SinConexion.tsx).
+    const via = await aplicarOAnotar<ResultadoMarcarPagado>(
+      {
+        company: companyId ?? '',
+        usuario: session?.user?.id ?? '',
+        tipo: 'cobro',
+        datos: { id: c.id, metodo_pago: metodo, ...(fotoCobro ? { foto: fotoCobro } : {}) },
+        foto: foto?.local ?? null,
+        citaId: c.id,
+        resumen: {
+          texto: `${c.service || cap(v.sesion)}${c.employee_id ? ` · ${nombrePorBarbero.get(c.employee_id) ?? ''}` : ''}`,
+          importe,
+          metodo,
+        },
+      },
+      rol,
     );
+    if (via.como === 'anotada' || via.como === 'error') {
+      setEnVuelo(null);
+      if (via.como === 'error') avisar(via.mensaje, 'error');
+      else avisar(`Sin conexión: el cobro quedó guardado en este celular y se sube solo al volver la conexión.`, 'espera');
+      return;
+    }
+    if (via.como === 'aplicada') releer();
+    const r = via.como === 'aplicada'
+      ? via.r
+      : await comando<ResultadoMarcarPagado>(
+          'marcar_pagado',
+          { tipo: 'appointment', id: c.id, metodo_pago: metodo, ...(fotoCobro ? { foto: fotoCobro } : {}) },
+          undefined,
+          releer,
+        );
     if (r)
       avisar(
         r.antes === 'pending_payment' && r.cambio
@@ -405,6 +439,9 @@ function Caja() {
             </button>
           </div>
         )}
+
+        {/* Lo anotado sin conexión en este celular: aparte del resumen, que es lo del servidor. */}
+        {companyId && <PendientesCaja companyId={companyId} />}
 
         {!cierre && gasto && (
           <GastosCaja modo="formulario" dia={hoy} gastos={[]} trabajadores={trabajadores} soloTodas={false}

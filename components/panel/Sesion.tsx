@@ -20,6 +20,7 @@ import { supabase } from '@/lib/supabase/client';
 import { misCompanias, soyAdminPlataforma, type CompaniaAccesible } from '@/lib/supabase/queries';
 import { rolDeNegocio, type RolNegocio } from '@/lib/panel/roles';
 import { leerCobroFoto, type CobroFoto } from '@/lib/panel/fotoPago';
+import { olvidarCopias, sesionSinConexion } from '@/lib/panel/sinConexion/worker';
 import {
   apuntarActividad,
   motivoDeCaducidad,
@@ -167,6 +168,8 @@ export function ProveedorSesion({ children }: { children: React.ReactNode }) {
    * sesión vigente —el token cambia en cada refresco—, no la del render en
    * el que se registraron.
    */
+  /** La sesión en uso es la guardada, sin red (sesionSinConexion). */
+  const sinConexionRef = useRef(false);
   const sesionRef = useRef<Session | null>(session);
   sesionRef.current = session;
 
@@ -192,6 +195,7 @@ export function ProveedorSesion({ children }: { children: React.ReactNode }) {
     setReconectando(false);
     let fallo = false;
     try {
+      olvidarCopias();
       const { error } = await supabase().auth.signOut({ scope: 'local' });
       fallo = Boolean(error);
     } catch {
@@ -215,6 +219,11 @@ export function ProveedorSesion({ children }: { children: React.ReactNode }) {
     let vivo = true;
 
     let relojReconexion: ReturnType<typeof setTimeout> | undefined;
+    // Con la red de vuelta, la renovación se intenta ya en vez de esperar al reloj de supabase-js.
+    const alVolver = () => {
+      if (sinConexionRef.current) void sb.auth.getSession();
+    };
+    window.addEventListener('online', alVolver);
 
     /**
      * ⚠️ getSession() SÍ VA A LA RED CUANDO EL TOKEN HA CADUCADO.
@@ -236,8 +245,15 @@ export function ProveedorSesion({ children }: { children: React.ReactNode }) {
      * tengo una sesión viva". Si queda una guardada en este navegador, lo
      * correcto es esperar al reintento, no echar a nadie.
      */
-    void sb.auth.getSession().then(({ data }) => {
+    void sb.auth.getSession().then(({ data, error }) => {
       if (!vivo) return;
+      // Sin red y con el modo sin conexión de esta persona: la sesión guardada (lib/panel/sinConexion/worker.ts).
+      const guardada = !data.session && haySesionGuardada() ? sesionSinConexion(error, CLAVE_SESION) : null;
+      if (guardada) {
+        sinConexionRef.current = true;
+        setSession(guardada);
+        return;
+      }
       setSession(data.session);
       if (!data.session && haySesionGuardada()) {
         setReconectando(true);
@@ -249,8 +265,12 @@ export function ProveedorSesion({ children }: { children: React.ReactNode }) {
       }
     });
 
-    const { data: sub } = sb.auth.onAuthStateChange((_evento, s) => {
+    const { data: sub } = sb.auth.onAuthStateChange((evento, s) => {
       if (!vivo) return;
+      // Usando la sesión guardada sin red, un «sin sesión» que no es salir es el refresco que no
+      // llegó: se sigue dentro. Al volver la red llega TOKEN_REFRESHED, o SIGNED_OUT si ya no vale.
+      if (!s && evento !== 'SIGNED_OUT' && sinConexionRef.current) return;
+      if (s) sinConexionRef.current = false;
       setSession(s);
       if (s) {
         // Volvió: se cancela el margen y se sigue como si nada.
@@ -274,6 +294,7 @@ export function ProveedorSesion({ children }: { children: React.ReactNode }) {
     return () => {
       vivo = false;
       if (relojReconexion) clearTimeout(relojReconexion);
+      window.removeEventListener('online', alVolver);
       sub.subscription.unsubscribe();
     };
   }, []);
@@ -453,6 +474,7 @@ export function ProveedorSesion({ children }: { children: React.ReactNode }) {
          * las sesiones a la vez está el cambio de contraseña, que usa 'others'
          * a propósito (ver /nueva-clave).
          */
+        olvidarCopias();
         const { error } = await supabase().auth.signOut({ scope: 'local' });
         // Sin red, supabase-js NO borra la sesión local: salir tiene que salir igual.
         if (error) localStorage.removeItem(CLAVE_SESION);
@@ -478,6 +500,7 @@ export function ProveedorSesion({ children }: { children: React.ReactNode }) {
        */
       salirDeTodos: async () => {
         try {
+          olvidarCopias();
           const { error } = await supabase().auth.signOut({ scope: 'global' });
           if (error) return false;
         } catch {

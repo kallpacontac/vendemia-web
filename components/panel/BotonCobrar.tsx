@@ -23,6 +23,7 @@ import FotoDelPago from '@/components/panel/FotoDelPago';
 import { useAvisar, useComando } from '@/components/panel/Avisos';
 import { useSesion } from '@/components/panel/Sesion';
 import { isoLocal } from '@/lib/panel/format';
+import { aplicarOAnotar, nuevoId } from '@/lib/panel/sinConexion/subir';
 import { METODO_LABEL, METODOS_CITA, type MetodoPago } from '@/lib/panel/metodosPago';
 import { exigeFoto, fotoParaMetodo, type FotoPago } from '@/lib/panel/fotoPago';
 import { billetesPara, categoriaVuelto, METODOS_CON_VUELTO, vueltoDe } from '@/lib/panel/vuelto';
@@ -50,7 +51,7 @@ export function BotonCobrar({
   /** Lo que se cobra. Con él sale «Con vuelto». */
   total?: number;
 }) {
-  const { companyId, cobroFoto } = useSesion();
+  const { companyId, cobroFoto, session, rol } = useSesion();
   const comando = useComando();
   const avisar = useAvisar();
   const [eligiendo, setEligiendo] = useState(false);
@@ -78,15 +79,22 @@ export function BotonCobrar({
     if (!conVuelto || metodo === 'cash') return;
     const v = vueltoDe(total!, recibido);
     if (v <= 0) return;
-    const r = await comando('upsert_gasto', {
-      gasto: {
-        fecha: isoLocal(new Date()),
-        concepto: `Vuelto en efectivo de un ${METODO_LABEL[metodo]} de ${soles2(recibido)}`,
-        categoria: categoriaVuelto(metodo),
-        importe: v,
-        tipo: 'negocio',
-      },
-    });
+    const gasto = {
+      id: nuevoId(),
+      fecha: isoLocal(new Date()),
+      concepto: `Vuelto en efectivo de un ${METODO_LABEL[metodo]} de ${soles2(recibido)}`,
+      categoria: categoriaVuelto(metodo),
+      importe: v,
+      tipo: 'negocio',
+    };
+    // Dueño o administrador: también sin conexión, como el cobro (datos 0025).
+    const via = await aplicarOAnotar(
+      { company: companyId ?? '', usuario: session?.user?.id ?? '', tipo: 'gasto', datos: { gasto },
+        resumen: { texto: gasto.concepto, importe: v, salida: true } },
+      rol,
+    );
+    if (via.como === 'aplicada' || via.como === 'anotada') return;
+    const r = via.como === 'error' ? undefined : await comando('upsert_gasto', { gasto });
     if (r === undefined) avisar(`No se apuntó el vuelto de ${soles2(v)}: apúntalo como gasto para que cuadre la caja.`, 'error');
   }
 

@@ -30,6 +30,8 @@ import { BotonCobrar } from '@/components/panel/BotonCobrar';
 import { cobrable } from '@/components/panel/ListosParaCobrar';
 import FiltroProductos, { ordenarPorVentas, useMasVendidos } from '@/components/panel/ProductosFiltro';
 import { useAvisar, useComando } from '@/components/panel/Avisos';
+import { useSesion } from '@/components/panel/Sesion';
+import { aplicarOAnotar } from '@/lib/panel/sinConexion/subir';
 import { fotoParaCobro, type FotoPago } from '@/lib/panel/fotoPago';
 import { etiquetaMetodo, type MetodoPago } from '@/lib/panel/metodosPago';
 import { soles } from '@/lib/panel/format';
@@ -64,6 +66,7 @@ export default function CobrarTicket({
 }) {
   const avisar = useAvisar();
   const comando = useComando();
+  const { session, rol } = useSesion();
   const activos = useMemo(() => trabajadores.filter((t) => t.activo), [trabajadores]);
   // Lo más pedido primero (datos 0013), en servicios y en productos.
   const ventas = useMasVendidos(companyId);
@@ -201,36 +204,86 @@ export default function CobrarTicket({
   async function cobrar(metodo: MetodoPago, foto?: FotoPago) {
     if (falta || enviando) return;
     setEnviando(true);
-    const { data, error } = await supabase().rpc('caja_ticket', {
-      p_company: companyId,
-      p_datos: {
-        items,
-        employee_id: barbero,
-        sede: pideSede ? sede : '',
-        telefono: telLimpio,
-        nombre: nombre.trim(),
+    const datosTicket = {
+      items,
+      employee_id: barbero,
+      sede: pideSede ? sede : '',
+      telefono: telLimpio,
+      nombre: nombre.trim(),
+    };
+    const recordarSede = () => {
+      try {
+        if (pideSede && sede) localStorage.setItem(claveSede(companyId), sede);
+      } catch {
+        /* nada */
+      }
+    };
+
+    /*
+     * Dueño o administrador: ticket y cobro en UNA operación con id propio (datos 0025), que sin
+     * conexión se guarda en el celular y sube sola. Sin la 0025, el camino de dos pasos de siempre.
+     */
+    const totalTicket = items.reduce((t, i) => t + Number(porId.get(i)?.price ?? 0), 0);
+    const atendio = activos.find((t) => t.id === barbero)?.name ?? '';
+    const queSeHizo = [...new Set(items)].map((i) => `${porId.get(i)?.name ?? ''}${cuenta(i) > 1 ? ` ×${cuenta(i)}` : ''}`).join(' + ');
+    const fotoCobro = fotoParaCobro(foto ?? null);
+    const via = await aplicarOAnotar<{ id: string; total: number; servicio: string; barbero: string; cobro?: unknown }>(
+      {
+        company: companyId,
+        usuario: session?.user?.id ?? '',
+        tipo: 'ticket',
+        datos: { ...datosTicket, metodo_pago: metodo, ...(fotoCobro ? { foto: fotoCobro } : {}) },
+        foto: foto?.local ?? null,
+        resumen: { texto: `${queSeHizo || 'Ticket'}${atendio ? ` · ${atendio}` : ''}`, importe: totalTicket, metodo },
       },
-    });
-    if (error) {
+      rol,
+    );
+    if (via.como === 'error') {
       setEnviando(false);
-      avisar(
-        /caja_ticket/.test(error.message) && /function|find/i.test(error.message)
-          ? 'Falta instalar «Cobrar ticket» en la base (tu-pagina 0031).'
-          : error.message,
-        'error',
-      );
+      avisar(via.mensaje, 'error');
       return;
     }
-    const r = data as { id: string; total: number; servicio: string; barbero: string };
-    try {
-      if (pideSede && sede) localStorage.setItem(claveSede(companyId), sede);
-    } catch {
-      /* nada */
+    if (via.como === 'anotada') {
+      setEnviando(false);
+      recordarSede();
+      avisar(`Sin conexión: el cobro de ${soles(totalTicket)} quedó guardado en este celular y se sube solo al volver la conexión.`, 'espera');
+      // Sin boleta ni sello todavía: el ticket aún no existe en el servidor.
+      setHecho({ texto: `${soles(totalTicket)} · ${queSeHizo}${atendio ? ` · ${atendio}` : ''} (sin subir)`, tel: '', cliente: nombre.trim(), atendio, sello: null });
+      setItems([]);
+      quitarCliente();
+      if (activos.length !== 1) setBarbero('');
+      alListo();
+      guiarA(raiz.current);
+      return;
     }
-    const pagado = await comando(
-      'marcar_pagado',
-      { tipo: 'appointment', id: r.id, metodo_pago: metodo, ...(foto ? { foto: fotoParaCobro(foto) } : {}) },
-    );
+
+    let r: { id: string; total: number; servicio: string; barbero: string };
+    let pagado: unknown;
+    if (via.como === 'aplicada') {
+      r = via.r;
+      pagado = via.r.cobro;
+    } else {
+      const { data, error } = await supabase().rpc('caja_ticket', {
+        p_company: companyId,
+        p_datos: datosTicket,
+      });
+      if (error) {
+        setEnviando(false);
+        avisar(
+          /caja_ticket/.test(error.message) && /function|find/i.test(error.message)
+            ? 'Falta instalar «Cobrar ticket» en la base (tu-pagina 0031).'
+            : error.message,
+          'error',
+        );
+        return;
+      }
+      r = data as { id: string; total: number; servicio: string; barbero: string };
+      pagado = await comando(
+        'marcar_pagado',
+        { tipo: 'appointment', id: r.id, metodo_pago: metodo, ...(fotoCobro ? { foto: fotoCobro } : {}) },
+      );
+    }
+    recordarSede();
     setEnviando(false);
     const texto = `${soles(Number(r.total))} · ${r.servicio}${r.barbero ? ` · ${r.barbero}` : ''}`;
     if (pagado === undefined) {

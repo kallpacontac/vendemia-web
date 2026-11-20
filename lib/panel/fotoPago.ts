@@ -48,10 +48,15 @@ export interface FotoPago {
   monto: number | null;
   metodo: string;
   destino: string;
+  /**
+   * Tomada SIN CONEXIÓN: la imagen sigue en el celular y `url` es local. No se manda con el cobro:
+   * el cobro va a la bandeja con ella y se sube antes (lib/panel/sinConexion/subir.ts).
+   */
+  local?: Blob;
 }
 
-/** Lo que viaja con el cobro: Postgres vuelve a comprobarlo todo. */
-export const fotoParaCobro = (f: FotoPago | null) => (f ? { url: f.url, hash: f.hash, operacion: f.operacion } : undefined);
+/** Lo que viaja con el cobro: Postgres vuelve a comprobarlo todo. Una foto local no viaja así. */
+export const fotoParaCobro = (f: FotoPago | null) => (f && !f.local ? { url: f.url, hash: f.hash, operacion: f.operacion } : undefined);
 
 /** Efectivo y contra entrega nunca piden foto: no hay comprobante que fotografiar. */
 export const METODOS_SIN_FOTO = ['cash', 'cod'];

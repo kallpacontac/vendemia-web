@@ -18,6 +18,7 @@ import AltaNegocio from '@/components/panel/AltaNegocio';
 import Instalable from '@/components/panel/Instalable';
 import BannerApp from '@/components/panel/BannerApp';
 import TecladoVisible from '@/components/panel/TecladoVisible';
+import { ProveedorSinConexion } from '@/components/panel/SinConexion';
 
 /**
  * ══════════════════════════════════════════════════════════════════════════
@@ -196,7 +197,10 @@ export default function PanelLayout({ children }: { children: React.ReactNode })
           está apagado. Si se invierte el orden, ese useSalud() revienta. */}
       <ProveedorSalud>
         <ProveedorAvisos>
-          <Guardia>{children}</Guardia>
+          {/* Sin conexión (apagones): la barra de arriba y la subida de lo anotado. Ver SinConexion.tsx. */}
+          <ProveedorSinConexion>
+            <Guardia>{children}</Guardia>
+          </ProveedorSinConexion>
         </ProveedorAvisos>
       </ProveedorSalud>
     </ProveedorSesion>
