@@ -175,9 +175,9 @@ function Caja() {
     // Cobrar: ningún cliente (el cajero reconoce el ticket por barbero y servicio). Solo el Cierre,
     // que es el reporte, pone nombres.
     const leads = cierre ? await clientesDe(companyId, [...todasCitas.map((c) => c.lead_id), ...pagos.pagosDelDia.map((p) => p.lead_id)]) : [];
-    // Ingresos sueltos del día (datos 0023), solo en el Cierre y en «Todas»: son de todo el negocio,
-    // como los gastos. null = sin la 0023: la tarjeta no sale.
-    const ingresos = cierre && !sede ? await leerIngresosCaja(companyId, dia) : null;
+    // Ingresos sin ticket del día (datos 0023), solo en el Cierre. Cada uno con su sede (0024):
+    // mirando una sede, solo los suyos. null = sin la 0023: la tarjeta no sale.
+    const ingresos = cierre ? await leerIngresosCaja(companyId, dia) : null;
     if (!sede) return { dia, sede, movimientos: todosMovimientos, citas: todasCitas, pedidos, gastos: todosGastos, leads, pagos, ingresos };
 
     // Una sede: solo el dinero de SUS citas (por la sede de cada cita, también la de un adelanto
@@ -195,7 +195,7 @@ function Caja() {
       citas: todasCitas.filter((c) => (c.sede ?? '') === sede),
       pedidos,
       gastos: [] as typeof todosGastos,
-      ingresos: null,
+      ingresos: ingresos ? ingresos.filter((i) => (i.sede ?? '') === sede) : null,
       leads,
       pagos: { ...pagos, pagosDelDia: pagos.pagosDelDia.filter((p) => suya(p.appointment_id)) },
     };
@@ -593,9 +593,9 @@ function Caja() {
                 </p>
               )}
               {/* Ingresos sin ticket, aquí dentro: solo el dueño los apunta (datos 0023). */}
-              {companyId && (sede || datos?.ingresos) && (
-                <IngresosCaja companyId={companyId} dia={dia} ingresos={datos?.ingresos ?? []} esDueno={esDueno}
-                  soloTodas={Boolean(sede)} alCambiar={releer} incrustado />
+              {companyId && datos?.ingresos && (
+                <IngresosCaja companyId={companyId} dia={dia} ingresos={datos.ingresos} esDueno={esDueno}
+                  sedes={sedes.map((x) => x.nombre)} sedeElegida={sede} alCambiar={releer} incrustado />
               )}
             </div>
 

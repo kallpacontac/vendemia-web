@@ -22,6 +22,8 @@ export interface IngresoCaja {
   concepto: string;
   importe: number;
   metodo: MetodoPago;
+  /** La sede del cajón donde entró (datos 0024). '' = del negocio. */
+  sede?: string;
 }
 
 const METODOS: MetodoPago[] = ['cash', 'yape', 'plin', 'bank_transfer'];
@@ -39,7 +41,8 @@ export default function IngresosCaja({
   dia,
   ingresos,
   esDueno,
-  soloTodas,
+  sedes = [],
+  sedeElegida = '',
   alCambiar,
   incrustado = false,
 }: {
@@ -47,8 +50,10 @@ export default function IngresosCaja({
   dia: string;
   ingresos: IngresoCaja[];
   esDueno: boolean;
-  /** Mirando una sede: son de todo el negocio y la lista solo sale en «Todas». */
-  soloTodas: boolean;
+  /** Las sedes del negocio (nombres). Con 2 o más, el ingreso se apunta en una. */
+  sedes?: string[];
+  /** La sede elegida arriba ('' = todas): el formulario la trae puesta. */
+  sedeElegida?: string;
   alCambiar: () => void;
   /** Dentro de la tarjeta «Entró, por método» del Cierre: sin tarjeta propia. */
   incrustado?: boolean;
@@ -58,6 +63,9 @@ export default function IngresosCaja({
   const [importe, setImporte] = useState('');
   const [concepto, setConcepto] = useState('');
   const [metodo, setMetodo] = useState<MetodoPago>('cash');
+  const pideSede = sedes.length >= 2;
+  const [sede, setSede] = useState(sedeElegida);
+  useEffect(() => setSede(sedeElegida), [sedeElegida]);
   const [guardando, setGuardando] = useState(false);
   const [borrando, setBorrando] = useState<string | null>(null);
   const raiz = useRef<HTMLDivElement>(null);
@@ -65,7 +73,7 @@ export default function IngresosCaja({
   const refFin = useRef<HTMLDivElement>(null);
 
   const monto = Number(importe.replace(',', '.'));
-  const falta = !(Number.isFinite(monto) && monto > 0) ? '¿cuánto entró?' : !concepto.trim() ? '¿de qué es?' : '';
+  const falta = !(Number.isFinite(monto) && monto > 0) ? '¿cuánto entró?' : !concepto.trim() ? '¿de qué es?' : pideSede && !sede ? '¿en qué sede?' : '';
   const total = ingresos.reduce((t, i) => t + i.importe, 0);
 
   useEffect(() => {
@@ -78,6 +86,7 @@ export default function IngresosCaja({
     setImporte('');
     setConcepto('');
     setMetodo('cash');
+    setSede(sedeElegida);
   }
 
   async function guardar() {
@@ -85,7 +94,7 @@ export default function IngresosCaja({
     setGuardando(true);
     const { error } = await supabase().rpc('caja_ingreso_guardar', {
       p_company: companyId,
-      p_datos: { dia, concepto: concepto.trim(), importe: monto, metodo },
+      p_datos: { dia, concepto: concepto.trim(), importe: monto, metodo, sede: pideSede ? sede : '' },
     });
     setGuardando(false);
     if (error) {
@@ -112,7 +121,7 @@ export default function IngresosCaja({
     <div ref={raiz} className={incrustado ? 'gc gc--dentro' : 'card gc'}>
       <div className="card-mini-head">
         {incrustado ? <b>Ingresos sin ticket</b> : <h3>Ingresos del día</h3>}
-        {esDueno && !abierto && !soloTodas && (
+        {esDueno && !abierto && (
           <button type="button" className="btn btn-primary" onClick={() => setAbierto(true)}>
             <Plus size={16} /> Ingreso
           </button>
@@ -149,6 +158,20 @@ export default function IngresosCaja({
             <input className="input" placeholder="O escríbelo" value={concepto} onChange={(e) => setConcepto(e.target.value)} aria-label="Concepto" />
           </div>
 
+          {pideSede && (
+            <div className="gc-campo">
+              <span>¿En qué sede?</span>
+              <div className="ticket-chips" role="radiogroup" aria-label="Sede">
+                {sedes.map((n) => (
+                  <button key={n} type="button" role="radio" aria-checked={sede === n} className={`ticket-chip${sede === n ? ' on' : ''}`}
+                    onClick={() => setSede(n)}>
+                    {n}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
           <div className="gc-campo">
             <span>¿Con qué?</span>
             <div className="ticket-chips" role="radiogroup" aria-label="Método">
@@ -173,9 +196,7 @@ export default function IngresosCaja({
         </div>
       )}
 
-      {soloTodas ? (
-        <p className="muted" style={{ fontSize: 12.5 }}>Los ingresos sin ticket son de todo el negocio: se ven en «Todas las sedes».</p>
-      ) : ingresos.length === 0 ? (
+      {ingresos.length === 0 ? (
         <p className="muted" style={{ fontSize: 12.5 }}>{esDueno ? 'Lo que entró sin ticket (un corte sin anotar, el fondo de caja…), apúntalo aquí.' : 'Sin ingresos sin ticket este día.'}</p>
       ) : (
         <>
@@ -183,7 +204,7 @@ export default function IngresosCaja({
             <div className="kv-fila gc-fila" key={i.id}>
               <span>
                 {i.concepto}
-                <small className="gc-tipo">{METODO_LABEL[i.metodo] ?? i.metodo}</small>
+                <small className="gc-tipo">{METODO_LABEL[i.metodo] ?? i.metodo}{pideSede && !sedeElegida && i.sede ? ` · ${i.sede}` : ''}</small>
               </span>
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
                 <b>{soles(i.importe)}</b>

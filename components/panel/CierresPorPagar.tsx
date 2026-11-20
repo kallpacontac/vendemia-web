@@ -31,6 +31,7 @@ const fecha = (iso: string) => diaMes(new Date(`${iso.slice(0, 10)}T12:00:00`));
 
 /** Cierran cada semana (lunes a domingo); la semana anterior, para pagarla el lunes. */
 const FILTROS: [Periodo, string][] = [
+  ['hoy', 'Hoy'],
   ['semana', 'Esta semana'],
   ['semana-anterior', 'Semana anterior'],
   ['quincena', 'Quincena'],
@@ -94,7 +95,9 @@ export default function CierresPorPagar({ companyId, esDueno }: { companyId: str
             {txt}
           </button>
         ))}
-        <span className="muted cierres__rango">del {fecha(fechas.desde)} al {fecha(fechas.hasta)}</span>
+        <span className="muted cierres__rango">
+          {fechas.desde === fechas.hasta ? fecha(fechas.desde) : `del ${fecha(fechas.desde)} al ${fecha(fechas.hasta)}`}
+        </span>
       </div>
 
       {porPagar.length === 0 ? (
