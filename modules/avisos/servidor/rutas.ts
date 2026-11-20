@@ -3,6 +3,7 @@ import { timingSafeEqual } from 'node:crypto';
 import { entorno } from '@/modules/fideliza/servidor/entorno';
 import { cuerpo, desdeError, fallo, jwtDe, log, ok } from '@/modules/fideliza/servidor/http';
 import { enviarPush, pushConfigurado } from '@/modules/fideliza/servidor/push';
+import { iconosDeAviso } from '@/lib/panel/marcaPropia';
 import { deUsuario, rpc, servidor } from '@/modules/fideliza/servidor/supabase';
 import { enviarCorreo, esc } from '@/lib/correo';
 import { cuandoSlot, planificar, type EventoPendiente, type Resumen } from '../dominio/redactar';
@@ -132,6 +133,7 @@ export async function prueba(req: Request) {
         : 'Así te llegará cuando haya un pago por revisar o una reserva nueva.',
       url: delEquipo ? '/panel/mi-agenda' : '/panel/configuracion?avisos=1',
       tag: 'prueba',
+      ...iconosDeAviso(fila.company_id),
     });
     return r.aceptados ? ok({ enviado: true }) : fallo('no_aceptado', 502, { detalle: r.error, caducado: r.caducados.length > 0 });
   } catch (e) {

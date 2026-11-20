@@ -175,11 +175,17 @@ function Guardia({ children }: { children: React.ReactNode }) {
   );
 }
 
+/** Instalable con el negocio activo, para la marca propia (lib/panel/marcaPropia.ts). */
+function InstalableDelNegocio() {
+  const { companyId } = useSesion();
+  return <Instalable companyId={companyId} />;
+}
+
 export default function PanelLayout({ children }: { children: React.ReactNode }) {
   return (
     <ProveedorSesion>
       {/* Manifest, service worker y el «Instalar» de Android: el panel como app. */}
-      <Instalable />
+      <InstalableDelNegocio />
       {/* Que el teclado de la tablet no tape la caja de texto que se está llenando. */}
       <TecladoVisible />
       {/* Salud va DENTRO de Sesión (necesita la compañía activa) y FUERA de la

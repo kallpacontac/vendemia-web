@@ -30,6 +30,7 @@ import { useAvisar } from './Avisos';
 import { enModoApp, plataforma, useInstalarAndroid } from './Instalable';
 import { supabase } from '@/lib/supabase/client';
 import { activarAvisos, enviarPrueba, registroPanel, soportaAvisos, suscripcionActual } from '@/lib/panel/suscribirAvisos';
+import { nombreApp } from '@/lib/panel/marcaPropia';
 
 type Tipo = 'pago' | 'reserva' | 'whatsapp' | 'plan' | 'persona' | 'stock' | 'por_aprobar';
 
@@ -182,7 +183,7 @@ export default function AvisosCelular() {
           <b>Tenlo como app</b>
           <p className="muted">Se abre desde su icono, a pantalla completa, sin buscar la página.</p>
           <button type="button" className="btn btn-ghost btn-sm" onClick={() => void instalar()}>
-            <Download size={14} /> Instalar Vendemia
+            <Download size={14} /> Instalar {nombreApp(companyId)}
           </button>
         </div>
       )}
@@ -194,7 +195,7 @@ export default function AvisosCelular() {
         )
       ) : permiso === 'denied' ? (
         <p className="muted" style={{ fontSize: 13 }}>
-          <BellOff size={13} /> Bloqueaste los avisos para Vendemia. Para activarlos, permítelos en los ajustes del navegador
+          <BellOff size={13} /> Bloqueaste los avisos para {nombreApp(companyId)}. Para activarlos, permítelos en los ajustes del navegador
           o del celular y vuelve aquí.
         </p>
       ) : !activos ? (

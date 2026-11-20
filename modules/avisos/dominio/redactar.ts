@@ -15,6 +15,7 @@
  *     anterior en la bandeja en vez de apilarse.
  */
 import { vocabulario } from '@/lib/panel/vocabulario';
+import { iconosDeAviso } from '@/lib/panel/marcaPropia';
 import type { BusinessMode } from '@/lib/supabase/types';
 
 export type TipoAviso =
@@ -58,6 +59,9 @@ export interface Mensaje {
   body: string;
   url: string;
   tag: string;
+  /** Con marca propia, el logo del negocio en vez del de Vendemia (lib/panel/marcaPropia.ts). */
+  icon?: string;
+  badge?: string;
 }
 
 export interface Envio {
@@ -479,7 +483,10 @@ export function planificar(eventos: EventoPendiente[], resumenes: Resumen[]): En
       grupos.set(clave, g);
     }
   }
-  const envios: Envio[] = [...grupos.values()].map((g) => ({ destino: g.destino, mensaje: redactar(g.eventos) }));
+  const envios: Envio[] = [...grupos.values()].map((g) => ({
+    destino: g.destino,
+    mensaje: { ...redactar(g.eventos), ...iconosDeAviso(g.eventos[0].company_id) },
+  }));
   for (const r of resumenes) {
     const m = redactarResumen(r);
     if (m) envios.push({ destino: r, mensaje: m });

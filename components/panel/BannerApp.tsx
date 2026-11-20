@@ -31,6 +31,7 @@ import { useSesion } from './Sesion';
 import { useAvisar } from './Avisos';
 import { enModoApp, plataforma, useInstalarAndroid, vistaDeEscritorio } from './Instalable';
 import { activarAvisos, soportaAvisos, suscripcionActual } from '@/lib/panel/suscribirAvisos';
+import { iconoApp, nombreApp } from '@/lib/panel/marcaPropia';
 
 type Variante = 'escritorio' | 'instalar' | 'ios' | 'android-manual' | 'activar';
 
@@ -62,6 +63,8 @@ const permitido = (m: Memoria) => !m.hecho && m.veces < 2 && Date.now() >= m.has
 
 export default function BannerApp() {
   const { companyId, rol } = useSesion();
+  // Con marca propia, la app se llama como el negocio (lib/panel/marcaPropia.ts).
+  const app = nombreApp(companyId);
   const avisar = useAvisar();
   const instalar = useInstalarAndroid();
   const [variante, setVariante] = useState<Variante | null>(null);
@@ -174,13 +177,13 @@ export default function BannerApp() {
   }
 
   return (
-    <div className={`banner-app banner-app--${variante}`} role="dialog" aria-live="polite" aria-label="Vendemia en tu celular">
+    <div className={`banner-app banner-app--${variante}`} role="dialog" aria-live="polite" aria-label={`${app} en tu celular`}>
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src="/icons/panel-192.png" alt="" className="banner-app__icono" />
+      <img src={iconoApp(companyId)} alt="" className="banner-app__icono" />
       <div className="banner-app__texto">
         {variante === 'instalar' && (
           <>
-            <b>{so === 'otra' ? 'Instala Vendemia en tu computadora' : 'Ten Vendemia como app'}</b>
+            <b>{so === 'otra' ? `Instala ${app} en tu computadora` : `Ten ${app} como app`}</b>
             <small>
               {so === 'otra'
                 ? 'Se abre en su propia ventana, como una app, y te avisa de pagos y reservas.'
@@ -195,7 +198,7 @@ export default function BannerApp() {
               {enModoApp() ? (
                 <>
                   Abre Chrome, toca <EllipsisVertical size={13} aria-label="menú" /> → <b>Configuración</b> →{' '}
-                  <b>Configuración de sitios</b> → <b>Sitio de escritorio</b> y desactívalo. Luego cierra Vendemia y vuelve a
+                  <b>Configuración de sitios</b> → <b>Sitio de escritorio</b> y desactívalo. Luego cierra {app} y vuelve a
                   abrirla.
                 </>
               ) : (
@@ -209,7 +212,7 @@ export default function BannerApp() {
         )}
         {variante === 'android-manual' && (
           <>
-            <b>Instala Vendemia en tu celular</b>
+            <b>Instala {app} en tu celular</b>
             {pasos ? (
               <small>
                 1. Toca <EllipsisVertical size={13} aria-label="menú" /> arriba a la derecha.
@@ -223,7 +226,7 @@ export default function BannerApp() {
         )}
         {variante === 'ios' && (
           <>
-            <b>Instala Vendemia en tu iPhone</b>
+            <b>Instala {app} en tu iPhone</b>
             {pasos ? (
               <small>
                 1. Toca <Share size={13} aria-label="Compartir" /> <b>Compartir</b>, abajo.

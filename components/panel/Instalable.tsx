@@ -18,6 +18,7 @@
  * explica a mano (Compartir → Añadir a pantalla de inicio).
  */
 import { useEffect, useSyncExternalStore } from 'react';
+import { iconoIphone, manifestDe, nombreApp } from '@/lib/panel/marcaPropia';
 
 interface EventoInstalar extends Event {
   prompt: () => Promise<void>;
@@ -100,16 +101,46 @@ function etiqueta(tag: 'link' | 'meta', attrs: Record<string, string>) {
   document.head.appendChild(el);
 }
 
-export default function Instalable() {
+/**
+ * El ícono de iPhone. Next ya pone uno (app/apple-icon.png): con marca propia
+ * se cambia por el del negocio y se guarda el original para volver a él si se
+ * cambia a un negocio sin marca propia.
+ */
+function iconoDeIphone(href: string | null) {
+  const links = document.head.querySelectorAll<HTMLLinkElement>('link[rel="apple-touch-icon"]');
+  if (!links.length && href) {
+    etiqueta('link', { rel: 'apple-touch-icon', href, 'data-vm-original': '' });
+    return;
+  }
+  links.forEach((l) => {
+    if (!l.hasAttribute('data-vm-original')) l.setAttribute('data-vm-original', l.getAttribute('href') ?? '');
+    const original = l.getAttribute('data-vm-original') ?? '';
+    const nuevo = href ?? original;
+    if (nuevo) l.setAttribute('href', nuevo);
+    else l.remove(); // Lo puso esta función y el negocio de ahora no tiene marca.
+  });
+}
+
+/**
+ * Marca propia (lib/panel/marcaPropia.ts): el manifest, el nombre y el ícono
+ * del negocio activo. Safari y Chrome los leen al instalar, así que basta con
+ * que estén puestos para entonces. El layout le pasa el negocio: este fichero
+ * no lee la sesión porque también lo importa la tarjeta pública de Fideliza.
+ */
+export default function Instalable({ companyId }: { companyId: string | null }) {
   useEffect(() => {
-    etiqueta('link', { rel: 'manifest', href: '/panel.webmanifest' });
+    etiqueta('link', { rel: 'manifest', href: manifestDe(companyId) });
+    etiqueta('meta', { name: 'apple-mobile-web-app-title', content: nombreApp(companyId) });
+    iconoDeIphone(iconoIphone(companyId));
+  }, [companyId]);
+
+  useEffect(() => {
     // Android usa este color para la barra superior cuando el navegador o la
     // app instalada lo permiten. Se actualiza aunque el layout raíz ya haya
     // creado la etiqueta, para que la barra continúe el fondo del dashboard.
     etiqueta('meta', { name: 'theme-color', content: '#EAEAE8' });
     etiqueta('meta', { name: 'apple-mobile-web-app-capable', content: 'yes' });
     etiqueta('meta', { name: 'mobile-web-app-capable', content: 'yes' });
-    etiqueta('meta', { name: 'apple-mobile-web-app-title', content: 'Vendemia' });
     etiqueta('meta', { name: 'apple-mobile-web-app-status-bar-style', content: 'default' });
 
     navigator.serviceWorker?.register('/panel-sw.js', { scope: '/panel' }).catch(() => {});
