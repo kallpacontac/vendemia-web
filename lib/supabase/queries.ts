@@ -738,6 +738,41 @@ export async function getCitasDelPeriodo(companyId: string, desde: string, hasta
 }
 
 /**
+ * Las citas puntuales de UN día, para «Agenda de hoy» del inicio (21-nov-2026).
+ *
+ * El inicio usaba `getCitas` (las 500 más recientes, con todas sus columnas) cada minuto para
+ * enseñar las de hoy: unas mil filas por minuto en un negocio con movimiento. Esto trae solo
+ * las de ese día. En la demo, las de la demo de ese día.
+ */
+export async function getCitasDeHoy(companyId: string, dia: string): Promise<Cita[]> {
+  if (demoActivo()) return citasDemo(companyId).filter((c) => c.slot_start?.startsWith(dia));
+  return getCitasDelPeriodo(companyId, dia, dia);
+}
+
+/**
+ * Nombre (o teléfono) de unos leads, por id: solo los que hacen falta en pantalla.
+ * En tandas de 100, por el largo de la URL (ver getServiciosDeCitas).
+ */
+export async function getNombresDeLeads(companyId: string, ids: string[]): Promise<Map<string, string>> {
+  const unicos = [...new Set(ids.filter(Boolean))];
+  if (demoActivo()) {
+    const quiero = new Set(unicos);
+    return new Map(leadsDemo(companyId).filter((l) => quiero.has(l.id)).map((l) => [l.id, l.name || l.phone]));
+  }
+  const nombres = new Map<string, string>();
+  if (!unicos.length) return nombres;
+  const sb = supabase();
+  for (let i = 0; i < unicos.length; i += 100) {
+    const { data, error } = await sb.from('leads').select('id, name, phone').eq('company_id', companyId).in('id', unicos.slice(i, i + 100));
+    if (error) throw error;
+    for (const l of (data ?? []) as { id: string; name: string | null; phone: string | null }[]) {
+      nombres.set(l.id, l.name || l.phone || '');
+    }
+  }
+  return nombres;
+}
+
+/**
  * Las líneas de servicio de unas citas: qué se hizo en cada una y a qué precio.
  * Es de donde sale la comisión, línea a línea (ver lib/panel/comisiones.ts).
  *

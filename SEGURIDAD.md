@@ -240,7 +240,7 @@ conviene confirmarlo.
   |---|---|---|
   | Access token (JWT) expiry | `900` | La ventana en la que un token robado o revocado sigue leyendo datos. Ver el riesgo de la sección 3 |
   | Time-box user sessions | `168` h | El tope absoluto. Sin él, un refresh token en el ordenador de recepción vale indefinidamente |
-  | Inactivity timeout | `1` h | Recepción cierra y la sesión muere sola. Eran 8 h (una jornada); bajado a 1 h el 2026-09-11 porque a un ordenador de recepción se acerca cualquiera |
+  | Inactivity timeout | `8` h | Una jornada: recepción cierra y la sesión muere sola. Bajado a 1 h el 2026-09-11; vuelto a 8 h el 2026-11-21 porque con 1 h la pantalla del mostrador que solo está abierta (agenda, sonido de reserva nueva) se cerraba sola. Lo sensible sigue corto: el asistente se bloquea a los 10 min |
   | Refresh token rotation | activado | Cada refresco invalida el anterior |
   | Reuse interval | `10` s | Margen para dos pestañas refrescando a la vez. Más alto es una ventana para reutilizar un token robado |
 
@@ -304,7 +304,7 @@ contraseña vieja. Por eso:
 | El filtro de Realtime no es un control | `escucharMensajes` filtra por `lead_id`, pero eso es una comodidad del canal. Lo que impide recibir mensajes ajenos es el RLS aplicado a Realtime: **hay que tener RLS activo en `messages`** (2.1). |
 | Sin CSP de scripts | Explicado arriba. |
 | **Revocar una sesión no corta el acceso a los datos al instante** | Y es contraintuitivo, así que conviene tenerlo escrito. Al revocar, el *refresh token* muere en el acto: esa sesión no se puede renovar nunca más. Pero el *access token* que el navegador ya tenía **sigue leyendo datos hasta que caduca solo**, porque PostgREST valida la firma y la fecha en local, sin preguntarle al servidor de auth si la sesión sigue viva. Medido el 2026-08-31: token revocado, `GET /rest/v1/memberships` → `200` con filas reales, 38 minutos por delante. La única palanca es el **JWT expiry** (2.6): con `900` la ventana pasa de una hora a un cuarto de hora. Bajarlo a cero no es opción — cada refresco es una petición de red. |
-| **En Free, una sesión copiada a otra máquina no caduca** | La caducidad del panel (7 días / 1 h, §2.6) corre en el navegador donde vive la sesión, y al saltar revoca el refresh token en el servidor. Pero si alguien copió ese token a otro sitio ANTES, allí no corre este código y Supabase lo seguirá renovando: en Free no hay time-box ni inactividad en el servidor. Se acepta porque copiar el token exige ya acceso al navegador —el mismo riesgo que el XSS de la primera fila—. Se cierra del todo pasando a Pro y activando los dos ajustes. |
+| **En Free, una sesión copiada a otra máquina no caduca** | La caducidad del panel (7 días / 8 h, §2.6) corre en el navegador donde vive la sesión, y al saltar revoca el refresh token en el servidor. Pero si alguien copió ese token a otro sitio ANTES, allí no corre este código y Supabase lo seguirá renovando: en Free no hay time-box ni inactividad en el servidor. Se acepta porque copiar el token exige ya acceso al navegador —el mismo riesgo que el XSS de la primera fila—. Se cierra del todo pasando a Pro y activando los dos ajustes. |
 | La clave `anon` está en el bundle | Es su función. Lo que nunca puede aparecer es la `service_role`: se salta el RLS entero. No está en el repo ni en Vercel — solo en el `.env` del bot. |
 
 ---

@@ -68,12 +68,12 @@ async function cuenta(p: PromiseLike<{ data: unknown; error: unknown; count?: nu
 
 /**
  * Lo que se le debe al equipo (datos 0014). Recalcula comisiones de semanas: se hace cada
- * 5 minutos, no en cada vuelta de 30 s.
+ * 15 minutos, no en cada vuelta de 30 s (eran 5; lo que se le debe al equipo no cambia al minuto).
  */
 const cierresCache = new Map<string, { at: number; v: Promise<{ n: number; total: number }> }>();
 function porPagarAlEquipo(companyId: string) {
   const c = cierresCache.get(companyId);
-  if (c && Date.now() - c.at < 5 * 60_000) return c.v;
+  if (c && Date.now() - c.at < 15 * 60_000) return c.v;
   const v = (async () => {
     try {
       const cierres = await leerCierres(companyId);

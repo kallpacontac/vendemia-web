@@ -63,10 +63,16 @@ export function ProveedorSalud({ children }: { children: React.ReactNode }) {
     };
 
     void mirar();
-    const t = setInterval(() => void mirar(), CADA_MS);
+    // Con la pestaña escondida no se pregunta (21-nov-2026: era la única consulta que seguía
+    // sola en segundo plano); al volver, una al momento.
+    const visible = () => document.visibilityState === 'visible';
+    const t = setInterval(() => { if (visible()) void mirar(); }, CADA_MS);
+    const alVolver = () => { if (visible()) void mirar(); };
+    document.addEventListener('visibilitychange', alVolver);
     return () => {
       vivo = false;
       clearInterval(t);
+      document.removeEventListener('visibilitychange', alVolver);
     };
   }, [companyId]);
 

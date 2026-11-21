@@ -19,7 +19,7 @@
  * Así que el panel aplica él mismo esos dos valores, en cualquier plan:
  *
  *   · TOPE:        7 días desde que la persona ENTRÓ, pase lo que pase.
- *   · INACTIVIDAD: 1 hora sin que nadie toque el panel.
+ *   · INACTIVIDAD: 8 horas sin que nadie toque el panel (una jornada).
  *
  * ── Lo que esto protege y lo que NO ──────────────────────────────────────
  *
@@ -48,16 +48,18 @@ import type { Session } from '@supabase/supabase-js';
 export const TOPE_SESION_MS = 168 * 60 * 60 * 1000;
 
 /**
- * 1 hora sin que nadie toque el panel.
+ * 8 horas sin que nadie toque el panel: una jornada.
  *
- * Decisión de producto del 2026-09-11: las 8 h que fijaba SEGURIDAD.md eran
- * demasiado para un ordenador de recepción al que se acerca cualquiera.
+ * Historia: eran 8 h (SEGURIDAD.md), el 2026-09-11 se bajó a 1 h porque a un
+ * ordenador de recepción se acerca cualquiera, y el 2026-11-21 Alvaro lo volvió a
+ * 8 h: con 1 h, la pantalla del mostrador que solo está abierta (la agenda en un
+ * monitor, el sonido de «llegó una reserva», components/panel/SonidoReservas.tsx)
+ * se cerraba a media mañana y dejaba de avisar.
  *
- * ⚠️ Consecuencia asumida: una pantalla que solo se MIRA —la agenda puesta en
- * un monitor, alguien leyendo el chat sin escribir— no genera actividad y
- * también se cierra a la hora.
+ * Lo que sigue protegiendo lo sensible con poco tiempo: el asistente se bloquea a
+ * los 10 minutos (components/panel/asistente/useBloqueo.ts).
  */
-export const TOPE_INACTIVIDAD_MS = 60 * 60 * 1000;
+export const TOPE_INACTIVIDAD_MS = 8 * 60 * 60 * 1000;
 
 /** Cada cuánto, como mucho, se apunta actividad: un clic por segundo no son sesenta escrituras. */
 const APUNTAR_CADA_MS = 30 * 1000;
@@ -187,6 +189,6 @@ export function apuntarActividad(s: Session | null, ahora = Date.now()): void {
 
 /** El texto que se enseña en /login después. */
 export const MENSAJE_CADUCIDAD: Record<MotivoCaducidad, string> = {
-  inactividad: 'Tu sesión se cerró tras 1 hora sin actividad. Vuelve a entrar para seguir.',
+  inactividad: 'Tu sesión se cerró tras 8 horas sin actividad. Vuelve a entrar para seguir.',
   tope: 'Por seguridad, una sesión dura como máximo 7 días. Vuelve a entrar para seguir.',
 };

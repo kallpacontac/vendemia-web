@@ -8,7 +8,7 @@
  * Es lo que justifica que el asistente viva en la web y no en WhatsApp: allí,
  * quien tiene el teléfono ES el dueño. Aquí se puede pedir que lo demuestre.
  *
- * La sesión del panel aguanta una hora sin que nadie la toque (ver
+ * La sesión del panel aguanta 8 horas sin que nadie la toque (ver
  * lib/panel/caducidad.ts). Para la agenda está bien; para una pantalla que
  * contesta «¿cuánto entró hoy?» a quien se siente delante, no. Esta página se
  * bloquea a los 10 minutos.

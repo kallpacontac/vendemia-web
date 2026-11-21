@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import {
   CalendarDays,
@@ -20,9 +20,10 @@ import { quienDeCita, quienEnUnaLinea } from '@/lib/panel/ficha';
 import { anterior, rangoDe } from '@/lib/panel/serie';
 import { cap, vocabulario } from '@/lib/panel/vocabulario';
 import {
-  getCitas,
+  getCitasDeHoy,
   getCompania,
   getConversaciones,
+  getNombresDeLeads,
   getIngresosPorProducto,
   getMetricasDiarias,
   getPendientesDePago,
@@ -31,6 +32,25 @@ import {
 import type { GranoSerie } from '@/lib/supabase/types';
 
 const SONDEO_DASHBOARD_MS = 60000;
+
+/**
+ * Rendimiento (21-nov-2026). Cada minuto el inicio pedía las 500 citas y las 500 conversaciones
+ * más recientes, con todas sus columnas, para enseñar las citas de hoy, cuatro conversaciones y
+ * los nombres. Ahora las citas son solo las de hoy, los nombres solo los de esas citas, y las
+ * conversaciones (que no cambian con el periodo ni hacen falta al minuto) se reutilizan durante
+ * 5 minutos. «Reintentar» las vuelve a pedir.
+ */
+const CONVERSACIONES_CADA_MS = 5 * 60_000;
+const conversacionesCache = new Map<string, { at: number; v: ReturnType<typeof getConversaciones> }>();
+function conversaciones(companyId: string, forzar = false) {
+  const c = conversacionesCache.get(companyId);
+  if (!forzar && c && Date.now() - c.at < CONVERSACIONES_CADA_MS) return c.v;
+  const v = getConversaciones(companyId, 500);
+  // Si falla, que la próxima vuelta lo intente otra vez en vez de guardar el error 5 min.
+  v.catch(() => conversacionesCache.delete(companyId));
+  conversacionesCache.set(companyId, { at: Date.now(), v });
+  return v;
+}
 const COLORES_SERVICIO = ['#FF5A1F', '#1F8A83', '#E7A62A', '#4F7CFF', '#8B63E6'];
 const ICONOS_CITA = [
   ['#FFF0E8', '#D8430B', Scissors],
@@ -58,6 +78,9 @@ export default function Dashboard() {
   const { companyId, compania, canchas } = useSesion();
   const [periodo, setPeriodo] = useState<ClavePeriodo>('semana');
   const seleccion = PERIODOS[periodo];
+  const [forzar, setForzar] = useState(0);
+  // «Reintentar» pide las conversaciones de nuevo UNA vez; las vueltas siguientes vuelven a la caché.
+  const forzarConversaciones = useRef(false);
 
   const { datos, cargando, error, releer } = useCargar(async () => {
     if (!companyId) return null;
@@ -69,14 +92,23 @@ export default function Dashboard() {
       getMetricasDiarias(companyId, hoy, hoy),
       getSerie(companyId, actual.desde, actual.hasta, seleccion.grano),
       getSerie(companyId, previo.desde, previo.hasta, seleccion.grano),
-      getCitas(companyId),
-      getConversaciones(companyId, 500),
+      getCitasDeHoy(companyId, hoy),
+      conversaciones(companyId, forzarConversaciones.current),
       getIngresosPorProducto(companyId, actual.desde, actual.hasta).catch(() => null),
       getCompania(companyId),
     ]);
-    const porPagar = await getPendientesDePago(companyId, esAppointmentFamily(empresa?.business_mode));
-    return { metricas, serie, serieAnterior, citas, leads, productos, empresa, porPagar };
-  }, [companyId, periodo]);
+    forzarConversaciones.current = false;
+    const [porPagar, nombres] = await Promise.all([
+      getPendientesDePago(companyId, esAppointmentFamily(empresa?.business_mode)),
+      // Los nombres de las citas de hoy; si falla, la fila enseña el teléfono o «Cliente».
+      getNombresDeLeads(companyId, citas.map((c) => c.lead_id)).catch(() => new Map<string, string>()),
+    ]);
+    return { metricas, serie, serieAnterior, citas, leads, productos, empresa, porPagar, nombres };
+  }, [companyId, periodo, forzar]);
+  const reintentar = () => {
+    forzarConversaciones.current = true;
+    setForzar((n) => n + 1);
+  };
 
   useSondeo(releer, SONDEO_DASHBOARD_MS, !!companyId);
 
@@ -98,10 +130,7 @@ export default function Dashboard() {
     [datos, hoy],
   );
 
-  const nombrePorLead = useMemo(
-    () => new Map((datos?.leads ?? []).map((l) => [l.id, l.name || l.phone])),
-    [datos],
-  );
+  const nombrePorLead = datos?.nombres ?? new Map<string, string>();
 
   const recientes = (datos?.leads ?? []).filter((l) => l.ultimoMensaje).slice(0, 4);
   const productos = (datos?.productos ?? []).slice(0, 5);
@@ -147,7 +176,7 @@ export default function Dashboard() {
           }
         />
 
-        {error && <div className="dashboard-error" role="alert">No se pudo actualizar el resumen. {datos ? 'Mostramos la última lectura disponible.' : 'Reintenta para consultar las cifras.'}<button type="button" onClick={releer}>Reintentar</button></div>}
+        {error && <div className="dashboard-error" role="alert">No se pudo actualizar el resumen. {datos ? 'Mostramos la última lectura disponible.' : 'Reintenta para consultar las cifras.'}<button type="button" onClick={reintentar}>Reintentar</button></div>}
 
         {datos && <>
         <ResumenNegocio
@@ -214,7 +243,7 @@ export default function Dashboard() {
               <Link className="round-link" href="/panel/catalogo" aria-label="Abrir catálogo"><ChevronRight size={17} /></Link>
             </div>
             {datos.productos === null ? (
-              <div className="dash-empty dash-empty--small" role="status"><p>No se pudo cargar el detalle de ventas.</p><button className="dash-text-link" type="button" onClick={releer}>Reintentar</button></div>
+              <div className="dash-empty dash-empty--small" role="status"><p>No se pudo cargar el detalle de ventas.</p><button className="dash-text-link" type="button" onClick={reintentar}>Reintentar</button></div>
             ) : productos.length === 0 ? (
               <div className="dash-empty dash-empty--small"><p>Sin ventas registradas en este período.</p></div>
             ) : (
