@@ -58,6 +58,7 @@ import {
   Store,
   Trash2,
   UserSquare,
+  Users,
   Wallet,
   Wifi,
 } from 'lucide-react';
@@ -124,6 +125,9 @@ const TONOS: { etiqueta: string; texto: string }[] = [
   { etiqueta: 'Alegre', texto: 'Alegre y con jerga peruana. Tutea y usa emojis con moderación.' },
   { etiqueta: 'Directo', texto: 'Directo y breve. Responde lo justo y lleva al cliente a reservar o comprar.' },
 ];
+
+/** Las pestañas de «Tu panel». */
+type PestanaPanel = 'negocio' | 'oferta' | 'cobros' | 'equipo';
 
 /** Lo que el formulario edita de `companies`. Todos están en la lista blanca del bot. */
 interface Formulario {
@@ -317,7 +321,22 @@ function Configuracion() {
    * cambia la URL sin volver a montar la página.
    */
   const irAlEquipo = parametros.get('equipo') === '1';
-  const seccionEquipo = useRef<HTMLDetailsElement>(null);
+  const seccionEquipo = useRef<HTMLDivElement>(null);
+  /** Equipo, menú, boletas, caja y Google Calendar: dueño, administrador y admin de la plataforma. */
+  const gestiona = rol === 'dueno' || rol === 'admin' || esAdminPlataforma;
+
+  /**
+   * La pestaña de Tu panel. Los enlaces de otras pantallas abren la suya:
+   * `?equipo=1` → Equipo, `#facturacion` → Cobros, `?google=` / `#google-calendar`
+   * → Servicios y horario. Cada sección hace su propio scroll al montarse.
+   */
+  const [pestana, setPestana] = useState<PestanaPanel>(() => {
+    const hash = typeof window === 'undefined' ? '' : window.location.hash;
+    if (parametros.get('equipo') === '1') return 'equipo';
+    if (hash === '#facturacion') return 'cobros';
+    if (parametros.has('google') || hash === '#google-calendar') return 'oferta';
+    return 'negocio';
+  });
 
   /**
    * Ajustes tiene dos cosas que no se mezclan (20-nov-2026, Alvaro: «siempre
@@ -356,12 +375,10 @@ function Configuracion() {
   useEffect(() => {
     if (!irAlEquipo) return;
     setVista('panel');
+    setPestana('equipo');
     // Tras el render, que es cuando la sección existe.
     const t = setTimeout(() => {
-      const d = seccionEquipo.current;
-      if (!d) return;
-      d.open = true;
-      d.scrollIntoView({ block: 'start', behavior: 'smooth' });
+      seccionEquipo.current?.scrollIntoView({ block: 'start', behavior: 'smooth' });
     }, 80);
     return () => clearTimeout(t);
     // `cargado`: mientras el formulario no llega, la página enseña «Cargando…»
@@ -561,6 +578,7 @@ function Configuracion() {
     if (sinNumero) {
       avisar(`Falta el número del método de pago "${sinNumero.type}".`, 'error');
       setVista('panel');
+      setPestana('cobros');
       return;
     }
 
@@ -570,6 +588,7 @@ function Configuracion() {
       if (e) {
         avisar(e, 'error');
         setVista('panel');
+        setPestana('oferta');
         return;
       }
     }
@@ -672,6 +691,13 @@ function Configuracion() {
       </main>
     );
   }
+
+  const pestanasPanel: [PestanaPanel, string][] = [
+    ['negocio', 'Negocio'],
+    ['oferta', `${cap(vocabulario(form.business_mode).items)} y horario`],
+    ['cobros', 'Cobros'],
+    ...(gestiona ? ([['equipo', 'Equipo']] as [PestanaPanel, string][]) : []),
+  ];
 
   return (
     <main className="main main--configuracion">
@@ -1074,8 +1100,35 @@ function Configuracion() {
         </div>
 
         <div hidden={vista !== 'panel'}>
-          {/* Los datos del negocio: antes, el paso 1 del asistente. Son generales (los usan la página, la caja y el asistente). */}
-          <div className="card panel active">
+          {/*
+            Tu panel en pestañas, como el Asistente (21-nov-2026, Alvaro: «evitemos tener que
+            scrollear mucho»). Cada pestaña es una parte de lo general y se ve sola. Ocultas y no
+            desmontadas, igual que las vistas: lo que esté sin guardar sigue ahí. La de Equipo
+            solo existe para dueño, administrador y admin de la plataforma (este último ve la
+            lista sin botones: `equipo_listar` se la da, pero los comandos no los puede encolar).
+            «Comprobante al cobrar» y «Asistencia» van con la barra de guardar; equipo, menú,
+            boletas, avisos y Google se guardan solos.
+          */}
+          <div className="stepper-card">
+            <nav className="stepper" aria-label="Partes de Tu panel">
+              {pestanasPanel.map(([id, txt], i) => (
+                <button
+                  key={id}
+                  type="button"
+                  className={`step ${pestana === id ? 'active' : ''}`}
+                  onClick={() => setPestana(id)}
+                  aria-current={pestana === id ? 'page' : undefined}
+                >
+                  <div className="step__dot">{i + 1}</div>
+                  <div className="step__lbl">{txt}</div>
+                </button>
+              ))}
+            </nav>
+          </div>
+
+          {/* ══ TU PANEL · NEGOCIO ══ */}
+          <div hidden={pestana !== 'negocio'}>
+            <div className="card panel active">
           <div className="sec">
             <h4>
               <Store /> Datos del negocio
@@ -1130,10 +1183,14 @@ function Configuracion() {
 
           {/* Pegado al «WhatsApp del bot»: es el estado de ESE número, no cómo habla el asistente. */}
           <ConexionWhatsApp necesita={necesitaEmparejar(salud)} />
+            </div>
+            {/* No es configuración del negocio sino de ESTE celular, y se guarda sola. */}
+            <AvisosCelular />
           </div>
 
-          {/* Catálogo, reserva, horario y métodos de pago: antes, el paso «Servicios y cobros» del asistente. */}
-          <div className="card panel active" style={{ marginTop: 18 }}>
+          {/* ══ TU PANEL · SERVICIOS Y HORARIO ══ */}
+          <div hidden={pestana !== 'oferta'}>
+            <div className="card panel active">
           {/*
             El catálogo tenía aquí su propio editor, y eran DOS sitios para lo
             mismo con distintos campos: este tocaba 4 de los 14 de `catalog` y
@@ -1152,7 +1209,7 @@ function Configuracion() {
                 ? 'Productos'
                 : `${cap(vocabulario(form?.business_mode).items)} y productos`}
             </h4>
-            <p className="cfg-guide">Qué ofreces, cuándo atiendes y cómo cobras. Lo usan tu página, la caja y tu asistente.</p>
+            <p className="cfg-guide">Qué ofreces y cuándo atiendes. Lo usan tu página, la caja y tu asistente.</p>
             <div className="cfg-enlace">
               <div>
                 <b>
@@ -1288,7 +1345,43 @@ function Configuracion() {
               necesitas cambiarla, dínoslo y la ajustamos en el bot.
             </p>
           </div>
+          {/*
+            Decisión de Alvaro (18-sep-2026): apagado por defecto. Con él
+            encendido, una cita a la que nadie dijo «no vino» se da por
+            atendida sola, y un plantón acaba pagando comisión. Solo en
+            citas puntuales: un grupo recurrente no tiene una hora que pase.
+          */}
+          {gestiona && form.business_mode === 'appointment' && (
+            <div className="sec">
+              <h4>
+                <CalendarCheck /> Asistencia
+              </h4>
+              <div className="toggle-row">
+                <div className="t">
+                  <b>Dar por atendida la cita si nadie dice lo contrario</b>
+                  <small>
+                    {form.asumir_asistencia
+                      ? 'Pasada la hora, la cita cuenta como atendida sola. Un plantón que no marques como «No vino» pagará comisión.'
+                      : 'Apagado: la cita espera a que marques «Vino» o «No vino» en la Agenda. Hasta entonces no genera comisión.'}
+                  </small>
+                </div>
+                <div
+                  className={`toggle ${form.asumir_asistencia ? 'on' : ''}`}
+                  onClick={() => set('asumir_asistencia', !form.asumir_asistencia)}
+                  role="switch"
+                  aria-checked={form.asumir_asistencia}
+                />
+              </div>
+            </div>
+          )}
+            </div>
+            {/* Su Google Calendar en la agenda de su página (sql/0028): solo dueño o administrador. */}
+            {gestiona && <GoogleCalendar />}
+          </div>
 
+          {/* ══ TU PANEL · COBROS ══ */}
+          <div hidden={pestana !== 'cobros'}>
+            <div className="card panel active">
           <div className="sec">
             <h4>
               <Wallet /> Métodos de pago
@@ -1343,145 +1436,103 @@ function Configuracion() {
             )}
             </fieldset>
           </div>
-          </div>
-
-        {/*
-          Fuera del asistente (18-nov-2026, Alvaro: «no tiene sentido» en «Cómo responde»): quién
-          entra al panel, el orden del menú y las boletas no cambian cómo responde Mia. Desde el
-          20-nov van en la vista «Tu panel» (ver `vista`) y cada una se guarda sola, salvo «Caja y agenda», que va con la barra de
-          guardar porque son campos del mismo formulario. Dueño y administrador; el admin de la plataforma
-          ve la lista del equipo sin botones (`equipo_listar` se la da, pero los comandos no los
-          puede encolar). Al empleado ni se le pinta. Ver components/panel/Equipo.tsx.
-        */}
-        {(rol === 'dueno' || rol === 'admin' || esAdminPlataforma) && (
-          <section className="card cfg-panel" aria-labelledby="cfg-panel-titulo">
-            <div className="card-mini-head">
-              <h3 id="cfg-panel-titulo">Tu equipo y tu panel</h3>
+          {gestiona && (
+            <>
+          {/*
+            «Comprobante al cobrar» (datos 0010, pedido de Alvaro el 10-nov-2026).
+            Es distinto de «Comprobantes» del Asistente: aquel dice quién
+            revisa las capturas que manda el CLIENTE por WhatsApp; este, si
+            quien cobra desde el PANEL tiene que adjuntar la foto del pago.
+            Solo el dueño la cambia: «obligatoria» le protege de cobros
+            apuntados sin pruebas, y no puede apagarla otro.
+          */}
+          <div className="sec">
+            <h4>
+              <Camera /> Comprobante al cobrar
+            </h4>
+            <p className="cfg-guide">
+              Al registrar un cobro en la Caja, la Agenda o {vocabulario(form.business_mode, { canchas }).una}{' '}
+              {vocabulario(form.business_mode, { canchas }).reserva}, adjuntar la foto del Yape, Plin o transferencia. Se lee sola y
+              queda guardada con el pago.
+            </p>
+            {rol !== 'dueno' && rol !== null && (
+              <p className="muted" style={{ fontSize: 12.5, marginBottom: 8 }}>
+                Solo la cambia el dueño.
+              </p>
+            )}
+            {cobroFoto?.sinMigrar && (
+              <p className="muted" style={{ fontSize: 12.5, marginBottom: 8 }}>
+                Falta la actualización 0010 en la base de datos. Hasta entonces la foto solo sale en el tablero de canchas.
+              </p>
+            )}
+            {cobroFoto && !cobroFoto.sinMigrar && !cobroFoto.nube && (
+              <p className="muted" style={{ fontSize: 12.5, marginBottom: 8 }}>
+                La agenda de este negocio todavía la lleva el bot: la foto no tiene dónde guardarse con el cobro. Se
+                aplicará cuando la agenda pase a la nube.
+              </p>
+            )}
+            <div className="opciones opciones--3" role="radiogroup" aria-label="Comprobante al cobrar">
+              {MODOS_FOTO_PAGO.map((m) => (
+                <button
+                  key={m}
+                  type="button"
+                  className={`opcion ${fotoPago === m ? 'on' : ''}`}
+                  onClick={() => setFotoPago(m)}
+                  role="radio"
+                  aria-checked={fotoPago === m}
+                  disabled={fotoPago === null || (rol !== 'dueno' && rol !== null)}
+                >
+                  <b>{TEXTO_MODO[m].titulo}</b>
+                  <small>{TEXTO_MODO[m].detalle}</small>
+                  {m === 'apagada' && <span className="opcion__def">por defecto</span>}
+                </button>
+              ))}
             </div>
-            {/*
-              «Caja y agenda» (20-nov-2026): estaban en los pasos 1 y 2 del asistente y
-              ninguna cambia cómo responde Mia: una es de quien cobra desde el panel,
-              la otra de cuándo una cita cuenta para la comisión. Se guardan con la
-              barra de abajo, como el resto del formulario.
-            */}
-            <details className="cfg-advanced cfg-advanced--section">
-              <summary>Caja y agenda</summary>
-              {/*
-                «Comprobante al cobrar» (datos 0010, pedido de Alvaro el 10-nov-2026).
-                Es distinto de «Comprobantes de pago» del paso 2: aquel dice quién
-                revisa las capturas que manda el CLIENTE por WhatsApp; este, si
-                quien cobra desde el PANEL tiene que adjuntar la foto del pago.
-                Solo el dueño la cambia: «obligatoria» le protege de cobros
-                apuntados sin pruebas, y no puede apagarla otro.
-              */}
-              <div className="sec">
-                <h4>
-                  <Camera /> Comprobante al cobrar
-                </h4>
-                <p className="cfg-guide">
-                  Al registrar un cobro en la Caja, la Agenda o {vocabulario(form.business_mode, { canchas }).una}{' '}
-                  {vocabulario(form.business_mode, { canchas }).reserva}, adjuntar la foto del Yape, Plin o transferencia. Se lee sola y
-                  queda guardada con el pago.
-                </p>
-                {rol !== 'dueno' && rol !== null && (
-                  <p className="muted" style={{ fontSize: 12.5, marginBottom: 8 }}>
-                    Solo la cambia el dueño.
-                  </p>
-                )}
-                {cobroFoto?.sinMigrar && (
-                  <p className="muted" style={{ fontSize: 12.5, marginBottom: 8 }}>
-                    Falta la actualización 0010 en la base de datos. Hasta entonces la foto solo sale en el tablero de canchas.
-                  </p>
-                )}
-                {cobroFoto && !cobroFoto.sinMigrar && !cobroFoto.nube && (
-                  <p className="muted" style={{ fontSize: 12.5, marginBottom: 8 }}>
-                    La agenda de este negocio todavía la lleva el bot: la foto no tiene dónde guardarse con el cobro. Se
-                    aplicará cuando la agenda pase a la nube.
-                  </p>
-                )}
-                <div className="opciones opciones--3" role="radiogroup" aria-label="Comprobante al cobrar">
-                  {MODOS_FOTO_PAGO.map((m) => (
-                    <button
-                      key={m}
-                      type="button"
-                      className={`opcion ${fotoPago === m ? 'on' : ''}`}
-                      onClick={() => setFotoPago(m)}
-                      role="radio"
-                      aria-checked={fotoPago === m}
-                      disabled={fotoPago === null || (rol !== 'dueno' && rol !== null)}
-                    >
-                      <b>{TEXTO_MODO[m].titulo}</b>
-                      <small>{TEXTO_MODO[m].detalle}</small>
-                      {m === 'apagada' && <span className="opcion__def">por defecto</span>}
-                    </button>
-                  ))}
-                </div>
 
-                {/*
-                  «Los empleados cobran» (datos 0012, Alvaro 12-nov-2026). Apagado de
-                  serie; lo enciende el equipo de Vendemia cuando el dueño lo pide. El
-                  dueño lo ve, pero no lo toca: así no se enciende por descuido.
-                */}
-                {cobroFoto && !cobroFoto.sinMigrar && (
-                  <div className="cfg-enlace" style={{ marginTop: 12 }}>
-                    <div>
-                      <b>Los empleados {cobroFoto.empleadoCobra ? 'cobran' : 'no cobran'}</b>
-                      <small>
-                        {cobroFoto.empleadoCobra
-                          ? 'Desde Mi agenda cobran lo que falta de sus citas, siempre con foto (también en efectivo). Cada cobro sale en la Caja con su nombre.'
-                          : 'El cobro lo apunta la caja. Si quieres que tus empleados cobren (siempre con foto), pídeselo al equipo de Vendemia.'}
-                      </small>
-                    </div>
-                    {esAdminPlataforma && (
-                      <button type="button" className="btn btn-ghost btn-sm" onClick={() => void cambiarEmpleadoCobra(!cobroFoto.empleadoCobra)}>
-                        {cobroFoto.empleadoCobra ? 'Apagar' : 'Encender'}
-                      </button>
-                    )}
-                  </div>
+            {/*
+              «Los empleados cobran» (datos 0012, Alvaro 12-nov-2026). Apagado de
+              serie; lo enciende el equipo de Vendemia cuando el dueño lo pide. El
+              dueño lo ve, pero no lo toca: así no se enciende por descuido.
+            */}
+            {cobroFoto && !cobroFoto.sinMigrar && (
+              <div className="cfg-enlace" style={{ marginTop: 12 }}>
+                <div>
+                  <b>Los empleados {cobroFoto.empleadoCobra ? 'cobran' : 'no cobran'}</b>
+                  <small>
+                    {cobroFoto.empleadoCobra
+                      ? 'Desde Mi agenda cobran lo que falta de sus citas, siempre con foto (también en efectivo). Cada cobro sale en la Caja con su nombre.'
+                      : 'El cobro lo apunta la caja. Si quieres que tus empleados cobren (siempre con foto), pídeselo al equipo de Vendemia.'}
+                  </small>
+                </div>
+                {esAdminPlataforma && (
+                  <button type="button" className="btn btn-ghost btn-sm" onClick={() => void cambiarEmpleadoCobra(!cobroFoto.empleadoCobra)}>
+                    {cobroFoto.empleadoCobra ? 'Apagar' : 'Encender'}
+                  </button>
                 )}
               </div>
-              {/*
-                Decisión de Alvaro (18-sep-2026): apagado por defecto. Con él
-                encendido, una cita a la que nadie dijo «no vino» se da por
-                atendida sola, y un plantón acaba pagando comisión. Solo en
-                citas puntuales: un grupo recurrente no tiene una hora que pase.
-              */}
-              {form.business_mode === 'appointment' && (
-                <div className="sec">
-                  <h4>
-                    <CalendarCheck /> Asistencia
-                  </h4>
-                  <div className="toggle-row">
-                    <div className="t">
-                      <b>Dar por atendida la cita si nadie dice lo contrario</b>
-                      <small>
-                        {form.asumir_asistencia
-                          ? 'Pasada la hora, la cita cuenta como atendida sola. Un plantón que no marques como «No vino» pagará comisión.'
-                          : 'Apagado: la cita espera a que marques «Vino» o «No vino» en la Agenda. Hasta entonces no genera comisión.'}
-                      </small>
-                    </div>
-                    <div
-                      className={`toggle ${form.asumir_asistencia ? 'on' : ''}`}
-                      onClick={() => set('asumir_asistencia', !form.asumir_asistencia)}
-                      role="switch"
-                      aria-checked={form.asumir_asistencia}
-                    />
-                  </div>
-                </div>
-              )}
-            </details>
-            <details ref={seccionEquipo} className="cfg-advanced cfg-advanced--section"><summary>Acceso del equipo</summary><Equipo sinLista={datos?.miembros.length ?? 0} /></details>
-            <OrdenDelMenu />
-            {/* La pantalla de emitir está en Caja; aquí, su configuración. */}
-            <SeccionFacturacion />
-          </section>
-        )}
+            )}
+          </div>
+              {/* La pantalla de emitir está en Caja; aquí, su configuración. */}
+              <SeccionFacturacion />
+            </>
+          )}
+            </div>
+          </div>
 
-        {/* Fuera del asistente: no es configuración del bot sino de ESTE
-            celular, y se guarda sola (no pasa por la barra de guardar). */}
-        <AvisosCelular />
-        {/* Su Google Calendar en la agenda de su página (sql/0028): solo dueño o administrador. */}
-        {(rol === 'dueno' || rol === 'admin' || esAdminPlataforma) && <GoogleCalendar />}
+          {/* ══ TU PANEL · EQUIPO ══ */}
+          {gestiona && (
+            <div hidden={pestana !== 'equipo'}>
+              <div className="card panel active">
+                <div className="sec" ref={seccionEquipo}>
+                  <h4>
+                    <Users /> Acceso del equipo
+                  </h4>
+                  <Equipo sinLista={datos?.miembros.length ?? 0} />
+                </div>
+                <OrdenDelMenu />
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
