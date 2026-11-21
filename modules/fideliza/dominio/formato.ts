@@ -37,6 +37,14 @@ export const fechaHora = (iso: string | null | undefined) =>
       }).replace(/\s/g, ' ')
     : '—';
 
+/** «jueves, 20 de noviembre» (hora de Lima). Para el detalle de una visita en la tarjeta. */
+export const diaLargo = (iso: string) =>
+  new Date(iso).toLocaleDateString('es-PE', { timeZone: 'America/Lima', weekday: 'long', day: 'numeric', month: 'long' }).replace(/\s/g, ' ');
+
+/** «3:40 p. m.» (hora de Lima). */
+export const horaSola = (iso: string) =>
+  new Date(iso).toLocaleTimeString('es-PE', { timeZone: 'America/Lima', hour: 'numeric', minute: '2-digit' }).replace(/\s/g, ' ');
+
 export const fecha = (iso: string | null | undefined) =>
   iso ? new Date(iso).toLocaleDateString('es-PE', { timeZone: 'America/Lima', day: '2-digit', month: 'short', year: 'numeric' }) : '—';
 

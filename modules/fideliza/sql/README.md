@@ -47,6 +47,8 @@ tocar ese repositorio. No chocan: todo usa el prefijo `loyalty_`.
 | `0018_ficha_con_lineas.sql` | La ficha del cliente trae operaciones, libro y premios de TODAS sus líneas, cada fila con `line_label`; en el panel se filtran con un toque (Todo · Asistencia · Compra). Prueba: en `tests/pruebas_0017_pglite.mjs`. Deshacer: `scripts/fideliza-0018-deshacer.sql` |
 | `0020_portafolio.sql` | Sube el tope de `page_style` a 12 000 caracteres para el **portafolio** de la página de enlaces (trabajos con foto) y hace que cambiar solo el portafolio no resincronice Google Wallet |
 
+| `0024_visita_en_la_tarjeta.sql` | La tarjeta pública dice, en cada sello que vino de cobrar una cita en la Caja (clave `cita-<id>`), el servicio, quién atendió y la sede, más `reservar_slug` para «Reservar otra vez con…». Solo cambia `movements` de `loyalty_srv_card`; vale también para los sellos ya dados. Prueba: `tests/pruebas_0024_pglite.mjs` |
+
 **Aplicar:** SQL Editor de Supabase, en orden (0001 → 0018), cada fichero entero. Primero en
 staging, y allí pegar `tests/pruebas.sql` (no deja nada escrito: acaba en
 `ROLLBACK`). Tiene que terminar con «TODAS LAS PRUEBAS PASARON».

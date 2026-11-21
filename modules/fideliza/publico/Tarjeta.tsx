@@ -2,8 +2,9 @@
 
 import { fotoEnCirculo } from '@/modules/fideliza/dominio/encuadre';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ArrowLeft, Check, Gift, Sparkles } from 'lucide-react';
-import { UNIDAD, fechaHora, type TipoRegla } from '@/modules/fideliza/dominio/formato';
+import { ArrowLeft, CalendarPlus, Check, ChevronDown, Gift, Sparkles } from 'lucide-react';
+import { UNIDAD, diaLargo, fechaHora, horaSola, type TipoRegla } from '@/modules/fideliza/dominio/formato';
+import { AGENDA_URL } from '@/modules/tu-pagina/dominio/config';
 import { colorValido, mezcla, resolverEstilo, tintaSobre, type Estilo } from '@/modules/fideliza/dominio/estilo';
 import { urlNegocio } from '@/modules/fideliza/dominio/config';
 import { selloValido, trazoSello } from '@/modules/fideliza/dominio/sellos';
@@ -18,7 +19,10 @@ export interface DatosTarjeta {
   /** Con period 'month' (0015) el saldo es el del mes y threshold/reward son el SIGUIENTE nivel. */
   program: { name: string; description: string; status: string; rule_type: TipoRegla | null; threshold: number | null; reward: string | null; period?: 'none' | 'month' } | null;
   rewards: { description: string; expires_at: string | null }[];
-  movements: { kind: string; units: number; at: string }[];
+  /** 0024: `visit` cuando el sello vino de cobrar una cita en la Caja (qué, con quién, dónde). */
+  movements: { kind: string; units: number; at: string; visit?: Visita | null }[];
+  /** 0024: la agenda de Mi página (agenda.vendemias.com/<slug>), si reserva. Para «Reservar otra vez». */
+  reservar_slug?: string | null;
   wallet: { state: string; pending: boolean; links_issued: number } | null;
   push: { consent: boolean; devices: number };
   contacts: { kind: 'phone' | 'email'; verified: boolean }[];
@@ -37,6 +41,21 @@ export interface DatosTarjeta {
     rewards: { description: string; expires_at: string | null }[];
   }[];
 }
+
+export interface Visita {
+  servicio: string | null;
+  barbero: string | null;
+  barbero_id: string | null;
+  sede: string | null;
+}
+
+/** La reserva con el mismo barbero (y la misma sede): Escaparate lee ?barbero= y ?sede=. */
+const reservarCon = (slug: string, v: Visita) => {
+  const q = new URLSearchParams();
+  if (v.sede) q.set('sede', v.sede);
+  if (v.barbero_id) q.set('barbero', v.barbero_id);
+  return `${AGENDA_URL}/${slug}/reservar?${q}`;
+};
 
 const MOV: Record<string, string> = {
   earn: 'Acumulaste',
@@ -77,6 +96,8 @@ export default function Tarjeta(props: {
   const [leido, setLeido] = useState(props.leidoEn);
   /** La pantalla de celebración: el premio cambió mientras la tarjeta estaba abierta. */
   const [fiesta, setFiesta] = useState<null | { tipo: 'ganado' | 'canjeado'; premio: string }>(null);
+  /** Qué visita de «Últimos movimientos» está desplegada (una a la vez). Cerrada al cargar. */
+  const [visitaAbierta, setVisitaAbierta] = useState<number | null>(null);
   const ultimo = useRef(props.inicial);
   const [enLinea, setEnLinea] = useState(true);
   const [aviso, setAviso] = useState<string | null>(null);
@@ -606,14 +627,51 @@ export default function Tarjeta(props: {
       {d.movements.length > 0 && (
         <section className="fz-caja" aria-label="Últimos movimientos">
           <h2>Últimos movimientos</h2>
+          {d.movements.some((m) => m.visit) && <p className="fz-mini fz-movs__ayuda">Toca una visita para ver la fecha, la hora y quién te atendió.</p>}
           <ul className="fz-movs">
-            {d.movements.map((m, i) => (
-              <li key={i}>
-                <span>{MOV[m.kind] ?? m.kind}</span>
-                <span className="fz-nota">{fechaHora(m.at)}</span>
-                <b>{m.units > 0 ? `+${m.units}` : m.units}</b>
-              </li>
-            ))}
+            {d.movements.map((m, i) => {
+              const sumo = <b>{m.units > 0 ? `+${m.units}` : m.units}</b>;
+              const v = m.visit;
+              if (!v) {
+                return (
+                  <li key={i}>
+                    <span>{MOV[m.kind] ?? m.kind}</span>
+                    <span className="fz-nota">{fechaHora(m.at)}</span>
+                    {sumo}
+                  </li>
+                );
+              }
+              const abierta = visitaAbierta === i;
+              return (
+                <li key={i} className={`fz-mov-visita${abierta ? ' fz-mov-visita--abierta' : ''}`}>
+                  <button type="button" className="fz-mov-visita__fila" aria-expanded={abierta} aria-controls={`fz-visita-${i}`}
+                    onClick={() => setVisitaAbierta(abierta ? null : i)}>
+                    <span className="fz-mov-visita__que">
+                      <span>{v.servicio ?? 'Visita'}</span>
+                      <span className="fz-nota">{fechaHora(m.at)}{v.barbero ? ` · ${v.barbero}` : ''}</span>
+                    </span>
+                    {sumo}
+                    <ChevronDown className="fz-mov-visita__flecha" aria-hidden="true" />
+                  </button>
+                  {abierta && (
+                    <div id={`fz-visita-${i}`} className="fz-mov-visita__detalle">
+                      <dl>
+                        <div><dt>Fecha</dt><dd>{diaLargo(m.at)}</dd></div>
+                        <div><dt>Hora</dt><dd>{horaSola(m.at)}</dd></div>
+                        {v.barbero && <div><dt>Te atendió</dt><dd>{v.barbero}</dd></div>}
+                        {v.servicio && <div><dt>Servicio</dt><dd>{v.servicio}</dd></div>}
+                        {v.sede && <div><dt>Sede</dt><dd>{v.sede}</dd></div>}
+                      </dl>
+                      {d.reservar_slug && v.barbero && v.barbero_id && (
+                        <a className="fz-btn fz-mov-visita__reservar" href={reservarCon(d.reservar_slug, v)}>
+                          <CalendarPlus aria-hidden="true" /> Reservar otra vez con {v.barbero}
+                        </a>
+                      )}
+                    </div>
+                  )}
+                </li>
+              );
+            })}
           </ul>
         </section>
       )}

@@ -900,6 +900,15 @@ function Reservar({ item, esc, slug, alTerminar, presentacion, esBarberia = fals
   );
   // Los barberos de la sede elegida (agendaDeSede filtra el equipo, tu-pagina 0034).
   const equipoVisible = agenda.equipo;
+  // «Reservar otra vez con Carlos» desde la tarjeta de Fideliza llega con ?barbero=<id>: ya elegido.
+  // Solo si aquí se elige barbero (si no, se reservaría con él sin que el cliente lo vea). Si luego
+  // se elige una sede donde no trabaja, el efecto de abajo lo quita y queda «Cualquiera».
+  useEffect(() => {
+    if (!esc.pideProfesional) return;
+    const pedido = new URLSearchParams(window.location.search).get('barbero');
+    if (pedido && esc.agenda.equipo.some((e) => e.id === pedido)) setProfesional(pedido);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   useEffect(() => {
     if (profesional && !equipoVisible.some((e) => e.id === profesional)) setProfesional('');
   }, [equipoVisible, profesional]);
