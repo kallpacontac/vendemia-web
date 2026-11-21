@@ -302,9 +302,10 @@ function Configuracion() {
 
   const [paso, setPaso] = useState(() => {
     const p = Number(parametros.get('paso'));
-    // Los números internos siguen siendo 2, 3 y 4 —hay enlaces con ?paso=3 y ?paso=4—;
-    // el 1 (los datos del negocio) pasó a «Tu panel». En pantalla se ven como 1, 2 y 3.
-    return p >= 2 && p <= 4 ? p : 2;
+    // Los números internos del asistente son 3, 4 y 5 —hay enlaces con ?paso=3 y
+    // ?paso=4—; el 1 y el 2 (negocio, catálogo, horario, pagos) pasaron a «Tu panel».
+    // En pantalla se ven como 1, 2 y 3.
+    return p >= 3 && p <= 5 ? p : 3;
   });
 
   /**
@@ -334,7 +335,7 @@ function Configuracion() {
   const [vista, setVista] = useState<'mia' | 'panel'>(() => {
     // Tu panel es lo general y va primero. Solo un enlace a un paso del asistente abre el asistente.
     const p = Number(parametros.get('paso'));
-    return p >= 2 && p <= 4 ? 'mia' : 'panel';
+    return p >= 3 && p <= 5 ? 'mia' : 'panel';
   });
 
   const [form, setForm] = useState<Formulario | null>(null);
@@ -559,8 +560,7 @@ function Configuracion() {
     );
     if (sinNumero) {
       avisar(`Falta el número del método de pago "${sinNumero.type}".`, 'error');
-      setVista('mia');
-      setPaso(2);
+      setVista('panel');
       return;
     }
 
@@ -569,8 +569,7 @@ function Configuracion() {
       const e = errorDeDescanso(nombre, horario[clave]);
       if (e) {
         avisar(e, 'error');
-        setVista('mia');
-        setPaso(2);
+        setVista('panel');
         return;
       }
     }
@@ -683,8 +682,8 @@ function Configuracion() {
           titulo="Ajustes"
           sub={
             vista === 'mia'
-              ? `Cómo atiende tu asistente${form.bot_name ? `, ${form.bot_name},` : ''} por WhatsApp: qué ofrece, cómo responde y qué pregunta.`
-              : 'Los datos de tu negocio, la caja, tu equipo, el menú, las boletas y los avisos.'
+              ? `Cómo atiende tu asistente${form.bot_name ? `, ${form.bot_name},` : ''} por WhatsApp: cómo responde, qué pregunta antes de cerrar y qué hace con los comprobantes.`
+              : 'Lo general: tu negocio, lo que ofreces, horario, pagos, caja, equipo, menú, boletas y avisos.'
           }
         />
 
@@ -703,15 +702,15 @@ function Configuracion() {
           <nav className="stepper" aria-label="Pasos de configuración">
             {/*
               Ordenados como avanza una conversación (20-nov-2026, Alvaro: «no hay
-              cohesión»): qué vende y cómo cobra → quién es
+              cohesión»): quién es
               Mia, cómo saluda, sus reglas y cómo cierra → lo que pregunta antes de
-              cerrar. Lo general (los datos del negocio, la Caja, el equipo, el
-              menú) va en la vista «Tu panel», que es la primera.
+              cerrar → qué hace con el comprobante. Lo general (negocio, catálogo,
+              horario, pagos, Caja, equipo, menú) va en «Tu panel», que es la primera.
             */}
             {([
-              [2, `${cap(vocabulario(form?.business_mode).items)} y cobros`],
               [3, 'Cómo responde'],
               [4, 'Antes de cerrar'],
+              [5, 'Comprobantes'],
             ] as const).map(([n, txt], i) => (
                 <button
                   key={txt}
@@ -728,8 +727,413 @@ function Configuracion() {
           </nav>
         </div>
 
-        {/* ══ PASO 2 · SERVICIOS, HORARIO Y PAGOS ══ */}
-        <div className={`card panel ${paso === 2 ? 'active' : ''}`}>
+        {/* ══ PASO 3 · CÓMO RESPONDE ══ */}
+        {/*
+          En el orden en que lo vive el cliente y en el que lo lee el bot
+          (agent.prompt.ts): quién es → «QUÉ VENDE ESTE NEGOCIO» → «TU TONO» →
+          «AL SALUDAR» → «POLÍTICA» / «REGLAS DEL NEGOCIO» → la nota tras cerrar.
+          Antes el nombre y la descripción vivían en el paso 1 (la descripción,
+          plegada junto al teléfono admin), el saludo tenía dos campos y las
+          reglas estaban plegadas como «opcionales» aunque entran en todas las
+          conversaciones.
+        */}
+        <div className={`card panel ${paso === 3 ? 'active' : ''}`}>
+          <div className="sec">
+            <h4>
+              <MessageSquare /> Quién es {form.bot_name || 'Mia'}
+            </h4>
+            <p className="cfg-guide">
+              Paso 1 de 3 · En el orden en que lo vive tu cliente: quién le atiende, cómo le saluda, qué reglas sigue y
+              cómo se despide.
+            </p>
+            <div className="grid-form">
+              <Campo etiqueta="Nombre del asistente" valor={form.bot_name} alCambiar={(v) => set('bot_name', v)} />
+              <div className="full">
+                <label className="field-label">Qué vende tu negocio</label>
+                <textarea
+                  className="textarea"
+                  style={{ minHeight: 64 }}
+                  placeholder="Barbería: cortes clásicos y degradados, barba y afeitado con toalla caliente."
+                  value={form.business_description}
+                  onChange={(e) => set('business_description', e.target.value)}
+                />
+                <small className="muted" style={{ fontSize: 11.5 }}>
+                  Una o dos frases. Es lo primero que {form.bot_name || 'Mia'} lee: sin esto solo sabe el nombre del
+                  negocio.
+                </small>
+              </div>
+              <div className="full">
+                <label className="field-label">Tono</label>
+                <div className="tono-atajos" role="group" aria-label="Tonos de partida">
+                  {TONOS.map((t) => {
+                    const puesto = form.bot_tone.trim() === t.texto;
+                    return (
+                      <button
+                        key={t.etiqueta}
+                        type="button"
+                        className={`btn btn-ghost btn-sm ${puesto ? 'on' : ''}`}
+                        aria-pressed={puesto}
+                        onClick={() => {
+                          const actual = form.bot_tone.trim();
+                          // Un texto escrito a mano no se pisa sin preguntar; uno de los atajos, sí.
+                          const aMano = actual !== '' && !TONOS.some((x) => x.texto === actual);
+                          if (aMano && !window.confirm('Se reemplaza el tono que tenías escrito. ¿Seguro?')) return;
+                          set('bot_tone', t.texto);
+                        }}
+                      >
+                        {t.etiqueta}
+                      </button>
+                    );
+                  })}
+                </div>
+                <textarea
+                  className="textarea"
+                  style={{ minHeight: 70 }}
+                  placeholder="Cercano, directo y con jerga peruana."
+                  value={form.bot_tone}
+                  onChange={(e) => set('bot_tone', e.target.value)}
+                />
+                <small className="muted" style={{ fontSize: 11.5 }}>
+                  Elige uno para empezar y retócalo con tus palabras.
+                </small>
+              </div>
+            </div>
+          </div>
+
+          <div className="sec">
+            <h4>
+              <Hand /> Al saludar
+            </h4>
+            <label className="field-label">Saludo</label>
+            <textarea
+              className="textarea"
+              style={{ minHeight: 64 }}
+              placeholder={`¡Hola! Te escribe ${form.bot_name || 'Mia'} de ${form.name || 'tu negocio'}.`}
+              value={form.welcome_note}
+              onChange={(e) => set('welcome_note', e.target.value)}
+            />
+            <small className="muted" style={{ fontSize: 11.5 }}>
+              Lo dice con sus palabras en su primer mensaje a cada cliente, junto con la respuesta. Opcional.
+            </small>
+            <AdjuntosNota
+              companyId={companyId}
+              lista={form.welcome_media}
+              alCambiar={cambiarAdjuntos('welcome_media')}
+              alSubir={alSubirSaludo}
+              asistente={form.bot_name || 'Mia'}
+              cuando={`Se envía junto con el primer mensaje que ${form.bot_name || 'Mia'} le escribe a cada cliente.`}
+            />
+          </div>
+
+          <div className="sec">
+            <h4>
+              <FileText /> Reglas y política
+            </h4>
+            <div className="desfase" style={{ background: 'var(--brand-soft)', borderColor: '#FFD9C7', color: 'var(--brand-txt)' }}>
+              Las reglas son para <b>cómo comportarse</b>, no para repetir horarios ni precios: eso
+              ya vive en Tu panel, y si se contradicen {form.bot_name || 'Mia'} ofrece una hora que luego el sistema rechaza.
+            </div>
+            <div className="grid-form">
+              <div className="full">
+                <label className="field-label">Reglas del negocio</label>
+                <textarea
+                  className="textarea"
+                  placeholder="Confirma siempre servicio y hora antes de cerrar. Si no sabes algo, dilo."
+                  value={form.custom_rules}
+                  onChange={(e) => set('custom_rules', e.target.value)}
+                />
+              </div>
+              <div className="full">
+                <label className="field-label">Política de cambios, cancelaciones y devoluciones</label>
+                <textarea
+                  className="textarea"
+                  style={{ minHeight: 64 }}
+                  value={form.return_policy}
+                  onChange={(e) => set('return_policy', e.target.value)}
+                />
+                <small className="muted" style={{ fontSize: 11.5 }}>
+                  Si la dejas vacía, {form.bot_name || 'Mia'} usa una política estándar para tu tipo de negocio.
+                </small>
+              </div>
+            </div>
+          </div>
+
+          <div className="sec">
+            <h4>
+              <Flag /> Al cerrar
+            </h4>
+            <label className="field-label">Nota de cierre</label>
+            <textarea
+              className="textarea"
+              style={{ minHeight: 64 }}
+              placeholder="Llega 10 minutos antes. Si no puedes venir, avísanos con un día de anticipación."
+              value={form.closing_note}
+              onChange={(e) => set('closing_note', e.target.value)}
+            />
+            <small className="muted" style={{ fontSize: 11.5 }}>
+              Qué traer, a qué hora llegar… Sale tal cual, al final del resumen de la venta. Opcional.
+            </small>
+            <AdjuntosNota
+              companyId={companyId}
+              lista={form.closing_media}
+              alCambiar={cambiarAdjuntos('closing_media')}
+              alSubir={alSubirCierre}
+              asistente={form.bot_name || 'Mia'}
+              cuando={(() => {
+                // Salta con una venta NUEVA: en academia también al inscribirse.
+                const v = vocabulario(form.business_mode);
+                const que = form.business_mode === 'recurring_appointment' ? 'una reserva o una inscripción' : `${v.una} ${v.reserva}`;
+                return `Se envía cuando el ${v.persona} cierra ${que}.`;
+              })()}
+            />
+          </div>
+
+          <div className="nav-btns">
+            <span />
+            <button className="btn btn-primary" onClick={() => setPaso(4)}>
+              Continuar <ArrowRight size={16} />
+            </button>
+          </div>
+        </div>
+
+        {/* ══ PASO 4 · ANTES DE CERRAR ══ */}
+        <div className={`card panel ${paso === 4 ? 'active' : ''}`}>
+          <p className="cfg-guide">
+            Paso 2 de 3 · Opcional. Lo que {form.bot_name || 'Mia'} pregunta antes de cerrar{' '}
+            {vocabulario(form.business_mode).una} {vocabulario(form.business_mode).reserva}. Añade solo lo que de verdad necesitas.
+          </p>
+
+          {/*
+            El interruptor vive aquí, pegado al editor, y no en el paso 1 a
+            propósito: es la trampa que hay que ver justo antes de escribir una
+            pregunta. Va ENCIMA del editor para que el aviso se lea antes.
+          */}
+          {form.business_mode === 'appointment' && (
+            <div className="sec">
+              <h4>
+                <UserSquare /> Quién atiende
+              </h4>
+              <div className="toggle-row">
+                <div className="t">
+                  <b>Preguntar por el profesional</b>
+                  <small>
+                    Mia pide el nombre antes de cerrar la cita, lo valida contra tu equipo y ofrece
+                    solo los huecos libres de esa persona
+                  </small>
+                </div>
+                <div
+                  className={`toggle ${pideEmpleado ? 'on' : ''}`}
+                  onClick={() => setPideEmpleado((v) => !v)}
+                  role="switch"
+                  aria-checked={pideEmpleado}
+                />
+              </div>
+              <div
+                className="desfase"
+                style={{ background: 'var(--brand-soft)', borderColor: '#FFD9C7', color: 'var(--brand-txt)', marginTop: 12 }}
+              >
+                Si activas esto, <b>no añadas además una pregunta obligatoria del tipo «¿con qué
+                barbero?»</b>. Van por caminos distintos: la respuesta de aquí entra en el motor de
+                horarios, y la de una pregunta obligatoria acaba en la ficha del cliente, que el
+                motor de reservas no lee. Mia lo preguntaría dos veces y la segunda no serviría de
+                nada.
+              </div>
+            </div>
+          )}
+
+          <div className="sec">
+            <h4>
+              <ListChecks /> Preguntas obligatorias
+            </h4>
+            <p className="muted" style={{ fontSize: 13, marginTop: -4, marginBottom: 12 }}>
+              Mia las hace <b>siempre</b>, en este orden, antes de cerrar. No son un guion de
+              conversación: son un filtro. Cada una puede descalificar al cliente, guardar un dato
+              en su ficha, o las dos cosas.
+            </p>
+            <Preguntas lista={preguntas} alCambiar={setPreguntas} />
+          </div>
+
+          {/*
+            Aquí estaba el ÚNICO botón de guardar de toda la pantalla, al final
+            del paso 4. Para guardar un cambio del paso 1 había que pasar por
+            tres pantallas más, o adivinar que los números del stepper se pueden
+            pulsar. Y si te ibas antes, se perdía sin decir nada.
+
+            Ahora guarda la barra de abajo, que aparece en cuanto hay algo que
+            guardar y está en los cuatro pasos. Aquí solo queda navegación.
+          */}
+          <div className="nav-btns">
+            <button className="btn btn-ghost" onClick={() => setPaso(3)}>
+              <ArrowLeft size={16} /> Atrás
+            </button>
+            <button className="btn btn-primary" onClick={() => setPaso(5)}>
+              Continuar <ArrowRight size={16} />
+            </button>
+          </div>
+        </div>
+
+        {/* ══ PASO 5 · COMPROBANTES (quién revisa la captura que manda el cliente) ══ */}
+        {/* Antes iba en «Servicios y cobros»; eso pasó a Tu panel y esto es lo único que es del asistente. */}
+        <div className={`card panel ${paso === 5 ? 'active' : ''}`}>
+          {/*
+            ⚠️ NO es "Requerir pago para confirmar", que está en Tu panel
+            (Reserva) y suena igual. Aquel dice CUÁNDO se reserva el cupo; este,
+            QUIÉN comprueba que el pago llegó. Son independientes, y por eso las
+            dos opciones se describen por lo que le pasa al cliente en la
+            conversación y no por el nombre del campo.
+          */}
+          <div className="sec">
+            <h4>
+              <ShieldCheck /> Comprobantes de pago
+            </h4>
+            <p className="cfg-guide">Paso 3 de 3 · Qué hace tu asistente cuando el cliente manda la captura del Yape, Plin o transferencia.</p>
+
+            <div className="opciones">
+              <button
+                type="button"
+                className={`opcion ${form.verify_vouchers ? 'on' : ''}`}
+                onClick={() => set('verify_vouchers', true)}
+                role="radio"
+                aria-checked={form.verify_vouchers}
+              >
+                <b>Los revisa Mia</b>
+                <small>
+                  Analiza la captura, comprueba que el pago sea real y le confirma al cliente al
+                  momento.
+                </small>
+                <span className="opcion__def">por defecto</span>
+              </button>
+              <button
+                type="button"
+                className={`opcion ${!form.verify_vouchers ? 'on' : ''}`}
+                onClick={() => set('verify_vouchers', false)}
+                role="radio"
+                aria-checked={!form.verify_vouchers}
+              >
+                <b>Los revisas tú</b>
+                <small>
+                  Mia recibe la captura, la guarda y le dice al cliente que la confirmáis vosotros.
+                  No da ningún pago por bueno.
+                </small>
+              </button>
+            </div>
+
+            {/*
+              El aviso se enseña SIEMPRE que estén apagados y la regla exista, no
+              solo en el momento de apagarlo: alguien puede añadir esa frase a
+              las reglas tres meses después y romperlo otra vez sin enterarse.
+            */}
+            {!form.verify_vouchers && reglaQuePideComprobante(form.custom_rules) && (
+              <div
+                className="desfase"
+                style={{ background: '#FFF4E5', borderColor: '#FFD9A8', color: '#8A4B00', marginTop: 12 }}
+              >
+                <b>Tus reglas del negocio todavía piden el comprobante:</b>{' '}
+                «{reglaQuePideComprobante(form.custom_rules)}». Quítala en{' '}
+                <b>Reglas y política</b> (paso «Cómo responde») o tu asistente seguirá pidiendo una captura que nadie va a
+                mirar.
+              </div>
+            )}
+
+            {/*
+              Lo que se pierde, dicho ANTES y no después. No es un fallo: es la
+              consecuencia razonable de revisar a mano, y el dueño merece leerla
+              mientras decide.
+            */}
+            {!form.verify_vouchers && (
+              <p className="muted" style={{ fontSize: 12, marginTop: 10 }}>
+                Sin comprobantes verificados no se registran pagos, así que este negocio deja de
+                distinguir «pagó a medias» de «no pagó nada» en el seguimiento de ventas. El pedido
+                sigue apareciendo como pendiente —que es lo que importa para llamar al cliente— pero
+                el motivo «pago inconcluso» desaparece.
+              </p>
+            )}
+
+            {/*
+              Aquí estaban «Pedir la ubicación para la entrega» (request_location) y
+              «Mencionar la dirección del local» (proactive_venue). Se quitaron el
+              20-nov-2026: el bot no lee ninguno de los dos desde af988a8. Mia dice
+              la dirección cuando hay «Ubicación / distrito» (Tu panel).
+            */}
+            {/*
+              La duda razonable al tocar cualquiera de estos es "¿hay que
+              reiniciar el bot?". Si no se contesta, alguien apaga el bot de un
+              cliente para nada.
+            */}
+            <p className="muted" style={{ fontSize: 12, marginTop: 12 }}>
+              No hace falta reiniciar nada: el cambio entra en la siguiente conversación.
+            </p>
+          </div>
+
+          <div className="nav-btns">
+            <button className="btn btn-ghost" onClick={() => setPaso(4)}>
+              <ArrowLeft size={16} /> Atrás
+            </button>
+          </div>
+        </div>
+        </div>
+
+        <div hidden={vista !== 'panel'}>
+          {/* Los datos del negocio: antes, el paso 1 del asistente. Son generales (los usan la página, la caja y el asistente). */}
+          <div className="card panel active">
+          <div className="sec">
+            <h4>
+              <Store /> Datos del negocio
+            </h4>
+            <p className="cfg-guide">Identifica tu negocio y el número desde el que atiende tu asistente.</p>
+            <div className="grid-form">
+              <Campo etiqueta="Nombre del negocio" valor={form.name} alCambiar={(v) => set('name', v)} />
+              <div>
+                <label className="field-label">Tipo de negocio</label>
+                <select
+                  className="select"
+                  value={form.business_mode}
+                  onChange={(e) => set('business_mode', e.target.value as BusinessMode)}
+                >
+                  <option value="appointment">Citas puntuales (barbería, salón, clínica)</option>
+                  <option value="recurring_appointment">Grupos recurrentes (cursos, clases)</option>
+                  <option value="ecommerce">E-commerce (productos)</option>
+                </select>
+                <small className="muted" style={{ fontSize: 11.5 }}>Define si gestionas citas, clases o productos.</small>
+              </div>
+              {vendeProductos && (
+                <div>
+                  <label className="field-label">Entrega</label>
+                  <select
+                    className="select"
+                    value={form.delivery_type}
+                    onChange={(e) => set('delivery_type', e.target.value as Formulario['delivery_type'])}
+                  >
+                    <option value="pickup">Recojo en local</option>
+                    <option value="delivery">Delivery</option>
+                    <option value="both">Ambos</option>
+                  </select>
+                </div>
+              )}
+              <Campo
+                etiqueta="WhatsApp del bot"
+                valor={form.whatsapp_phone}
+                alCambiar={(v) => set('whatsapp_phone', v)}
+                pista={delDueno ? 'Solo lo cambia el dueño.' : 'Sin +, así: 51987654321'}
+                bloqueado={delDueno}
+              />
+              <Campo etiqueta="Ubicación / distrito" valor={form.location} alCambiar={(v) => set('location', v)} />
+            </div>
+            <details className="cfg-advanced">
+              <summary>Teléfonos del dueño y del administrador</summary>
+              <div className="grid-form">
+                <Campo etiqueta="Teléfono del dueño" valor={form.owner_phone} alCambiar={(v) => set('owner_phone', v)} bloqueado={delDueno} />
+                <Campo etiqueta="Teléfono admin (comandos)" valor={form.admin_phone} alCambiar={(v) => set('admin_phone', v)} bloqueado={delDueno} />
+              </div>
+            </details>
+          </div>
+
+          {/* Pegado al «WhatsApp del bot»: es el estado de ESE número, no cómo habla el asistente. */}
+          <ConexionWhatsApp necesita={necesitaEmparejar(salud)} />
+          </div>
+
+          {/* Catálogo, reserva, horario y métodos de pago: antes, el paso «Servicios y cobros» del asistente. */}
+          <div className="card panel active" style={{ marginTop: 18 }}>
           {/*
             El catálogo tenía aquí su propio editor, y eran DOS sitios para lo
             mismo con distintos campos: este tocaba 4 de los 14 de `catalog` y
@@ -748,13 +1152,13 @@ function Configuracion() {
                 ? 'Productos'
                 : `${cap(vocabulario(form?.business_mode).items)} y productos`}
             </h4>
-            <p className="cfg-guide">Paso 1 de 3 · Revisa qué ofreces, cuándo atiendes y cómo cobras.</p>
+            <p className="cfg-guide">Qué ofreces, cuándo atiendes y cómo cobras. Lo usan tu página, la caja y tu asistente.</p>
             <div className="cfg-enlace">
               <div>
                 <b>
                   {(datos?.catalogo.length ?? 0) === 0
                     ? 'Todavía no hay nada en el catálogo'
-                    : `${datos?.catalogo.length} en el catálogo, ${datos?.catalogo.filter((c) => c.activo).length} visibles para Mia`}
+                    : `${datos?.catalogo.length} en el catálogo, ${datos?.catalogo.filter((c) => c.activo).length} visibles`}
                 </b>
                 <small>
                   Los precios, el stock y las fotos se editan en su propia pantalla.
@@ -939,406 +1343,6 @@ function Configuracion() {
             )}
             </fieldset>
           </div>
-
-          {/*
-            ⚠️ NO es "Requerir pago para confirmar", que está en el paso
-            anterior y suena igual. Aquel dice CUÁNDO se reserva el cupo; este,
-            QUIÉN comprueba que el pago llegó. Son independientes, y por eso las
-            dos opciones se describen por lo que le pasa al cliente en la
-            conversación y no por el nombre del campo.
-          */}
-          <div className="sec">
-            <h4>
-              <ShieldCheck /> Comprobantes de pago
-            </h4>
-
-            <div className="opciones">
-              <button
-                type="button"
-                className={`opcion ${form.verify_vouchers ? 'on' : ''}`}
-                onClick={() => set('verify_vouchers', true)}
-                role="radio"
-                aria-checked={form.verify_vouchers}
-              >
-                <b>Los revisa Mia</b>
-                <small>
-                  Analiza la captura, comprueba que el pago sea real y le confirma al cliente al
-                  momento.
-                </small>
-                <span className="opcion__def">por defecto</span>
-              </button>
-              <button
-                type="button"
-                className={`opcion ${!form.verify_vouchers ? 'on' : ''}`}
-                onClick={() => set('verify_vouchers', false)}
-                role="radio"
-                aria-checked={!form.verify_vouchers}
-              >
-                <b>Los revisas tú</b>
-                <small>
-                  Mia recibe la captura, la guarda y le dice al cliente que la confirmáis vosotros.
-                  No da ningún pago por bueno.
-                </small>
-              </button>
-            </div>
-
-            {/*
-              El aviso se enseña SIEMPRE que estén apagados y la regla exista, no
-              solo en el momento de apagarlo: alguien puede añadir esa frase a
-              las reglas tres meses después y romperlo otra vez sin enterarse.
-            */}
-            {!form.verify_vouchers && reglaQuePideComprobante(form.custom_rules) && (
-              <div
-                className="desfase"
-                style={{ background: '#FFF4E5', borderColor: '#FFD9A8', color: '#8A4B00', marginTop: 12 }}
-              >
-                <b>Tus reglas del negocio todavía piden el comprobante:</b>{' '}
-                «{reglaQuePideComprobante(form.custom_rules)}». Quítala en{' '}
-                <b>Reglas y política</b> (paso «Cómo responde») o tu asistente seguirá pidiendo una captura que nadie va a
-                mirar.
-              </div>
-            )}
-
-            {/*
-              Lo que se pierde, dicho ANTES y no después. No es un fallo: es la
-              consecuencia razonable de revisar a mano, y el dueño merece leerla
-              mientras decide.
-            */}
-            {!form.verify_vouchers && (
-              <p className="muted" style={{ fontSize: 12, marginTop: 10 }}>
-                Sin comprobantes verificados no se registran pagos, así que este negocio deja de
-                distinguir «pagó a medias» de «no pagó nada» en el seguimiento de ventas. El pedido
-                sigue apareciendo como pendiente —que es lo que importa para llamar al cliente— pero
-                el motivo «pago inconcluso» desaparece.
-              </p>
-            )}
-
-            {/*
-              Aquí estaban «Pedir la ubicación para la entrega» (request_location) y
-              «Mencionar la dirección del local» (proactive_venue). Se quitaron el
-              20-nov-2026: el bot no lee ninguno de los dos desde af988a8. Mia dice
-              la dirección cuando hay «Ubicación / distrito» (Tu panel).
-            */}
-            {/*
-              La duda razonable al tocar cualquiera de estos es "¿hay que
-              reiniciar el bot?". Si no se contesta, alguien apaga el bot de un
-              cliente para nada.
-            */}
-            <p className="muted" style={{ fontSize: 12, marginTop: 12 }}>
-              No hace falta reiniciar nada: el cambio entra en la siguiente conversación.
-            </p>
-          </div>
-
-          <div className="nav-btns">
-            <span />
-            <button className="btn btn-primary" onClick={() => setPaso(3)}>
-              Continuar <ArrowRight size={16} />
-            </button>
-          </div>
-        </div>
-
-        {/* ══ PASO 3 · CÓMO RESPONDE ══ */}
-        {/*
-          En el orden en que lo vive el cliente y en el que lo lee el bot
-          (agent.prompt.ts): quién es → «QUÉ VENDE ESTE NEGOCIO» → «TU TONO» →
-          «AL SALUDAR» → «POLÍTICA» / «REGLAS DEL NEGOCIO» → la nota tras cerrar.
-          Antes el nombre y la descripción vivían en el paso 1 (la descripción,
-          plegada junto al teléfono admin), el saludo tenía dos campos y las
-          reglas estaban plegadas como «opcionales» aunque entran en todas las
-          conversaciones.
-        */}
-        <div className={`card panel ${paso === 3 ? 'active' : ''}`}>
-          <div className="sec">
-            <h4>
-              <MessageSquare /> Quién es {form.bot_name || 'Mia'}
-            </h4>
-            <p className="cfg-guide">
-              Paso 2 de 3 · En el orden en que lo vive tu cliente: quién le atiende, cómo le saluda, qué reglas sigue y
-              cómo se despide.
-            </p>
-            <div className="grid-form">
-              <Campo etiqueta="Nombre del asistente" valor={form.bot_name} alCambiar={(v) => set('bot_name', v)} />
-              <div className="full">
-                <label className="field-label">Qué vende tu negocio</label>
-                <textarea
-                  className="textarea"
-                  style={{ minHeight: 64 }}
-                  placeholder="Barbería: cortes clásicos y degradados, barba y afeitado con toalla caliente."
-                  value={form.business_description}
-                  onChange={(e) => set('business_description', e.target.value)}
-                />
-                <small className="muted" style={{ fontSize: 11.5 }}>
-                  Una o dos frases. Es lo primero que {form.bot_name || 'Mia'} lee: sin esto solo sabe el nombre del
-                  negocio.
-                </small>
-              </div>
-              <div className="full">
-                <label className="field-label">Tono</label>
-                <div className="tono-atajos" role="group" aria-label="Tonos de partida">
-                  {TONOS.map((t) => {
-                    const puesto = form.bot_tone.trim() === t.texto;
-                    return (
-                      <button
-                        key={t.etiqueta}
-                        type="button"
-                        className={`btn btn-ghost btn-sm ${puesto ? 'on' : ''}`}
-                        aria-pressed={puesto}
-                        onClick={() => {
-                          const actual = form.bot_tone.trim();
-                          // Un texto escrito a mano no se pisa sin preguntar; uno de los atajos, sí.
-                          const aMano = actual !== '' && !TONOS.some((x) => x.texto === actual);
-                          if (aMano && !window.confirm('Se reemplaza el tono que tenías escrito. ¿Seguro?')) return;
-                          set('bot_tone', t.texto);
-                        }}
-                      >
-                        {t.etiqueta}
-                      </button>
-                    );
-                  })}
-                </div>
-                <textarea
-                  className="textarea"
-                  style={{ minHeight: 70 }}
-                  placeholder="Cercano, directo y con jerga peruana."
-                  value={form.bot_tone}
-                  onChange={(e) => set('bot_tone', e.target.value)}
-                />
-                <small className="muted" style={{ fontSize: 11.5 }}>
-                  Elige uno para empezar y retócalo con tus palabras.
-                </small>
-              </div>
-            </div>
-          </div>
-
-          <div className="sec">
-            <h4>
-              <Hand /> Al saludar
-            </h4>
-            <label className="field-label">Saludo</label>
-            <textarea
-              className="textarea"
-              style={{ minHeight: 64 }}
-              placeholder={`¡Hola! Te escribe ${form.bot_name || 'Mia'} de ${form.name || 'tu negocio'}.`}
-              value={form.welcome_note}
-              onChange={(e) => set('welcome_note', e.target.value)}
-            />
-            <small className="muted" style={{ fontSize: 11.5 }}>
-              Lo dice con sus palabras en su primer mensaje a cada cliente, junto con la respuesta. Opcional.
-            </small>
-            <AdjuntosNota
-              companyId={companyId}
-              lista={form.welcome_media}
-              alCambiar={cambiarAdjuntos('welcome_media')}
-              alSubir={alSubirSaludo}
-              asistente={form.bot_name || 'Mia'}
-              cuando={`Se envía junto con el primer mensaje que ${form.bot_name || 'Mia'} le escribe a cada cliente.`}
-            />
-          </div>
-
-          <div className="sec">
-            <h4>
-              <FileText /> Reglas y política
-            </h4>
-            <div className="desfase" style={{ background: 'var(--brand-soft)', borderColor: '#FFD9C7', color: 'var(--brand-txt)' }}>
-              Las reglas son para <b>cómo comportarse</b>, no para repetir horarios ni precios: eso
-              ya vive en el paso anterior, y si se contradicen {form.bot_name || 'Mia'} ofrece una hora que luego el sistema rechaza.
-            </div>
-            <div className="grid-form">
-              <div className="full">
-                <label className="field-label">Reglas del negocio</label>
-                <textarea
-                  className="textarea"
-                  placeholder="Confirma siempre servicio y hora antes de cerrar. Si no sabes algo, dilo."
-                  value={form.custom_rules}
-                  onChange={(e) => set('custom_rules', e.target.value)}
-                />
-              </div>
-              <div className="full">
-                <label className="field-label">Política de cambios, cancelaciones y devoluciones</label>
-                <textarea
-                  className="textarea"
-                  style={{ minHeight: 64 }}
-                  value={form.return_policy}
-                  onChange={(e) => set('return_policy', e.target.value)}
-                />
-                <small className="muted" style={{ fontSize: 11.5 }}>
-                  Si la dejas vacía, {form.bot_name || 'Mia'} usa una política estándar para tu tipo de negocio.
-                </small>
-              </div>
-            </div>
-          </div>
-
-          <div className="sec">
-            <h4>
-              <Flag /> Al cerrar
-            </h4>
-            <label className="field-label">Nota de cierre</label>
-            <textarea
-              className="textarea"
-              style={{ minHeight: 64 }}
-              placeholder="Llega 10 minutos antes. Si no puedes venir, avísanos con un día de anticipación."
-              value={form.closing_note}
-              onChange={(e) => set('closing_note', e.target.value)}
-            />
-            <small className="muted" style={{ fontSize: 11.5 }}>
-              Qué traer, a qué hora llegar… Sale tal cual, al final del resumen de la venta. Opcional.
-            </small>
-            <AdjuntosNota
-              companyId={companyId}
-              lista={form.closing_media}
-              alCambiar={cambiarAdjuntos('closing_media')}
-              alSubir={alSubirCierre}
-              asistente={form.bot_name || 'Mia'}
-              cuando={(() => {
-                // Salta con una venta NUEVA: en academia también al inscribirse.
-                const v = vocabulario(form.business_mode);
-                const que = form.business_mode === 'recurring_appointment' ? 'una reserva o una inscripción' : `${v.una} ${v.reserva}`;
-                return `Se envía cuando el ${v.persona} cierra ${que}.`;
-              })()}
-            />
-          </div>
-
-          <div className="nav-btns">
-            <button className="btn btn-ghost" onClick={() => setPaso(2)}>
-              <ArrowLeft size={16} /> Atrás
-            </button>
-            <button className="btn btn-primary" onClick={() => setPaso(4)}>
-              Continuar <ArrowRight size={16} />
-            </button>
-          </div>
-        </div>
-
-        {/* ══ PASO 4 · ANTES DE CERRAR ══ */}
-        <div className={`card panel ${paso === 4 ? 'active' : ''}`}>
-          <p className="cfg-guide">
-            Paso 3 de 3 · Opcional. Lo que {form.bot_name || 'Mia'} pregunta antes de cerrar{' '}
-            {vocabulario(form.business_mode).una} {vocabulario(form.business_mode).reserva}. Añade solo lo que de verdad necesitas.
-          </p>
-
-          {/*
-            El interruptor vive aquí, pegado al editor, y no en el paso 1 a
-            propósito: es la trampa que hay que ver justo antes de escribir una
-            pregunta. Va ENCIMA del editor para que el aviso se lea antes.
-          */}
-          {form.business_mode === 'appointment' && (
-            <div className="sec">
-              <h4>
-                <UserSquare /> Quién atiende
-              </h4>
-              <div className="toggle-row">
-                <div className="t">
-                  <b>Preguntar por el profesional</b>
-                  <small>
-                    Mia pide el nombre antes de cerrar la cita, lo valida contra tu equipo y ofrece
-                    solo los huecos libres de esa persona
-                  </small>
-                </div>
-                <div
-                  className={`toggle ${pideEmpleado ? 'on' : ''}`}
-                  onClick={() => setPideEmpleado((v) => !v)}
-                  role="switch"
-                  aria-checked={pideEmpleado}
-                />
-              </div>
-              <div
-                className="desfase"
-                style={{ background: 'var(--brand-soft)', borderColor: '#FFD9C7', color: 'var(--brand-txt)', marginTop: 12 }}
-              >
-                Si activas esto, <b>no añadas además una pregunta obligatoria del tipo «¿con qué
-                barbero?»</b>. Van por caminos distintos: la respuesta de aquí entra en el motor de
-                horarios, y la de una pregunta obligatoria acaba en la ficha del cliente, que el
-                motor de reservas no lee. Mia lo preguntaría dos veces y la segunda no serviría de
-                nada.
-              </div>
-            </div>
-          )}
-
-          <div className="sec">
-            <h4>
-              <ListChecks /> Preguntas obligatorias
-            </h4>
-            <p className="muted" style={{ fontSize: 13, marginTop: -4, marginBottom: 12 }}>
-              Mia las hace <b>siempre</b>, en este orden, antes de cerrar. No son un guion de
-              conversación: son un filtro. Cada una puede descalificar al cliente, guardar un dato
-              en su ficha, o las dos cosas.
-            </p>
-            <Preguntas lista={preguntas} alCambiar={setPreguntas} />
-          </div>
-
-          {/*
-            Aquí estaba el ÚNICO botón de guardar de toda la pantalla, al final
-            del paso 4. Para guardar un cambio del paso 1 había que pasar por
-            tres pantallas más, o adivinar que los números del stepper se pueden
-            pulsar. Y si te ibas antes, se perdía sin decir nada.
-
-            Ahora guarda la barra de abajo, que aparece en cuanto hay algo que
-            guardar y está en los cuatro pasos. Aquí solo queda navegación.
-          */}
-          <div className="nav-btns">
-            <button className="btn btn-ghost" onClick={() => setPaso(3)}>
-              <ArrowLeft size={16} /> Atrás
-            </button>
-          </div>
-        </div>
-        </div>
-
-        <div hidden={vista !== 'panel'}>
-          {/* Los datos del negocio: antes, el paso 1 del asistente. Son generales (los usan la página, la caja y el asistente). */}
-          <div className="card panel active">
-          <div className="sec">
-            <h4>
-              <Store /> Datos del negocio
-            </h4>
-            <p className="cfg-guide">Identifica tu negocio y el número desde el que atiende tu asistente.</p>
-            <div className="grid-form">
-              <Campo etiqueta="Nombre del negocio" valor={form.name} alCambiar={(v) => set('name', v)} />
-              <div>
-                <label className="field-label">Tipo de negocio</label>
-                <select
-                  className="select"
-                  value={form.business_mode}
-                  onChange={(e) => set('business_mode', e.target.value as BusinessMode)}
-                >
-                  <option value="appointment">Citas puntuales (barbería, salón, clínica)</option>
-                  <option value="recurring_appointment">Grupos recurrentes (cursos, clases)</option>
-                  <option value="ecommerce">E-commerce (productos)</option>
-                </select>
-                <small className="muted" style={{ fontSize: 11.5 }}>Define si gestionas citas, clases o productos.</small>
-              </div>
-              {vendeProductos && (
-                <div>
-                  <label className="field-label">Entrega</label>
-                  <select
-                    className="select"
-                    value={form.delivery_type}
-                    onChange={(e) => set('delivery_type', e.target.value as Formulario['delivery_type'])}
-                  >
-                    <option value="pickup">Recojo en local</option>
-                    <option value="delivery">Delivery</option>
-                    <option value="both">Ambos</option>
-                  </select>
-                </div>
-              )}
-              <Campo
-                etiqueta="WhatsApp del bot"
-                valor={form.whatsapp_phone}
-                alCambiar={(v) => set('whatsapp_phone', v)}
-                pista={delDueno ? 'Solo lo cambia el dueño.' : 'Sin +, así: 51987654321'}
-                bloqueado={delDueno}
-              />
-              <Campo etiqueta="Ubicación / distrito" valor={form.location} alCambiar={(v) => set('location', v)} />
-            </div>
-            <details className="cfg-advanced">
-              <summary>Teléfonos del dueño y del administrador</summary>
-              <div className="grid-form">
-                <Campo etiqueta="Teléfono del dueño" valor={form.owner_phone} alCambiar={(v) => set('owner_phone', v)} bloqueado={delDueno} />
-                <Campo etiqueta="Teléfono admin (comandos)" valor={form.admin_phone} alCambiar={(v) => set('admin_phone', v)} bloqueado={delDueno} />
-              </div>
-            </details>
-          </div>
-
-          {/* Pegado al «WhatsApp del bot»: es el estado de ESE número, no cómo habla el asistente. */}
-          <ConexionWhatsApp necesita={necesitaEmparejar(salud)} />
           </div>
 
         {/*
