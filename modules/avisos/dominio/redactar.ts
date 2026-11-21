@@ -213,30 +213,37 @@ export function redactar(eventos: EventoPendiente[]): Mensaje {
           tag,
         };
       }
+      // Un pedido es un pedido aunque el negocio sea de citas, y al revés.
+      const palabra = esPedido ? 'pedido' : v.reserva === 'pedido' ? 'reserva' : v.reserva;
+      const plural = esPedido ? 'pedidos' : v.reserva === 'pedido' ? 'reservas' : v.reservas;
+      const a = esPedido ? 'o' : palabra === 'pedido' ? 'o' : v.a;
+      // Lo primero que se quiere saber de una reserva es CUÁNDO (21-nov-2026): va en el título.
+      // Por dónde llegó (Mia o la página) no se dice: al dueño le da igual.
+      const horas = eventos.map((x) => cuandoSlot(x.datos.slot)).filter(Boolean);
       if (web.length === n) {
         const nombre = typeof e.datos.nombre === 'string' ? e.datos.nombre : 'Un cliente';
         const detalle = esPedido ? soles(e.datos.total) : typeof e.datos.servicio === 'string' ? e.datos.servicio : '';
+        const cuando = !esPedido && n === 1 ? cuandoSlot(e.datos.slot) : '';
         return {
-          title: n === 1 ? `${prefijo}${esPedido ? 'Pedido' : 'Reserva'} desde tu página` : `${prefijo}${n} nuevos desde tu página`,
-          body: n === 1 ? `${nombre}${detalle ? ` · ${detalle}` : ''}` : 'Ábrelos para confirmarlos.',
+          title: n === 1 ? `${prefijo}Nuev${a} ${palabra}${cuando ? ` · ${cuando}` : ''}` : `${prefijo}${n} ${plural} nuev${a}s`,
+          body: n === 1
+            ? `${nombre}${detalle ? ` · ${detalle}` : ''}`
+            : horas.length ? `${cap(horas.slice(0, 3).join(' · '))}${horas.length > 3 ? '…' : ''}` : `Ábre${a === 'o' ? 'los' : 'las'} para confirmarl${a}s.`,
           url: esPedido
             ? envios ? '/panel/pedidos' : '/panel/pedidos?ver=pagina'
             : pedidos === 0 ? '/panel/tu-pagina?ver=reservas' : '/panel',
           tag,
         };
       }
-      // Un pedido es un pedido aunque el negocio sea de citas, y al revés.
-      const palabra = esPedido ? 'pedido' : v.reserva === 'pedido' ? 'reserva' : v.reserva;
-      const plural = esPedido ? 'pedidos' : v.reserva === 'pedido' ? 'reservas' : v.reservas;
-      const a = esPedido ? 'o' : palabra === 'pedido' ? 'o' : v.a;
       if (n === 1) {
         const detalle = esPedido
           ? soles(e.datos.total)
           : typeof e.datos.servicio === 'string'
             ? e.datos.servicio
             : '';
+        const cuando = esPedido ? '' : cuandoSlot(e.datos.slot);
         return {
-          title: `${prefijo}Nuev${a} ${palabra}`,
+          title: `${prefijo}Nuev${a} ${palabra}${cuando ? ` · ${cuando}` : ''}`,
           body: `${quien}${detalle ? ` · ${detalle}` : ''}`,
           url: esPedido ? '/panel/pedidos' : lead ? `/panel/mensajes?lead=${lead}` : '/panel/agenda',
           tag,
@@ -244,9 +251,9 @@ export function redactar(eventos: EventoPendiente[]): Mensaje {
       }
       return {
         title: `${prefijo}${n} ${plural} nuev${a}s`,
-        body: web.length
-          ? `Por WhatsApp y por tu página. Ábre${a === 'o' ? 'los' : 'las'} para ver el detalle.`
-          : `Mia ${a === 'o' ? 'los' : 'las'} cerró mientras atendías. Ábre${a === 'o' ? 'los' : 'las'} para ver el detalle.`,
+        body: horas.length
+          ? `${cap(horas.slice(0, 3).join(' · '))}${horas.length > 3 ? '…' : ''}`
+          : `Ábre${a === 'o' ? 'los' : 'las'} para ver el detalle.`,
         // Mezcla de pedidos y reservas, o reservas de la página con citas de Mia: no hay
         // una sola pantalla donde estén todas.
         url: esPedido ? '/panel/pedidos' : pedidos === 0 && !web.length ? '/panel/agenda' : '/panel',

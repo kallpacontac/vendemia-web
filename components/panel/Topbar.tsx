@@ -13,6 +13,7 @@ import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import CuentaPanel from './CuentaPanel';
 import CampanaAvisos from './CampanaAvisos';
+import SonidoReservas from './SonidoReservas';
 import CambiarClave from '@/components/panel/CambiarClave';
 import { useClub, VentanaQrClub } from '@/components/panel/QrDelClub';
 import ComboPanel from './ComboPanel';
@@ -272,7 +273,7 @@ export default function Topbar({
     <CabeceraPanel titulo={titulo} sub={sub} accionesTitulo={accionesTitulo}
       navegacion={<NavegacionPanel />}
       avisos={<>{children}<BotonDemo /><AvisoCorteDeRoles /></>}
-      cuenta={<>{conSede && <SedeGlobal companyId={companyId} />}<CampanaAvisos /><SelectorCompania /><MenuCuenta email={email} pie={pie} /></>}
+      cuenta={<>{conSede && <SedeGlobal companyId={companyId} />}<CampanaAvisos /><SonidoReservas /><SelectorCompania /><MenuCuenta email={email} pie={pie} /></>}
     />
   );
 }

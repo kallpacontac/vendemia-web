@@ -31,12 +31,13 @@ import { enModoApp, plataforma, useInstalarAndroid } from './Instalable';
 import { supabase } from '@/lib/supabase/client';
 import { activarAvisos, enviarPrueba, registroPanel, soportaAvisos, suscripcionActual } from '@/lib/panel/suscribirAvisos';
 import { nombreApp } from '@/lib/panel/marcaPropia';
+import { guardarSonido, prepararAudio, probarSonido, sonidoActivo } from '@/lib/panel/sonidoAviso';
 
 type Tipo = 'pago' | 'reserva' | 'whatsapp' | 'plan' | 'persona' | 'stock' | 'por_aprobar';
 
 const TIPOS: { id: Tipo; titulo: string; detalle: string }[] = [
   { id: 'pago', titulo: 'Pagos', detalle: 'Un comprobante por revisar, o un pago validado que conviene mirar en tu Yape.' },
-  { id: 'reserva', titulo: 'Reservas y pedidos nuevos', detalle: 'Cuando Mia cierra una venta.' },
+  { id: 'reserva', titulo: 'Reservas y pedidos nuevos', detalle: 'En cuanto entran, con el día y la hora.' },
   { id: 'whatsapp', titulo: 'WhatsApp desconectado', detalle: 'Si Mia deja de responder porque se cayó el número.' },
   { id: 'plan', titulo: 'Tu plan', detalle: 'Al 80 % y al 100 % de las conversaciones del mes.' },
   { id: 'persona', titulo: 'Cliente pide una persona', detalle: 'Cuando Mia deriva una conversación a tu equipo.' },
@@ -79,11 +80,14 @@ export default function AvisosCelular() {
   const [endpoint, setEndpoint] = useState<string | null>(null);
   const [fila, setFila] = useState<Fila | null>(null);
   const [ocupado, setOcupado] = useState(false);
+  const [sonido, setSonido] = useState(true);
 
   // Todo lo del navegador se lee después de montar (no existe en el servidor).
   useEffect(() => {
     setSo(plataforma());
     setApp(enModoApp());
+    setSonido(sonidoActivo());
+    prepararAudio();
     const ok = soportaAvisos();
     setSoporta(ok);
     if (!ok || !companyId) {
@@ -257,6 +261,29 @@ export default function AvisosCelular() {
             </button>
           </div>
         </>
+      )}
+
+      {/* El panel abierto (la computadora o la tablet del mostrador): suena aunque no tenga los
+          avisos. Con los avisos de reservas activados aquí, suena el aviso y esto calla. */}
+      {!(activos && prefs.reserva) && (
+        <div className="toggle-row" style={{ marginTop: 12 }}>
+          <div className="t">
+            <b>Sonar con el panel abierto</b>
+            <small>Suena cuando entra una reserva o un pedido, mientras el panel esté abierto en esta pantalla.</small>
+            <button type="button" className="btn btn-ghost btn-sm" style={{ marginTop: 6, alignSelf: 'flex-start' }}
+              onClick={() => void probarSonido().then((ok) => { if (!ok) avisar('Toca la pantalla una vez y vuelve a probar: el navegador no deja sonar antes.', 'error'); })}>
+              Probar el sonido
+            </button>
+          </div>
+          <div
+            className={`toggle ${sonido ? 'on' : ''}`}
+            role="switch"
+            aria-checked={sonido}
+            aria-label="Sonar con el panel abierto"
+            tabIndex={0}
+            onClick={() => { guardarSonido(!sonido); setSonido(!sonido); }}
+          />
+        </div>
       )}
     </div>
   );

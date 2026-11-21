@@ -22,6 +22,7 @@
  * le permite al bot comprobar permisos.
  */
 import { supabase } from './client';
+import { marcarPropias } from '@/lib/panel/sonidoAviso';
 
 /** Los tipos de comando que el bot sabe ejecutar. Uno desconocido acaba en `error`. */
 export type TipoComando =
@@ -524,6 +525,21 @@ export async function encolar<T = unknown>(
   type: TipoComando,
   payload: Record<string, unknown>,
   timeoutMs: number = 15000,
+): Promise<T> {
+  const r = await encolarSinMarcar<T>(companyId, type, payload, timeoutMs);
+  // Lo que agenda el propio panel no hace sonar el «llegó una reserva» (lib/panel/sonidoAviso.ts).
+  if (type === 'crear_cita' && r && typeof r === 'object') {
+    const c = r as Partial<ResultadoCrearCita>;
+    marcarPropias([c.id, ...(Array.isArray(c.creadas) ? c.creadas : [])]);
+  }
+  return r;
+}
+
+async function encolarSinMarcar<T>(
+  companyId: string,
+  type: TipoComando,
+  payload: Record<string, unknown>,
+  timeoutMs: number,
 ): Promise<T> {
   if (await vaALaNube(companyId, type)) {
     try {

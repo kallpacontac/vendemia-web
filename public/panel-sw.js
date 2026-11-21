@@ -65,6 +65,9 @@ self.addEventListener('activate', (e) =>
 
 /* ══ Los avisos ══════════════════════════════════════════════════════════════ */
 
+/** Solo rutas de este sitio: un aviso no carga imágenes de fuera. */
+const propio = (v) => (typeof v === 'string' && v.startsWith('/') && !v.startsWith('//') ? v : '');
+
 self.addEventListener('push', (e) => {
   let d = {};
   try {
@@ -76,12 +79,15 @@ self.addEventListener('push', (e) => {
   e.waitUntil(
     self.registration.showNotification(d.title || 'Vendemia', {
       body: d.body || '',
-      icon: '/icons/panel-192.png',
-      badge: '/icons/panel-192.png',
+      // Marca propia: el logo del negocio, si el aviso lo trae (lib/panel/marcaPropia.ts). Se había
+      // perdido al rehacer este worker para «sin conexión» (44df7b0); vuelto el 21-nov-2026.
+      icon: propio(d.icon) || '/icons/panel-192.png',
+      badge: propio(d.badge) || '/icons/panel-192.png',
       tag: d.tag || undefined,
-      // Un aviso nuevo del mismo tipo reemplaza al anterior sin volver a sonar
-      // si no hay nada nuevo que mirar.
+      // Un aviso nuevo del mismo tipo reemplaza al anterior en la bandeja, pero VUELVE a sonar
+      // y vibrar: es otra reserva. El sonido es el del celular (la web no puede elegir otro).
       renotify: Boolean(d.tag),
+      vibrate: [200, 100, 200],
       data: { url },
     }),
   );
