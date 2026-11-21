@@ -302,7 +302,9 @@ function Configuracion() {
 
   const [paso, setPaso] = useState(() => {
     const p = Number(parametros.get('paso'));
-    return p >= 1 && p <= 4 ? p : 1;
+    // Los números internos siguen siendo 2, 3 y 4 —hay enlaces con ?paso=3 y ?paso=4—;
+    // el 1 (los datos del negocio) pasó a «Tu panel». En pantalla se ven como 1, 2 y 3.
+    return p >= 2 && p <= 4 ? p : 2;
   });
 
   /**
@@ -318,24 +320,21 @@ function Configuracion() {
 
   /**
    * Ajustes tiene dos cosas que no se mezclan (20-nov-2026, Alvaro: «siempre
-   * aparece esto»): cómo atiende Mia (los 4 pasos) y Tu panel (caja, equipo,
+   * aparece esto»): Tu negocio (los 4 pasos: datos, cobros y cómo atiende el
+   * asistente) y Tu panel (caja, equipo,
    * menú, boletas, avisos de este celular, Google Calendar). Antes el segundo
    * colgaba debajo de cualquier paso. Ahora se elige arriba y se ve uno solo.
-   * Abren directo en Tu panel los enlaces que vienen a algo de ahí: `?vista=panel`,
-   * `?equipo=1` (Topbar), `?avisos=1` (el aviso push), `?google=` / `#google-calendar`
-   * (vuelta de Google) y `#facturacion` (Boletas). Cada sección hace su propio
-   * scroll al montarse; solo necesita estar visible.
+   * El botón dice «Tu negocio» y no el nombre del asistente: cada negocio le
+   * pone el suyo («¿quién es Pierina?») y la vista es más que el asistente.
+   * Tu panel es la vista por defecto (Alvaro, 20-nov: «todo lo general, y debe
+   * estar primero»): ahí también van los datos del negocio. Por eso los enlaces a
+   * algo de Tu panel (`?equipo=1`, `?avisos=1`, `?google=`, `#facturacion`,
+   * `#google-calendar`) no necesitan nada: cada sección hace su propio scroll.
    */
   const [vista, setVista] = useState<'mia' | 'panel'>(() => {
-    const hash = typeof window === 'undefined' ? '' : window.location.hash;
-    const alPanel =
-      parametros.get('vista') === 'panel' ||
-      parametros.get('equipo') === '1' ||
-      parametros.has('avisos') ||
-      parametros.has('google') ||
-      hash === '#facturacion' ||
-      hash === '#google-calendar';
-    return alPanel ? 'panel' : 'mia';
+    // Tu panel es lo general y va primero. Solo un enlace a un paso del asistente abre el asistente.
+    const p = Number(parametros.get('paso'));
+    return p >= 2 && p <= 4 ? 'mia' : 'panel';
   });
 
   const [form, setForm] = useState<Formulario | null>(null);
@@ -684,17 +683,17 @@ function Configuracion() {
           titulo="Ajustes"
           sub={
             vista === 'mia'
-              ? `Prepara lo esencial para que ${form.bot_name || 'Mia'} atienda bien. Los detalles opcionales están en cada paso.`
-              : `Caja, equipo, menú, boletas y avisos. Nada de esto cambia cómo responde ${form.bot_name || 'Mia'}.`
+              ? `Cómo atiende tu asistente${form.bot_name ? `, ${form.bot_name},` : ''} por WhatsApp: qué ofrece, cómo responde y qué pregunta.`
+              : 'Los datos de tu negocio, la caja, tu equipo, el menú, las boletas y los avisos.'
           }
         />
 
         <div className="cfg-vistas" role="tablist" aria-label="Qué configurar">
-          <button type="button" role="tab" aria-selected={vista === 'mia'} className={vista === 'mia' ? 'active' : ''} onClick={() => setVista('mia')}>
-            {form.bot_name || 'Mia'}
-          </button>
           <button type="button" role="tab" aria-selected={vista === 'panel'} className={vista === 'panel' ? 'active' : ''} onClick={() => setVista('panel')}>
             Tu panel
+          </button>
+          <button type="button" role="tab" aria-selected={vista === 'mia'} className={vista === 'mia' ? 'active' : ''} onClick={() => setVista('mia')}>
+            Asistente
           </button>
         </div>
 
@@ -704,95 +703,29 @@ function Configuracion() {
           <nav className="stepper" aria-label="Pasos de configuración">
             {/*
               Ordenados como avanza una conversación (20-nov-2026, Alvaro: «no hay
-              cohesión»): el negocio y su número → qué vende y cómo cobra → quién es
+              cohesión»): qué vende y cómo cobra → quién es
               Mia, cómo saluda, sus reglas y cómo cierra → lo que pregunta antes de
-              cerrar. Lo que no cambia cómo responde Mia (la Caja, el equipo, el
-              menú) va en la vista «Tu panel».
+              cerrar. Lo general (los datos del negocio, la Caja, el equipo, el
+              menú) va en la vista «Tu panel», que es la primera.
             */}
-            {[
-              'Negocio',
-              `${cap(vocabulario(form?.business_mode).items)} y cobros`,
-              'Cómo responde',
-              'Antes de cerrar',
-            ].map((txt, i) => (
+            {([
+              [2, `${cap(vocabulario(form?.business_mode).items)} y cobros`],
+              [3, 'Cómo responde'],
+              [4, 'Antes de cerrar'],
+            ] as const).map(([n, txt], i) => (
                 <button
                   key={txt}
                   type="button"
-                  className={`step ${paso === i + 1 ? 'active' : ''} ${paso > i + 1 ? 'done' : ''}`}
-                  onClick={() => setPaso(i + 1)}
-                  aria-current={paso === i + 1 ? 'step' : undefined}
-                  aria-label={`Paso ${i + 1} de 4: ${txt}`}
+                  className={`step ${paso === n ? 'active' : ''} ${paso > n ? 'done' : ''}`}
+                  onClick={() => setPaso(n)}
+                  aria-current={paso === n ? 'step' : undefined}
+                  aria-label={`Paso ${i + 1} de 3: ${txt}`}
                 >
                   <div className="step__dot">{i + 1}</div>
                   <div className="step__lbl">{txt}</div>
                 </button>
             ))}
           </nav>
-        </div>
-
-        {/* ══ PASO 1 · MI NEGOCIO ══ */}
-        <div className={`card panel ${paso === 1 ? 'active' : ''}`}>
-          <div className="sec">
-            <h4>
-              <Store /> Datos del negocio
-            </h4>
-            <p className="cfg-guide">Paso 1 de 4 · Identifica tu negocio y el número desde el que atenderá el asistente.</p>
-            <div className="grid-form">
-              <Campo etiqueta="Nombre del negocio" valor={form.name} alCambiar={(v) => set('name', v)} />
-              <div>
-                <label className="field-label">Tipo de negocio</label>
-                <select
-                  className="select"
-                  value={form.business_mode}
-                  onChange={(e) => set('business_mode', e.target.value as BusinessMode)}
-                >
-                  <option value="appointment">Citas puntuales (barbería, salón, clínica)</option>
-                  <option value="recurring_appointment">Grupos recurrentes (cursos, clases)</option>
-                  <option value="ecommerce">E-commerce (productos)</option>
-                </select>
-                <small className="muted" style={{ fontSize: 11.5 }}>Define si gestionas citas, clases o productos.</small>
-              </div>
-              {vendeProductos && (
-                <div>
-                  <label className="field-label">Entrega</label>
-                  <select
-                    className="select"
-                    value={form.delivery_type}
-                    onChange={(e) => set('delivery_type', e.target.value as Formulario['delivery_type'])}
-                  >
-                    <option value="pickup">Recojo en local</option>
-                    <option value="delivery">Delivery</option>
-                    <option value="both">Ambos</option>
-                  </select>
-                </div>
-              )}
-              <Campo
-                etiqueta="WhatsApp del bot"
-                valor={form.whatsapp_phone}
-                alCambiar={(v) => set('whatsapp_phone', v)}
-                pista={delDueno ? 'Solo lo cambia el dueño.' : 'Sin +, así: 51987654321'}
-                bloqueado={delDueno}
-              />
-              <Campo etiqueta="Ubicación / distrito" valor={form.location} alCambiar={(v) => set('location', v)} />
-            </div>
-            <details className="cfg-advanced">
-              <summary>Teléfonos del dueño y del administrador</summary>
-              <div className="grid-form">
-                <Campo etiqueta="Teléfono del dueño" valor={form.owner_phone} alCambiar={(v) => set('owner_phone', v)} bloqueado={delDueno} />
-                <Campo etiqueta="Teléfono admin (comandos)" valor={form.admin_phone} alCambiar={(v) => set('admin_phone', v)} bloqueado={delDueno} />
-              </div>
-            </details>
-          </div>
-
-          {/* Pegado al «WhatsApp del bot»: es el estado de ESE número, no cómo habla Mia (antes, en el paso 3). */}
-          <ConexionWhatsApp necesita={necesitaEmparejar(salud)} />
-
-          <div className="nav-btns">
-            <span />
-            <button className="btn btn-primary" onClick={() => setPaso(2)}>
-              Continuar <ArrowRight size={16} />
-            </button>
-          </div>
         </div>
 
         {/* ══ PASO 2 · SERVICIOS, HORARIO Y PAGOS ══ */}
@@ -815,7 +748,7 @@ function Configuracion() {
                 ? 'Productos'
                 : `${cap(vocabulario(form?.business_mode).items)} y productos`}
             </h4>
-            <p className="cfg-guide">Paso 2 de 4 · Revisa qué ofreces, cuándo atiendes y cómo cobras.</p>
+            <p className="cfg-guide">Paso 1 de 3 · Revisa qué ofreces, cuándo atiendes y cómo cobras.</p>
             <div className="cfg-enlace">
               <div>
                 <b>
@@ -1061,7 +994,7 @@ function Configuracion() {
               >
                 <b>Tus reglas del negocio todavía piden el comprobante:</b>{' '}
                 «{reglaQuePideComprobante(form.custom_rules)}». Quítala en{' '}
-                <b>Reglas y política</b> (paso 3) o Mia seguirá pidiendo una captura que nadie va a
+                <b>Reglas y política</b> (paso «Cómo responde») o tu asistente seguirá pidiendo una captura que nadie va a
                 mirar.
               </div>
             )}
@@ -1084,7 +1017,7 @@ function Configuracion() {
               Aquí estaban «Pedir la ubicación para la entrega» (request_location) y
               «Mencionar la dirección del local» (proactive_venue). Se quitaron el
               20-nov-2026: el bot no lee ninguno de los dos desde af988a8. Mia dice
-              la dirección cuando hay «Ubicación / distrito» en el paso 1.
+              la dirección cuando hay «Ubicación / distrito» (Tu panel).
             */}
             {/*
               La duda razonable al tocar cualquiera de estos es "¿hay que
@@ -1097,9 +1030,7 @@ function Configuracion() {
           </div>
 
           <div className="nav-btns">
-            <button className="btn btn-ghost" onClick={() => setPaso(1)}>
-              <ArrowLeft size={16} /> Atrás
-            </button>
+            <span />
             <button className="btn btn-primary" onClick={() => setPaso(3)}>
               Continuar <ArrowRight size={16} />
             </button>
@@ -1122,7 +1053,7 @@ function Configuracion() {
               <MessageSquare /> Quién es {form.bot_name || 'Mia'}
             </h4>
             <p className="cfg-guide">
-              Paso 3 de 4 · En el orden en que lo vive tu cliente: quién le atiende, cómo le saluda, qué reglas sigue y
+              Paso 2 de 3 · En el orden en que lo vive tu cliente: quién le atiende, cómo le saluda, qué reglas sigue y
               cómo se despide.
             </p>
             <div className="grid-form">
@@ -1210,7 +1141,7 @@ function Configuracion() {
             </h4>
             <div className="desfase" style={{ background: 'var(--brand-soft)', borderColor: '#FFD9C7', color: 'var(--brand-txt)' }}>
               Las reglas son para <b>cómo comportarse</b>, no para repetir horarios ni precios: eso
-              ya vive en el paso 2, y si se contradicen {form.bot_name || 'Mia'} ofrece una hora que luego el sistema rechaza.
+              ya vive en el paso anterior, y si se contradicen {form.bot_name || 'Mia'} ofrece una hora que luego el sistema rechaza.
             </div>
             <div className="grid-form">
               <div className="full">
@@ -1280,7 +1211,7 @@ function Configuracion() {
         {/* ══ PASO 4 · ANTES DE CERRAR ══ */}
         <div className={`card panel ${paso === 4 ? 'active' : ''}`}>
           <p className="cfg-guide">
-            Paso 4 de 4 · Opcional. Lo que {form.bot_name || 'Mia'} pregunta antes de cerrar{' '}
+            Paso 3 de 3 · Opcional. Lo que {form.bot_name || 'Mia'} pregunta antes de cerrar{' '}
             {vocabulario(form.business_mode).una} {vocabulario(form.business_mode).reserva}. Añade solo lo que de verdad necesitas.
           </p>
 
@@ -1352,6 +1283,63 @@ function Configuracion() {
         </div>
 
         <div hidden={vista !== 'panel'}>
+          {/* Los datos del negocio: antes, el paso 1 del asistente. Son generales (los usan la página, la caja y el asistente). */}
+          <div className="card panel active">
+          <div className="sec">
+            <h4>
+              <Store /> Datos del negocio
+            </h4>
+            <p className="cfg-guide">Identifica tu negocio y el número desde el que atiende tu asistente.</p>
+            <div className="grid-form">
+              <Campo etiqueta="Nombre del negocio" valor={form.name} alCambiar={(v) => set('name', v)} />
+              <div>
+                <label className="field-label">Tipo de negocio</label>
+                <select
+                  className="select"
+                  value={form.business_mode}
+                  onChange={(e) => set('business_mode', e.target.value as BusinessMode)}
+                >
+                  <option value="appointment">Citas puntuales (barbería, salón, clínica)</option>
+                  <option value="recurring_appointment">Grupos recurrentes (cursos, clases)</option>
+                  <option value="ecommerce">E-commerce (productos)</option>
+                </select>
+                <small className="muted" style={{ fontSize: 11.5 }}>Define si gestionas citas, clases o productos.</small>
+              </div>
+              {vendeProductos && (
+                <div>
+                  <label className="field-label">Entrega</label>
+                  <select
+                    className="select"
+                    value={form.delivery_type}
+                    onChange={(e) => set('delivery_type', e.target.value as Formulario['delivery_type'])}
+                  >
+                    <option value="pickup">Recojo en local</option>
+                    <option value="delivery">Delivery</option>
+                    <option value="both">Ambos</option>
+                  </select>
+                </div>
+              )}
+              <Campo
+                etiqueta="WhatsApp del bot"
+                valor={form.whatsapp_phone}
+                alCambiar={(v) => set('whatsapp_phone', v)}
+                pista={delDueno ? 'Solo lo cambia el dueño.' : 'Sin +, así: 51987654321'}
+                bloqueado={delDueno}
+              />
+              <Campo etiqueta="Ubicación / distrito" valor={form.location} alCambiar={(v) => set('location', v)} />
+            </div>
+            <details className="cfg-advanced">
+              <summary>Teléfonos del dueño y del administrador</summary>
+              <div className="grid-form">
+                <Campo etiqueta="Teléfono del dueño" valor={form.owner_phone} alCambiar={(v) => set('owner_phone', v)} bloqueado={delDueno} />
+                <Campo etiqueta="Teléfono admin (comandos)" valor={form.admin_phone} alCambiar={(v) => set('admin_phone', v)} bloqueado={delDueno} />
+              </div>
+            </details>
+          </div>
+
+          {/* Pegado al «WhatsApp del bot»: es el estado de ESE número, no cómo habla el asistente. */}
+          <ConexionWhatsApp necesita={necesitaEmparejar(salud)} />
+          </div>
 
         {/*
           Fuera del asistente (18-nov-2026, Alvaro: «no tiene sentido» en «Cómo responde»): quién
