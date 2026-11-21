@@ -288,7 +288,7 @@ export default function Equipo() {
         {empresa?.business_mode === 'appointment' && !empresa.pideEmpleado && (
           <div className="desfase" style={{ marginBottom: 14 }}>
             Ahora mismo Mia <b>no pregunta con quién</b> quiere el cliente su cita. Se activa en{' '}
-            <Link href="/panel/configuracion">Ajustes</Link> · «Preguntar por el profesional».
+            <Link href="/panel/configuracion?paso=4">Ajustes</Link> · «Preguntar por el profesional».
           </div>
         )}
 

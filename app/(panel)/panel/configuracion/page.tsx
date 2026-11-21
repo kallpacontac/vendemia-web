@@ -316,6 +316,28 @@ function Configuracion() {
   const irAlEquipo = parametros.get('equipo') === '1';
   const seccionEquipo = useRef<HTMLDetailsElement>(null);
 
+  /**
+   * Ajustes tiene dos cosas que no se mezclan (20-nov-2026, Alvaro: «siempre
+   * aparece esto»): cómo atiende Mia (los 4 pasos) y Tu panel (caja, equipo,
+   * menú, boletas, avisos de este celular, Google Calendar). Antes el segundo
+   * colgaba debajo de cualquier paso. Ahora se elige arriba y se ve uno solo.
+   * Abren directo en Tu panel los enlaces que vienen a algo de ahí: `?vista=panel`,
+   * `?equipo=1` (Topbar), `?avisos=1` (el aviso push), `?google=` / `#google-calendar`
+   * (vuelta de Google) y `#facturacion` (Boletas). Cada sección hace su propio
+   * scroll al montarse; solo necesita estar visible.
+   */
+  const [vista, setVista] = useState<'mia' | 'panel'>(() => {
+    const hash = typeof window === 'undefined' ? '' : window.location.hash;
+    const alPanel =
+      parametros.get('vista') === 'panel' ||
+      parametros.get('equipo') === '1' ||
+      parametros.has('avisos') ||
+      parametros.has('google') ||
+      hash === '#facturacion' ||
+      hash === '#google-calendar';
+    return alPanel ? 'panel' : 'mia';
+  });
+
   const [form, setForm] = useState<Formulario | null>(null);
   const [horario, setHorario] = useState<Horario>({});
   const [pagos, setPagos] = useState<MetodoPago[]>([]);
@@ -333,6 +355,7 @@ function Configuracion() {
   const cargado = form !== null;
   useEffect(() => {
     if (!irAlEquipo) return;
+    setVista('panel');
     // Tras el render, que es cuando la sección existe.
     const t = setTimeout(() => {
       const d = seccionEquipo.current;
@@ -537,6 +560,8 @@ function Configuracion() {
     );
     if (sinNumero) {
       avisar(`Falta el número del método de pago "${sinNumero.type}".`, 'error');
+      setVista('mia');
+      setPaso(2);
       return;
     }
 
@@ -545,6 +570,8 @@ function Configuracion() {
       const e = errorDeDescanso(nombre, horario[clave]);
       if (e) {
         avisar(e, 'error');
+        setVista('mia');
+        setPaso(2);
         return;
       }
     }
@@ -554,6 +581,7 @@ function Configuracion() {
     // decirlo aquí que dejar que desaparezca en silencio.
     if (preguntas.some((p) => !p.question.trim())) {
       avisar('Hay una pregunta obligatoria sin texto. Escríbela o bórrala.', 'error');
+      setVista('mia');
       setPaso(4);
       return;
     }
@@ -563,6 +591,7 @@ function Configuracion() {
         `"${huerfana.question.trim()}" está marcada como dato obligatorio pero no tiene clave donde guardarse.`,
         'error',
       );
+      setVista('mia');
       setPaso(4);
       return;
     }
@@ -651,8 +680,26 @@ function Configuracion() {
       {/* El padding extra evita que la barra fija tape el último control de la
           pantalla, que en el paso 4 es un botón de borrar pregunta. */}
       <div className={`cfg-wrap ${hayCambios ? 'cfg-wrap--barra' : ''}`}>
-        <Topbar titulo="Configura tu negocio" sub={`Prepara lo esencial para que ${form.bot_name || 'Mia'} atienda bien. Los detalles opcionales están en cada paso.`} />
+        <Topbar
+          titulo="Ajustes"
+          sub={
+            vista === 'mia'
+              ? `Prepara lo esencial para que ${form.bot_name || 'Mia'} atienda bien. Los detalles opcionales están en cada paso.`
+              : `Caja, equipo, menú, boletas y avisos. Nada de esto cambia cómo responde ${form.bot_name || 'Mia'}.`
+          }
+        />
 
+        <div className="cfg-vistas" role="tablist" aria-label="Qué configurar">
+          <button type="button" role="tab" aria-selected={vista === 'mia'} className={vista === 'mia' ? 'active' : ''} onClick={() => setVista('mia')}>
+            {form.bot_name || 'Mia'}
+          </button>
+          <button type="button" role="tab" aria-selected={vista === 'panel'} className={vista === 'panel' ? 'active' : ''} onClick={() => setVista('panel')}>
+            Tu panel
+          </button>
+        </div>
+
+        {/* Ocultas y no desmontadas: un adjunto a medio subir o un cambio sin guardar siguen ahí al volver. */}
+        <div hidden={vista !== 'mia'}>
         <div className="stepper-card">
           <nav className="stepper" aria-label="Pasos de configuración">
             {/*
@@ -660,7 +707,7 @@ function Configuracion() {
               cohesión»): el negocio y su número → qué vende y cómo cobra → quién es
               Mia, cómo saluda, sus reglas y cómo cierra → lo que pregunta antes de
               cerrar. Lo que no cambia cómo responde Mia (la Caja, el equipo, el
-              menú) va en «Tu equipo y tu panel», debajo.
+              menú) va en la vista «Tu panel».
             */}
             {[
               'Negocio',
@@ -1302,11 +1349,14 @@ function Configuracion() {
             </button>
           </div>
         </div>
+        </div>
+
+        <div hidden={vista !== 'panel'}>
 
         {/*
           Fuera del asistente (18-nov-2026, Alvaro: «no tiene sentido» en «Cómo responde»): quién
-          entra al panel, el orden del menú y las boletas no cambian cómo responde Mia. Se ven en
-          cualquier paso y cada una se guarda sola, salvo «Caja y agenda», que va con la barra de
+          entra al panel, el orden del menú y las boletas no cambian cómo responde Mia. Desde el
+          20-nov van en la vista «Tu panel» (ver `vista`) y cada una se guarda sola, salvo «Caja y agenda», que va con la barra de
           guardar porque son campos del mismo formulario. Dueño y administrador; el admin de la plataforma
           ve la lista del equipo sin botones (`equipo_listar` se la da, pero los comandos no los
           puede encolar). Al empleado ni se le pinta. Ver components/panel/Equipo.tsx.
@@ -1316,7 +1366,6 @@ function Configuracion() {
             <div className="card-mini-head">
               <h3 id="cfg-panel-titulo">Tu equipo y tu panel</h3>
             </div>
-            <p className="muted cfg-panel__sub">Quién entra al panel, cómo se cobra en la caja, el orden del menú y tus boletas. No cambia cómo responde Mia.</p>
             {/*
               «Caja y agenda» (20-nov-2026): estaban en los pasos 1 y 2 del asistente y
               ninguna cambia cómo responde Mia: una es de quien cobra desde el panel,
@@ -1441,6 +1490,7 @@ function Configuracion() {
         <AvisosCelular />
         {/* Su Google Calendar en la agenda de su página (sql/0028): solo dueño o administrador. */}
         {(rol === 'dueno' || rol === 'admin' || esAdminPlataforma) && <GoogleCalendar />}
+        </div>
       </div>
 
       {/*
