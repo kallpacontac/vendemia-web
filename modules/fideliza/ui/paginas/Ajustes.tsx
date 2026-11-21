@@ -3,11 +3,15 @@
 /**
  * FIDELIZA · AJUSTES — equipo y permisos, estado de Google Wallet, la cola
  * de sincronización y la conciliación del saldo contra el libro.
+ *
+ * 20-nov-2026: lo técnico (servicios, cola de Wallet, conciliación) solo lo ve el equipo de
+ * Vendemia; el dueño no puede arreglarlo y solo lo asustaba. El dueño ve su equipo y permisos.
  */
 import { useState } from 'react';
 import { useFideliza } from '@/modules/fideliza/ui/Contexto';
 import { Cargando, Fallo } from '@/modules/fideliza/ui/Estados';
 import { useAvisar } from '@/components/panel/Avisos';
+import { useSesion } from '@/components/panel/Sesion';
 import { useCargar } from '@/components/panel/useCargar';
 import { accion, lecturas, mensaje } from '@/modules/fideliza/cliente/api';
 import { ROL, fechaHora } from '@/modules/fideliza/dominio/formato';
@@ -30,6 +34,7 @@ const ESTADO: Record<string, string> = { pending: 'En cola', retry: 'Reintentar�
 export default function Ajustes() {
   const { companyId, puede, ajustes, recargar: recargarCtx, rol } = useFideliza();
   const avisar = useAvisar();
+  const tecnico = useSesion().esAdminPlataforma;
   const [conciliacion, setConciliacion] = useState<{ mismatches: unknown[]; fixed: boolean } | null>(null);
   const [sincronizando, setSincronizando] = useState(false);
 
@@ -80,6 +85,7 @@ export default function Ajustes() {
 
   return (
     <>
+      {tecnico && (
       <div className="card" style={{ marginBottom: 16 }}>
         <h3 style={{ fontSize: 15, marginBottom: 10 }}>Servicios</h3>
         <ul className="fz-lista">
@@ -127,8 +133,9 @@ export default function Ajustes() {
           </label>
         )}
       </div>
+      )}
 
-      {puede('wallet.manage') && (
+      {tecnico && puede('wallet.manage') && (
         <div className="card" style={{ marginBottom: 16 }}>
           <div className="fz-fila" style={{ justifyContent: 'space-between', marginBottom: 8 }}>
             <h3 style={{ fontSize: 15 }}>Cola de sincronización</h3>
@@ -197,7 +204,7 @@ export default function Ajustes() {
         <div className="card">
           <h3 style={{ fontSize: 15, marginBottom: 6 }}>Equipo y permisos en Fideliza</h3>
           <p className="fz-def" style={{ marginTop: 0 }}>
-            Las cuentas del equipo se dan de alta en Ajustes del panel. Aquí solo se decide qué pueden hacer en Fideliza. Cajero: buscar, registrar y canjear. Gerente: además programa, placas, devoluciones y campañas. Analista: solo métricas.
+            Las cuentas del equipo se dan de alta en Ajustes del panel. Aquí solo se decide qué pueden hacer en Fideliza. Cajero: buscar, registrar y canjear. Gerente: además el club, placas, devoluciones y avisos. Analista: solo métricas.
           </p>
           <ul className="fz-lista">
             {datos.equipo.map((m) => (

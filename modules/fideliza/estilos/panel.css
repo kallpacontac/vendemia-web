@@ -487,3 +487,29 @@
 /* Clientes · la ficha en la lista: celular y cumpleaños (paginas/Clientes.tsx, sql/0021) */
 .fz-cl-datos{display:flex;flex-wrap:wrap;gap:4px 12px;margin-top:3px;font-size:12px;color:var(--ink-soft)}
 .fz-cl-datos>span{display:inline-flex;align-items:center;gap:4px}
+
+/* «Pruébalo con tu celular» al publicar el club (20-nov-2026). */
+.fz-probar{display:grid;gap:8px;max-width:400px;margin:14px auto 4px;padding-left:22px;text-align:left;font-size:14.5px}
+.fz-probar__qr{display:flex;justify-content:center;margin:12px 0}
+
+/* Avisos con interruptores (20-nov-2026), con las tarjetas del Dashboard (.fz-numeros__card). */
+.fz-avisos{display:grid;gap:16px;margin:6px 0 18px}
+.fz-avisos__alcance .fz-numeros__sub{margin-bottom:14px;font-size:13.5px;line-height:1.5}
+.fz-avisos__mandar{align-self:flex-start;min-height:46px}
+.fz-avisos__lista{list-style:none;margin:6px 0 0;padding:0}
+.fz-avisos__fila{display:grid;gap:9px;padding:15px 0;border-top:1px solid #eeefeb}
+.fz-avisos__fila:first-child{border-top:0;padding-top:6px}
+.fz-avisos__cab{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.fz-avisos__cab b{display:block;font-size:14.5px}
+.fz-avisos__cab small{display:block;color:#6b6c66;font-size:12.5px;margin-top:2px}
+.fz-avisos .toggle{border:0;padding:0;margin-top:2px}
+.fz-avisos .toggle:disabled{opacity:.55;cursor:default}
+.fz-avisos__msg{background:#f6f6f3;border-radius:14px;padding:10px 12px;font-size:13px;color:#4a4b45}
+.fz-avisos__msg b{display:block;color:#20211d;font-size:13px}
+.fz-avisos__fila--off .fz-avisos__msg{opacity:.55}
+.fz-avisos__pie{display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px}
+.fz-avisos__pie small{color:#6b6c66;font-size:12.5px}
+.fz-avisos__dias{max-width:100%;overflow-x:auto;scrollbar-width:none}
+.fz-avisos__dias button:disabled{cursor:default}
+.fz-avisos__editar{display:inline-flex;align-items:center;gap:5px;font-size:12.5px}
+.fz-avisos__tope{color:#6b6c66;font-size:12.5px;line-height:1.5;margin:16px 2px 0;max-width:70ch}

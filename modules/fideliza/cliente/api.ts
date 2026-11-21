@@ -77,6 +77,8 @@ export interface Ajustes {
   page_style?: Record<string, unknown> | null;
   require_external_ref: boolean;
   wallet_use_demo_class: boolean;
+  /** sql/0019: el regalo de cumpleaños ('' = sin regalo ni aviso). Puede no venir. */
+  cumple_regalo?: string;
 }
 
 export interface Sucursal {

@@ -24,36 +24,45 @@ export interface SeccionFideliza {
 const SOLO_CLUB: Modo[] = ['fidelizacion'];
 const CON_PAGINA: Modo[] = ['enlaces', 'fidelizacion'];
 
+/*
+ * 20-nov-2026 (maqueta aprobada por Alvaro): de 7 pestañas a 5 — Inicio · Caja · Clientes ·
+ * Avisos · Mi club. Avisos sale de Clientes porque es lo que el dueño tiene que encontrar sin
+ * buscar; todo lo de la tarjeta (premio, diseño, QR, placas, enlaces) va junto en «Mi club», que
+ * abre la pantalla única del club y deja el asistente de 6 pasos como «Opciones avanzadas».
+ * Inicio pide metrics.read: el cajero no lo ve y entra directo a la Caja (ver Resumen.tsx).
+ */
 const SECCIONES: SeccionFideliza[] = [
-  { label: 'Inicio', paginas: [{ href: '/panel/fideliza', label: 'Inicio', permiso: 'program.read', modos: ['nuevo', 'enlaces', 'fidelizacion'] }] },
-  { label: 'Caja', paginas: [{ href: '/panel/fideliza/caja', label: 'Caja', permiso: 'ops.record', modos: SOLO_CLUB }] },
   {
-    label: 'Clientes',
+    label: 'Inicio',
     paginas: [
-      { href: '/panel/fideliza/clientes', label: 'Mis clientes', permiso: 'members.read', modos: SOLO_CLUB },
-      { href: '/panel/fideliza/campanas', label: 'Campañas', permiso: 'campaigns.manage', modos: SOLO_CLUB },
+      { href: '/panel/fideliza', label: 'Resumen', permiso: 'metrics.read', modos: ['nuevo', 'enlaces', 'fidelizacion'] },
+      { href: '/panel/fideliza/numeros', label: 'Números', permiso: 'metrics.read', modos: SOLO_CLUB },
     ],
   },
-  { label: 'Números', paginas: [{ href: '/panel/fideliza/numeros', label: 'Números', permiso: 'metrics.read', modos: SOLO_CLUB }] },
+  { label: 'Caja', paginas: [{ href: '/panel/fideliza/caja', label: 'Caja', permiso: 'ops.record', modos: SOLO_CLUB }] },
+  { label: 'Clientes', paginas: [{ href: '/panel/fideliza/clientes', label: 'Clientes', permiso: 'members.read', modos: SOLO_CLUB }] },
+  { label: 'Avisos', paginas: [{ href: '/panel/fideliza/campanas', label: 'Avisos', permiso: 'campaigns.manage', modos: SOLO_CLUB }] },
   {
-    label: 'Tarjeta de puntos',
-    paginas: [{ href: '/panel/fideliza/programa', label: 'Tarjeta de puntos', permiso: 'program.edit', modos: SOLO_CLUB }],
-    tambien: ['/panel/fideliza/club'],
-  },
-  {
-    label: 'Enlaces y QR',
+    label: 'Mi club',
     paginas: [
+      { href: '/panel/fideliza/club', label: 'Tu tarjeta', permiso: 'program.edit', modos: SOLO_CLUB },
       { href: '/panel/fideliza/mi-pagina', label: 'Mis enlaces', permiso: 'links.manage', modos: CON_PAGINA },
-      { href: '/panel/fideliza/placas', label: 'Placas y QR', permiso: 'devices.manage', modos: CON_PAGINA },
+      { href: '/panel/fideliza/placas', label: 'QR y placas', permiso: 'devices.manage', modos: CON_PAGINA },
       { href: '/panel/fideliza/enlaces', label: 'Otras páginas', permiso: 'links.manage', modos: SOLO_CLUB },
     ],
+    tambien: ['/panel/fideliza/programa'],
   },
-  { label: 'Ajustes', icono: 'ajustes', paginas: [{ href: '/panel/fideliza/ajustes', label: 'Ajustes', permiso: 'wallet.manage', modos: SOLO_CLUB }] },
+  { label: 'Ajustes', icono: 'ajustes', paginas: [{ href: '/panel/fideliza/ajustes', label: 'Ajustes', permiso: 'team.manage', modos: SOLO_CLUB }] },
 ];
 
 /** Las secciones que le tocan a este negocio y a esta persona, solo con sus páginas. */
 export function seccionesDe(modo: Modo, puede: (permiso: string) => boolean): SeccionFideliza[] {
-  return SECCIONES.map((s) => ({ ...s, paginas: s.paginas.filter((p) => p.modos.includes(modo) && puede(p.permiso)) })).filter((s) => s.paginas.length > 0);
+  return SECCIONES.map((s) => ({
+    ...s,
+    // Sin club (solo página de enlaces), «Mi club» no dice nada: ahí son sus enlaces.
+    label: s.label === 'Mi club' && modo !== 'fidelizacion' ? 'Mis enlaces' : s.label,
+    paginas: s.paginas.filter((p) => p.modos.includes(modo) && puede(p.permiso)),
+  })).filter((s) => s.paginas.length > 0);
 }
 
 export const paginaActiva = (href: string, ruta: string) => (href === '/panel/fideliza' ? ruta === href : ruta.startsWith(href));

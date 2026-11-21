@@ -10,8 +10,15 @@
  * los premios por entregar (HoyEnElClub); los primeros pasos, el programa y el link, debajo. Las
  * alertas de servidor, cron, Wallet y cola solo las ve el equipo de Vendemia: el dueño no puede
  * arreglarlas y solo lo asustaban.
+ *
+ * 20-nov-2026 (maqueta aprobada): un solo camino para crear el club — la pantalla única
+ * (/club); el asistente de 6 pasos queda como «Opciones avanzadas». Primeros pasos baja de 5 a
+ * 3, y el segundo es que el dueño saque SU tarjeta y se dé un sello: ahí ve lo que vive su
+ * cliente. El cajero no tiene Inicio: entra directo a la Caja.
  */
+import { useEffect } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { AlertTriangle, ExternalLink } from 'lucide-react';
 import { useFideliza } from '@/modules/fideliza/ui/Contexto';
 import { Cargando, Cifra, Fallo } from '@/modules/fideliza/ui/Estados';
@@ -49,6 +56,12 @@ const ESTADO_PROGRAMA: Record<string, [string, string]> = {
 export default function Resumen() {
   const { companyId, ajustes, puede, modo } = useFideliza();
   const { esAdminPlataforma } = useSesion();
+  const router = useRouter();
+  // El cajero no tiene Inicio (secciones.ts): su sitio es la Caja.
+  const soloCaja = !puede('metrics.read') && puede('ops.record');
+  useEffect(() => {
+    if (soloCaja) router.replace('/panel/fideliza/caja');
+  }, [soloCaja, router]);
 
   const { datos, cargando, error, releer } = useCargar(async () => {
     if (!companyId) return null;
@@ -81,6 +94,7 @@ export default function Resumen() {
     return { programas, lineas: vivo ? lineas.filter((l) => l.parent_program_id === vivo.id) : [], vivo, version: versiones[0] ?? null, config, m, publicada: publicada ?? null, placas, visitas, aperturas };
   }, [companyId, ajustes?.default_profile_id, modo]);
 
+  if (soloCaja) return <Cargando texto="Abriendo la caja…" />;
   if (modo === 'nuevo' && puede('program.edit')) return <Bienvenida />;
   if (cargando && !datos) return <Cargando texto="Calculando el resumen…" />;
   if (error) return <Fallo texto={error} reintentar={releer} />;
@@ -95,41 +109,26 @@ export default function Resumen() {
 
   const pasos: Paso[] = [
     {
-      titulo: 'Datos de tu negocio',
-      que: 'El nombre que verán tus clientes y la dirección de tu link (ej. fideliza.vendemias.com/n/tu-negocio).',
-      hecho: Boolean(ajustes),
-      href: '/panel/fideliza/programa?paso=0',
-      boton: 'Empezar',
-    },
-    {
-      titulo: 'Tu programa de premios',
-      que: 'Cuántos sellos, puntos o visitas hacen falta y qué premio se gana. Al publicarlo, la gente ya puede crear su tarjeta.',
+      titulo: 'Crea tu club',
+      que: 'Cuántos sellos y qué premio. Tu logo y tu color. Al publicarlo, la gente ya puede sacar su tarjeta.',
       hecho: vivo?.status === 'active' || vivo?.status === 'paused',
       href: '/panel/fideliza/club',
       boton: vivo ? 'Publicar' : 'Crear',
     },
     {
-      titulo: 'Tu marca: color y logo',
-      que: 'Para que la tarjeta y tu página se vean con tus colores. Sirve cualquier foto o logo.',
-      hecho: Boolean(ajustes?.logo_url && ajustes.logo_checked?.ok),
-      opcional: true,
-      href: '/panel/fideliza/programa?paso=4',
-      boton: 'Personalizar',
+      titulo: 'Pruébalo con tu celular',
+      que: 'Saca tu propia tarjeta y date un sello: te llega el aviso como a tus clientes.',
+      hecho: Boolean(m && m.members.with_operation > 0),
+      href: '/panel/fideliza/club?probar=1',
+      boton: 'Probar',
     },
     {
-      titulo: 'Los botones de tu página',
-      que: 'WhatsApp, reseñas, cómo llegar, «Mi tarjeta»… Lo que verán al abrir tu link.',
-      hecho: botones > 0,
-      href: '/panel/fideliza/mi-pagina',
-      boton: 'Añadir botones',
-    },
-    {
-      titulo: 'Placa o QR para el local',
-      que: 'Un QR (o placa NFC) en el mostrador para que se unan al pagar.',
+      titulo: 'Pon tu cartel o tu placa',
+      que: 'Un QR en el mostrador para que se unan al pagar.',
       hecho: placas.some((d) => d.status === 'active'),
       opcional: true,
       href: '/panel/fideliza/placas?nueva=1',
-      boton: 'Crear placa',
+      boton: 'Ver QR',
     },
   ];
 
@@ -137,9 +136,9 @@ export default function Resumen() {
   const tecnicas: { texto: string; enlace?: string }[] = [];
   const alertas: { texto: string; enlace?: string }[] = [];
   if (!config.servidor) tecnicas.push({ texto: 'Falta la clave del servidor de Fideliza: las páginas públicas y Wallet no funcionan (ver modules/fideliza/sql/README.md).' });
-  if (!ajustes) alertas.push({ texto: 'Completa los datos del negocio (paso 1 del programa).', enlace: '/panel/fideliza/programa' });
-  if (!vivo) alertas.push({ texto: 'Todavía no hay programa. Configúralo y publícalo.', enlace: '/panel/fideliza/programa' });
-  if (vivo?.status === 'draft') alertas.push({ texto: 'El programa está en borrador: nadie puede unirse aún.', enlace: '/panel/fideliza/programa' });
+  if (!ajustes) alertas.push({ texto: 'Completa los datos de tu negocio y crea tu club.', enlace: '/panel/fideliza/club' });
+  if (!vivo) alertas.push({ texto: 'Todavía no tienes club. Créalo y publícalo.', enlace: '/panel/fideliza/club' });
+  if (vivo?.status === 'draft') alertas.push({ texto: 'Tu club está en borrador: nadie puede unirse aún.', enlace: '/panel/fideliza/club' });
   if (version?.valid_to && new Date(version.valid_to) < new Date())
     alertas.push({ texto: 'La regla del programa venció: las compras no suman. Publica una nueva.', enlace: '/panel/fideliza/programa' });
   if (!config.wallet) tecnicas.push({ texto: 'Google Wallet no está configurado en el servidor: las tarjetas solo funcionan como web.' });
@@ -291,7 +290,7 @@ function Bienvenida() {
           <span>Un solo link con tus botones: WhatsApp, Yape / Plin, reseñas de Google, Instagram, cómo llegar… Y un QR o placa NFC para el local.</span>
           <em>Listo en 3 minutos →</em>
         </Link>
-        <Link href="/panel/fideliza/programa?paso=0" className="card fz-opcion">
+        <Link href="/panel/fideliza/club" className="card fz-opcion">
           <b>Tarjeta de puntos para mis clientes</b>
           <span>Sellos, puntos o visitas con premio, caja para registrar compras y Google Wallet. Incluye también tu página de enlaces.</span>
           <em>Configurar →</em>

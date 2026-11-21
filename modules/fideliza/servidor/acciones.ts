@@ -712,6 +712,11 @@ export const ACCIONES = {
         p_config: d.config,
       }),
   }),
+  /** El regalo de cumpleaños del negocio (sql/0025). '' lo apaga. */
+  'cumple.regalo': accion({
+    esquema: z.object({ companyId: compania, regalo: z.string().trim().max(120) }),
+    ejecutar: (d, { sb }) => rpc(sb, 'loyalty_cumple_regalo_guardar', { p_company: d.companyId, p_regalo: d.regalo }),
+  }),
   'campana.audiencia': accion({
     esquema: z.object({
       companyId: compania,

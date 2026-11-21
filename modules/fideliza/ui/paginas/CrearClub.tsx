@@ -14,13 +14,18 @@
  *
  * Por dentro usa las mismas acciones que el asistente (ajustes.guardar,
  * estilo.guardar, programa.guardar, programa.publicar): no hay otra lógica.
+ *
+ * 20-nov-2026 (maqueta aprobada): es el ÚNICO camino para crear el club (Inicio, «Mi club» y
+ * Primeros pasos traen aquí). Al publicar, en vez de «Ir a la caja», el dueño lo prueba con su
+ * celular: saca su tarjeta y se da un sello, y le llega el aviso como a sus clientes. La primera
+ * vez deja prendidos los avisos automáticos (dominio/avisos.ts). /club?probar=1 abre esa prueba.
  */
 import { fotoEnCirculo } from '@/modules/fideliza/dominio/encuadre';
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { ImagePlus, Minus, Plus, Settings2, Trash2 } from 'lucide-react';
 import { useFideliza } from '@/modules/fideliza/ui/Contexto';
-import { Cargando, Fallo, SinPermiso } from '@/modules/fideliza/ui/Estados';
+import { Cargando, Fallo, Qr, SinPermiso } from '@/modules/fideliza/ui/Estados';
 import VistaTarjeta from '@/modules/fideliza/ui/VistaTarjeta';
 import { useValidacion, type Errores } from '@/modules/fideliza/ui/Validacion';
 import { useAvisar } from '@/components/panel/Avisos';
@@ -29,6 +34,8 @@ import { accion, ErrorFideliza, lecturas, mensaje, sincronizarEnSegundoPlano, ty
 import { subirImagenMarca } from '@/modules/fideliza/cliente/imagenMarca';
 import EncuadrarFoto from '@/modules/fideliza/ui/EncuadrarFoto';
 import { slugDe } from '@/modules/fideliza/dominio/botones';
+import { urlUnirse } from '@/modules/fideliza/dominio/config';
+import { AVISOS_AUTO, avisoDeFabrica, type PlantillaAuto } from '@/modules/fideliza/dominio/avisos';
 import { COLORES, PLANTILLAS_TARJETA, colorValido, tarjetaValida, type Estilo, type PlantillaTarjeta } from '@/modules/fideliza/dominio/estilo';
 import { RUBROS, SELLOS, sellosDe, selloValido, sugerirRubro, type Rubro, type Sello } from '@/modules/fideliza/dominio/sellos';
 import { datosArteWallet, svgArteWallet } from '@/modules/fideliza/dominio/wallet-arte';
@@ -54,6 +61,8 @@ export default function CrearClub() {
   const [ocupado, setOcupado] = useState(false);
   const [subiendo, setSubiendo] = useState(false);
   const [publicado, setPublicado] = useState(false);
+  /** Los avisos que se prendieron solos al publicar el club por primera vez. */
+  const [prendidos, setPrendidos] = useState<string[]>([]);
   const [slugOcupado, setSlugOcupado] = useState<string | null>(null);
   const archivo = useRef<HTMLInputElement>(null);
   const listo = useRef(false);
@@ -84,6 +93,8 @@ export default function CrearClub() {
       sellos: regla.reward_threshold && regla.reward_threshold > 0 ? Math.min(20, regla.reward_threshold) : 8,
       premio: regla.reward_description ?? '',
     });
+    // «Pruébalo con tu celular» desde Primeros pasos: solo si el club ya está publicado.
+    if (p && p.status !== 'draft' && new URLSearchParams(window.location.search).get('probar')) setPublicado(true);
   }, [datos, cargando, ajustes]);
 
   const programa = datos?.programa ?? null;
@@ -132,6 +143,19 @@ export default function CrearClub() {
     }
   }
 
+  /** Prende las campañas que el negocio no tenga todavía. Si falla, el club ya está publicado: no se dice nada. */
+  async function prenderAvisos(): Promise<string[]> {
+    try {
+      const ya = new Set((await lecturas.campanas(companyId!)).map((x) => x.template));
+      const nuevas = (Object.keys(AVISOS_AUTO) as PlantillaAuto[]).filter((t) => !ya.has(t));
+      const d = { negocio: (ajustes?.display_name ?? c.negocio).trim(), club: c.nombre.trim(), premio: c.premio.trim() };
+      for (const t of nuevas) await accion('campana.guardar', { companyId, template: t, status: 'active', ...avisoDeFabrica(t, d) });
+      return nuevas.map((t) => AVISOS_AUTO[t].nombre);
+    } catch {
+      return [];
+    }
+  }
+
   async function publicar() {
     if (!v.comprobar()) return avisar('Faltan datos: revisa lo marcado en rojo.', 'error');
     setOcupado(true);
@@ -165,6 +189,8 @@ export default function CrearClub() {
       // 4 · Publicar: desde ahora la gente puede crear su tarjeta.
       await accion('programa.publicar', { companyId, programId: id ?? programa?.id });
       sincronizarEnSegundoPlano(companyId!);
+      // 5 · La primera vez, los avisos automáticos quedan prendidos con su texto de fábrica.
+      if (!programa) setPrendidos(await prenderAvisos());
       recargarCtx();
       setPublicado(true);
       avisar(r.logo && !r.logo.ok ? `Club publicado. El logo no sirve para Google Wallet: ${r.logo.errores.join(' ')}` : '¡Tu club está publicado!', r.logo && !r.logo.ok ? 'espera' : 'ok');
@@ -180,13 +206,23 @@ export default function CrearClub() {
   }
 
   if (publicado) {
+    const slug = ajustes?.slug ?? slugDe(c.negocio);
     return (
       <div className="card fz-club-listo">
         <h2>¡Tu club está publicado!</h2>
-        <p>Tus clientes ya pueden crear su tarjeta desde tu QR, tu placa o tu link.</p>
+        <p>Ahora pruébalo con tu celular, como lo hará tu cliente.</p>
+        <ol className="fz-probar">
+          <li>Escanea este QR y saca <b>tu</b> tarjeta.</li>
+          <li>En la Caja, búscate por tu nombre y toca <b>«Dar sello»</b>.</li>
+          <li>Te llega el aviso <b>«+1 sello»</b>: así lo vive cada cliente.</li>
+        </ol>
+        {slug && <div className="fz-probar__qr"><Qr valor={urlUnirse(slug)} tam={180} /></div>}
+        {prendidos.length > 0 && (
+          <p className="fz-def">Tus avisos ya están prendidos: {prendidos.join(', ')}. Los cambias en Avisos.</p>
+        )}
         <div className="fz-fila" style={{ justifyContent: 'center', flexWrap: 'wrap' }}>
-          <Link className="btn btn-primary" href="/panel/fideliza#invitar">Invitar a tus clientes</Link>
-          <Link className="btn btn-ghost" href="/panel/fideliza/caja">Ir a la caja</Link>
+          <Link className="btn btn-primary" href="/panel/fideliza/caja">Ir a la Caja a darme el sello</Link>
+          <Link className="btn btn-ghost" href="/panel/fideliza#invitar">Ver mi QR y mi cartel</Link>
           <button className="btn btn-ghost" onClick={() => setPublicado(false)}>Seguir editando</button>
         </div>
       </div>

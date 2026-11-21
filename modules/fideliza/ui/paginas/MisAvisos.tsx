@@ -58,12 +58,17 @@ async function leerGuardados(companyId: string): Promise<Guardado[] | null> {
   return error ? null : ((data ?? []) as Guardado[]);
 }
 
-export default function MisAvisos({ companyId, push, resumen, alEnviar }: { companyId: string; push: boolean; resumen: string | null; alEnviar: () => void }) {
+export default function MisAvisos({
+  companyId, push, resumen, alEnviar, abrir = 0,
+}: { companyId: string; push: boolean; resumen: string | null; alEnviar: () => void; /** Cada vez que sube, abre «Crear aviso» (botón «Mandar un aviso ahora» de Avisos). */ abrir?: number }) {
   const avisar = useAvisar();
   const [ronda, setRonda] = useState(0);
   const { datos: guardados } = useCargar(() => leerGuardados(companyId), [companyId, ronda]);
   const [editando, setEditando] = useState<(typeof NUEVO & { id?: string; ultimo_envio?: string | null }) | null>(null);
   const sinTabla = guardados === null;
+  useEffect(() => {
+    if (abrir > 0) setEditando({ ...NUEVO });
+  }, [abrir]);
 
   async function borrar(g: Guardado) {
     if (!window.confirm(`¿Borrar el aviso «${g.nombre}»? No afecta a lo ya enviado.`)) return;

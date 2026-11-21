@@ -29,6 +29,7 @@ const activacion = cargar('modules/fideliza/dominio/activacion.ts');
 const config = cargar('modules/fideliza/dominio/config.ts');
 const encuadre = cargar('modules/fideliza/dominio/encuadre.ts');
 const secciones = cargar('modules/fideliza/ui/secciones.ts');
+const avisosBase = cargar('modules/fideliza/dominio/avisos.ts');
 
 const MIEMBRO_ID = '9f1c2d3e-4b5a-4c6d-8e7f-001122334455';
 const marca = { slug: 'barberia-centro', display_name: 'Barbería Centro', logo_url: 'https://x.com/l.png', bg_color: '#112233', support_url: null };
@@ -611,28 +612,38 @@ test('secciones: pocas arriba, ninguna página perdida y a cada quien lo suyo', 
   const conPermisos = (...p) => (x) => p.includes(x);
   const nombres = (l) => l.map((s) => s.label);
 
+  // 20-nov-2026 (maqueta aprobada): 5 pestañas y el engranaje.
   const dueno = secciones.seccionesDe('fidelizacion', todo);
-  assert.deepEqual(nombres(dueno), ['Inicio', 'Caja', 'Clientes', 'Números', 'Tarjeta de puntos', 'Enlaces y QR', 'Ajustes']);
-  // Las direcciones no cambian: hay placas impresas y enlaces que llevan a ellas.
-  assert.deepEqual(dueno.flatMap((s) => s.paginas.map((p) => p.href.replace('/panel/fideliza', ''))).sort(), ['', '/ajustes', '/caja', '/campanas', '/clientes', '/enlaces', '/mi-pagina', '/numeros', '/placas', '/programa']);
+  assert.deepEqual(nombres(dueno), ['Inicio', 'Caja', 'Clientes', 'Avisos', 'Mi club', 'Ajustes']);
+  // Las direcciones no cambian: hay placas impresas y enlaces que llevan a ellas. El asistente
+  // (/programa) ya no tiene pestaña, pero sigue abriendo «Mi club» («Opciones avanzadas»).
+  const rutas = dueno.flatMap((s) => [...s.paginas.map((p) => p.href), ...(s.tambien ?? [])].map((h) => h.replace('/panel/fideliza', ''))).sort();
+  assert.deepEqual(rutas, ['', '/ajustes', '/caja', '/campanas', '/clientes', '/club', '/enlaces', '/mi-pagina', '/numeros', '/placas', '/programa']);
+  assert.deepEqual(dueno[0].paginas.map((p) => p.label), ['Resumen', 'Números']);
+  assert.deepEqual(dueno[4].paginas.map((p) => p.label), ['Tu tarjeta', 'Mis enlaces', 'QR y placas', 'Otras páginas']);
 
   assert.deepEqual(nombres(secciones.seccionesDe('nuevo', todo)), ['Inicio']);
   const soloEnlaces = secciones.seccionesDe('enlaces', todo);
-  assert.deepEqual(nombres(soloEnlaces), ['Inicio', 'Enlaces y QR']);
-  assert.deepEqual(soloEnlaces[1].paginas.map((p) => p.label), ['Mis enlaces', 'Placas y QR']);
+  assert.deepEqual(nombres(soloEnlaces), ['Inicio', 'Mis enlaces']);
+  assert.deepEqual(soloEnlaces[1].paginas.map((p) => p.label), ['Mis enlaces', 'QR y placas']);
 
+  // El cajero: solo Caja y Clientes (entra directo a la Caja).
   const cajera = secciones.seccionesDe('fidelizacion', conPermisos('program.read', 'members.read', 'members.create', 'ops.record', 'ops.redeem'));
-  assert.deepEqual(nombres(cajera), ['Inicio', 'Caja', 'Clientes']);
-  assert.deepEqual(cajera[2].paginas.map((p) => p.label), ['Mis clientes']);
-  assert.deepEqual(nombres(secciones.seccionesDe('fidelizacion', conPermisos('program.read', 'metrics.read'))), ['Inicio', 'Números']);
+  assert.deepEqual(nombres(cajera), ['Caja', 'Clientes']);
+  assert.deepEqual(nombres(secciones.seccionesDe('fidelizacion', conPermisos('program.read', 'metrics.read'))), ['Inicio']);
+  // El gerente no ve el engranaje: lo técnico es del equipo de Vendemia y el equipo, del dueño.
+  const gerente = secciones.seccionesDe('fidelizacion', (p) => p !== 'team.manage');
+  assert.ok(!nombres(gerente).includes('Ajustes'));
 
   const abierta = (ruta) => dueno.find((s) => secciones.seccionActiva(s, ruta))?.label;
   assert.equal(abierta('/panel/fideliza'), 'Inicio');
+  assert.equal(abierta('/panel/fideliza/numeros'), 'Inicio');
   assert.equal(abierta('/panel/fideliza/clientes/abc'), 'Clientes');
-  assert.equal(abierta('/panel/fideliza/campanas'), 'Clientes');
-  assert.equal(abierta('/panel/fideliza/club'), 'Tarjeta de puntos');
-  assert.equal(abierta('/panel/fideliza/placas/abc'), 'Enlaces y QR');
-  assert.equal(abierta('/panel/fideliza/enlaces'), 'Enlaces y QR');
+  assert.equal(abierta('/panel/fideliza/campanas'), 'Avisos');
+  assert.equal(abierta('/panel/fideliza/club'), 'Mi club');
+  assert.equal(abierta('/panel/fideliza/programa'), 'Mi club');
+  assert.equal(abierta('/panel/fideliza/placas/abc'), 'Mi club');
+  assert.equal(abierta('/panel/fideliza/enlaces'), 'Mi club');
 });
 
 test('página pública: agenda y portafolio se abren en su sitio y su script se interpreta', () => {
@@ -695,4 +706,22 @@ test('página pública: el portafolio es un botón más y va donde lo puso el du
   assert.equal(orden(conLugar(1)), 'Uno Proyectos Dos Tres');
   assert.equal(orden(conLugar(0)), 'Proyectos Uno Dos Tres');
   assert.equal(orden(conLugar('abajo')), 'Uno Dos Tres Proyectos', 'lo guardado antes del 20-nov se sigue leyendo');
+});
+
+test('avisos de fábrica: caben en lo que acepta campana.guardar, también con nombres largos', () => {
+  const largo = { negocio: 'Barbería y Spa Los Hermanos Rodríguez de San Juan de Lurigancho', club: 'Club Barbería y Spa Los Hermanos Rodríguez', premio: 'Un corte clásico con lavado y perfilado de barba gratis' };
+  for (const t of Object.keys(avisosBase.AVISOS_AUTO)) {
+    for (const d of [largo, { negocio: '', club: '', premio: '' }]) {
+      const a = avisosBase.avisoDeFabrica(t, d);
+      assert.ok(a.title.length >= 1 && a.title.length <= 60, `${t}: título de ${a.title.length}`);
+      assert.ok(a.body.length >= 1 && a.body.length <= 160, `${t}: texto de ${a.body.length}`);
+      const c = a.config;
+      assert.ok(c.max_per_30d >= 1 && c.max_per_30d <= 4);
+      if (c.cycle_days !== undefined) assert.ok(c.cycle_days >= 7 && c.cycle_days <= 180);
+      if (c.inactive_days !== undefined) assert.ok(c.inactive_days >= 14 && c.inactive_days <= 365);
+    }
+  }
+  for (const n of avisosBase.DIAS_VOLVER) assert.ok(n >= 7 && n <= 180);
+  for (const n of avisosBase.DIAS_EXTRANAMOS) assert.ok(n >= 14 && n <= 365);
+  assert.equal(avisosBase.avisoDeFabrica('welcome', { negocio: 'X', club: 'Club X', premio: 'Corte gratis' }).body, 'Cada visita suma para tu corte gratis.');
 });
