@@ -36,6 +36,7 @@ import AlmuerzoDia, { errorDeDescanso } from '@/components/panel/AlmuerzoDia';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import AvisosCelular from '@/components/panel/AvisosCelular';
+import AvisosWhatsapp from '@/components/panel/AvisosWhatsapp';
 import GoogleCalendar from '@/components/panel/GoogleCalendar';
 import {
   ArrowLeft,
@@ -516,6 +517,24 @@ function Configuracion() {
     }
     recargarCobroFoto();
     avisar(activo ? 'Los empleados ya pueden cobrar, siempre con foto.' : 'Los empleados ya no cobran.', 'ok');
+  }
+
+  /** «El equipo ve las citas esperando pago» (datos 0029). Dueño o administrador. */
+  async function cambiarEquipoVePorPagar(activo: boolean) {
+    if (demoActivo()) {
+      avisar('Estás en modo demo: no se guarda nada. Sal del modo demo para cambiar algo de verdad.', 'espera');
+      return;
+    }
+    if (!companyId) return;
+    const { error } = await supabase().rpc('equipo_ve_por_pagar_guardar', { p_company: companyId, p_activo: activo });
+    if (error) {
+      avisar(/equipo_ve_por_pagar_guardar|PGRST202/.test(`${error.code} ${error.message}`)
+        ? 'Falta la actualización 0029 en la base de datos.'
+        : error.message, 'error');
+      return;
+    }
+    recargarCobroFoto();
+    avisar(activo ? 'Tu equipo ya ve las citas que esperan pago, con lo que falta del adelanto.' : 'Tu equipo ya no ve las citas que esperan pago.', 'ok');
   }
 
   /**
@@ -1186,6 +1205,8 @@ function Configuracion() {
             </div>
             {/* No es configuración del negocio sino de ESTE celular, y se guarda sola. */}
             <AvisosCelular />
+            {/* El mismo aviso por WhatsApp (número dedicado de Vendemia). Este SÍ es del negocio. */}
+            <AvisosWhatsapp />
           </div>
 
           {/* ══ TU PANEL · SERVICIOS Y HORARIO ══ */}
@@ -1507,6 +1528,28 @@ function Configuracion() {
                 {esAdminPlataforma && (
                   <button type="button" className="btn btn-ghost btn-sm" onClick={() => void cambiarEmpleadoCobra(!cobroFoto.empleadoCobra)}>
                     {cobroFoto.empleadoCobra ? 'Apagar' : 'Encender'}
+                  </button>
+                )}
+              </div>
+            )}
+
+            {/*
+              Las citas apartadas en Mi agenda (datos 0029, Alvaro 23-nov-2026): al barbero lo
+              confunden, así que apagado de serie. Encendido, las ve con lo que falta del adelanto.
+            */}
+            {cobroFoto && !cobroFoto.sinMigrar && (
+              <div className="cfg-enlace" style={{ marginTop: 12 }}>
+                <div>
+                  <b>Tu equipo {cobroFoto.equipoVePorPagar ? 've' : 'no ve'} las {vocabulario(form.business_mode, { canchas }).reservas} esperando pago</b>
+                  <small>
+                    {cobroFoto.equipoVePorPagar
+                      ? 'En Mi agenda salen las apartadas, con lo que falta del adelanto. Les llega el aviso al apartarse.'
+                      : 'En Mi agenda solo salen las confirmadas. El aviso les llega cuando se confirma, no cuando se aparta.'}
+                  </small>
+                </div>
+                {(rol === 'dueno' || rol === 'admin') && (
+                  <button type="button" className="btn btn-ghost btn-sm" onClick={() => void cambiarEquipoVePorPagar(!cobroFoto.equipoVePorPagar)}>
+                    {cobroFoto.equipoVePorPagar ? 'Ocultárselas' : 'Mostrárselas'}
                   </button>
                 )}
               </div>

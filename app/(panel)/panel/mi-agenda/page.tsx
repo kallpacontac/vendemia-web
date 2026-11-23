@@ -150,9 +150,12 @@ function selloDe(c: Cita, ahora: number, esProxima: boolean, palabra = 'cita'): 
 
 function MisCitas({ companyId }: { companyId: string }) {
   const comando = useComando();
-  const { compania, canchas, cobroFoto } = useSesion();
+  const { compania, canchas, cobroFoto, rol } = useSesion();
   // ¿Este negocio deja cobrar a sus empleados? (datos 0012). Con la agenda del bot, no.
   const cobra = Boolean(cobroFoto?.empleadoCobra && cobroFoto.nube);
+  // Las apartadas (esperando el adelanto) confunden al barbero (23-nov-2026, Alvaro): se ven solo
+  // si el negocio lo encendió (datos 0029). El dueño y el administrador, siempre.
+  const vePorPagar = rol === 'dueno' || rol === 'admin' || cobroFoto?.equipoVePorPagar === true;
   const [cobrando, setCobrando] = useState<string | null>(null);
   const [sinCita, setSinCita] = useState(false);
   const v = vocabulario(compania?.business_mode, { canchas });
@@ -178,11 +181,19 @@ function MisCitas({ companyId }: { companyId: string }) {
 
   const lunes = lunesDe(dia);
   const { datos, cargando, error, releer } = useCargar(async () => {
-    const [negocio, citas, clientes] = await Promise.all([
+    const [negocio, todas, clientes] = await Promise.all([
       getMiNegocio(companyId),
       getCitasDelPeriodo(companyId, lunes, sumarDias(lunes, 6)),
       getMisClientes(companyId),
     ]);
+    const citas = vePorPagar ? todas : todas.filter((c) => c.status !== 'pending_payment');
+    // De las apartadas que se ven, cuánto falta del adelanto (datos 0029). Sin la 0029, sin detalle.
+    const apartadas = citas.filter((c) => c.status === 'pending_payment').map((c) => c.id);
+    let adelantos: Record<string, Adelanto> = {};
+    if (apartadas.length) {
+      const { data, error } = await supabase().rpc('mi_adelantos', { p_company: companyId, p_ids: apartadas });
+      if (!error && data) adelantos = data as Record<string, Adelanto>;
+    }
     // Lo que falta en cada una: solo si cobra, y la base decide cuáles le tocan.
     // Sus citas: el precio de cada una y lo que gana (19-nov, The 24/7: «que en los barberos
     // aparezcan las citas y el precio de los cortes, y su monto actualizado por cada cita cobrada»).
@@ -202,8 +213,8 @@ function MisCitas({ companyId }: { companyId: string }) {
         saldos = Object.fromEntries(Object.entries(data as Record<string, unknown>).map(([k, n]) => [k, Number(n)]));
       }
     }
-    return { lunes, negocio, citas, clientes, saldos, lineas: [...lineas], congeladas: [...congeladas], pct };
-  }, [companyId, lunes, cobra]);
+    return { lunes, negocio, citas, clientes, saldos, adelantos, lineas: [...lineas], congeladas: [...congeladas], pct };
+  }, [companyId, lunes, cobra, vePorPagar]);
 
   // Lo que casi no cambia: el catálogo (tarifas y qué es producto). Se relee cada 5 min.
   const fijos = useCargar(async () => ({ catalogo: await getCatalogoDelEquipo(companyId) }), [companyId]);
@@ -418,6 +429,7 @@ function MisCitas({ companyId }: { companyId: string }) {
                 ocupado={enVuelo === c.id}
                 alMarcar={marcar}
                 falta={datos?.saldos[c.id] ?? 0}
+                adelanto={c.status === 'pending_payment' ? datos?.adelantos[c.id] : undefined}
                 importe={c.employee_id === ficha ? importes.get(c.id) : undefined}
                 cobrando={cobrando === c.id}
                 alCobrar={(abrir) => setCobrando(abrir ? c.id : null)}
@@ -445,6 +457,7 @@ function FilaCita({
   ocupado,
   alMarcar,
   falta,
+  adelanto,
   importe,
   cobrando,
   alCobrar,
@@ -461,6 +474,8 @@ function FilaCita({
   alMarcar: (c: Cita, vino: boolean) => void;
   /** Lo que le falta pagar; 0 = nada que cobrar, o este negocio no deja cobrar al empleado. */
   falta: number;
+  /** De una apartada: el total, lo pagado y el adelanto que la confirma (datos 0029). */
+  adelanto?: Adelanto;
   /** El precio de sus servicios y, ya atendida, lo que gana él. Solo en las suyas. */
   importe?: { precio: number; tuParte: number | null };
   cobrando: boolean;
@@ -502,6 +517,7 @@ function FilaCita({
             {importe.tuParte != null && <> · <b>Tu parte {soles(importe.tuParte)}</b></>}
           </span>
         )}
+        {adelanto && <DetalleAdelanto a={adelanto} />}
         <small>{quien.nombre}</small>
         {quien.deQuien && <small>{quien.deQuien}</small>}
         {c.sede && <small>{c.sede}</small>}
@@ -531,6 +547,29 @@ function FilaCita({
       )}
     </div>
   );
+}
+
+/** Lo que devuelve mi_adelantos por cita (datos 0029). */
+interface Adelanto {
+  total: number;
+  pagado: number;
+  /** Lo que la confirma: % del precio en citas, fijo en canchas. 0 = cualquier pago. */
+  adelanto: number;
+}
+
+/** «Falta el adelanto: S/ 10 de S/ 30», o lo que haya pagado. Para que el barbero sepa qué espera. */
+function DetalleAdelanto({ a }: { a: Adelanto }) {
+  const pagado = Number(a.pagado) || 0;
+  const adelanto = Number(a.adelanto) || 0;
+  const falta = Math.max(Math.round((adelanto - pagado) * 100) / 100, 0);
+  const texto = adelanto <= 0
+    ? pagado > 0 ? `Pagó ${soles(pagado)}: falta que la confirmen` : 'Aún no paga nada'
+    : falta > 0
+      ? pagado > 0
+        ? `Pagó ${soles(pagado)} · faltan ${soles(falta)} del adelanto de ${soles(adelanto)}`
+        : `Falta el adelanto: ${soles(adelanto)}${Number(a.total) > adelanto ? ` de ${soles(Number(a.total))}` : ''}`
+      : `Pagó el adelanto (${soles(pagado)}): falta que la confirmen`;
+  return <span className="mia-adelanto">{texto}</span>;
 }
 
 const METODOS_EMPLEADO = [

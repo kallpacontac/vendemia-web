@@ -35,6 +35,11 @@ export interface CobroFoto {
    * Apagado de serie; lo enciende el equipo de Vendemia a pedido del dueño.
    */
   empleadoCobra?: boolean;
+  /**
+   * Mi agenda enseña las citas apartadas (esperando el adelanto), con lo que falta (datos 0029).
+   * Apagado de serie: al barbero lo confunden. Lo cambian el dueño o el administrador.
+   */
+  equipoVePorPagar?: boolean;
 }
 
 /** La foto que el servidor subió y leyó (POST /api/cobros/foto). */
@@ -84,8 +89,13 @@ export function leerCobroFoto(data: unknown, error: { code?: string; message?: s
     const sinFuncion = error.code === 'PGRST202' || /cobro_foto_modo/.test(error.message ?? '');
     return { modo: sinFuncion && canchas ? 'opcional' : 'apagada', nube: true, sinMigrar: sinFuncion };
   }
-  const d = (data ?? {}) as { modo?: unknown; nube?: unknown; empleado_cobra?: unknown };
-  return { modo: esModoFotoPago(d.modo) ? d.modo : 'apagada', nube: d.nube === true, empleadoCobra: d.empleado_cobra === true };
+  const d = (data ?? {}) as { modo?: unknown; nube?: unknown; empleado_cobra?: unknown; equipo_ve_por_pagar?: unknown };
+  return {
+    modo: esModoFotoPago(d.modo) ? d.modo : 'apagada',
+    nube: d.nube === true,
+    empleadoCobra: d.empleado_cobra === true,
+    equipoVePorPagar: d.equipo_ve_por_pagar === true,
+  };
 }
 
 /** Lo que se lee en Configuración, en una línea por opción. */

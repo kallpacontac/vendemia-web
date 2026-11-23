@@ -2686,6 +2686,7 @@ button.fpill{font-family:inherit;min-height:36px}
 /* Mi agenda › el precio de cada cita y lo que gana el barbero (19-nov, The 24/7). */
 .mia-importe{display:inline-flex;flex-wrap:wrap;gap:4px;align-items:baseline;margin:2px 0;font-size:14px;font-weight:700;color:var(--ink,#151515)}
 .mia-importe b{color:#0B7A4B}
+.mia-adelanto{display:block;margin:2px 0;font-size:12.5px;font-weight:600;color:#B26B00}
 .mag-ganado{display:grid;gap:2px;padding:14px 18px;margin-bottom:14px;background:#ECFDF3;border:1.5px solid #86EFAC}
 .mag-ganado small{font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:#15803D}
 .mag-ganado b{font-size:30px;line-height:1.1;color:#0B7A4B}
