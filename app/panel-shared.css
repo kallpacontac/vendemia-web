@@ -169,10 +169,11 @@ body .main .panel-header .topbar__actions { display: flex; flex-wrap: nowrap; wi
   .main .form-nueva { grid-template-columns: repeat(2,minmax(0,1fr)); }
 }
 @container (max-width: 480px) {
-  /* Si el título necesita ese ancho, el logo deja de competir con él. La
-     flecha conserva visible y accesible el menú de cuenta. */
-  .main .panel-header .profile .avatar { display: none; }
+  /* Un círculo de 44 px: con el logo, no con la flecha (23-nov). Una flecha sola en un círculo se
+     leía como «desplegar algo», no como la cuenta; mide lo mismo. */
+  .main .panel-header .profile .profile__flecha { display: none; }
   .main .panel-header .profile { width: 44px; min-width: 44px; padding: 0; justify-content: center; }
+  .main .panel-header .profile .avatar { width: 36px; height: 36px; }
 }
 @media (max-width: 560px) {
   .main .toolbar > :is(.search,.select) { flex: 1 1 100%; width: 100%; }

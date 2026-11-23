@@ -2191,7 +2191,10 @@ button.fpill{font-family:inherit;min-height:36px}
 .listo-agregar__cab{display:flex;align-items:center;justify-content:space-between;gap:8px}
 .listo-agregar .q-icon{width:44px;height:44px}
 .listo-agregar__total{border-top:1px dashed var(--line-2);padding-top:6px;font-weight:700}
-.listos-vacio{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:16px;border-left:4px solid var(--line-2)}
+/* Vacío = tranquilo: borde punteado y sin sombra. El borde izquierdo grueso, con las esquinas de 20 px,
+   se veía como una media luna gris en el celular (23-nov). */
+.main .listos-vacio{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:16px;
+  background:transparent;border:1.5px dashed var(--line-2);box-shadow:none}
 .listos-vacio b{font-size:15px}
 .listos-vacio p{font-size:13px;margin:4px 0 0;max-width:560px}
 .listos-vacio .btn{min-height:48px;white-space:nowrap}
@@ -2305,9 +2308,16 @@ button.fpill{font-family:inherit;min-height:36px}
 .sede-global__menu span{display:grid;gap:1px}
 .sede-global__menu b{font-size:14px}
 .sede-global__menu small{font-size:12px;color:var(--ink-soft)}
-@media (max-width:560px){
-  .sede-global__boton{padding:0 10px;font-size:12.5px}
-  .sede-global__boton span{max-width:92px;overflow:hidden;text-overflow:ellipsis}
+/* En el celular la sede ocupa el hueco libre de la fila (antes: «Todas las sed…» cortado y un vacío
+   hasta la cuenta) y el menú se abre hacia la derecha, desde su borde izquierdo: anclado a la
+   derecha se salía de la pantalla por la izquierda (23-nov). */
+@media (max-width:820px){
+  .main .panel-header .sede-global{flex:1 1 auto;min-width:0}
+  .sede-global__boton{width:100%;padding:0 12px;font-size:13.5px}
+  .sede-global__boton span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;text-align:left}
+  .sede-global__boton svg{flex:none}
+  .sede-global__menu{left:0;right:auto;min-width:100%;width:max-content;max-width:calc(100vw - 24px)}
+  .sede-global__menu b,.sede-global__menu small{overflow-wrap:anywhere}
 }
 
 /* ── Agenda · controles simples (AgendaControles, 17-nov) ───────────────────── */
@@ -2371,9 +2381,21 @@ button.fpill{font-family:inherit;min-height:36px}
   -webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M10.27 21a2 2 0 0 0 3.46 0'/%3E%3Cpath d='M3.26 15.33A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.67C19.41 13.96 18 12.5 18 8A6 6 0 0 0 6 8c0 4.5-1.41 5.96-2.74 7.33'/%3E%3C/svg%3E") center/contain no-repeat;
   mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M10.27 21a2 2 0 0 0 3.46 0'/%3E%3Cpath d='M3.26 15.33A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.67C19.41 13.96 18 12.5 18 8A6 6 0 0 0 6 8c0 4.5-1.41 5.96-2.74 7.33'/%3E%3C/svg%3E") center/contain no-repeat}
 @media (prefers-reduced-motion:reduce){.campana,.tc-revisar__titulo::before{animation:none}}
-/* Las pestañas de Caja (Caja del día · Boletas y facturas · Comisiones): en el celular se desplazan, no se salen. */
-nav.chip-tabs[aria-label="Caja"]{max-width:100%;overflow-x:auto;scrollbar-width:none}
-nav.chip-tabs[aria-label="Caja"] a{flex-shrink:0;white-space:nowrap}
+/* Las pestañas de Caja (Cobrar · Cierre del día · Boletas · Comisiones). En el celular, una fila del
+   ancho de la pantalla con las cuatro a la vista (23-nov: antes se desplazaban y «Comisiones» salía
+   cortada a la derecha). */
+.subnav-caja{display:inline-flex;margin:0 0 14px;min-height:44px;max-width:100%}
+.subnav-caja a{display:flex;align-items:center;justify-content:center;min-height:36px;padding:6px 14px;border-radius:999px;
+  font-weight:700;font-size:12.5px;color:var(--ink-soft);white-space:nowrap;text-decoration:none;transition:.14s;-webkit-tap-highlight-color:transparent}
+.subnav-caja a:hover:not(.active){color:var(--ink)}
+.subnav-caja a.active{background:var(--brand);color:var(--on-brand)}
+.subnav-caja__corto{display:none}
+@media (max-width:560px){
+  .subnav-caja{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);width:100%}
+  .subnav-caja a{min-height:40px;padding:6px 4px;font-size:13px;min-width:0;overflow:hidden;text-overflow:ellipsis}
+  .subnav-caja__largo{display:none}
+  .subnav-caja__corto{display:inline}
+}
 
 /* ── Botones que no hay que buscar (18-nov-2026, The 24/7: «que no tengan que buscarlos, en
    especial guardar; mi cliente no es muy bueno con la tecnología») ──────────────────────────
@@ -2451,9 +2473,12 @@ nav.chip-tabs[aria-label="Caja"] a{flex-shrink:0;white-space:nowrap}
 .caja-tres__btn--principal{background:linear-gradient(155deg,#373830,#1d1e18);color:#fff;border-color:transparent}
 .caja-tres__btn--principal svg{color:#fff}
 .caja-tres__btn--principal.on{background:var(--brand);color:var(--on-brand,#fff)}
+/* En el celular (23-nov): «Cobrar», lo de cada cliente, a lo ancho y primero; escanear y gasto, debajo,
+   a medias. Antes eran tres columnas de 110 px con el texto partido en dos líneas en dos de ellas. */
 @media (max-width:560px){
-  .caja-tres{gap:8px}
-  .caja-tres__btn{min-height:92px;font-size:13.5px;padding:10px 6px;border-radius:16px;text-align:center}
+  .caja-tres{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+  .caja-tres__btn{min-height:84px;font-size:14.5px;line-height:1.25;padding:12px 8px;border-radius:18px;text-align:center}
+  .caja-tres__btn--principal{grid-column:1/-1;flex-direction:row;gap:10px;min-height:64px;font-size:17px}
 }
 .caja-sin-atender{margin-top:16px}
 .caja-sin-atender>summary{display:flex;align-items:center;justify-content:space-between;gap:10px;cursor:pointer;min-height:44px;

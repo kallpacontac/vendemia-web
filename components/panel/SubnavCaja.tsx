@@ -20,7 +20,7 @@ import { puedeVer } from '@/lib/panel/roles';
 
 export default function SubnavCaja() {
   return (
-    <Suspense fallback={<nav className="chip-tabs" aria-label="Caja" style={{ margin: '0 0 14px', minHeight: 40 }} />}>
+    <Suspense fallback={<nav className="chip-tabs subnav-caja" aria-label="Caja" />}>
       <Pestanas />
     </Suspense>
   );
@@ -30,20 +30,26 @@ function Pestanas() {
   const ruta = usePathname();
   const cierre = useSearchParams().get('ver') === 'cierre';
   const { rol, compania } = useSesion();
-  const pestanas = [
+  // `corto`: en el celular las cuatro van en una fila del ancho de la pantalla, sin desplazarse.
+  const pestanas: { href: string; label: string; corto?: string; activa: boolean }[] = [
     { href: '/panel/caja', label: 'Cobrar', activa: ruta.startsWith('/panel/caja') && !cierre },
-    { href: '/panel/caja?ver=cierre', label: 'Cierre del día', activa: ruta.startsWith('/panel/caja') && cierre },
+    { href: '/panel/caja?ver=cierre', label: 'Cierre del día', corto: 'Cierre', activa: ruta.startsWith('/panel/caja') && cierre },
     { href: '/panel/comprobantes', label: 'Boletas', activa: ruta.startsWith('/panel/comprobantes') },
     ...(esCita(compania?.business_mode) && puedeVer(rol, 'comisiones.ver')
       ? [{ href: '/panel/comisiones', label: 'Comisiones', activa: ruta.startsWith('/panel/comisiones') }]
       : []),
   ];
   return (
-    <nav className="chip-tabs subnav-caja" aria-label="Caja" style={{ margin: '0 0 14px' }}>
+    <nav className="chip-tabs subnav-caja" aria-label="Caja">
       {pestanas.map((p) => (
         <Link key={p.href} href={p.href} className={p.activa ? 'active' : ''} aria-current={p.activa ? 'page' : undefined}
-          style={{ padding: '6px 14px', borderRadius: 999, fontWeight: 700, fontSize: 12.5, ...(p.activa ? { background: 'var(--brand)', color: 'var(--on-brand)' } : { color: 'var(--ink-soft)' }) }}>
-          {p.label}
+          aria-label={p.corto ? p.label : undefined}>
+          {p.corto ? (
+            <>
+              <span className="subnav-caja__largo">{p.label}</span>
+              <span className="subnav-caja__corto" aria-hidden="true">{p.corto}</span>
+            </>
+          ) : p.label}
         </Link>
       ))}
     </nav>
