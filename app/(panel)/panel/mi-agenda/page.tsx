@@ -133,7 +133,7 @@ function minutosDe(c: Cita): number {
  * que ya pasó sale de `selloCumplido` (Vino, No vino, Presunta, Sin resolver),
  * igual que en la Agenda del dueño. Lo que viene es solo de esta pantalla.
  */
-function selloDe(c: Cita, ahora: number, esProxima: boolean): { label: string; color: string; enCurso: boolean } {
+function selloDe(c: Cita, ahora: number, esProxima: boolean, palabra = 'cita'): { label: string; color: string; enCurso: boolean } {
   if (c.status === 'pending_payment') return { label: 'Esperando pago', color: '#B26B00', enCurso: false };
   const inicio = c.inicio?.getTime() ?? 0;
   const fin = inicio + Math.max(minutosDe(c), 15) * 60000;
@@ -142,9 +142,10 @@ function selloDe(c: Cita, ahora: number, esProxima: boolean): { label: string; c
     const s = selloCumplido('appointment', c.status, c.cumplido_por);
     return { label: s.label, color: s.color, enCurso: false };
   }
-  return esProxima
-    ? { label: 'Próxima', color: '#CC3A00', enCurso: false }
-    : { label: 'Confirmada', color: '#93938C', enCurso: false };
+  // «Cita agendada», no «Próxima» ni «Confirmada» (23-nov-2026, Alvaro): dice que está en pie.
+  // La más cercana sigue en naranja para que se vea cuál viene.
+  const label = `${palabra[0].toUpperCase()}${palabra.slice(1)} agendad${palabra === 'pedido' ? 'o' : 'a'}`;
+  return { label, color: esProxima ? '#CC3A00' : '#93938C', enCurso: false };
 }
 
 function MisCitas({ companyId }: { companyId: string }) {
@@ -410,7 +411,7 @@ function MisCitas({ companyId }: { companyId: string }) {
                 key={c.id}
                 filaRef={c.id === foco ? marcada : undefined}
                 c={c}
-                sello={selloDe(c, ahora, c.id === proxima?.id)}
+                sello={selloDe(c, ahora, c.id === proxima?.id, palabra)}
                 enFoco={c.id === foco}
                 cliente={cliente.get(c.lead_id)}
                 negocio={datos?.negocio ?? null}
