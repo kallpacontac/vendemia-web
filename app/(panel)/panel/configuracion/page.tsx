@@ -36,7 +36,6 @@ import AlmuerzoDia, { errorDeDescanso } from '@/components/panel/AlmuerzoDia';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import AvisosCelular from '@/components/panel/AvisosCelular';
-import AvisosWhatsapp from '@/components/panel/AvisosWhatsapp';
 import GoogleCalendar from '@/components/panel/GoogleCalendar';
 import {
   ArrowLeft,
@@ -1205,8 +1204,6 @@ function Configuracion() {
             </div>
             {/* No es configuración del negocio sino de ESTE celular, y se guarda sola. */}
             <AvisosCelular />
-            {/* El mismo aviso por WhatsApp (número dedicado de Vendemia). Este SÍ es del negocio. */}
-            <AvisosWhatsapp />
           </div>
 
           {/* ══ TU PANEL · SERVICIOS Y HORARIO ══ */}
