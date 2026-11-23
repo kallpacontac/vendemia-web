@@ -19,8 +19,9 @@
  * "sched:<producto>:<grupo>", no una hora concreta, así que se enseñan como
  * grupos con su ocupación del mes.
  */
-import { useMemo, useState } from 'react';
+import { Suspense, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
+import { useRouter, useSearchParams } from 'next/navigation';
 import {
   CalendarOff,
   CalendarPlus,
@@ -37,6 +38,7 @@ import {
 import Topbar from '@/components/panel/Topbar';
 import AgendaControles from '@/components/panel/AgendaControles';
 import AvisarCliente from '@/components/panel/AvisarCliente';
+import FichaReserva from '@/components/panel/FichaReserva';
 import NuevaCita from '@/components/panel/NuevaCita';
 import { esDeSede, sedeCorta, useSedeElegida, useSedes } from '@/components/panel/SelectorSede';
 import TableroCanchas from '@/components/panel/TableroCanchas';
@@ -196,6 +198,14 @@ export default function Agenda() {
   /** La cita recién agendada: sale resaltada en «Próximas». */
   const [recien, setRecien] = useState<string | null>(null);
   const avisarAgenda = useAvisar();
+  /**
+   * La ficha de una cita (FichaReserva): la abre el aviso «Nueva cita» (?lead=…&slot=…, o
+   * ?cita=…) y tocar una cita en la rejilla. El aviso no lleva el id de la cita (avisos 0001):
+   * se reconoce por el cliente y la hora.
+   */
+  const [pedidaFicha, setPedidaFicha] = useState<FichaPedida | null>(null);
+  const [fichaDeUrl, setFichaDeUrl] = useState(false);
+  const router = useRouter();
 
   // Las sedes de Mi página (secciones.citas.sedes): con 2 o más, «Nueva cita» pide en cuál y
   // arriba sale «Todas · sede A · sede B» para ver una sola (SelectorSede, la misma elección que en Caja).
@@ -226,6 +236,43 @@ export default function Agenda() {
   // comprobantes que suben los clientes aparecen solos. Cada 30 s, con la pestaña a la vista, y
   // nunca a mitad de arrastrar una cita.
   useSondeo(releer, 30_000, arrastrada === null);
+
+  const fichaCita = useMemo(() => {
+    if (!pedidaFicha || !datos) return null;
+    const { cita, lead, slot } = pedidaFicha;
+    if (cita) return datos.citas.find((c) => c.id === cita) ?? null;
+    if (!lead || !slot) return null;
+    const suyas = datos.citas.filter((c) => c.lead_id === lead && c.slot_start.slice(0, 16) === slot.slice(0, 16));
+    return suyas.find((c) => c.status !== 'cancelled') ?? suyas[0] ?? null;
+  }, [pedidaFicha, datos]);
+
+  // Pedida por el aviso y no está (cancelada y borrada, o más vieja que las 500 de getCitas):
+  // se dice, y queda la agenda.
+  const fichaPerdida = Boolean(pedidaFicha && datos && !fichaCita);
+  useEffect(() => {
+    if (!fichaPerdida) return;
+    avisarAgenda('No encontré esa cita en la agenda. Puede que la hayan cancelado o movido.', 'espera');
+    setPedidaFicha(null);
+  }, [fichaPerdida, avisarAgenda]);
+
+  // Al abrirla desde el aviso, la rejilla salta a su semana y su día: al cerrar, se ve dónde quedó.
+  useEffect(() => {
+    if (!fichaDeUrl || !fichaCita?.inicio) return;
+    const lunes = new Date(fichaCita.inicio);
+    lunes.setHours(0, 0, 0, 0);
+    const dow = (lunes.getDay() + 6) % 7;
+    lunes.setDate(lunes.getDate() - dow);
+    setOffset(Math.round((lunes.getTime() - lunesDe(0).getTime()) / (7 * 864e5)));
+    setDiaSel(dow);
+  }, [fichaDeUrl, fichaCita?.id, fichaCita?.inicio]);
+
+  function cerrarFicha() {
+    setPedidaFicha(null);
+    if (fichaDeUrl) {
+      setFichaDeUrl(false);
+      router.replace('/panel/agenda', { scroll: false });
+    }
+  }
 
   const semana = useMemo(() => {
     if (!datos?.empresa) return null;
@@ -424,6 +471,29 @@ export default function Agenda() {
         {/* El mensaje para el cliente de lo que se acaba de mover arrastrando. */}
         {aviso && <AvisarCliente {...aviso} alCerrar={() => setAviso(null)} />}
 
+        <Suspense fallback={null}>
+          <FichaDeLaUrl alPedir={(f) => { setPedidaFicha(f); setFichaDeUrl(true); }} />
+        </Suspense>
+        {fichaCita && companyId && (() => {
+          const lead = (datos?.leads ?? []).find((l) => l.id === fichaCita.lead_id);
+          return (
+            <FichaReserva
+              key={fichaCita.id}
+              companyId={companyId}
+              cita={fichaCita}
+              cliente={lead?.name || lead?.phone || ''}
+              telefono={lead?.phone ?? ''}
+              negocio={datos?.empresa?.name ?? ''}
+              trabajadores={datos?.trabajadores ?? []}
+              pago={datos?.pagosCitas.get(fichaCita.id)}
+              v={v}
+              enDonde={canchas ? 'en la cancha' : 'en el local'}
+              alCambiar={recargar}
+              alCerrar={cerrarFicha}
+            />
+          );
+        })()}
+
         {porConfirmar && (
           <Confirmar
             titulo={porConfirmar.titulo}
@@ -589,7 +659,7 @@ export default function Agenda() {
                     {semana?.horas.map((hora, i) => (
                       <div className="dia-fila" key={hora}>
                         <div className="hourlbl">{hora12(hora)}</div>
-                        <Celda hueco={dia.huecos[i]} vista={vista} dnd={dnd} alLibre={abrirEn} />
+                        <Celda hueco={dia.huecos[i]} vista={vista} dnd={dnd} alLibre={abrirEn} alCita={(id) => setPedidaFicha({ cita: id })} />
                       </div>
                     ))}
                   </div>
@@ -609,7 +679,7 @@ export default function Agenda() {
                   {semana?.horas.map((hora, i) => (
                     <FilaDeHoras key={hora} hora={hora}>
                       {semana.dias.map((d) => (
-                        <Celda key={d.iso + hora} hueco={d.huecos[i]} vista={vista} dnd={dnd} alLibre={abrirEn} />
+                        <Celda key={d.iso + hora} hueco={d.huecos[i]} vista={vista} dnd={dnd} alLibre={abrirEn} alCita={(id) => setPedidaFicha({ cita: id })} />
                       ))}
                     </FilaDeHoras>
                   ))}
@@ -653,8 +723,11 @@ function Celda({
   vista,
   dnd,
   alLibre,
+  alCita,
 }: {
   hueco: ReturnType<typeof construirSemana>['dias'][number]['huecos'][number];
+  /** Tocar una cita abre su ficha (FichaReserva). */
+  alCita?: (citaId: string) => void;
   vista: 'negocio' | 'cliente';
   dnd?: Arrastre;
   /** Tocar un hueco libre abre «Nueva cita» con ese día y esa hora (17-nov-2026). */
@@ -688,7 +761,11 @@ function Celda({
                 dnd?.empezar(r.id);
               }}
               onDragEnd={() => dnd?.terminar()}
-              title={dnd && !hueco.pasado ? 'Arrástrala a otro hueco para cambiarle la hora' : undefined}
+              role={alCita ? 'button' : undefined}
+              tabIndex={alCita ? 0 : undefined}
+              onClick={alCita ? () => alCita(r.id) : undefined}
+              onKeyDown={alCita ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); alCita(r.id); } } : undefined}
+              title={dnd && !hueco.pasado ? 'Tócala para ver su ficha, o arrástrala a otro hueco para cambiarle la hora' : alCita ? 'Tócala para ver su ficha' : undefined}
             >
               <b>{r.cliente}</b>
               {r.deQuien && <span className="dq">{r.deQuien}</span>}
@@ -1724,4 +1801,30 @@ function SelloDeCita({ s }: { s: SelloCita }) {
       {s.label}
     </span>
   );
+}
+
+/** Lo que pide abrir la URL: ?cita=<id>, o ?lead=<id>&slot=YYYY-MM-DD HH:MM (el aviso «Nueva cita»). */
+interface FichaPedida {
+  cita?: string;
+  lead?: string;
+  slot?: string;
+}
+
+/**
+ * Lee la URL y pide la ficha. Va aparte y dentro de un <Suspense> porque useSearchParams lo
+ * exige al prerenderizar; así la Agenda entera no espera por él. Otro aviso con la Agenda ya
+ * abierta cambia la URL y vuelve a pedirla.
+ */
+function FichaDeLaUrl({ alPedir }: { alPedir: (f: FichaPedida) => void }) {
+  const params = useSearchParams();
+  const cita = params.get('cita') ?? '';
+  const lead = params.get('lead') ?? '';
+  const slot = params.get('slot') ?? '';
+  useEffect(() => {
+    if (cita) alPedir({ cita });
+    else if (lead && slot) alPedir({ lead, slot });
+    // alPedir cambia en cada render del padre: solo cuenta lo que dice la URL.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cita, lead, slot]);
+  return null;
 }

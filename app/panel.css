@@ -1283,6 +1283,24 @@ body:has(.demo-banda) .sidebar{padding-top:44px}
 .modal__cuerpo .muted{font-size:12.5px}
 .modal__pie{display:flex;justify-content:flex-end;gap:10px;padding:14px 18px 18px}
 .btn-peligro{background:var(--hot);color:#fff;border:none}
+
+/* Ficha de una reserva: lo que abre el aviso «Nueva cita» (components/panel/FichaReserva.tsx). */
+.ficha-reserva{width:min(520px,100%);max-height:calc(100dvh - 40px);overflow:auto}
+.ficha-reserva__cab{padding-right:12px}
+.ficha-reserva__cab b{flex:1;min-width:0}
+.ficha-reserva__cab small{font-weight:500}
+.ficha-reserva__cerrar{margin-left:auto}
+.ficha-reserva__cerrar svg{color:var(--ink-soft)}
+.ficha-reserva__datos{display:grid;grid-template-columns:auto 1fr;gap:6px 14px;margin:6px 0 10px}
+.ficha-reserva__datos dt{color:var(--ink-soft);font-size:12.5px;align-self:center}
+.ficha-reserva__datos dd{margin:0}
+.ficha-reserva__sellos{display:flex;flex-wrap:wrap;gap:6px}
+.ficha-reserva__sellos .badge-pill{display:inline-flex;align-items:center;gap:4px}
+.ficha-reserva__nota{margin-top:8px}
+.ficha-reserva__pago{margin-top:8px}
+.ficha-reserva .tc-revisar{margin:10px 0 6px}
+.ficha-reserva__pie{flex-wrap:wrap}
+.ficha-reserva__pie .btn{display:inline-flex;align-items:center;gap:7px;text-decoration:none}
 .btn-peligro:hover{filter:brightness(.95)}
 
 /* Arrastrar una cita a otro hueco. */

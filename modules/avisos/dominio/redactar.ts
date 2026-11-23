@@ -114,6 +114,14 @@ function urlMiAgenda(eventos: EventoPendiente[]): string {
   return `/panel/mi-agenda?dia=${slots[0].slice(0, 10)}${cita}`;
 }
 
+/** La ficha de una cita en la Agenda: el aviso no trae su id (avisos 0001), sí el cliente y la hora. */
+export function urlFicha(lead: string, slot: unknown): string {
+  const hora = typeof slot === 'string' ? slot.slice(0, 16) : '';
+  return lead && SLOT.test(hora)
+    ? `/panel/agenda?lead=${encodeURIComponent(lead)}&slot=${encodeURIComponent(hora)}`
+    : '/panel/agenda';
+}
+
 /** El nombre de quien se atiende, sin teléfono: el beneficiario si lo hay («Jorge»), si no el cliente. */
 const atendido = (e: EventoPendiente, sinNombre: string) =>
   (typeof e.datos.beneficiario === 'string' && e.datos.beneficiario) || e.cliente || sinNombre;
@@ -245,7 +253,9 @@ export function redactar(eventos: EventoPendiente[]): Mensaje {
         return {
           title: `${prefijo}Nuev${a} ${palabra}${cuando ? ` · ${cuando}` : ''}`,
           body: `${quien}${detalle ? ` · ${detalle}` : ''}`,
-          url: esPedido ? '/panel/pedidos' : lead ? `/panel/mensajes?lead=${lead}` : '/panel/agenda',
+          // La ficha de la reserva en la Agenda (FichaReserva): validar el pago, escribir al
+          // cliente y avisar al barbero. Antes abría el chat (23-nov-2026, Alvaro).
+          url: esPedido ? '/panel/pedidos' : urlFicha(lead, e.datos.slot),
           tag,
         };
       }

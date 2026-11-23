@@ -40,13 +40,13 @@ export interface PorRevisar {
   apartada?: boolean;
 }
 
-type Accion = 'aprobar' | 'rechazar';
+export type Accion = 'aprobar' | 'rechazar';
 
 /** El mensaje para el cliente tras revisar su pago (AvisarCliente): nadie le escribe solo. */
 export interface AvisoPago { titulo: string; mensaje: string; waLink: string; nota?: string }
 
 /** wa.me del cliente: 9 dígitos que empiezan por 9 → con el 51 de Perú. Sin número, sin enlace. */
-function waDe(telefono: string, texto: string): string {
+export function waDe(telefono: string, texto: string): string {
   const d = (telefono ?? '').replace(/\D/g, '');
   if (d.length < 8) return '';
   const n = /^9\d{8}$/.test(d) ? `51${d}` : d;
@@ -88,8 +88,10 @@ const TITULO_APROBAR = {
 const ETIQUETA_PAGO = { completo: 'Pago completo', resto: 'Lo que faltaba', adelanto: 'Adelanto', parcial: 'Pago parcial' } as const;
 
 /** La que pinta: sin red, para poder verla y probarla con datos de mentira. */
-export function ComprobantesPorRevisarVista({ datos, adelanto, alRevisar, alAvisar, enDonde = 'en la cancha' }: {
+export function ComprobantesPorRevisarVista({ datos, adelanto, alRevisar, alAvisar, enDonde = 'en la cancha', abiertaDeEntrada = false }: {
   datos: PorRevisar[];
+  /** La ficha de una reserva la enseña abierta: es lo que se viene a hacer. */
+  abiertaDeEntrada?: boolean;
   adelanto: number;
   /** Dónde se cobra el resto: «en la cancha» o «en el local». */
   enDonde?: string;
@@ -104,7 +106,7 @@ export function ComprobantesPorRevisarVista({ datos, adelanto, alRevisar, alAvis
   const [pregunta, setPregunta] = useState<{ c: PorRevisar; accion: Accion; monto: number | null; metodo: string } | null>(null);
   const [ocupado, setOcupado] = useState(false);
   /** Minimizada de entrada (Alvaro, 17-nov): el título dice cuántos hay; «Ver» la abre. */
-  const [abierta, setAbierta] = useState(false);
+  const [abierta, setAbierta] = useState(abiertaDeEntrada);
 
   if (!datos.length) return null;
 
@@ -218,6 +220,22 @@ export function ComprobantesPorRevisarVista({ datos, adelanto, alRevisar, alAvis
   );
 }
 
+/** Aprobar o rechazar un comprobante (sql/0017). También lo usa la ficha de una reserva (FichaReserva). */
+export async function revisarComprobante(
+  companyId: string, c: PorRevisar, accion: Accion, monto: number | null, metodo: string,
+  avisar: (texto: string, tipo: 'ok' | 'error') => void,
+): Promise<boolean> {
+  const { data, error } = await supabase().rpc('comprobante_revisar', {
+    p_company: companyId, p_id: c.id, p_accion: accion, p_monto: accion === 'aprobar' ? monto : null, p_metodo: metodo,
+  });
+  if (error) {
+    avisar(error.message, 'error');
+    return false;
+  }
+  avisar(accion === 'rechazar' ? 'Comprobante rechazado. Avísale al cliente por WhatsApp.' : String((data as { detalle?: string } | null)?.detalle ?? 'Pago registrado.'), 'ok');
+  return true;
+}
+
 export default function ComprobantesPorRevisar({ companyId, recarga, alCambiar, enDonde }: { companyId: string; recarga: unknown; alCambiar: () => void; enDonde?: string }) {
   const avisar = useAvisar();
   /** El mensaje para el cliente del último pago revisado: se queda aunque la lista quede vacía. */
@@ -239,17 +257,12 @@ export default function ComprobantesPorRevisar({ companyId, recarga, alCambiar, 
   if (!datos?.lista.length) return <>{avisoCliente}{cotejar}</>;
 
   async function revisar(c: PorRevisar, accion: Accion, monto: number | null, metodo: string): Promise<boolean> {
-    const { data, error } = await supabase().rpc('comprobante_revisar', {
-      p_company: companyId, p_id: c.id, p_accion: accion, p_monto: accion === 'aprobar' ? monto : null, p_metodo: metodo,
-    });
-    if (error) {
-      avisar(error.message, 'error');
-      return false;
+    const ok = await revisarComprobante(companyId, c, accion, monto, metodo, avisar);
+    if (ok) {
+      recargar();
+      alCambiar();
     }
-    avisar(accion === 'rechazar' ? 'Comprobante rechazado. Avísale al cliente por WhatsApp.' : String((data as { detalle?: string } | null)?.detalle ?? 'Pago registrado.'), 'ok');
-    recargar();
-    alCambiar();
-    return true;
+    return ok;
   }
 
   return (
