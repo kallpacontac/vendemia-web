@@ -195,6 +195,9 @@ export default function MiPagina() {
     return () => window.removeEventListener('beforeunload', f);
   }, [sucio]);
 
+  // Sin ninguno destacado, la página pinta con tu color el primero visible (paginaPublica.ts).
+  const destacadoPorDefecto = botones.some((b) => b.visible && b.destacado) ? null : botones.find((b) => b.visible)?.clave ?? null;
+
   // ── La página tal cual la verá el cliente ──
   const datosPagina: DatosPagina = useMemo(
     () => ({
@@ -766,6 +769,9 @@ export default function MiPagina() {
                       <Icono tipo={b.tipo} />
                       <b style={{ fontSize: 13 }}>{d.nombre}</b>
                       {b.destacado && <span className="badge-pill b-warm">Destacado</span>}
+                      {!b.destacado && b.clave === destacadoPorDefecto && (
+                        <span className="badge-pill b-warm" title="Ningún botón está destacado: el primero sale con tu color. Marca otro para cambiarlo.">Destacado · por ser el primero</span>
+                      )}
                     </span>
                     {editable && (
                       <span className="fz-fila" style={{ gap: 4 }}>

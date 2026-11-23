@@ -236,9 +236,12 @@ export function htmlPagina(d: DatosPagina, o: { vista?: boolean; indexable?: boo
         .join('')}</nav>`
     : '';
 
-  const listaBotones = d.botones.map((b) => {
+  // Si el dueño no destacó ninguno, el primero va con su color (22-nov-2026, Alvaro: «por defecto
+  // el primero que sea destacado»). Si marca alguno, mandan sus marcas.
+  const hayDestacado = d.botones.some((b) => b.destacado);
+  const listaBotones = d.botones.map((b, i) => {
       const sub = b.subtitulo ? `<small>${esc(b.subtitulo)}</small>` : '';
-      const cls = `bt${b.destacado ? ' bt--dest' : ''}`;
+      const cls = `bt${b.destacado || (!hayDestacado && i === 0) ? ' bt--dest' : ''}`;
       const contenido = tarjeta
         ? `<span class="tile">${icono(b.tipo)}</span><span class="tx"><b>${esc(b.label)}</b>${sub}</span><span class="fl">${icono('flecha')}</span>`
         : `<span class="ic">${icono(b.tipo)}</span><span class="tx"><b>${esc(b.label)}</b>${sub}</span>`;

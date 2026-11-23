@@ -435,7 +435,7 @@ test('21 · Yape / Plin se abre y copia dentro de la plantilla', () => {
     botones: [{ tipo: 'yape', label: 'Yape / Plin', url: 'https://fideliza.vendemias.com/pagar/987654321' }],
   };
   const html = pagina.htmlPagina(datos);
-  assert.ok(html.includes('class="bt bt--tarjeta pago-abrir"'));
+  assert.match(html, /class="bt( bt--dest)? bt--tarjeta pago-abrir"/); // el único botón sale destacado por ser el primero
   assert.ok(html.includes('data-numero="987654321"'));
   assert.ok(html.includes('<dialog class="pago-modal"'));
   assert.ok(html.includes('Copiar número'));
@@ -724,4 +724,17 @@ test('avisos de fábrica: caben en lo que acepta campana.guardar, también con n
   for (const n of avisosBase.DIAS_VOLVER) assert.ok(n >= 7 && n <= 180);
   for (const n of avisosBase.DIAS_EXTRANAMOS) assert.ok(n >= 14 && n <= 365);
   assert.equal(avisosBase.avisoDeFabrica('welcome', { negocio: 'X', club: 'Club X', premio: 'Corte gratis' }).body, 'Cada visita suma para tu corte gratis.');
+});
+
+test('página pública: sin ningún botón destacado, el primero sale con el color', () => {
+  const base = { nombre: 'Vendemia', color: '#F76D31', estilo: { plantilla: 'clasica' }, redes: [] };
+  const clases = (html) => [...html.matchAll(/class="(bt [^"]*)"/g)].map((m) => m[1].includes('bt--dest'));
+  const tres = [
+    { tipo: 'whatsapp', label: 'Escríbenos', url: 'https://wa.me/51947144701' },
+    { tipo: 'web', label: 'Web', url: 'https://a.pe' },
+    { tipo: 'reservar', label: 'Agenda', url: 'https://b.pe' },
+  ];
+  assert.deepEqual(clases(pagina.htmlPagina({ ...base, botones: tres })), [true, false, false]);
+  const marcado = tres.map((b, i) => ({ ...b, destacado: i === 2 }));
+  assert.deepEqual(clases(pagina.htmlPagina({ ...base, botones: marcado })), [false, false, true], 'si el dueño marca uno, manda su marca');
 });
