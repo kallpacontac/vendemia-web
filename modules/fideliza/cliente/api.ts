@@ -335,6 +335,17 @@ export const lecturas = {
         .order('created_at')
         .range(a, z),
     ),
+  /** Las tarjetas activas con lo que hace falta para «Escríbeles hoy» (dominio/valor.ts). */
+  miembrosParaEscribir: (companyId: string) =>
+    todas<{ id: string; alias: string | null; created_at: string; rewards_available: number; parent_member_id: string | null }>((a, z) =>
+      sb()
+        .from('loyalty_members')
+        .select('id, alias, created_at, rewards_available, parent_member_id')
+        .eq('company_id', companyId)
+        .eq('status', 'active')
+        .order('created_at')
+        .range(a, z),
+    ),
   /** Las tarjetas vivas: id, nombre y fecha de alta. */
   altas: (companyId: string) =>
     todas<{ id: string; created_at: string; alias: string | null }>((a, z) =>

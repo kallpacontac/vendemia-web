@@ -513,3 +513,31 @@
 .fz-avisos__dias button:disabled{cursor:default}
 .fz-avisos__editar{display:inline-flex;align-items:center;gap:5px;font-size:12.5px}
 .fz-avisos__tope{color:#6b6c66;font-size:12.5px;line-height:1.5;margin:16px 2px 0;max-width:70ch}
+
+/* Inicio: «Plata que volvió» y «Escríbeles hoy» (23-nov-2026), con las piezas del Dashboard. */
+.fz-valor{margin-bottom:16px}
+.fz-valor--solo{grid-template-columns:minmax(0,1fr)}
+.fz-plata .negocio-importe{margin:10px 0 6px}
+.fz-plata__que{margin:10px 0 0}
+.fz-plata__barras{display:flex;align-items:flex-end;gap:10px;height:92px;margin:14px 0 4px}
+.fz-plata__semana{flex:1;height:100%;display:flex;flex-direction:column;justify-content:flex-end;align-items:stretch;gap:6px;min-width:0}
+.fz-plata__semana i{display:block;border-radius:9px 9px 3px 3px;background:#e6e7e2}
+.fz-plata__semana i.pasada{background:#25261f}
+.fz-plata__semana i.actual{background:repeating-linear-gradient(135deg,#ff7046 0px,#ff7046 3px,#ffab86 3px,#ffab86 4px)}
+.fz-plata__semana small{text-align:center;font-size:11px;color:#75766f}
+.fz-plata__recuperados{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-top:12px;padding-top:12px;border-top:1px solid #eeefeb;font-size:13px;color:#4a4b45}
+.fz-plata__recuperados b{color:#20211d}
+.fz-plata__mas{margin-top:12px;align-self:flex-start;font-size:13px}
+.fz-escribe__lista{list-style:none;margin:4px 0 0;padding:0}
+.fz-escribe__lista li{display:flex;align-items:center;gap:10px;padding:10px 0;border-top:1px solid #eeefeb}
+.fz-escribe__lista li:first-child{border-top:0;padding-top:4px}
+.fz-escribe__av{width:38px;height:38px;flex:none;border-radius:50%;display:grid;place-items:center;background:#f4f5f2;color:#4a4b45;font-weight:700;font-size:13px}
+.fz-escribe__quien{flex:1;min-width:0;display:flex;flex-direction:column;align-items:flex-start;gap:3px}
+.fz-escribe__quien b{font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%}
+.fz-escribe__motivo{font-size:11.5px;font-weight:700;padding:2px 8px;border-radius:999px;background:#fff2d8;color:#8a5200}
+.fz-escribe__motivo--premio{background:#ffefe7;color:#c23700}
+.fz-escribe__motivo--dormido,.fz-escribe__motivo--atrasado{background:#fdecec;color:#b42a30}
+.fz-escribe__wa{background:#178f48;color:#fff;border:0;min-height:40px;padding:8px 14px;font-weight:700;display:inline-flex;align-items:center;gap:6px;flex:none}
+.fz-escribe__wa:hover{background:#127a3c;color:#fff}
+.fz-escribe__wa--grande{width:100%;justify-content:center;min-height:50px;font-size:15px;text-decoration:none}
+.fz-escribe__hecho{display:inline-flex;align-items:center;gap:4px;color:#0a8452;font-weight:700;font-size:13px;flex:none}

@@ -25,6 +25,7 @@ import { Cargando, Cifra, Fallo } from '@/modules/fideliza/ui/Estados';
 import LinkPublico from '@/modules/fideliza/ui/LinkPublico';
 import PrimerosPasos, { type Paso } from '@/modules/fideliza/ui/PrimerosPasos';
 import HoyEnElClub from '@/modules/fideliza/ui/HoyEnElClub';
+import ValorDelClub from '@/modules/fideliza/ui/ValorDelClub';
 import { useSesion } from '@/components/panel/Sesion';
 import { useCargar } from '@/components/panel/useCargar';
 import { accion, lecturas, type Enlace } from '@/modules/fideliza/cliente/api';
@@ -225,6 +226,16 @@ export default function Resumen() {
 
   return (
     <>
+      {/* Ideas 3 y 4 de la maqueta: la plata que volvió y a quién escribirle hoy, lo primero. */}
+      {conHoy && companyId && vivo && puede('metrics.read') && (
+        <ValorDelClub
+          companyId={companyId}
+          negocio={ajustes?.display_name ?? ''}
+          club={vivo.name}
+          premio={version?.reward_description ?? ''}
+          verContactos={puede('contacts.read')}
+        />
+      )}
       {conHoy && companyId && vivo && (
         <HoyEnElClub companyId={companyId} programas={[vivo, ...datos.lineas]} puedeSumar={puede('ops.record')} />
       )}
