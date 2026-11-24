@@ -504,4 +504,73 @@ export const ELIMINACION: PaginaLegal = {
   ],
 };
 
+/**
+ * La política de la app de Android «Vendemia Caja» (vendemia-root/vendemia-caja).
+ *
+ * ⚠️ VA ENLAZADA EN GOOGLE PLAY Y DENTRO DE LA APP. Play rechaza la app si la URL
+ * no abre o si lo que dice no coincide con el formulario de «Seguridad de los
+ * datos». Si la app empieza a enviar algo nuevo, se cambia aquí y allí a la vez.
+ */
+export const CAJA_PRIVACIDAD: PaginaLegal = {
+  slug: 'caja/privacidad',
+  titulo: 'Privacidad de Vendemia Caja',
+  bajada:
+    'Qué lee la app de Android Vendemia Caja en el celular de tu negocio, qué hace con eso y qué nunca toca.',
+  bloques: [
+    {
+      h: 'Qué es Vendemia Caja',
+      p: [
+        `Vendemia Caja es una app de Android de ${EMPRESA.razonSocial} (RUC ${EMPRESA.ruc}) para negocios. Te avisa, en voz alta y en pantalla, cuando te llega un pago por Yape, Plin o transferencia, leyendo el aviso que esas apps ya muestran en tu celular.`,
+      ],
+    },
+    {
+      h: 'Qué lee',
+      li: [
+        'Solo los avisos de Yape y de las apps de bancos que tú eliges dentro de Vendemia Caja.',
+        'De esos avisos, solo los que dicen que te ENTRÓ dinero: el monto, el nombre de quien pagó tal como lo muestra el aviso, la hora y, si viene, el código de seguridad de Yape.',
+        'Los avisos de cualquier otra app (WhatsApp, mensajes, correo, redes) se descartan en el mismo celular sin leer su contenido.',
+        'De las apps de bancos tampoco se guardan claves, códigos de verificación, compras ni promociones.',
+      ],
+    },
+    {
+      h: 'Qué nunca hace',
+      li: [
+        'No entra a Yape ni a tu banco, no conoce tus claves y no puede mover dinero.',
+        'No lee tus conversaciones, contactos, fotos ni ubicación.',
+        'No vende ni comparte los datos con terceros, ni los usa para publicidad.',
+      ],
+    },
+    {
+      h: 'Dónde se guarda',
+      p: [
+        'Por defecto, los pagos leídos se quedan solo en tu celular.',
+        'Si conectas la app a tu panel de Vendemia, cada pago (monto, nombre, hora y código) se envía cifrado a ese panel para confirmar los pedidos y avisar a tu equipo. Solo lo ven las personas de tu negocio con acceso al panel.',
+      ],
+    },
+    {
+      h: 'Cuánto tiempo',
+      p: [
+        'En el celular, los pagos se borran solos a los 90 días. Si desinstalas la app, se borra todo lo que guardó en el celular.',
+      ],
+    },
+    {
+      h: 'Las personas que te pagan',
+      p: [
+        'El nombre de quien te paga es un dato personal de esa persona. Tu negocio es el responsable de ese dato y Vendemia lo trata por encargo tuyo, solo para confirmar el pago, conforme a la Ley 29733 de Protección de Datos Personales.',
+      ],
+    },
+    {
+      h: 'Cómo dejar de usarla',
+      p: [
+        'Puedes quitarle el permiso en cualquier momento en Ajustes → Notificaciones → Acceso a notificaciones, o desinstalarla. Para pedir que borremos lo que llegó a tu panel, escríbenos.',
+      ],
+      li: [`Correo: ${EMPRESA.email}`, `WhatsApp: ${EMPRESA.telefono}`],
+      enlaces: [
+        { href: '/eliminacion-de-datos', label: 'Eliminación de datos' },
+        { href: '/privacidad', label: 'Política de privacidad de Vendemia' },
+      ],
+    },
+  ],
+};
+
 export const PAGINAS_LEGALES = [TERMINOS, PRIVACIDAD, GARANTIA] as const;

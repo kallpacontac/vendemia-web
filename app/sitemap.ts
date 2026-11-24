@@ -64,6 +64,8 @@ const LEGALES = [
   '/nosotros',
   '/contacto',
   '/eliminacion-de-datos',
+  /** La de la app de Android: Google Play la enlaza y la revisa. */
+  '/caja/privacidad',
 ];
 
 /**
