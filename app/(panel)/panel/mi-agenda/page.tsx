@@ -154,8 +154,10 @@ function MisCitas({ companyId }: { companyId: string }) {
   // ¿Este negocio deja cobrar a sus empleados? (datos 0012). Con la agenda del bot, no.
   const cobra = Boolean(cobroFoto?.empleadoCobra && cobroFoto.nube);
   // Las apartadas (esperando el adelanto) confunden al barbero (23-nov-2026, Alvaro): se ven solo
-  // si el negocio lo encendió (datos 0029). El dueño y el administrador, siempre.
+  // si el negocio lo encendió (datos 0029). El dueño y el administrador, siempre. Con 'con_captura'
+  // (datos 0030, 24-nov) también las que ya mandaron la captura: mi_adelantos dice cuáles.
   const vePorPagar = rol === 'dueno' || rol === 'admin' || cobroFoto?.equipoVePorPagar === true;
+  const veConCaptura = !vePorPagar && cobroFoto?.equipoVeApartadas === 'con_captura';
   const [cobrando, setCobrando] = useState<string | null>(null);
   const [sinCita, setSinCita] = useState(false);
   const v = vocabulario(compania?.business_mode, { canchas });
@@ -186,14 +188,15 @@ function MisCitas({ companyId }: { companyId: string }) {
       getCitasDelPeriodo(companyId, lunes, sumarDias(lunes, 6)),
       getMisClientes(companyId),
     ]);
-    const citas = vePorPagar ? todas : todas.filter((c) => c.status !== 'pending_payment');
-    // De las apartadas que se ven, cuánto falta del adelanto (datos 0029). Sin la 0029, sin detalle.
-    const apartadas = citas.filter((c) => c.status === 'pending_payment').map((c) => c.id);
+    // De las apartadas, cuánto falta del adelanto (datos 0029). Sin la 0029, sin detalle.
+    // Con 'con_captura', la base solo devuelve las que ya mandaron captura: esas son las que se ven.
+    const apartadas = vePorPagar || veConCaptura ? todas.filter((c) => c.status === 'pending_payment').map((c) => c.id) : [];
     let adelantos: Record<string, Adelanto> = {};
     if (apartadas.length) {
       const { data, error } = await supabase().rpc('mi_adelantos', { p_company: companyId, p_ids: apartadas });
       if (!error && data) adelantos = data as Record<string, Adelanto>;
     }
+    const citas = vePorPagar ? todas : todas.filter((c) => c.status !== 'pending_payment' || (veConCaptura && c.id in adelantos));
     // Lo que falta en cada una: solo si cobra, y la base decide cuáles le tocan.
     // Sus citas: el precio de cada una y lo que gana (19-nov, The 24/7: «que en los barberos
     // aparezcan las citas y el precio de los cortes, y su monto actualizado por cada cita cobrada»).
@@ -214,7 +217,7 @@ function MisCitas({ companyId }: { companyId: string }) {
       }
     }
     return { lunes, negocio, citas, clientes, saldos, adelantos, lineas: [...lineas], congeladas: [...congeladas], pct };
-  }, [companyId, lunes, cobra, vePorPagar]);
+  }, [companyId, lunes, cobra, vePorPagar, veConCaptura]);
 
   // Lo que casi no cambia: el catálogo (tarifas y qué es producto). Se relee cada 5 min.
   const fijos = useCargar(async () => ({ catalogo: await getCatalogoDelEquipo(companyId) }), [companyId]);
@@ -555,6 +558,8 @@ interface Adelanto {
   pagado: number;
   /** Lo que la confirma: % del precio en citas, fijo en canchas. 0 = cualquier pago. */
   adelanto: number;
+  /** El cliente mandó la captura y nadie la ha aprobado aún (datos 0030). */
+  por_revisar?: boolean;
 }
 
 /** «Falta el adelanto: S/ 10 de S/ 30», o lo que haya pagado. Para que el barbero sepa qué espera. */
@@ -562,7 +567,10 @@ function DetalleAdelanto({ a }: { a: Adelanto }) {
   const pagado = Number(a.pagado) || 0;
   const adelanto = Number(a.adelanto) || 0;
   const falta = Math.max(Math.round((adelanto - pagado) * 100) / 100, 0);
-  const texto = adelanto <= 0
+  // Mandó la captura y nadie la ha mirado (datos 0030): eso es lo que tiene que saber el barbero.
+  const texto = a.por_revisar && falta > 0
+    ? `Mandó la captura del adelanto${adelanto > 0 ? ` (${soles(adelanto)})` : ''}: falta que la aprueben`
+    : adelanto <= 0
     ? pagado > 0 ? `Pagó ${soles(pagado)}: falta que la confirmen` : 'Aún no paga nada'
     : falta > 0
       ? pagado > 0

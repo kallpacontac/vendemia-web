@@ -81,7 +81,7 @@ import { soloLeeLoDelDueno } from '@/lib/panel/roles';
 import { cap, vocabulario } from '@/lib/panel/vocabulario';
 import { PAGO_CADUCA_HORAS } from '@/lib/panel/adelantos';
 import { demoActivo } from '@/lib/panel/demo';
-import { MODOS_FOTO_PAGO, TEXTO_MODO, type ModoFotoPago } from '@/lib/panel/fotoPago';
+import { MODOS_FOTO_PAGO, TEXTO_MODO, type EquipoVeApartadas, type ModoFotoPago } from '@/lib/panel/fotoPago';
 import '@/components/panel/foto-del-pago.css';
 import { getCatalogo, getCompania } from '@/lib/supabase/queries';
 import { b01 } from '@/lib/supabase/parse';
@@ -518,14 +518,25 @@ function Configuracion() {
     avisar(activo ? 'Los empleados ya pueden cobrar, siempre con foto.' : 'Los empleados ya no cobran.', 'ok');
   }
 
-  /** «El equipo ve las citas esperando pago» (datos 0029). Dueño o administrador. */
-  async function cambiarEquipoVePorPagar(activo: boolean) {
+  /**
+   * Qué citas apartadas ve el equipo en Mi agenda (datos 0029 + 0030): solo las confirmadas, también
+   * las que ya mandaron la captura del adelanto, o todas. Dueño o administrador.
+   */
+  async function cambiarEquipoVeApartadas(modo: EquipoVeApartadas) {
     if (demoActivo()) {
       avisar('Estás en modo demo: no se guarda nada. Sal del modo demo para cambiar algo de verdad.', 'espera');
       return;
     }
     if (!companyId) return;
-    const { error } = await supabase().rpc('equipo_ve_por_pagar_guardar', { p_company: companyId, p_activo: activo });
+    let { error } = await supabase().rpc('equipo_ve_apartadas_guardar', { p_company: companyId, p_modo: modo });
+    // Sin la 0030: las dos posturas de la 0029 siguen funcionando.
+    if (error && /equipo_ve_apartadas_guardar|PGRST202/.test(`${error.code} ${error.message}`)) {
+      if (modo === 'con_captura') {
+        avisar('Para «con captura» falta la actualización 0030 en la base de datos.', 'error');
+        return;
+      }
+      ({ error } = await supabase().rpc('equipo_ve_por_pagar_guardar', { p_company: companyId, p_activo: modo === 'todas' }));
+    }
     if (error) {
       avisar(/equipo_ve_por_pagar_guardar|PGRST202/.test(`${error.code} ${error.message}`)
         ? 'Falta la actualización 0029 en la base de datos.'
@@ -533,7 +544,14 @@ function Configuracion() {
       return;
     }
     recargarCobroFoto();
-    avisar(activo ? 'Tu equipo ya ve las citas que esperan pago, con lo que falta del adelanto.' : 'Tu equipo ya no ve las citas que esperan pago.', 'ok');
+    avisar(
+      modo === 'todas'
+        ? 'Tu equipo ya ve todas las citas que esperan pago, con lo que falta del adelanto.'
+        : modo === 'con_captura'
+          ? 'Tu equipo ya ve las citas cuyo cliente mandó la captura del adelanto, aunque no esté aprobada.'
+          : 'Tu equipo solo ve las citas confirmadas.',
+      'ok',
+    );
   }
 
   /**
@@ -1532,25 +1550,39 @@ function Configuracion() {
 
             {/*
               Las citas apartadas en Mi agenda (datos 0029, Alvaro 23-nov-2026): al barbero lo
-              confunden, así que apagado de serie. Encendido, las ve con lo que falta del adelanto.
+              confunden, así que de serie solo ve las confirmadas. 24-nov (datos 0030): una postura
+              en medio, «con captura»: las que ya mandaron la captura del adelanto, sin aprobar.
             */}
-            {cobroFoto && !cobroFoto.sinMigrar && (
-              <div className="cfg-enlace" style={{ marginTop: 12 }}>
-                <div>
-                  <b>Tu equipo {cobroFoto.equipoVePorPagar ? 've' : 'no ve'} las {vocabulario(form.business_mode, { canchas }).reservas} esperando pago</b>
-                  <small>
-                    {cobroFoto.equipoVePorPagar
-                      ? 'En Mi agenda salen las apartadas, con lo que falta del adelanto. Les llega el aviso al apartarse.'
-                      : 'En Mi agenda solo salen las confirmadas. El aviso les llega cuando se confirma, no cuando se aparta.'}
-                  </small>
+            {cobroFoto && !cobroFoto.sinMigrar && (() => {
+              const actual: EquipoVeApartadas = cobroFoto.equipoVeApartadas ?? (cobroFoto.equipoVePorPagar ? 'todas' : 'nunca');
+              const palabras = vocabulario(form.business_mode, { canchas }).reservas;
+              const puede = rol === 'dueno' || rol === 'admin';
+              const OPCIONES: { id: EquipoVeApartadas; titulo: string; texto: string }[] = [
+                { id: 'nunca', titulo: 'Solo las confirmadas', texto: 'Ve la cita cuando apruebas el pago. El aviso le llega entonces.' },
+                { id: 'con_captura', titulo: 'También las que mandaron la captura', texto: 'Ve la cita en cuanto el cliente sube la captura del adelanto, aunque aún no la apruebes. Si luego la rechazas, sigue saliendo hasta que la canceles.' },
+                { id: 'todas', titulo: 'Todas, aunque no hayan pagado', texto: 'Ve también las apartadas sin ningún pago, con lo que falta del adelanto.' },
+              ];
+              return (
+                <div className="cfg-enlace cfg-apartadas" style={{ marginTop: 12 }}>
+                  <div>
+                    <b>¿Qué {palabras} esperando pago ve tu equipo?</b>
+                    <small>En su Mi agenda. Tú y el administrador las ven siempre todas.</small>
+                    <div className="cfg-apartadas__ops" role="radiogroup" aria-label={`Qué ${palabras} esperando pago ve tu equipo`}>
+                      {OPCIONES.map((o) => (
+                        <label key={o.id} className={`cfg-apartadas__op${actual === o.id ? ' on' : ''}`}>
+                          <input type="radio" name="equipo-ve-apartadas" checked={actual === o.id} disabled={!puede}
+                            onChange={() => void cambiarEquipoVeApartadas(o.id)} />
+                          <span>
+                            <b>{o.titulo}</b>
+                            <small>{o.texto}</small>
+                          </span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
                 </div>
-                {(rol === 'dueno' || rol === 'admin') && (
-                  <button type="button" className="btn btn-ghost btn-sm" onClick={() => void cambiarEquipoVePorPagar(!cobroFoto.equipoVePorPagar)}>
-                    {cobroFoto.equipoVePorPagar ? 'Ocultárselas' : 'Mostrárselas'}
-                  </button>
-                )}
-              </div>
-            )}
+              );
+            })()}
           </div>
               {/* La pantalla de emitir está en Caja; aquí, su configuración. */}
               <SeccionFacturacion />

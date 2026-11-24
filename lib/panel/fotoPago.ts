@@ -40,7 +40,14 @@ export interface CobroFoto {
    * Apagado de serie: al barbero lo confunden. Lo cambian el dueño o el administrador.
    */
   equipoVePorPagar?: boolean;
+  /**
+   * La postura entera (datos 0030): 'nunca' (solo confirmadas), 'con_captura' (también las que ya
+   * mandaron la captura del adelanto, sin aprobar) o 'todas'. Sin la 0030 sale de equipoVePorPagar.
+   */
+  equipoVeApartadas?: EquipoVeApartadas;
 }
+
+export type EquipoVeApartadas = 'nunca' | 'con_captura' | 'todas';
 
 /** La foto que el servidor subió y leyó (POST /api/cobros/foto). */
 export interface FotoPago {
@@ -89,12 +96,19 @@ export function leerCobroFoto(data: unknown, error: { code?: string; message?: s
     const sinFuncion = error.code === 'PGRST202' || /cobro_foto_modo/.test(error.message ?? '');
     return { modo: sinFuncion && canchas ? 'opcional' : 'apagada', nube: true, sinMigrar: sinFuncion };
   }
-  const d = (data ?? {}) as { modo?: unknown; nube?: unknown; empleado_cobra?: unknown; equipo_ve_por_pagar?: unknown };
+  const d = (data ?? {}) as {
+    modo?: unknown; nube?: unknown; empleado_cobra?: unknown; equipo_ve_por_pagar?: unknown; equipo_ve_apartadas?: unknown;
+  };
+  const apartadas: EquipoVeApartadas =
+    d.equipo_ve_apartadas === 'con_captura' || d.equipo_ve_apartadas === 'todas' || d.equipo_ve_apartadas === 'nunca'
+      ? d.equipo_ve_apartadas
+      : d.equipo_ve_por_pagar === true ? 'todas' : 'nunca';
   return {
     modo: esModoFotoPago(d.modo) ? d.modo : 'apagada',
     nube: d.nube === true,
     empleadoCobra: d.empleado_cobra === true,
     equipoVePorPagar: d.equipo_ve_por_pagar === true,
+    equipoVeApartadas: apartadas,
   };
 }
 

@@ -4,7 +4,7 @@
  * Cierre del día › «Ingresos del día» (datos 0023; The 24/7, 19-nov-2026: «en el cierre de caja,
  * solo para la cuenta del dueño, que pueda ingresar los ingresos del día y los gastos/adelantos»).
  *
- * Dinero que entró sin un ticket: un corte que no se anotó, una venta por fuera, el fondo de caja.
+ * Dinero que entró sin un ticket: un corte que no se anotó, una venta por fuera, el sencillo que se deja para dar vuelto.
  * Suma a «Entró, por método» y al neto. Lo apunta y lo borra SOLO el dueño (lo impone Postgres);
  * el administrador lo ve, para que el cierre le cuadre igual.
  */
@@ -24,12 +24,14 @@ export interface IngresoCaja {
   metodo: MetodoPago;
   /** La sede del cajón donde entró (datos 0024). '' = del negocio. */
   sede?: string;
-  /** De qué barbero es (datos 0026). '' = del negocio. No suma a su comisión. */
+  /** De qué barbero es (datos 0026). '' = del negocio. */
   employee_id?: string;
+  /** Si suma a la comisión de ese barbero (datos 0031). */
+  suma_comision?: boolean;
 }
 
 const METODOS: MetodoPago[] = ['cash', 'yape', 'plin', 'bank_transfer'];
-const RAPIDOS = ['Corte sin ticket', 'Venta de producto', 'Fondo de caja', 'Otro ingreso'];
+const RAPIDOS = ['Corte sin ticket', 'Venta de producto', 'Sencillo para el vuelto', 'Otro ingreso'];
 
 /** Los del día. null = sin la 0023 o sin permiso: la tarjeta no sale. */
 export async function leerIngresosCaja(companyId: string, dia: string): Promise<IngresoCaja[] | null> {
@@ -77,6 +79,9 @@ export default function IngresosCaja({
   const [barbero, setBarbero] = useState(barberoElegido);
   useEffect(() => setBarbero(barberoElegido), [barberoElegido]);
   const nombreBarbero = new Map(barberos.map((b) => [b.id, b.name]));
+  // ¿Suma a su comisión? (datos 0031). Encendido de serie al elegir barbero; el dueño lo puede apagar.
+  const [sumaComision, setSumaComision] = useState(true);
+  const suma = Boolean(barbero) && sumaComision;
   const [guardando, setGuardando] = useState(false);
   const [borrando, setBorrando] = useState<string | null>(null);
   const raiz = useRef<HTMLDivElement>(null);
@@ -99,6 +104,7 @@ export default function IngresosCaja({
     setMetodo('cash');
     setSede(sedeElegida);
     setBarbero(barberoElegido);
+    setSumaComision(true);
   }
 
   async function guardar() {
@@ -107,7 +113,8 @@ export default function IngresosCaja({
     const { error } = await supabase().rpc('caja_ingreso_guardar', {
       p_company: companyId,
       // employee_id solo si se eligió: así sigue funcionando sin la 0026 (lo ignoraría igual).
-      p_datos: { dia, concepto: concepto.trim(), importe: monto, metodo, sede: pideSede ? sede : '', ...(barbero ? { employee_id: barbero } : {}) },
+      // Con barbero, suma a su comisión salvo que el dueño lo apague (datos 0031).
+      p_datos: { dia, concepto: concepto.trim(), importe: monto, metodo, sede: pideSede ? sede : '', ...(barbero ? { employee_id: barbero, suma_comision: suma } : {}) },
     });
     setGuardando(false);
     if (error) {
@@ -191,11 +198,20 @@ export default function IngresosCaja({
               <div className="ticket-chips" role="radiogroup" aria-label="De quién">
                 {[{ id: '', name: 'Del negocio' }, ...barberos].map((b) => (
                   <button key={b.id || 'negocio'} type="button" role="radio" aria-checked={barbero === b.id}
-                    className={`ticket-chip${barbero === b.id ? ' on' : ''}`} onClick={() => setBarbero(b.id)}>
+                    className={`ticket-chip${barbero === b.id ? ' on' : ''}`} onClick={() => { setBarbero(b.id); setSumaComision(true); }}>
                     {b.name}
                   </button>
                 ))}
               </div>
+              {barbero && (
+                <label className="gc-suma">
+                  <input type="checkbox" checked={sumaComision} onChange={(e) => setSumaComision(e.target.checked)} />
+                  <span>
+                    <b>Suma a su comisión</b>
+                    <small>{sumaComision ? `Le cuenta a ${nombreBarbero.get(barbero) ?? 'este barbero'} como una atención, con su %.` : 'Solo cuenta en su cierre del día, no en lo que gana.'}</small>
+                  </span>
+                </label>
+              )}
             </div>
           )}
 
@@ -224,7 +240,7 @@ export default function IngresosCaja({
       )}
 
       {ingresos.length === 0 ? (
-        <p className="muted" style={{ fontSize: 12.5 }}>{esDueno ? 'Lo que entró sin ticket (un corte sin anotar, el fondo de caja…), apúntalo aquí.' : 'Sin ingresos sin ticket este día.'}</p>
+        <p className="muted" style={{ fontSize: 12.5 }}>{esDueno ? 'Lo que entró sin ticket (un corte sin anotar, el sencillo para el vuelto…), apúntalo aquí.' : 'Sin ingresos sin ticket este día.'}</p>
       ) : (
         <>
           {ingresos.map((i) => (
@@ -235,6 +251,7 @@ export default function IngresosCaja({
                   {METODO_LABEL[i.metodo] ?? i.metodo}
                   {pideSede && !sedeElegida && i.sede ? ` · ${i.sede}` : ''}
                   {!barberoElegido && i.employee_id ? ` · ${nombreBarbero.get(i.employee_id) ?? 'barbero'}` : ''}
+                  {i.employee_id && i.suma_comision ? ' · en su comisión' : ''}
                 </small>
               </span>
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>

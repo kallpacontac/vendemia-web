@@ -47,6 +47,12 @@
  * S/ 0 para siempre aunque luego se le pusiera (The 24/7, Alexander: 8 atenciones, S/ 0). Ahora
  * «sin» usa la tarifa de hoy. Un 0 puesto a propósito en el servicio se congela como «servicio»
  * con valor 0, no como «sin», así que eso se respeta.
+ *
+ * ── Ingresos sin ticket (datos 0031, 24-nov-2026, The 24/7) ──────────────
+ * Un corte cobrado sin ticket y apuntado a nombre de un barbero (Caja › Cierre › Ingreso) suma a
+ * su comisión si el dueño lo dejó así (`suma_comision`). Entra como una «atención» más, con id
+ * `ingreso:<id>` (los cierres lo pagan con ese id), al % del barbero CONGELADO el día que se
+ * apuntó; si ese día no tenía %, al de hoy.
  */
 import type { AppointmentServiceRow, CatalogRow, ComisionCongeladaRow, EmployeeRow } from '@/lib/supabase/types';
 import type { Cita } from '@/lib/supabase/queries';
@@ -61,6 +67,50 @@ export interface LineaComision {
   regla: Regla;
   /** El % aplicado, para enseñarlo. null con comisión fija o sin comisión. */
   pct: number | null;
+  /** Un ingreso sin ticket de Caja (datos 0031), no una cita. */
+  sinTicket?: boolean;
+}
+
+/** Un ingreso sin ticket que suma a la comisión de su barbero (ingresos_con_comision, datos 0031). */
+export interface IngresoComision {
+  id: string;
+  dia: string;
+  concepto: string;
+  importe: number;
+  employee_id: string;
+  /** El % del barbero el día que se apuntó. null = no tenía: se usa el de hoy. */
+  comision_pct: number | null;
+  creado_at?: string;
+}
+
+/** El id con que el ingreso entra en la cuenta y en un cierre. */
+export const idDeIngreso = (id: string) => `ingreso:${id}`;
+
+/** El ingreso como una cita atendida: así sale en las mismas listas, con su día y su hora. */
+function ingresoComoCita(i: IngresoComision): Cita {
+  const creado = i.creado_at ? new Date(i.creado_at) : null;
+  const mismoDia =
+    creado && !Number.isNaN(creado.getTime()) &&
+    `${creado.getFullYear()}-${String(creado.getMonth() + 1).padStart(2, '0')}-${String(creado.getDate()).padStart(2, '0')}` === i.dia;
+  const inicio = mismoDia && creado ? creado : new Date(`${i.dia}T12:00:00`);
+  const hh = `${String(inicio.getHours()).padStart(2, '0')}:${String(inicio.getMinutes()).padStart(2, '0')}`;
+  return {
+    id: idDeIngreso(i.id),
+    company_id: '',
+    lead_id: '',
+    slot_start: `${i.dia} ${hh}`,
+    slot_end: null,
+    status: 'completed',
+    slot_minutes: null,
+    employee_id: i.employee_id,
+    service: i.concepto,
+    created_at: null,
+    created_ts: null,
+    pagado_por: 'panel',
+    cumplido_por: 'panel',
+    inicio,
+    recurrente: false,
+  } as unknown as Cita;
 }
 
 export interface ComisionProfesional {
@@ -119,6 +169,7 @@ export function comisionCongelada(
  * @param lineas sus líneas de servicio (getServiciosDeCitas)
  * @param ahora  para decidir qué citas «confirmadas» ya pasaron
  * @param congeladas la tarifa de cada línea al completarse (getComisionesCongeladas)
+ * @param ingresos los ingresos sin ticket que suman (getIngresosConComision, datos 0031)
  */
 export function calcularComisiones(
   citas: Cita[],
@@ -127,6 +178,7 @@ export function calcularComisiones(
   equipo: Pick<EmployeeRow, 'id' | 'comision_pct'>[],
   ahora: Date = new Date(),
   congeladas: ComisionCongeladaRow[] = [],
+  ingresos: IngresoComision[] = [],
 ): ResumenComisiones {
   const congeladaDe = new Map(congeladas.map((c) => [c.linea_id, c]));
   const servicio = new Map(catalogo.map((c) => [c.id, c]));
@@ -175,6 +227,23 @@ export function calcularComisiones(
       if (r.regla === 'sin' && precio > 0) fila.sinTarifa += 1;
       fila.lineas.push({ cita, nombre: l.name, precio, ...r });
     }
+    porProfesional.set(empleado, fila);
+  }
+
+  for (const i of ingresos) {
+    const empleado = i.employee_id ?? '';
+    if (!empleado) continue;
+    const precio = Number(i.importe ?? 0);
+    const pct = i.comision_pct != null && Number(i.comision_pct) > 0 ? Number(i.comision_pct) : pctDe.get(empleado) ?? 0;
+    const r = comisionDeLinea(precio, undefined, pct);
+    const fila =
+      porProfesional.get(empleado) ??
+      ({ employeeId: empleado, citas: 0, facturado: 0, comision: 0, lineas: [], sinTarifa: 0 } as ComisionProfesional);
+    fila.citas += 1;
+    fila.facturado += precio;
+    fila.comision += r.comision;
+    if (r.regla === 'sin' && precio > 0) fila.sinTarifa += 1;
+    fila.lineas.push({ cita: ingresoComoCita(i), nombre: /sin ticket/i.test(i.concepto) ? i.concepto : `${i.concepto} · sin ticket`, precio, ...r, sinTicket: true });
     porProfesional.set(empleado, fila);
   }
 

@@ -30,6 +30,7 @@ import { useCargar } from '@/components/panel/useCargar';
 import { useSondeo } from '@/components/panel/useSondeo';
 import Link from 'next/link';
 import { calcularComisiones } from '@/lib/panel/comisiones';
+import { getIngresosConComision } from '@/lib/panel/ingresosComision';
 import { desdeDeCuentas, solesExactos } from '@/lib/panel/cierres';
 import { diaMes, hora, isoLocal, soles } from '@/lib/panel/format';
 import { PERIODOS, rango, type Periodo } from '@/lib/panel/periodos';
@@ -50,18 +51,21 @@ export default function MiComision() {
 
   const { datos, cargando, error, releer } = useCargar(async () => {
     if (!companyId) return null;
-    const [negocio, citas, fichas, catalogo] = await Promise.all([
+    const [negocio, citas, fichas, catalogo, ingresosTodos] = await Promise.all([
       getMiNegocio(companyId),
       getCitasDelPeriodo(companyId, desde, hasta),
       getEquipoFichas(companyId),
       getCatalogoDelEquipo(companyId),
+      getIngresosConComision(companyId, desde, hasta),
     ]);
     const ficha = negocio?.tu_ficha ?? null;
+    // Sus ingresos sin ticket (datos 0031): la base ya le da solo los suyos.
+    const ingresos = ficha ? ingresosTodos.filter((i) => i.employee_id === ficha) : [];
     // Solo las suyas. Una cita sin asignar no es de nadie: no le cuenta a él.
     const mias = ficha ? citas.filter((c) => c.employee_id === ficha) : [];
     const ids = mias.map((c) => c.id);
     const [lineas, congeladas] = await Promise.all([getServiciosDeCitas(ids), getComisionesCongeladas(ids)]);
-    return { ficha, mias, lineas, congeladas, fichas, catalogo };
+    return { ficha, mias, lineas, congeladas, fichas, catalogo, ingresos };
   }, [companyId, desde, hasta]);
 
   const cobro = useCargar(() => (companyId ? porCobrar(companyId) : Promise.resolve(null)), [companyId]);
@@ -81,6 +85,7 @@ export default function MiComision() {
       [{ id: datos.ficha, comision_pct: mia?.comision_pct ?? 0 }],
       new Date(),
       datos.congeladas,
+      datos.ingresos,
     );
     const yo = r.profesionales.find((p) => p.employeeId === datos.ficha) ?? null;
     return {
@@ -202,17 +207,19 @@ async function porCobrar(companyId: string) {
   if (!d.ficha) return null;
   const hoy = new Date();
   const desde = desdeDeCuentas(d.primero, hoy);
-  const [citas, fichas, catalogo] = await Promise.all([
+  const [citas, fichas, catalogo, ingresosTodos] = await Promise.all([
     getCitasDelPeriodo(companyId, desde, isoLocal(hoy)),
     getEquipoFichas(companyId),
     getCatalogoDelEquipo(companyId),
+    getIngresosConComision(companyId, desde, isoLocal(hoy)),
   ]);
+  const ingresos = ingresosTodos.filter((i) => i.employee_id === d.ficha);
   const pagadas = new Set(d.cierres.flatMap((c) => c.citas));
   const mias = citas.filter((c) => c.employee_id === d.ficha);
   const ids = mias.map((c) => c.id);
   const [lineas, congeladas] = await Promise.all([getServiciosDeCitas(ids), getComisionesCongeladas(ids)]);
   const pct = fichas.find((f) => f.es_la_tuya)?.comision_pct ?? 0;
-  const r = calcularComisiones(mias, lineas, catalogo, [{ id: d.ficha, comision_pct: pct }], hoy, congeladas);
+  const r = calcularComisiones(mias, lineas, catalogo, [{ id: d.ficha, comision_pct: pct }], hoy, congeladas, ingresos);
   const todas = r.profesionales.find((p) => p.employeeId === d.ficha)?.lineas ?? [];
   const lineasSinPagar = todas.filter((l) => !pagadas.has(l.cita.id));
   const hoyIso = isoLocal(hoy);

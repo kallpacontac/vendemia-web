@@ -36,6 +36,7 @@ import { diaMes, soles } from '@/lib/panel/format';
 import { PERIODOS, rango, type Periodo } from '@/lib/panel/periodos';
 import { esCita } from '@/lib/panel/modo';
 import { calcularComisiones, type Regla } from '@/lib/panel/comisiones';
+import { getIngresosConComision } from '@/lib/panel/ingresosComision';
 import {
   getCatalogo,
   getCitasDelPeriodo,
@@ -59,20 +60,21 @@ export default function Comisiones() {
 
   const { datos, cargando, error } = useCargar(async () => {
     if (!companyId) return null;
-    const [citas, trabajadores, catalogo] = await Promise.all([
+    const [citas, trabajadores, catalogo, ingresos] = await Promise.all([
       getCitasDelPeriodo(companyId, desde, hasta),
       getTrabajadores(companyId),
       getCatalogo(companyId),
+      getIngresosConComision(companyId, desde, hasta),
     ]);
     const ids = citas.map((c) => c.id);
     const [lineas, congeladas] = await Promise.all([getServiciosDeCitas(ids), getComisionesCongeladas(ids)]);
-    return { citas, lineas, congeladas, trabajadores, catalogo };
+    return { citas, lineas, congeladas, trabajadores, catalogo, ingresos };
   }, [companyId, desde, hasta]);
 
   const resumen = useMemo(
     () =>
       datos
-        ? calcularComisiones(datos.citas, datos.lineas, datos.catalogo, datos.trabajadores, new Date(), datos.congeladas)
+        ? calcularComisiones(datos.citas, datos.lineas, datos.catalogo, datos.trabajadores, new Date(), datos.congeladas, datos.ingresos)
         : null,
     [datos],
   );

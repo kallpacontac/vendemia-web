@@ -1076,6 +1076,14 @@ a{color:inherit;text-decoration:none}
   background:var(--bg-soft);border:1px solid var(--line);border-radius:var(--r-sm);padding:14px 16px}
 .cfg-enlace b{display:block;font-size:13.5px;color:var(--ink)}
 .cfg-enlace small{display:block;font-size:12px;color:var(--ink-soft);margin-top:2px}
+/* ¿Qué citas esperando pago ve el equipo? (datos 0030): tres posturas */
+.cfg-apartadas>div{flex:1 1 100%;min-width:0}
+.cfg-apartadas__ops{display:grid;gap:8px;margin-top:10px}
+.cfg-apartadas__op{display:flex;align-items:flex-start;gap:10px;padding:10px 12px;border:1px solid var(--line,#E7E5E0);border-radius:12px;cursor:pointer;background:var(--card,#fff)}
+.cfg-apartadas__op.on{border-color:var(--brand,#FF4F00);box-shadow:0 0 0 1px var(--brand,#FF4F00)}
+.cfg-apartadas__op input{width:18px;height:18px;margin-top:1px;flex:none;accent-color:var(--brand,#FF4F00)}
+.cfg-apartadas__op span{min-width:0}
+.cfg-apartadas__op small{margin-top:3px}
 
 /* ── Retargeting ─────────────────────────────────────────────────────────
    La nota de "los envías tú" NO es decoración: es lo único que separa esta
@@ -2474,6 +2482,12 @@ button.fpill{font-family:inherit;min-height:36px}
 .gc-tipo{font-size:12px;font-weight:700;color:var(--ink-mute)}
 .gc-tipo--adelanto{color:#C2410C}
 .gc-tipo--personal{color:#6D28D9}
+/* Ingreso sin ticket de un barbero: «Suma a su comisión», encendido de serie (datos 0031) */
+.gc-suma{display:flex;align-items:flex-start;gap:10px;padding:10px 12px;border:1px solid var(--line,#E7E5E0);border-radius:12px;cursor:pointer}
+.gc-suma input{width:20px;height:20px;margin-top:1px;flex:none;accent-color:var(--brand,#FF4F00)}
+.gc-suma span{display:grid;gap:2px;min-width:0}
+.gc-suma b{font-size:14px}
+.gc-suma small{font-size:12.5px;color:var(--ink-mute)}
 .mi-recibe{display:grid;gap:4px;margin-top:10px;padding:12px 14px;border-radius:14px;background:var(--bg-soft);font-size:14px}
 .mi-recibe span{display:flex;justify-content:space-between;gap:12px}
 .mi-recibe__menos b{color:#C2410C}

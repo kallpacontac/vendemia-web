@@ -11,6 +11,7 @@
  * meses). La comisión sale de calcularComisiones, la misma cuenta que la página Comisiones.
  */
 import { calcularComisiones } from '@/lib/panel/comisiones';
+import { getIngresosConComision } from '@/lib/panel/ingresosComision';
 import { isoLocal } from '@/lib/panel/format';
 import { supabase } from '@/lib/supabase/client';
 import {
@@ -109,15 +110,17 @@ export async function calcularPorPagar(
   const desde = periodo ? periodo.desde : desdeDeCuentas(primero, hoy);
   const hasta = periodo && periodo.hasta < isoLocal(hoy) ? periodo.hasta : isoLocal(hoy);
 
-  const [citas, trabajadores, catalogo, adelantos] = await Promise.all([
+  const [citas, trabajadores, catalogo, adelantos, ingresos] = await Promise.all([
     getCitasDelPeriodo(companyId, desde, hasta),
     getTrabajadores(companyId),
     getCatalogo(companyId),
     adelantosSinCerrar(companyId, desde, periodo ? hasta : undefined),
+    // Los ingresos sin ticket que suman (datos 0031): se pagan con id «ingreso:<id>».
+    getIngresosConComision(companyId, desde, hasta),
   ]);
   const ids = citas.map((c) => c.id);
   const [lineas, congeladas] = await Promise.all([getServiciosDeCitas(ids), getComisionesCongeladas(ids)]);
-  const resumen = calcularComisiones(citas, lineas, catalogo, trabajadores, hoy, congeladas);
+  const resumen = calcularComisiones(citas, lineas, catalogo, trabajadores, hoy, congeladas, ingresos);
 
   const citasPagadas = new Set(cierres.flatMap((c) => c.citas));
   const adelantosPagados = new Set(cierres.flatMap((c) => c.adelantos));
