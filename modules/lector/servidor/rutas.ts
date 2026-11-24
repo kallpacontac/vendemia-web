@@ -52,7 +52,9 @@ export async function vincular(req: Request) {
     return responder({ url: `${BASE()}/api/caja/aviso`, clave, negocio: r.negocio });
   } catch (e) {
     // P0001 = el raise del SQL, con el texto para la persona («Ese código no vale o ya caducó…»).
-    if (e instanceof ErrorRpc && e.code === 'P0001') return error(e.message, 400);
+    if (e instanceof ErrorRpc && e.code === 'P0001') {
+      return error('Ese código no vale o ya caducó. Pide uno nuevo en el panel: Configuración › Cobros.', 400);
+    }
     if (e instanceof Error && e.message === 'loyalty:invalid_input') return error('Petición no válida.', 400);
     return caida(e, 'vincular');
   }

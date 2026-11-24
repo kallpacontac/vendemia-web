@@ -4,13 +4,13 @@
 -- Vendemia Caja (app Android aparte, vendemia-root/vendemia-caja) lee el aviso de Yape, Plin o del
 -- banco en el celular del negocio. Esto es lo que lo une al panel:
 --
---   1. Vincular: el dueño o el administrador pide un CÓDIGO en el panel (Caja › Cobrar), lo escribe
+--   1. Vincular: el dueño o el administrador pide un CÓDIGO en el panel (Configuración › Cobros), lo escribe
 --      en la app (o escanea el QR) y la web le da al celular su clave propia. El código vale 15 min
 --      y una sola vez; la clave no sale nunca en un QR.
 --   2. Recibir: cada aviso llega firmado (HMAC con esa clave) a /api/caja/aviso, que lo guarda aquí
 --      una sola vez (dispositivo + huella) y apunta un aviso push de tipo 'pago', clase 'lector':
 --      lo reciben el dueño y el administrador (avisos 0002), con su silencio y sus preferencias.
---   3. Ver: «Lo que llegó» en Caja › Cobrar, con el estado del celular (último contacto).
+--   3. Ver: «Celular de cobros» en Configuración › Cobros, con el estado del celular (último contacto).
 --
 -- Lo que NO hace todavía: marcar solo una reserva o un pedido como pagado. Un aviso dice «llegó
 -- S/ 30 de ALVARO F…», no a qué cita corresponde; casarlo es la fase siguiente.
@@ -180,7 +180,7 @@ begin
      where codigo = upper(regexp_replace(coalesce(p_codigo, ''), '[^A-Za-z0-9]', '', 'g'))
      for update;
     if not found or v_cod.usado_at is not null or v_cod.expira < now() then
-        raise exception 'Ese código no vale o ya caducó. Pide uno nuevo en el panel: Caja › Cobrar.';
+        raise exception 'Ese código no vale o ya caducó. Pide uno nuevo en el panel: Configuración › Cobros.';
     end if;
     update public.lector_codigos set usado_at = now() where codigo = v_cod.codigo;
     insert into public.lector_dispositivos (id, company_id, clave, modelo, vinculado_por)

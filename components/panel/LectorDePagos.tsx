@@ -1,19 +1,17 @@
 'use client';
 
 /**
- * Los pagos que leyó Vendemia Caja en el celular del negocio, en la Caja, para dueño y
- * administrador. SQL: modules/lector/sql/0001_lector_de_pagos.sql.
+ * «Celular de cobros» en Configuración › Cobros (24-nov-2026, Alvaro: la conexión va en
+ * configuración, no en la Caja; la Caja no cambia). Dueño y administrador.
+ * SQL: modules/lector/sql/0001_lector_de_pagos.sql.
  *
- * Dos partes:
- *   · Ajustes («Celular del Yape», la tuerquita junto al título de la Caja): qué es, el celular
- *     conectado y si tiene señal, conectar uno con un código de 6 (o su QR) y desconectarlo.
- *   · «Llegó a tu Yape hoy» (pestaña Cobrar): la respuesta a «ya te yapeé». Se mira aquí, no la
- *     captura del cliente. Sin celular conectado no sale nada: Cobrar queda como siempre.
- * Si la SQL no está aplicada, no sale nada: ni errores en la Caja.
+ * Qué es la app Vendemia Caja, el celular conectado y si da señal, conectar uno con un código de 6
+ * (o su QR), desconectarlo, y los últimos pagos que leyó: para comprobar que funciona. Si la SQL no
+ * está aplicada, no sale nada.
  */
 import { useEffect, useState } from 'react';
 import QRCode from 'qrcode';
-import { X } from 'lucide-react';
+import { Check, Copy, Smartphone } from 'lucide-react';
 import { supabase } from '@/lib/supabase/client';
 import { useCargar } from '@/components/panel/useCargar';
 import { useSondeo } from '@/components/panel/useSondeo';
@@ -33,10 +31,7 @@ interface Aviso {
   id: number;
   centimos: number | null;
   nombre: string;
-  codigo: string | null;
   origen: string;
-  generico: boolean;
-  recuperado: boolean;
   cuando: string;
 }
 interface Estado {
@@ -44,7 +39,7 @@ interface Estado {
   avisos: Aviso[];
 }
 
-const POR_PAGINA = 8;
+const ULTIMOS = 5;
 /** El celular manda señal cada ~15 min mientras está despierto; dormido, cuando llega un aviso. */
 const VIVO_MIN = 30;
 
@@ -63,30 +58,23 @@ function hace(iso: string | null, ahora: number): string {
 const nombreBonito = (s: string) => s.trim().toLowerCase().replace(/\b\p{L}/gu, (l) => l.toUpperCase());
 const ultimaSenal = (d: Dispositivo) => [d.ultimo_latido, d.ultimo_aviso].filter((x): x is string => !!x).sort().pop() ?? null;
 
-export default function LectorDePagos({
-  companyId,
-  ajustes,
-  alAjustes,
-}: {
-  companyId: string;
-  /** La tuerquita del título de la Caja está abierta. */
-  ajustes: boolean;
-  alAjustes: (abierto: boolean) => void;
-}) {
+export default function LectorDePagos({ companyId }: { companyId: string }) {
   const [codigo, setCodigo] = useState<{ codigo: string; expira: string } | null>(null);
   const [qr, setQr] = useState('');
-  const [verTodos, setVerTodos] = useState(false);
   const [ocupado, setOcupado] = useState(false);
   const [error, setError] = useState('');
   const [ahora, setAhora] = useState(() => Date.now());
+  const [copiado, setCopiado] = useState(false);
 
+  // Los últimos 7 días: en Configuración sirve para comprobar que lee, no para cuadrar el día.
   const { datos, releer } = useCargar(async (): Promise<Estado | null> => {
-    const { data, error: e } = await supabase().rpc('lector_estado', { p_company: companyId });
+    const desde = new Date(Date.now() - 7 * 86_400_000).toISOString();
+    const { data, error: e } = await supabase().rpc('lector_estado', { p_company: companyId, p_desde: desde });
     return e ? null : (data as Estado);
   }, [companyId]);
 
-  // Con un código a la vista se pregunta seguido: la tarjeta cambia sola cuando el celular se conecta.
-  useSondeo(() => { releer(); setAhora(Date.now()); }, codigo ? 4_000 : 20_000);
+  // Con un código a la vista se pregunta seguido: cambia solo cuando el celular se conecta.
+  useSondeo(() => { releer(); setAhora(Date.now()); }, codigo ? 4_000 : 30_000);
 
   const conectados = datos?.dispositivos.length ?? 0;
   const [conectadosAntes, setConectadosAntes] = useState(conectados);
@@ -113,26 +101,46 @@ export default function LectorDePagos({
   }
 
   async function desconectar(d: Dispositivo) {
-    if (!window.confirm(`¿Desconectar ${d.modelo || 'este celular'}? Dejará de mandar los pagos aquí.`)) return;
+    if (!window.confirm(`¿Desconectar ${d.modelo || 'este celular'}? Dejará de mandar los pagos al panel.`)) return;
     const { error: e } = await supabase().rpc('lector_desvincular', { p_company: companyId, p_dispositivo: d.id });
     if (e) return setError(e.message);
     releer();
   }
 
-  // ── La tuerquita: conectar y ver el celular ──
+  async function copiar(texto: string) {
+    try {
+      await navigator.clipboard.writeText(texto);
+    } catch {
+      // Navegadores viejos o sin permiso: el texto seleccionado se copia igual.
+      const t = document.createElement('textarea');
+      t.value = texto;
+      document.body.appendChild(t);
+      t.select();
+      document.execCommand('copy');
+      t.remove();
+    }
+    setCopiado(true);
+    setTimeout(() => setCopiado(false), 2_000);
+  }
+
   const caducado = codigo ? new Date(codigo.expira).getTime() < ahora : false;
-  const panelAjustes = ajustes && (
-    <section id="lector-ajustes" className="card ldp" aria-label="Celular del Yape">
-      <div className="card-mini-head">
-        <h3>Celular del Yape</h3>
-        <button type="button" className="ldp-cerrar" aria-label="Cerrar" onClick={() => { setCodigo(null); alAjustes(false); }}>
-          <X size={18} />
-        </button>
-      </div>
+  // El enlace abre la app con el código puesto (o la página /caja/vincular si no la tiene).
+  const enlace = codigo ? `${typeof window === 'undefined' ? '' : window.location.origin}/caja/vincular?c=${codigo.codigo}` : '';
+  const whatsapp = codigo
+    ? `https://wa.me/?text=${encodeURIComponent(`Código para conectar Vendemia Caja: ${codigo.codigo}
+Ábrelo en el celular de cobros: ${enlace}`)}`
+    : '';
+  const ultimos = datos.avisos.filter((a) => a.centimos !== null).slice(0, ULTIMOS);
+
+  return (
+    <div className="sec ldp" id="celular-de-cobros">
+      <h4>
+        <Smartphone /> Celular de cobros
+      </h4>
       <p className="ldp-que">
         La app <b>Vendemia Caja</b> va en el celular donde te llegan los Yape, Plin o transferencias. Lee el aviso
-        de pago de ese celular, lo dice en voz alta y lo manda aquí; a ti y al administrador les llega como
-        notificación. Es la prueba de que el dinero llegó: una captura no lo es.
+        de pago, lo dice en voz alta y lo manda a tu panel, y a ti y al administrador les llega como notificación.
+        Es la prueba de que el dinero llegó: una captura no lo es.
       </p>
 
       {conectados > 0 && (
@@ -144,7 +152,7 @@ export default function LectorDePagos({
               <li key={d.id} className={vivo ? 'is-vivo' : ''}>
                 <span className="ldp-punto" aria-hidden="true" />
                 <span>
-                  <b>{d.modelo || 'Celular de la caja'}</b> · {vivo ? 'conectado' : 'sin señal'} {hace(ultimo, ahora)}
+                  <b>{d.modelo || 'Celular de cobros'}</b> · {vivo ? 'conectado' : 'sin señal'} {hace(ultimo, ahora)}
                   {d.por_enviar > 0 && ` · ${d.por_enviar} pagos por llegar`}
                   {d.version && <small className="muted"> · app {d.version}</small>}
                 </span>
@@ -169,9 +177,15 @@ export default function LectorDePagos({
                 <p className="ldp-codigo__num" aria-label={`Código ${codigo.codigo.split('').join(' ')}`}>
                   {codigo.codigo.slice(0, 3)}&nbsp;{codigo.codigo.slice(3)}
                 </p>
+                <div className="ldp-acciones">
+                  <button type="button" className="btn btn-primary btn-sm" onClick={() => copiar(codigo.codigo)}>
+                    {copiado ? <><Check size={15} /> Copiado</> : <><Copy size={15} /> Copiar código</>}
+                  </button>
+                  <a className="btn btn-ghost btn-sm" href={whatsapp} target="_blank" rel="noopener">Enviar por WhatsApp</a>
+                </div>
                 <ol>
                   <li>En el celular donde te llegan los Yape, abre <b>Vendemia Caja</b>.</li>
-                  <li>Toca <b>Conectar con Vendemia</b> y escribe este código. O escanea el QR con la cámara.</li>
+                  <li>Toca <b>Conectar con Vendemia</b>: el código copiado se pone solo. O escanea el QR con la cámara.</li>
                 </ol>
                 <small className="muted">Vale 15 minutos y una sola vez. Esto cambia solo cuando el celular se conecta.</small>
               </>
@@ -192,68 +206,29 @@ export default function LectorDePagos({
           </a>
         </div>
       )}
-      {error && <p className="ldp-aviso">{error}</p>}
-    </section>
-  );
 
-  // ── Sin celular: nada en Cobrar. El flujo de cobrar no cambia; solo está la tuerquita. ──
-  if (!conectados) return panelAjustes || null;
-
-  // ── Con celular: lo que llegó hoy ──
-  const leidos = datos.avisos.filter((a) => a.centimos !== null);
-  const total = leidos.reduce((t, a) => t + (a.centimos ?? 0), 0) / 100;
-  const lista = verTodos ? datos.avisos : datos.avisos.slice(0, POR_PAGINA);
-  const vivo = datos.dispositivos.some((d) => {
-    const u = ultimaSenal(d);
-    return !!u && ahora - new Date(u).getTime() < VIVO_MIN * 60_000;
-  });
-
-  return (
-    <>
-      {panelAjustes}
-      <section className="card ldp" aria-label="Pagos que llegaron a tu Yape">
-        <div className="card-mini-head">
-          <h3>Llegó a tu Yape hoy</h3>
-          <small className="muted">{leidos.length ? `${leidos.length} · ${soles(total)}` : 'Nada todavía'}</small>
-        </div>
-        {!vivo && (
-          <p className="ldp-aviso">
-            El celular del Yape no da señal: si está apagado o sin internet, los pagos llegarán cuando vuelva.
-          </p>
-        )}
-        {lista.length === 0 && <p className="muted ldp-nota">Cuando te yapeen, aparece aquí al instante.</p>}
-        {lista.length > 0 && (
-          <ul className="ldp-lista">
-            {lista.map((a) => (
-              <li key={a.id}>
-                <span className="ldp-hora">{hora(a.cuando)}</span>
-                {a.centimos !== null ? (
-                  <>
-                    <span className="ldp-quien">
-                      <b>{nombreBonito(a.nombre) || 'Sin nombre'}</b>
-                      <small>
-                        {[a.origen, a.codigo && `código ${a.codigo}`, a.generico && 'revisa el aviso en el celular', a.recuperado && 'llegó con retraso']
-                          .filter(Boolean).join(' · ')}
-                      </small>
-                    </span>
-                    <span className="ldp-monto">{soles(a.centimos / 100)}</span>
-                  </>
-                ) : (
+      {conectados > 0 && (
+        ultimos.length ? (
+          <>
+            <small className="muted">Últimos pagos que leyó</small>
+            <ul className="ldp-lista">
+              {ultimos.map((a) => (
+                <li key={a.id}>
+                  <span className="ldp-hora">{hora(a.cuando)}</span>
                   <span className="ldp-quien">
-                    <b className="ldp-sinleer">Aviso de {a.origen} sin leer</b>
-                    <small>Míralo en el celular: no se entendió el monto.</small>
+                    <b>{nombreBonito(a.nombre) || 'Sin nombre'}</b>
+                    <small>{a.origen}</small>
                   </span>
-                )}
-              </li>
-            ))}
-          </ul>
-        )}
-        {datos.avisos.length > POR_PAGINA && (
-          <button type="button" className="btn btn-ghost btn-sm" onClick={() => setVerTodos((v) => !v)}>
-            {verTodos ? 'Ver menos' : `Ver los ${datos.avisos.length}`}
-          </button>
-        )}
-      </section>
-    </>
+                  <span className="ldp-monto">{soles((a.centimos ?? 0) / 100)}</span>
+                </li>
+              ))}
+            </ul>
+          </>
+        ) : (
+          <p className="muted ldp-nota">Conectado. Para probar, que te yapeen S/ 1: aparecerá aquí.</p>
+        )
+      )}
+      {error && <p className="ldp-aviso">{error}</p>}
+    </div>
   );
 }

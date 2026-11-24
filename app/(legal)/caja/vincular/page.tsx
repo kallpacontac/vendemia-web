@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import Marco from '@/components/legal/Marco';
 
 /**
- * Lo que abre el QR de «Conectar celular» (Caja › Cobrar) cuando la cámara no entrega el enlace a la
+ * Lo que abre el QR de «Conectar celular» (Configuración › Cobros) cuando la cámara no entrega el enlace a la
  * app: muestra el código y un botón que abre Vendemia Caja con él ya puesto. La app también se abre
  * sola desde este enlace si Android verificó vendemias.com (public/.well-known/assetlinks.json).
  * ⚠️ La ruta va en la app (AndroidManifest: /caja/vincular). Si cambia, se cambia en los dos.
@@ -32,7 +32,7 @@ export default function Pagina({ searchParams }: { searchParams: { c?: string } 
           <p>Si el botón no hace nada, abre la app tú mismo, toca <b>Conectar con Vendemia</b> y escribe el código.</p>
         </>
       ) : (
-        <p>Pide el código en tu panel: <b>Caja › Cobrar › Conectar celular</b>.</p>
+        <p>Pide el código en tu panel: <b>Configuración › Cobros › Conectar celular</b>.</p>
       )}
       <p>
         ¿Aún no tienes la app? Escríbenos por{' '}

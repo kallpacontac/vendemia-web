@@ -37,6 +37,7 @@ import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import AvisosCelular from '@/components/panel/AvisosCelular';
 import GoogleCalendar from '@/components/panel/GoogleCalendar';
+import LectorDePagos from '@/components/panel/LectorDePagos';
 import {
   ArrowLeft,
   ArrowRight,
@@ -1597,6 +1598,8 @@ function Configuracion() {
               <SeccionFacturacion />
             </>
           )}
+          {/* El celular que lee los avisos de Yape/Plin/banco (app Vendemia Caja, lector 0001). */}
+          {gestiona && companyId && <LectorDePagos companyId={companyId} />}
             </div>
           </div>
 
