@@ -64,7 +64,7 @@ import { pideRevision, selloCumplido } from '@/lib/panel/confirmacion';
 import { vocabulario } from '@/lib/panel/vocabulario';
 import { claveGrupo, hoyLima, ocupa, reservando } from '@/lib/panel/inscripciones';
 import { quienDeCita } from '@/lib/panel/ficha';
-import { calcularComisiones } from '@/lib/panel/comisiones';
+import { calcularComisiones, DESDE_COBRO, esperaCaja } from '@/lib/panel/comisiones';
 import {
   getCatalogoDelEquipo,
   getCitasDelPeriodo,
@@ -308,7 +308,7 @@ function MisCitas({ companyId }: { companyId: string }) {
     await comando(
       'marcar_cumplido',
       { tipo: 'appointment', id: c.id, vino },
-      vino ? (c.pagado_por ? 'Anotado: atendido.' : 'Atendido: ya sale en Caja para cobrar, con tu nombre.') : 'Anotado: no vino.',
+      vino ? (c.pagado_por ? 'Anotado: atendido.' : 'Atendido: ya sale en Caja para cobrar. Tu parte cuenta cuando la cobren.') : 'Anotado: no vino.',
       releer,
     );
     setEnVuelo(null);
@@ -417,9 +417,16 @@ function MisCitas({ companyId }: { companyId: string }) {
             <LlegoSinCita
               companyId={companyId}
               alCerrar={() => setSinCita(false)}
-              alListo={() => {
+              alListo={(id, atendido) => {
                 setSinCita(false);
-                releer();
+                // «Ya lo atendí» (24-nov-2026): anotar y atender en un solo paso. Va a la Caja, a
+                // «Listos para cobrar»; su parte cuenta cuando la caja la cobre.
+                if (id && atendido) {
+                  void comando('marcar_cumplido', { tipo: 'appointment', id, vino: true },
+                    'Anotado y atendido: ya sale en Caja para cobrar, con tu nombre.', releer);
+                } else {
+                  releer();
+                }
               }}
             />
           )}
@@ -508,9 +515,17 @@ function FilaCita({
   const min = minutosDe(c);
   const estado = estadoDelPago(c, pago);
   // Apartada con la captura sin mirar: eso es lo que tiene que leer el barbero, no «Esperando pago».
+  // Atendida: la comisión cuenta al cobrarse (24-nov-2026). Que lo diga sin rodeos.
+  const cobradaYa = c.status === 'completed' && Boolean(c.pagado_por) && (c.slot_start ?? '') >= DESDE_COBRO;
   const etiqueta = c.status === 'pending_payment' && (pago?.por_revisar || adelanto?.por_revisar)
     ? { label: 'Pago sin verificar', color: '#B26B00' }
-    : sello;
+    : esperaCaja(c)
+      ? { label: 'Atendido · esperando caja', color: '#C2410C' }
+      : cobradaYa
+        ? { label: importe?.tuParte != null ? `Cobrado · tu parte ${soles(importe.tuParte)}` : 'Cobrado', color: '#0B7A4B' }
+        : sello;
+  // El sello del pago, sin repetir lo que ya dice el de arriba.
+  const pagoAparte = estado && !(c.status === 'completed' && (estado.tipo === 'pagado' || estado.tipo === 'porPagar' || cobradaYa));
   // «Atendido» con el pago a medias o sin verificar: antes, que lo corrobore con la caja.
   const [aviso, setAviso] = useState(false);
   const pideCorroborar = Boolean(estado && (estado.tipo === 'falta' || estado.tipo === 'sinVerificar'));
@@ -528,8 +543,8 @@ function FilaCita({
           {!c.employee_id && <span className="mia-sin">Sin asignar</span>}
           {/* Cómo va el pago (datos 0032). Sin ella, lo de antes: ¿pasó por caja lo que ya atendió? */}
           {estado ? (
-            <span className="badge-pill" style={{ color: estado.color, background: `${estado.color}18` }}>{estado.label}</span>
-          ) : c.status === 'completed' && (
+            pagoAparte && <span className="badge-pill" style={{ color: estado.color, background: `${estado.color}18` }}>{estado.label}</span>
+          ) : c.status === 'completed' && !esperaCaja(c) && !cobradaYa && (
             c.pagado_por
               ? <span className="badge-pill" style={{ color: '#0B7A4B', background: '#0FA96818' }}>Cobrado</span>
               : <span className="badge-pill" style={{ color: '#C2410C', background: '#C2410C18' }}>En caja · por cobrar</span>
@@ -758,7 +773,11 @@ const ahoraHHMM = () => {
  * catálogo: eso lo vuelve a decidir la base. La sede se recuerda en este celular (el barbero
  * suele estar siempre en la misma). Si la sede ya estaba llena, se crea igual y se avisa.
  */
-function LlegoSinCita({ companyId, alCerrar, alListo }: { companyId: string; alCerrar: () => void; alListo: () => void }) {
+function LlegoSinCita({ companyId, alCerrar, alListo }: {
+  companyId: string;
+  alCerrar: () => void;
+  alListo: (id?: string, atendido?: boolean) => void;
+}) {
   const avisar = useAvisar();
   const { datos, error } = useCargar(async () => {
     const { data, error: e } = await supabase().rpc('mi_agenda_sin_cita_datos', { p_company: companyId });
@@ -767,6 +786,8 @@ function LlegoSinCita({ companyId, alCerrar, alListo }: { companyId: string; alC
   }, [companyId]);
   const [nombre, setNombre] = useState('');
   const [tel, setTel] = useState('');
+  // Lo normal es anotarlo cuando ya terminó: encendido de serie.
+  const [yaAtendido, setYaAtendido] = useState(true);
   const [servicio, setServicio] = useState('');
   const [sede, setSede] = useState(() => {
     try {
@@ -807,10 +828,10 @@ function LlegoSinCita({ companyId, alCerrar, alListo }: { companyId: string; alC
     } catch {
       /* sin almacenamiento: la próxima vez la vuelve a elegir */
     }
-    const r = data as { servicio?: string; slot_start?: string; aviso?: string | null };
-    avisar(`Anotado: ${r.servicio ?? 'la cita'} a las ${(r.slot_start ?? '').slice(11, 16)}.`, 'ok');
+    const r = data as { id?: string; servicio?: string; slot_start?: string; aviso?: string | null };
+    if (!yaAtendido) avisar(`Anotado: ${r.servicio ?? 'la cita'} a las ${(r.slot_start ?? '').slice(11, 16)}.`, 'ok');
     if (r.aviso) avisar(r.aviso, 'error');
-    alListo();
+    alListo(r.id, yaAtendido);
   }
 
   return (
@@ -860,12 +881,19 @@ function LlegoSinCita({ companyId, alCerrar, alListo }: { companyId: string; alC
                 Empieza
                 <input className="input" type="time" value={horaInicio} onChange={(e) => setHoraInicio(e.target.value)} />
               </label>
+              <label className="gc-suma">
+                <input type="checkbox" checked={yaAtendido} onChange={(e) => setYaAtendido(e.target.checked)} />
+                <span>
+                  <b>Ya lo atendí</b>
+                  <small>{yaAtendido ? 'Pasa directo a la Caja para cobrar. Tu parte cuenta cuando la caja lo cobre.' : 'Queda en tu agenda; marcas «Atendido» al terminar.'}</small>
+                </span>
+              </label>
             </>
           )}
         </div>
         <div className="modal__pie">
           <button type="button" className="btn btn-ghost" onClick={alCerrar} disabled={enviando}>Cancelar</button>
-          <button type="submit" className="btn btn-primary" disabled={!datos || enviando}>{enviando ? 'Anotando…' : 'Anotar'}</button>
+          <button type="submit" className="btn btn-primary" disabled={!datos || enviando}>{enviando ? 'Anotando…' : (yaAtendido ? 'Anotar y atendido' : 'Anotar')}</button>
         </div>
       </form>
     </div>

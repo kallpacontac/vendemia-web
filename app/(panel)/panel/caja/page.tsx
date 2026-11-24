@@ -250,7 +250,25 @@ function Caja() {
 
   // Lo que el barbero acaba de marcar «Atendido» tiene que aparecer solo, sin recargar: el cliente
   // ya viene caminando hacia la caja con su ticket. Solo hoy, y con la pestaña a la vista.
-  useSondeo(releer, 20_000, dia === hoy);
+  // Latido (datos 0033, 24-nov-2026): cada 10 s UNA consulta mínima (la huella del día); solo si
+  // cambió se recarga todo. Y cada minuto, por si acaso, una recarga entera. Sin la 0033, cada 20 s.
+  const huella = useRef<{ clave: string; valor: string | null; tics: number }>({ clave: '', valor: null, tics: 0 });
+  useSondeo(async () => {
+    if (!companyId) return;
+    const clave = `${companyId}|${dia}`;
+    const h = huella.current;
+    if (h.clave !== clave) Object.assign(h, { clave, valor: null, tics: 0 });
+    h.tics += 1;
+    const { data, error } = await supabase().rpc('caja_latido', { p_company: companyId, p_dia: dia });
+    if (error) {
+      if (h.tics % 2 === 0) releer();
+      return;
+    }
+    const nueva = String(data ?? '');
+    const cambio = h.valor !== null && nueva !== h.valor;
+    h.valor = nueva;
+    if (cambio || h.tics % 6 === 0) releer();
+  }, 10_000, dia === hoy);
 
   const calculo = useMemo(() => {
     if (!datos || datos.dia !== dia || datos.sede !== sede || datos.barbero !== (cierre ? barbero : '')) return null;

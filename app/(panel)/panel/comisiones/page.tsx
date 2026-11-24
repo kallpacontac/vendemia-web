@@ -178,6 +178,21 @@ export default function Comisiones() {
           </div>
         </div>
 
+        {/* Atendidas sin cobrar: no cuentan hasta que la caja las cobre (24-nov-2026). */}
+        {(resumen?.esperandoCaja.citas ?? 0) > 0 && (
+          <div className="desfase" style={{ marginBottom: 14 }}>
+            <AlertTriangle size={15} style={{ verticalAlign: -2 }} />{' '}
+            <b>
+              {resumen!.esperandoCaja.citas} {resumen!.esperandoCaja.citas === 1 ? 'atención espera' : 'atenciones esperan'} que la caja las cobre
+            </b>{' '}
+            ({soles(resumen!.esperandoCaja.importe)}). La comisión cuenta al cobrarse, en{' '}
+            <Link href="/panel/caja" style={{ fontWeight: 700 }}>
+              Caja → Listos para cobrar
+            </Link>
+            .
+          </div>
+        )}
+
         {/* 2 · Lo que explica un total en cero. */}
         {(resumen?.sinMarcar.citas ?? 0) > 0 && (
           <div className="desfase" style={{ marginBottom: 14 }}>

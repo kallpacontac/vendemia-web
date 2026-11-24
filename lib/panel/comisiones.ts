@@ -9,7 +9,12 @@
  * discusión.
  *
  * ── Qué devenga comisión ─────────────────────────────────────────────────
- * Solo la cita COMPLETADA (decisión de Alvaro, 18-sep-2026). Una confirmada
+ * Desde el 24-nov-2026 (Alvaro, The 24/7): la cita ATENDIDA Y COBRADA. El «Atendido» del barbero
+ * no basta: la caja es la que valida al cobrarla (`pagado_por`). Hasta entonces sale en
+ * `esperandoCaja`. Lo de antes de DESDE_COBRO sigue con la regla vieja (completada = cuenta), para
+ * no reescribir comisiones ya pagadas ni filas anteriores a `pagado_por`.
+ *
+ * Antes: solo la cita COMPLETADA (decisión de Alvaro, 18-sep-2026). Una confirmada
  * todavía no ha ocurrido, y pagarla crea una deuda si luego no viene. Por eso
  * la comisión de un periodo es SIEMPRE menor que sus ingresos: los ingresos sí
  * cuentan las confirmadas (lib/panel/dinero.ts). La pantalla lo dice.
@@ -129,7 +134,16 @@ export interface ResumenComisiones {
   total: number;
   /** Citas con la hora ya pasada que siguen `confirmed`: nadie dijo si vino. */
   sinMarcar: { citas: number; importe: number };
+  /** Atendidas que la caja aún no cobró: no cuentan hasta que se cobren (24-nov-2026). */
+  esperandoCaja: { citas: number; importe: number; porEmpleado: Record<string, number> };
 }
+
+/** Desde este día, la comisión cuenta al COBRARSE la cita, no al marcarla atendida. */
+export const DESDE_COBRO = '2026-11-24';
+
+/** ¿Esta cita atendida espera todavía a que la caja la cobre? */
+export const esperaCaja = (c: Pick<Cita, 'status' | 'pagado_por' | 'slot_start'>): boolean =>
+  c.status === 'completed' && !c.pagado_por && (c.slot_start ?? '') >= DESDE_COBRO;
 
 const redondear = (n: number) => Math.round(n * 100) / 100;
 
@@ -193,6 +207,9 @@ export function calcularComisiones(
   const porProfesional = new Map<string, ComisionProfesional>();
   let sinMarcarCitas = 0;
   let sinMarcarImporte = 0;
+  let cajaCitas = 0;
+  let cajaImporte = 0;
+  const cajaPorEmpleado: Record<string, number> = {};
 
   for (const cita of citas) {
     const todas = lineasDe.get(cita.id) ?? [];
@@ -207,6 +224,14 @@ export function calcularComisiones(
       continue;
     }
     if (cita.status !== 'completed') continue;
+    // Atendida pero sin cobrar: la caja aún no la validó. No cuenta todavía.
+    if (esperaCaja(cita)) {
+      cajaCitas += 1;
+      cajaImporte += importe;
+      const e = cita.employee_id ?? '';
+      cajaPorEmpleado[e] = (cajaPorEmpleado[e] ?? 0) + 1;
+      continue;
+    }
 
     const empleado = cita.employee_id ?? '';
     const fila =
@@ -256,5 +281,6 @@ export function calcularComisiones(
     profesionales,
     total: redondear(profesionales.reduce((t, p) => t + p.comision, 0)),
     sinMarcar: { citas: sinMarcarCitas, importe: redondear(sinMarcarImporte) },
+    esperandoCaja: { citas: cajaCitas, importe: redondear(cajaImporte), porEmpleado: cajaPorEmpleado },
   };
 }

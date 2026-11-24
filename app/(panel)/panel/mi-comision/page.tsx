@@ -92,6 +92,7 @@ export default function MiComision() {
       pct: Number(mia?.comision_pct ?? 0),
       yo,
       sinMarcar: r.sinMarcar,
+      esperandoCaja: r.esperandoCaja,
     };
   }, [datos]);
 
@@ -126,6 +127,12 @@ export default function MiComision() {
                 ? <span>Último pago: <b>{solesExactos(cobro.datos.ultimo.pagado)}</b> el {diaMes(new Date(cobro.datos.ultimo.pagado_at))} ({cobro.datos.ultimo.metodo})</span>
                 : <span className="muted">Desde el {diaMes(new Date(`${cobro.datos.desde}T12:00`))}</span>}
             </div>
+            {resumen && resumen.esperandoCaja.citas > 0 && (
+              <p className="mi-cobro__ojo">
+                {resumen.esperandoCaja.citas} {resumen.esperandoCaja.citas === 1 ? 'atención espera' : 'atenciones esperan'} que la caja
+                {resumen.esperandoCaja.citas === 1 ? ' la cobre' : ' las cobre'} ({soles(resumen.esperandoCaja.importe)}): tu parte cuenta al cobrarse.
+              </p>
+            )}
             {resumen && resumen.sinMarcar.citas > 0 && (
               <p className="mi-cobro__ojo">
                 {resumen.sinMarcar.citas} {resumen.sinMarcar.citas === 1 ? 'cita pasada no cuenta' : 'citas pasadas no cuentan'} hasta que
