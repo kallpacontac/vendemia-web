@@ -2707,6 +2707,12 @@ button.fpill{font-family:inherit;min-height:36px}
 /* Mi agenda › el precio de cada cita y lo que gana el barbero (19-nov, The 24/7). */
 .mia-importe{display:inline-flex;flex-wrap:wrap;gap:4px;align-items:baseline;margin:2px 0;font-size:14px;font-weight:700;color:var(--ink,#151515)}
 .mia-importe b{color:#0B7A4B}
+/* «Corrobora con caja el pago total de la cita» (datos 0032) */
+.mia-corrobora{max-width:380px}
+.mia-corrobora .modal__cuerpo{display:grid;justify-items:center;gap:8px;text-align:center}
+.mia-corrobora__icono{color:#C2410C}
+.mia-corrobora b{font-size:16px;line-height:1.3}
+.mia-corrobora p{margin:0;font-size:14px;color:var(--ink-soft)}
 .mia-adelanto{display:block;margin:2px 0;font-size:12.5px;font-weight:600;color:#B26B00}
 .mag-ganado{display:grid;gap:2px;padding:14px 18px;margin-bottom:14px;background:#ECFDF3;border:1.5px solid #86EFAC}
 .mag-ganado small{font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:#15803D}

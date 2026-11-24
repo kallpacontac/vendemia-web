@@ -46,7 +46,7 @@
  */
 import { Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { Banknote, Check, ChevronLeft, ChevronRight, UserPlus, X } from 'lucide-react';
+import { AlertTriangle, Banknote, Check, ChevronLeft, ChevronRight, UserPlus, X } from 'lucide-react';
 import Link from 'next/link';
 import Topbar from '@/components/panel/Topbar';
 import AvisosDelEquipo from '@/components/panel/AvisosDelEquipo';
@@ -197,6 +197,14 @@ function MisCitas({ companyId }: { companyId: string }) {
       if (!error && data) adelantos = data as Record<string, Adelanto>;
     }
     const citas = vePorPagar ? todas : todas.filter((c) => c.status !== 'pending_payment' || (veConCaptura && c.id in adelantos));
+    // Cómo va el pago de cada una (datos 0032): «Falta pagar S/ 10», «Pago sin verificar», «Pagado».
+    // Sin la 0032, sin sello de pago (como antes).
+    let pagos: Record<string, PagoCita> = {};
+    const vivas = citas.filter((c) => c.status !== 'cancelled').map((c) => c.id);
+    if (vivas.length) {
+      const { data, error } = await supabase().rpc('mi_pagos', { p_company: companyId, p_ids: vivas });
+      if (!error && data) pagos = data as Record<string, PagoCita>;
+    }
     // Lo que falta en cada una: solo si cobra, y la base decide cuáles le tocan.
     // Sus citas: el precio de cada una y lo que gana (19-nov, The 24/7: «que en los barberos
     // aparezcan las citas y el precio de los cortes, y su monto actualizado por cada cita cobrada»).
@@ -216,7 +224,7 @@ function MisCitas({ companyId }: { companyId: string }) {
         saldos = Object.fromEntries(Object.entries(data as Record<string, unknown>).map(([k, n]) => [k, Number(n)]));
       }
     }
-    return { lunes, negocio, citas, clientes, saldos, adelantos, lineas: [...lineas], congeladas: [...congeladas], pct };
+    return { lunes, negocio, citas, clientes, saldos, adelantos, pagos, lineas: [...lineas], congeladas: [...congeladas], pct };
   }, [companyId, lunes, cobra, vePorPagar, veConCaptura]);
 
   // Lo que casi no cambia: el catálogo (tarifas y qué es producto). Se relee cada 5 min.
@@ -433,6 +441,7 @@ function MisCitas({ companyId }: { companyId: string }) {
                 alMarcar={marcar}
                 falta={datos?.saldos[c.id] ?? 0}
                 adelanto={c.status === 'pending_payment' ? datos?.adelantos[c.id] : undefined}
+                pago={datos?.pagos[c.id]}
                 importe={c.employee_id === ficha ? importes.get(c.id) : undefined}
                 cobrando={cobrando === c.id}
                 alCobrar={(abrir) => setCobrando(abrir ? c.id : null)}
@@ -461,6 +470,7 @@ function FilaCita({
   alMarcar,
   falta,
   adelanto,
+  pago,
   importe,
   cobrando,
   alCobrar,
@@ -479,6 +489,8 @@ function FilaCita({
   falta: number;
   /** De una apartada: el total, lo pagado y el adelanto que la confirma (datos 0029). */
   adelanto?: Adelanto;
+  /** Cómo va su pago (datos 0032). */
+  pago?: PagoCita;
   /** El precio de sus servicios y, ya atendida, lo que gana él. Solo en las suyas. */
   importe?: { precio: number; tuParte: number | null };
   cobrando: boolean;
@@ -494,6 +506,14 @@ function FilaCita({
     empezo && (c.status === 'confirmed' || pideRevision(selloCumplido('appointment', c.status, c.cumplido_por)));
   const quien = quienDeCita(c, cliente?.name?.trim());
   const min = minutosDe(c);
+  const estado = estadoDelPago(c, pago);
+  // Apartada con la captura sin mirar: eso es lo que tiene que leer el barbero, no «Esperando pago».
+  const etiqueta = c.status === 'pending_payment' && (pago?.por_revisar || adelanto?.por_revisar)
+    ? { label: 'Pago sin verificar', color: '#B26B00' }
+    : sello;
+  // «Atendido» con el pago a medias o sin verificar: antes, que lo corrobore con la caja.
+  const [aviso, setAviso] = useState(false);
+  const pideCorroborar = Boolean(estado && (estado.tipo === 'falta' || estado.tipo === 'sinVerificar'));
   return (
     <div ref={filaRef} className={`mia-fila${sello.enCurso ? ' mia-fila--ahora' : ''}${enFoco ? ' mia-fila--foco' : ''}`}>
       <span className="mia-hora">
@@ -502,12 +522,14 @@ function FilaCita({
       </span>
       <div className="mia-quien">
         <div className="mia-sellos">
-          <span className="badge-pill" style={{ color: sello.color, background: `${sello.color}18` }}>
-            {sello.label}
+          <span className="badge-pill" style={{ color: etiqueta.color, background: `${etiqueta.color}18` }}>
+            {etiqueta.label}
           </span>
           {!c.employee_id && <span className="mia-sin">Sin asignar</span>}
-          {/* Lo que ya atendió: ¿pasó por caja? Así sabe si su cliente pagó. */}
-          {c.status === 'completed' && (
+          {/* Cómo va el pago (datos 0032). Sin ella, lo de antes: ¿pasó por caja lo que ya atendió? */}
+          {estado ? (
+            <span className="badge-pill" style={{ color: estado.color, background: `${estado.color}18` }}>{estado.label}</span>
+          ) : c.status === 'completed' && (
             c.pagado_por
               ? <span className="badge-pill" style={{ color: '#0B7A4B', background: '#0FA96818' }}>Cobrado</span>
               : <span className="badge-pill" style={{ color: '#C2410C', background: '#C2410C18' }}>En caja · por cobrar</span>
@@ -530,7 +552,8 @@ function FilaCita({
         <div className="mia-acciones">
           {porMarcar && (
             <>
-              <button type="button" className="btn btn-primary btn-sm" disabled={ocupado} onClick={() => alMarcar(c, true)}>
+              <button type="button" className="btn btn-primary btn-sm" disabled={ocupado}
+                onClick={() => (pideCorroborar ? setAviso(true) : alMarcar(c, true))}>
                 <Check size={14} /> Atendido
               </button>
               <button type="button" className="btn btn-ghost btn-sm confirmar-no" disabled={ocupado} onClick={() => alMarcar(c, false)}>
@@ -548,8 +571,58 @@ function FilaCita({
       {cobrando && falta > 0 && (
         <CobrarSaldo companyId={companyId} cita={c} falta={falta} alCerrar={() => alCobrar(false)} alListo={alCobrado} />
       )}
+      {aviso && estado && pago && (
+        <div className="modal-fondo" role="presentation" onClick={(e) => { if (e.target === e.currentTarget) setAviso(false); }}>
+          <div className="modal mia-corrobora" role="alertdialog" aria-modal="true" aria-labelledby={`corrobora-${c.id}`}>
+            <div className="modal__cuerpo">
+              <AlertTriangle size={28} className="mia-corrobora__icono" aria-hidden />
+              <b id={`corrobora-${c.id}`}>Corrobora con caja el pago total de la cita</b>
+              <p>
+                {estado.tipo === 'sinVerificar'
+                  ? `El cliente mandó la captura del pago, pero aún nadie la verificó. Total de la cita: ${soles(pago.total)}.`
+                  : `Pagó ${soles(pago.pagado)} de ${soles(pago.total)}: faltan ${soles(Math.max(pago.total - pago.pagado, 0))}.`}
+              </p>
+            </div>
+            <div className="modal__pie">
+              <button type="button" className="btn btn-ghost" onClick={() => setAviso(false)}>Volver</button>
+              <button type="button" className="btn btn-primary" autoFocus
+                onClick={() => { setAviso(false); alMarcar(c, true); }}>
+                <Check size={14} /> Entendido, atendido
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
+}
+
+/** Lo que devuelve mi_pagos por cita (datos 0032). */
+interface PagoCita {
+  total: number;
+  pagado: number;
+  /** Hay una captura que nadie ha verificado. */
+  por_revisar: boolean;
+  /** La caja la dio por cobrada entera. */
+  cobrada: boolean;
+}
+
+/**
+ * El sello del pago, en palabras de mostrador (24-nov-2026, Alvaro: «si falta completar que diga
+ * el monto, y sin verificar que lo diga»). null = no hay nada que decir (sin precio, cancelada,
+ * o la apartada, que ya lo dice con su sello y el detalle del adelanto).
+ */
+function estadoDelPago(c: Cita, p: PagoCita | undefined):
+  { tipo: 'pagado' | 'sinVerificar' | 'falta' | 'porPagar'; label: string; color: string } | null {
+  if (!p || c.status === 'cancelled' || c.status === 'pending_payment') return null;
+  const total = Number(p.total) || 0;
+  const pagado = Number(p.pagado) || 0;
+  if (total <= 0 && !p.cobrada) return null;
+  if (p.cobrada || pagado >= total) return { tipo: 'pagado', label: 'Pagado', color: '#0B7A4B' };
+  if (p.por_revisar) return { tipo: 'sinVerificar', label: 'Pago sin verificar', color: '#B26B00' };
+  const falta = Math.round((total - pagado) * 100) / 100;
+  if (pagado > 0) return { tipo: 'falta', label: `Falta pagar ${soles(falta)}`, color: '#C2410C' };
+  return { tipo: 'porPagar', label: `Por pagar ${soles(total)}`, color: '#C2410C' };
 }
 
 /** Lo que devuelve mi_adelantos por cita (datos 0029). */
@@ -711,8 +784,9 @@ function LlegoSinCita({ companyId, alCerrar, alListo }: { companyId: string; alC
 
   async function guardar(e: React.FormEvent) {
     e.preventDefault();
-    if (!nombre.trim()) return avisar('Escribe el nombre del cliente.', 'error');
-    if (tel.replace(/\D/g, '').length < 9) return avisar('Escribe su celular: con él le llegan sus avisos y su tarjeta.', 'error');
+    // Nombre y celular opcionales (24-nov-2026, tu-pagina 0035). El celular, si lo escribe, entero.
+    const digitos = tel.replace(/\D/g, '');
+    if (digitos && digitos.length < 9) return avisar('Ese celular no está completo: escribe los 9 dígitos o déjalo vacío.', 'error');
     if (!servicio) return avisar('Elige el servicio.', 'error');
     if (!sedeValida) return avisar('Elige en qué sede estás.', 'error');
     setEnviando(true);
@@ -753,11 +827,11 @@ function LlegoSinCita({ companyId, alCerrar, alListo }: { companyId: string; alC
             <>
               <p className="muted" style={{ margin: 0 }}>Queda en tu agenda, hoy, al precio de la carta.</p>
               <label className="field-label" style={{ display: 'grid', gap: 4 }}>
-                Nombre
+                <span>Nombre <small className="muted">opcional</small></span>
                 <input className="input" value={nombre} onChange={(e) => setNombre(e.target.value)} autoComplete="off" autoFocus />
               </label>
               <label className="field-label" style={{ display: 'grid', gap: 4 }}>
-                Celular
+                <span>Celular <small className="muted">opcional · con él le llegan sus avisos y su tarjeta</small></span>
                 <input className="input" inputMode="tel" placeholder="9…" value={tel} onChange={(e) => setTel(e.target.value)} autoComplete="off" />
               </label>
               <label className="field-label" style={{ display: 'grid', gap: 4 }}>

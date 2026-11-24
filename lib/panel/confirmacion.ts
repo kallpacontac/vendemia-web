@@ -144,7 +144,10 @@ export function selloPagado(tipo: Tipo, estado: string | null, pagadoPor: string
  */
 export function selloCumplido(tipo: Tipo, estado: string | null, cumplidoPor: string | null): Sello {
   const cumplido = tipo === 'order' ? PEDIDO_CUMPLIDO : CITA_CUMPLIDA;
-  if (!estado || !cumplido.has(estado)) return PENDIENTE_CUMPLIDO;
+  // «Sin resolver» no se entendía (24-nov-2026, The 24/7): dice qué falta hacer.
+  if (!estado || !cumplido.has(estado)) {
+    return { ...PENDIENTE_CUMPLIDO, label: tipo === 'order' ? '¿Se entregó? Márcalo' : '¿Vino? Márcalo' };
+  }
 
   const noVino = estado === 'no_show';
 
