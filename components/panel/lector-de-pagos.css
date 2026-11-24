@@ -33,3 +33,10 @@
 .ldp-monto { font-weight: 700; font-size: 15px; font-variant-numeric: tabular-nums; }
 .ldp-sinleer { color: var(--warm, #B26B00); }
 .ldp-aviso { margin: 0; font-size: 12.5px; color: #B42318; font-weight: 600; }
+
+/* La tuerquita «Celular del Yape». */
+.ldp-cerrar { border: 0; background: none; padding: 4px; color: var(--ink-soft, #5C5C5C); cursor: pointer; display: grid; place-items: center; }
+.ldp-que { margin: 0; font-size: 13px; line-height: 1.45; color: var(--ink-soft, #5C5C5C); }
+
+/* En el celular, solo la tuerquita junto al título. */
+@media (max-width: 560px) { .ldp-tuerca__txt { display: none; } }

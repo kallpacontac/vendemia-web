@@ -1,16 +1,19 @@
 'use client';
 
 /**
- * «Lo que llegó a tu Yape»: los pagos que leyó Vendemia Caja en el celular del negocio, en la Caja
- * (pestaña Cobrar), para dueño y administrador. SQL: modules/lector/sql/0001_lector_de_pagos.sql.
+ * Los pagos que leyó Vendemia Caja en el celular del negocio, en la Caja, para dueño y
+ * administrador. SQL: modules/lector/sql/0001_lector_de_pagos.sql.
  *
- * Es la respuesta a «ya te yapeé»: se mira aquí, no la captura del cliente. Sin celular conectado
- * la tarjeta ofrece conectarlo (un código de 6 que se escribe en la app, o su QR). Si la SQL aún no
- * está aplicada, la tarjeta no sale: nada de errores en la Caja.
+ * Dos partes:
+ *   · Ajustes («Celular del Yape», la tuerquita junto al título de la Caja): qué es, el celular
+ *     conectado y si tiene señal, conectar uno con un código de 6 (o su QR) y desconectarlo.
+ *   · «Llegó a tu Yape hoy» (pestaña Cobrar): la respuesta a «ya te yapeé». Se mira aquí, no la
+ *     captura del cliente. Sin celular conectado no sale nada: Cobrar queda como siempre.
+ * Si la SQL no está aplicada, no sale nada: ni errores en la Caja.
  */
 import { useEffect, useState } from 'react';
 import QRCode from 'qrcode';
-import { Smartphone } from 'lucide-react';
+import { X } from 'lucide-react';
 import { supabase } from '@/lib/supabase/client';
 import { useCargar } from '@/components/panel/useCargar';
 import { useSondeo } from '@/components/panel/useSondeo';
@@ -58,8 +61,18 @@ function hace(iso: string | null, ahora: number): string {
 }
 
 const nombreBonito = (s: string) => s.trim().toLowerCase().replace(/\b\p{L}/gu, (l) => l.toUpperCase());
+const ultimaSenal = (d: Dispositivo) => [d.ultimo_latido, d.ultimo_aviso].filter((x): x is string => !!x).sort().pop() ?? null;
 
-export default function LectorDePagos({ companyId }: { companyId: string }) {
+export default function LectorDePagos({
+  companyId,
+  ajustes,
+  alAjustes,
+}: {
+  companyId: string;
+  /** La tuerquita del título de la Caja está abierta. */
+  ajustes: boolean;
+  alAjustes: (abierto: boolean) => void;
+}) {
   const [codigo, setCodigo] = useState<{ codigo: string; expira: string } | null>(null);
   const [qr, setQr] = useState('');
   const [verTodos, setVerTodos] = useState(false);
@@ -76,9 +89,11 @@ export default function LectorDePagos({ companyId }: { companyId: string }) {
   useSondeo(() => { releer(); setAhora(Date.now()); }, codigo ? 4_000 : 20_000);
 
   const conectados = datos?.dispositivos.length ?? 0;
+  const [conectadosAntes, setConectadosAntes] = useState(conectados);
   useEffect(() => {
-    if (codigo && conectados > 0) setCodigo(null);
-  }, [codigo, conectados]);
+    if (codigo && conectados > conectadosAntes) setCodigo(null);
+    setConectadosAntes(conectados);
+  }, [codigo, conectados, conectadosAntes]);
 
   useEffect(() => {
     if (!codigo) return setQr('');
@@ -104,130 +119,141 @@ export default function LectorDePagos({ companyId }: { companyId: string }) {
     releer();
   }
 
+  // ── La tuerquita: conectar y ver el celular ──
   const caducado = codigo ? new Date(codigo.expira).getTime() < ahora : false;
-  const panelCodigo = codigo && (
-    <div className="ldp-codigo">
-      {qr && !caducado && (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={qr} alt="QR para conectar el celular" width={150} height={150} />
-      )}
-      <div>
-        {caducado ? (
-          <p className="ldp-aviso">El código caducó. Pide otro.</p>
-        ) : (
-          <>
-            <p className="ldp-codigo__num" aria-label={`Código ${codigo.codigo.split('').join(' ')}`}>
-              {codigo.codigo.slice(0, 3)}&nbsp;{codigo.codigo.slice(3)}
-            </p>
-            <ol>
-              <li>En el celular donde tienes tu Yape, abre <b>Vendemia Caja</b>.</li>
-              <li>Toca <b>Conectar con Vendemia</b> y escribe este código, o escanea el QR con la cámara.</li>
-            </ol>
-            <small className="muted">Vale 15 minutos y una sola vez. Esta tarjeta cambia sola al conectarse.</small>
-          </>
-        )}
-        <div className="ldp-acciones">
-          {caducado && <button type="button" className="btn btn-primary btn-sm" onClick={pedirCodigo} disabled={ocupado}>Otro código</button>}
-          <button type="button" className="btn btn-ghost btn-sm" onClick={() => setCodigo(null)}>Cerrar</button>
-        </div>
+  const panelAjustes = ajustes && (
+    <section id="lector-ajustes" className="card ldp" aria-label="Celular del Yape">
+      <div className="card-mini-head">
+        <h3>Celular del Yape</h3>
+        <button type="button" className="ldp-cerrar" aria-label="Cerrar" onClick={() => { setCodigo(null); alAjustes(false); }}>
+          <X size={18} />
+        </button>
       </div>
-    </div>
+      <p className="ldp-que">
+        La app <b>Vendemia Caja</b> va en el celular donde te llegan los Yape, Plin o transferencias. Lee el aviso
+        de pago de ese celular, lo dice en voz alta y lo manda aquí; a ti y al administrador les llega como
+        notificación. Es la prueba de que el dinero llegó: una captura no lo es.
+      </p>
+
+      {conectados > 0 && (
+        <ul className="ldp-celulares">
+          {datos.dispositivos.map((d) => {
+            const ultimo = ultimaSenal(d);
+            const vivo = !!ultimo && ahora - new Date(ultimo).getTime() < VIVO_MIN * 60_000;
+            return (
+              <li key={d.id} className={vivo ? 'is-vivo' : ''}>
+                <span className="ldp-punto" aria-hidden="true" />
+                <span>
+                  <b>{d.modelo || 'Celular de la caja'}</b> · {vivo ? 'conectado' : 'sin señal'} {hace(ultimo, ahora)}
+                  {d.por_enviar > 0 && ` · ${d.por_enviar} pagos por llegar`}
+                  {d.version && <small className="muted"> · app {d.version}</small>}
+                </span>
+                <button type="button" className="ldp-quitar" onClick={() => desconectar(d)}>Desconectar</button>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+
+      {codigo ? (
+        <div className="ldp-codigo">
+          {qr && !caducado && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={qr} alt="QR para conectar el celular" width={150} height={150} />
+          )}
+          <div>
+            {caducado ? (
+              <p className="ldp-aviso">El código caducó. Pide otro.</p>
+            ) : (
+              <>
+                <p className="ldp-codigo__num" aria-label={`Código ${codigo.codigo.split('').join(' ')}`}>
+                  {codigo.codigo.slice(0, 3)}&nbsp;{codigo.codigo.slice(3)}
+                </p>
+                <ol>
+                  <li>En el celular donde te llegan los Yape, abre <b>Vendemia Caja</b>.</li>
+                  <li>Toca <b>Conectar con Vendemia</b> y escribe este código. O escanea el QR con la cámara.</li>
+                </ol>
+                <small className="muted">Vale 15 minutos y una sola vez. Esto cambia solo cuando el celular se conecta.</small>
+              </>
+            )}
+            <div className="ldp-acciones">
+              {caducado && <button type="button" className="btn btn-primary btn-sm" onClick={pedirCodigo} disabled={ocupado}>Otro código</button>}
+              <button type="button" className="btn btn-ghost btn-sm" onClick={() => setCodigo(null)}>Cancelar</button>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div className="ldp-acciones">
+          <button type="button" className="btn btn-primary btn-sm" onClick={pedirCodigo} disabled={ocupado}>
+            {conectados ? 'Conectar otro celular' : 'Conectar celular'}
+          </button>
+          <a className="btn btn-ghost btn-sm" href="https://wa.me/51947144701?text=Hola%2C%20quiero%20instalar%20Vendemia%20Caja" target="_blank" rel="noopener">
+            ¿No tienes la app? Escríbenos
+          </a>
+        </div>
+      )}
+      {error && <p className="ldp-aviso">{error}</p>}
+    </section>
   );
 
-  // ── Sin celular conectado: la invitación ──
-  if (!conectados) {
-    return (
-      <section className="card ldp" aria-label="Pagos que llegan a tu Yape">
-        <div className="ldp-vacio">
-          <Smartphone size={22} aria-hidden="true" />
-          <div>
-            <b>Mira aquí cada Yape que te llega, al instante</b>
-            <small className="muted">
-              Sin fiarte de capturas: la app Vendemia Caja lee el aviso de tu Yape, Plin o banco en tu celular y te lo
-              muestra aquí, y te avisa aunque no estés en el local.
-            </small>
-          </div>
-          {!codigo && (
-            <button type="button" className="btn btn-primary btn-sm" onClick={pedirCodigo} disabled={ocupado}>
-              Conectar celular
-            </button>
-          )}
-        </div>
-        {panelCodigo}
-        {error && <p className="ldp-aviso">{error}</p>}
-      </section>
-    );
-  }
+  // ── Sin celular: nada en Cobrar. El flujo de cobrar no cambia; solo está la tuerquita. ──
+  if (!conectados) return panelAjustes || null;
 
   // ── Con celular: lo que llegó hoy ──
   const leidos = datos.avisos.filter((a) => a.centimos !== null);
   const total = leidos.reduce((t, a) => t + (a.centimos ?? 0), 0) / 100;
   const lista = verTodos ? datos.avisos : datos.avisos.slice(0, POR_PAGINA);
+  const vivo = datos.dispositivos.some((d) => {
+    const u = ultimaSenal(d);
+    return !!u && ahora - new Date(u).getTime() < VIVO_MIN * 60_000;
+  });
 
   return (
-    <section className="card ldp" aria-label="Pagos que llegaron a tu Yape">
-      <div className="card-mini-head">
-        <h3>Llegó a tu Yape hoy</h3>
-        <small className="muted">{leidos.length ? `${leidos.length} · ${soles(total)}` : 'Nada todavía'}</small>
-      </div>
-
-      <ul className="ldp-celulares">
-        {datos.dispositivos.map((d) => {
-          const ultimo = [d.ultimo_latido, d.ultimo_aviso].filter(Boolean).sort().pop() ?? null;
-          const vivo = !!ultimo && ahora - new Date(ultimo).getTime() < VIVO_MIN * 60_000;
-          return (
-            <li key={d.id} className={vivo ? 'is-vivo' : ''}>
-              <span className="ldp-punto" aria-hidden="true" />
-              <span>
-                {d.modelo || 'Celular de la caja'} · {vivo ? 'conectado' : 'sin señal'} {hace(ultimo, ahora)}
-                {d.por_enviar > 0 && ` · ${d.por_enviar} por llegar`}
-              </span>
-              <button type="button" className="ldp-quitar" onClick={() => desconectar(d)}>Desconectar</button>
-            </li>
-          );
-        })}
-      </ul>
-      {datos.dispositivos.every((d) => !d.ultimo_latido && !d.ultimo_aviso) && (
-        <p className="muted ldp-nota">Conectado. Pide que te yapeen S/ 1 para probar: aparecerá aquí.</p>
-      )}
-
-      {lista.length > 0 && (
-        <ul className="ldp-lista">
-          {lista.map((a) => (
-            <li key={a.id}>
-              <span className="ldp-hora">{hora(a.cuando)}</span>
-              {a.centimos !== null ? (
-                <>
+    <>
+      {panelAjustes}
+      <section className="card ldp" aria-label="Pagos que llegaron a tu Yape">
+        <div className="card-mini-head">
+          <h3>Llegó a tu Yape hoy</h3>
+          <small className="muted">{leidos.length ? `${leidos.length} · ${soles(total)}` : 'Nada todavía'}</small>
+        </div>
+        {!vivo && (
+          <p className="ldp-aviso">
+            El celular del Yape no da señal: si está apagado o sin internet, los pagos llegarán cuando vuelva.
+          </p>
+        )}
+        {lista.length === 0 && <p className="muted ldp-nota">Cuando te yapeen, aparece aquí al instante.</p>}
+        {lista.length > 0 && (
+          <ul className="ldp-lista">
+            {lista.map((a) => (
+              <li key={a.id}>
+                <span className="ldp-hora">{hora(a.cuando)}</span>
+                {a.centimos !== null ? (
+                  <>
+                    <span className="ldp-quien">
+                      <b>{nombreBonito(a.nombre) || 'Sin nombre'}</b>
+                      <small>
+                        {[a.origen, a.codigo && `código ${a.codigo}`, a.generico && 'revisa el aviso en el celular', a.recuperado && 'llegó con retraso']
+                          .filter(Boolean).join(' · ')}
+                      </small>
+                    </span>
+                    <span className="ldp-monto">{soles(a.centimos / 100)}</span>
+                  </>
+                ) : (
                   <span className="ldp-quien">
-                    <b>{nombreBonito(a.nombre) || 'Sin nombre'}</b>
-                    <small>
-                      {[a.origen, a.codigo && `código ${a.codigo}`, a.generico && 'revisa el aviso en el celular', a.recuperado && 'llegó con retraso']
-                        .filter(Boolean).join(' · ')}
-                    </small>
+                    <b className="ldp-sinleer">Aviso de {a.origen} sin leer</b>
+                    <small>Míralo en el celular: no se entendió el monto.</small>
                   </span>
-                  <span className="ldp-monto">{soles(a.centimos / 100)}</span>
-                </>
-              ) : (
-                <span className="ldp-quien">
-                  <b className="ldp-sinleer">Aviso de {a.origen} sin leer</b>
-                  <small>Míralo en el celular: no se entendió el monto.</small>
-                </span>
-              )}
-            </li>
-          ))}
-        </ul>
-      )}
-      {datos.avisos.length > POR_PAGINA && (
-        <button type="button" className="btn btn-ghost btn-sm" onClick={() => setVerTodos((v) => !v)}>
-          {verTodos ? 'Ver menos' : `Ver los ${datos.avisos.length}`}
-        </button>
-      )}
-
-      {panelCodigo}
-      {!codigo && (
-        <button type="button" className="ldp-otro" onClick={pedirCodigo} disabled={ocupado}>+ Conectar otro celular</button>
-      )}
-      {error && <p className="ldp-aviso">{error}</p>}
-    </section>
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
+        {datos.avisos.length > POR_PAGINA && (
+          <button type="button" className="btn btn-ghost btn-sm" onClick={() => setVerTodos((v) => !v)}>
+            {verTodos ? 'Ver menos' : `Ver los ${datos.avisos.length}`}
+          </button>
+        )}
+      </section>
+    </>
   );
 }

@@ -37,7 +37,7 @@
 import { Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { QrCode, Receipt, Wallet } from 'lucide-react';
+import { QrCode, Receipt, Settings2, Wallet } from 'lucide-react';
 import CajaResumen from '@/components/panel/CajaResumen';
 import CobrarTicket from '@/components/panel/CobrarTicket';
 import { PendientesCaja, useSinConexion } from '@/components/panel/SinConexion';
@@ -150,6 +150,8 @@ function Caja() {
   const [ticket, setTicket] = useState(false);
   /** «Gasto o adelanto» abierto en la pestaña Cobrar. */
   const [gasto, setGasto] = useState(false);
+  /** La tuerquita «Celular del Yape»: conectar o ver el celular que lee los pagos (LectorDePagos). */
+  const [lectorAjustes, setLectorAjustes] = useState(false);
   /**
    * Dos pestañas, la misma pantalla (18-nov-2026): «Cobrar» (el mostrador, siempre hoy) y
    * «Cierre del día» (?ver=cierre: cuadrar, cualquier día). Ver SubnavCaja.
@@ -460,7 +462,13 @@ function Caja() {
       <div className="wrap">
         {/* Lo que se hace en la Caja (17-nov-2026): cobrar, escanear la tarjeta de fidelidad y cerrar
             el día. La Agenda dice quién viene y si vino; el dinero, aquí. */}
-        <Topbar titulo="Caja" sub={cierre ? 'Lo que entró, con qué, y lo que salió' : 'Cobra, escanea tarjetas y apunta gastos'} />
+        <Topbar titulo="Caja" sub={cierre ? 'Lo que entró, con qué, y lo que salió' : 'Cobra, escanea tarjetas y apunta gastos'}
+          accionesTitulo={companyId && (rol === 'dueno' || rol === 'admin') ? (
+            <button type="button" className="btn btn-ghost ldp-tuerca" aria-expanded={lectorAjustes} aria-controls="lector-ajustes"
+              aria-label="Celular del Yape" title="Celular del Yape" onClick={() => setLectorAjustes((v) => !v)}>
+              <Settings2 size={17} aria-hidden="true" /> <span className="ldp-tuerca__txt">Celular del Yape</span>
+            </button>
+          ) : undefined} />
         <SubnavCaja />
 
         {/* La sede se elige arriba, en la cabecera (SedeGlobal). */}
@@ -487,7 +495,9 @@ function Caja() {
 
         {/* Lo que leyó Vendemia Caja en el aviso de Yape/Plin/banco (lector 0001): la respuesta a «ya te
             yapeé». Dueño y administrador; el empleado no ve el dinero que entra. */}
-        {!cierre && companyId && (rol === 'dueno' || rol === 'admin') && <LectorDePagos companyId={companyId} />}
+        {companyId && (rol === 'dueno' || rol === 'admin') && (!cierre || lectorAjustes) && (
+          <LectorDePagos companyId={companyId} ajustes={lectorAjustes} alAjustes={setLectorAjustes} />
+        )}
 
         {/* Lo anotado sin conexión en este celular: aparte del resumen, que es lo del servidor. */}
         {companyId && <PendientesCaja companyId={companyId} />}
