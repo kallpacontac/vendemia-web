@@ -58,6 +58,7 @@ import { useCargar } from '@/components/panel/useCargar';
 import { useVocabulario } from '@/components/panel/useVocabulario';
 import { BotonCobrar } from '@/components/panel/BotonCobrar';
 import ComprobantesDelDia from '@/components/panel/ComprobantesDelDia';
+import LectorDePagos from '@/components/panel/LectorDePagos';
 import { fotoParaCobro, type FotoPago } from '@/lib/panel/fotoPago';
 import { RegistrarPago, SaldosPendientes } from '@/components/panel/Saldos';
 import { diaMes, hora, hora12, isoLocal, soles, telefono } from '@/lib/panel/format';
@@ -483,6 +484,10 @@ function Caja() {
             </button>
           </div>
         )}
+
+        {/* Lo que leyó Vendemia Caja en el aviso de Yape/Plin/banco (lector 0001): la respuesta a «ya te
+            yapeé». Dueño y administrador; el empleado no ve el dinero que entra. */}
+        {!cierre && companyId && (rol === 'dueno' || rol === 'admin') && <LectorDePagos companyId={companyId} />}
 
         {/* Lo anotado sin conexión en este celular: aparte del resumen, que es lo del servidor. */}
         {companyId && <PendientesCaja companyId={companyId} />}

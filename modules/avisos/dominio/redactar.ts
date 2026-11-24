@@ -87,6 +87,14 @@ export function horaDeSlot(slot: unknown): string {
   return `${h % 12 || 12}:${m[5]} ${h < 12 ? 'am' : 'pm'}`;
 }
 
+/** « a las 2:36 pm» (hora de Lima) de un timestamptz del lector, o nada si no se entiende. */
+export function horaDeAviso(cuando: unknown): string {
+  const d = typeof cuando === 'string' ? new Date(cuando) : null;
+  if (!d || Number.isNaN(d.getTime())) return '';
+  const hora = d.toLocaleTimeString('en-US', { timeZone: 'America/Lima', hour: 'numeric', minute: '2-digit', hour12: true });
+  return ` a las ${hora.replace(' AM', ' am').replace(' PM', ' pm')}`;
+}
+
 /**
  * «hoy 4:30 pm», «mañana 9:00 am», «jue 30 oct 5:00 pm». El slot es hora de Lima
  * y el servidor no lo es: «hoy» se calcula en Lima, no con la fecha del servidor.
@@ -147,6 +155,31 @@ export function redactar(eventos: EventoPendiente[]): Mensaje {
       url: '/panel/agenda',
       tag: `${e.company_id}:comprobante_espera`,
     };
+  }
+
+  // Lo que leyó Vendemia Caja en el aviso de Yape, Plin o del banco (lector 0001). A diferencia de
+  // una captura, esto SÍ dice que el dinero llegó: lo dice la cuenta del negocio. Va aparte de los
+  // comprobantes (ver planificar) y cada pago se apila en la bandeja: uno no tapa al otro.
+  if (e.datos.clase === 'lector') {
+    const origen = (x: EventoPendiente) => String(x.datos.origen || 'Yape');
+    const nombre = (x: EventoPendiente) => {
+      const s = String(x.datos.nombre ?? '').trim().toLowerCase().replace(/\b\p{L}/gu, (l) => l.toUpperCase());
+      return s ? ` de ${s}` : '';
+    };
+    const total = eventos.reduce((t, x) => t + (Number(x.datos.monto) || 0), 0);
+    return n === 1
+      ? {
+          title: `${prefijo}${origen(e)} · ${soles(e.datos.monto)}`,
+          body: `Llegó${nombre(e)}${horaDeAviso(e.datos.cuando)}. Leído en el celular de la caja.`,
+          url: '/panel/caja',
+          tag: `${e.company_id}:lector:${e.id}`,
+        }
+      : {
+          title: `${prefijo}${n} pagos llegaron · ${soles(total)}`,
+          body: eventos.slice(0, 3).map((x) => `${origen(x)} ${soles(x.datos.monto)}${nombre(x)}`).join(' · '),
+          url: '/panel/caja',
+          tag: `${e.company_id}:lector:${e.id}`,
+        };
   }
 
   // Un comprobante subido en la página que tiene que mirar una persona (tu-pagina 0017).
@@ -494,7 +527,8 @@ export function planificar(eventos: EventoPendiente[], resumenes: Resumen[]): En
   for (const e of eventos) {
     for (const d of e.destinos) {
       // Una mesa llamando no se mezcla con las reservas o la agenda del mismo tipo de aviso.
-      const clave = `${d.id}|${e.company_id}|${e.datos.clase === 'web_mesa' ? 'mesa' : e.datos.clase === 'comprobante_esperando' ? 'espera' : e.tipo}`;
+      const aparte: Record<string, string> = { web_mesa: 'mesa', comprobante_esperando: 'espera', lector: 'lector' };
+      const clave = `${d.id}|${e.company_id}|${aparte[String(e.datos.clase)] ?? e.tipo}`;
       const g = grupos.get(clave) ?? { destino: d, eventos: [] };
       g.eventos.push(e);
       grupos.set(clave, g);

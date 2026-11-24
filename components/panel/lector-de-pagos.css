@@ -1,0 +1,35 @@
+/* «Llegó a tu Yape hoy» en la Caja (components/panel/LectorDePagos.tsx). Con los colores del panel. */
+.ldp { margin-top: 16px; display: grid; gap: 10px; }
+.ldp-vacio { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 12px; }
+.ldp-vacio > div { display: grid; gap: 2px; min-width: 0; }
+.ldp-vacio small { font-size: 12.5px; line-height: 1.4; }
+@media (max-width: 560px) {
+  .ldp-vacio { grid-template-columns: auto minmax(0, 1fr); }
+  .ldp-vacio > .btn { grid-column: 1 / -1; min-height: 44px; }
+}
+
+.ldp-codigo { display: flex; flex-wrap: wrap; gap: 14px; align-items: flex-start; padding: 12px; border-radius: 12px; background: var(--bg-soft, #F4F4F0); }
+.ldp-codigo img { width: 150px; height: 150px; border-radius: 8px; background: #fff; }
+.ldp-codigo > div { flex: 1 1 220px; display: grid; gap: 6px; }
+.ldp-codigo__num { margin: 0; font: 700 30px/1.1 ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: .12em; color: var(--ink, #0A0A0A); }
+.ldp-codigo ol { margin: 0; padding-left: 18px; font-size: 13px; display: grid; gap: 2px; }
+.ldp-acciones { display: flex; gap: 8px; flex-wrap: wrap; }
+
+.ldp-celulares { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; font-size: 12.5px; color: var(--ink-soft, #5C5C5C); }
+.ldp-celulares li { display: flex; align-items: center; gap: 8px; }
+.ldp-celulares li > span:nth-child(2) { flex: 1 1 auto; min-width: 0; }
+.ldp-punto { width: 8px; height: 8px; border-radius: 50%; background: var(--line-2, #BDBDB6); flex: none; }
+.is-vivo .ldp-punto { background: var(--new, #0FA968); }
+.ldp-quitar, .ldp-otro { border: 0; background: none; padding: 4px 0; color: var(--ink-soft, #5C5C5C); font-size: 12.5px; text-decoration: underline; cursor: pointer; }
+.ldp-otro { justify-self: start; }
+.ldp-nota { margin: 0; font-size: 13px; }
+
+.ldp-lista { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+.ldp-lista li { display: grid; grid-template-columns: 64px minmax(0, 1fr) auto; align-items: center; gap: 10px; padding: 8px 0; border-top: 1px solid var(--line, #EAEAE6); }
+.ldp-hora { font-size: 12.5px; color: var(--ink-soft, #5C5C5C); font-variant-numeric: tabular-nums; }
+.ldp-quien { display: grid; min-width: 0; font-size: 13.5px; }
+.ldp-quien b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ldp-quien small { font-size: 12px; color: var(--ink-soft, #5C5C5C); }
+.ldp-monto { font-weight: 700; font-size: 15px; font-variant-numeric: tabular-nums; }
+.ldp-sinleer { color: var(--warm, #B26B00); }
+.ldp-aviso { margin: 0; font-size: 12.5px; color: #B42318; font-weight: 600; }

@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "pe.vendemia.caja",
+      "sha256_cert_fingerprints": [
+        "72:B6:CB:B4:5F:94:F9:80:D5:3D:13:01:E3:70:63:CD:83:18:71:E0:CE:FA:BC:04:22:46:94:B6:53:50:B5:B8"
+      ]
+    }
+  }
+]
