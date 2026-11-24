@@ -563,3 +563,56 @@
 .fz-datos__verificar{font-size:12.5px;margin-top:6px;align-self:flex-start}
 .fz-datos__fallo{color:#c7353a;font-size:13px;font-weight:600;margin:8px 0 0}
 @media(max-width:520px){.fz-datos__lista>div{grid-template-columns:minmax(0,1fr);gap:2px}}
+
+/* Números (24-nov-2026): «Horas más llenas» por franjas, «Días más llenos» y los 4 grupos. */
+.fz-cuando{margin-top:16px}
+.fz-franjas{display:grid;grid-template-columns:minmax(86px,auto) repeat(7,minmax(0,1fr));gap:6px;align-items:center;margin-top:4px}
+.fz-franjas__fila{display:contents}
+.fz-franjas__dia{text-align:center;font-size:11.5px;font-weight:700;color:#75766f}
+.fz-franjas__nombre{display:flex;flex-direction:column;line-height:1.15}
+.fz-franjas__nombre b{font-size:12.5px;color:#20211d;font-weight:650}
+.fz-franjas__nombre small{font-size:10.5px;color:#8a8b84}
+.fz-franjas i{display:grid;place-items:center;height:40px;border-radius:10px;font-style:normal;font-size:12px;font-weight:700;color:#7a2d16;font-variant-numeric:tabular-nums;transition:transform .15s}
+.fz-franjas i.fuerte{color:#fff}
+.fz-franjas i.vacia{background:#f1f2ee}
+.fz-franjas i:hover{transform:scale(1.06)}
+.fz-dias{display:flex;align-items:stretch;gap:10px;height:210px;margin-top:6px}
+.fz-dias__col{flex:1;min-width:0;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:6px}
+.fz-dias__col b{font-size:12.5px;font-weight:700;color:#4a4b45;font-variant-numeric:tabular-nums}
+.fz-dias__col i{display:block;width:100%;max-width:46px;border-radius:12px 12px 4px 4px;background:#25261f;animation:fz-crece .5s cubic-bezier(.2,.8,.2,1) both}
+.fz-dias__col i.mejor{background:repeating-linear-gradient(135deg,#ff7046 0px,#ff7046 3px,#ffab86 3px,#ffab86 4px)}
+.fz-dias__col span{font-size:11.5px;font-weight:700;color:#75766f}
+@keyframes fz-crece{from{transform:scaleY(0);transform-origin:bottom}to{transform:scaleY(1);transform-origin:bottom}}
+@media(prefers-reduced-motion:reduce){.fz-dias__col i{animation:none}}
+.fz-grupos{margin-top:16px}
+.fz-grupos__barra{display:flex;height:18px;border-radius:999px;overflow:hidden;background:#f1f2ee;margin:14px 0 6px}
+.fz-grupos__barra i{display:block;height:100%}
+.fz-grupo--ok{background:#0fa968}
+.fz-grupo--peligro{background:#e5484d}
+.fz-grupo--alerta{background:#fbb040}
+.fz-grupo--neutro{background:#b9bab3}
+.fz-grupos__lista{list-style:none;margin:6px 0 0;padding:0;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.fz-grupos__lista li{display:grid;grid-template-columns:10px minmax(0,1fr) auto;gap:10px;align-items:center;padding:12px;border-radius:16px;background:#f6f6f3}
+.fz-grupos__lista li>i{width:10px;height:10px;border-radius:50%}
+.fz-grupos__lista b{display:block;font-size:13.5px}
+.fz-grupos__lista small{display:block;font-size:11.5px;color:#75766f;line-height:1.3}
+.fz-grupos__lista strong{font-size:24px;font-weight:650;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.fz-grupos__accion{margin-top:14px;align-self:flex-start}
+@media(max-width:1100px){.fz-grupos__lista{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:560px){.fz-grupos__lista{grid-template-columns:minmax(0,1fr)}.fz-franjas{grid-template-columns:62px repeat(7,minmax(0,1fr));gap:4px}.fz-franjas i{height:34px;font-size:11px;border-radius:8px}.fz-franjas__nombre small{display:none}.fz-dias{height:170px;gap:6px}}
+/* Ficha: canales en una línea y lo delicado en «Más opciones» (24-nov-2026). */
+.fz-ficha__canales{display:flex;flex-wrap:wrap;align-items:center;gap:4px 10px;margin:10px 0 0}
+.fz-ficha__canales .nc-link{font-size:12.5px}
+.fz-mas{margin-top:12px}
+.fz-mas>summary{cursor:pointer;font-size:13px;font-weight:700;color:var(--ink-soft,#5c5c5c);padding:6px 0;list-style:none}
+.fz-mas>summary::-webkit-details-marker{display:none}
+.fz-mas>summary::after{content:" ▾"}
+.fz-mas[open]>summary::after{content:" ▴"}
+.fz-mas .fz-fila{margin-top:6px}
+/* Menos ruido (24-nov-2026): en Avisos el mensaje va en una línea (completo al «Cambiar mensaje»);
+   en Clientes, los filtros son botones de un toque. */
+.fz-avisos__msg{display:flex;align-items:baseline;gap:6px;white-space:nowrap;overflow:hidden;padding:8px 11px}
+.fz-avisos__msg b{display:inline;flex:none}
+.fz-avisos__msg span{overflow:hidden;text-overflow:ellipsis;min-width:0}
+.fz-filtros{display:flex;max-width:100%;overflow-x:auto;scrollbar-width:none;margin:0 0 12px}
+.fz-filtros button{white-space:nowrap;min-height:36px}

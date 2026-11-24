@@ -226,3 +226,36 @@ export function calcularNumeros(visitas: Visita[], altas: Alta[], dias: number, 
 
 export const DIAS_CORTOS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
 export const DIAS_LARGOS = ['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo'];
+
+/* ── Cuándo vienen, en palabras de todos (24-nov-2026) ─────────────────────
+ * El mapa por hora exacta (24 columnas) se leía mal. Como en Stamply, por franjas del día y por
+ * día de la semana: «el sábado al mediodía» se entiende sin pensar. Se calcula del mismo `calor`.
+ */
+export const FRANJAS = [
+  { id: 'manana', nombre: 'Mañana', rango: '6 a 10', horas: [6, 7, 8, 9] },
+  { id: 'media', nombre: 'Media mañana', rango: '10 a 12', horas: [10, 11] },
+  { id: 'almuerzo', nombre: 'Almuerzo', rango: '12 a 3', horas: [12, 13, 14] },
+  { id: 'tarde', nombre: 'Tarde', rango: '3 a 7', horas: [15, 16, 17, 18] },
+  { id: 'noche', nombre: 'Noche', rango: '7 a 11', horas: [19, 20, 21, 22] },
+  { id: 'madrugada', nombre: 'Madrugada', rango: '11 a 6', horas: [23, 0, 1, 2, 3, 4, 5] },
+] as const;
+
+/** [franja][día 0–6]: visitas. La madrugada solo sale si hubo alguna. */
+export function porFranja(calor: number[][]): { franjas: (typeof FRANJAS)[number][]; celdas: number[][] } {
+  const celdas = FRANJAS.map((f) => Array.from({ length: 7 }, (_, dia) => f.horas.reduce<number>((s, h) => s + (calor[dia]?.[h] ?? 0), 0)));
+  const conMadrugada = celdas[5].some((v) => v > 0);
+  return { franjas: conMadrugada ? [...FRANJAS] : FRANJAS.slice(0, 5), celdas: conMadrugada ? celdas : celdas.slice(0, 5) };
+}
+
+/** Visitas por día de la semana (0 = lunes). */
+export const porDia = (calor: number[][]): number[] => calor.map((fila) => fila.reduce((s, v) => s + v, 0));
+
+/** Los 7 segmentos, en 4 grupos que el dueño entiende. */
+export const GRUPOS = [
+  { id: 'vienen', nombre: 'Vienen seguido', describe: 'Nuevos y los que vienen a su ritmo', tono: 'ok', de: ['nuevos', 'fieles', 'regulares'] },
+  { id: 'yendo', nombre: 'Se están yendo', describe: 'Tardan más de lo normal en volver', tono: 'peligro', de: ['atrasados', 'dormidos'] },
+  { id: 'una', nombre: 'Vinieron una vez', describe: 'Y no volvieron en más de 30 días', tono: 'alerta', de: ['no_regresaron'] },
+  { id: 'nunca', nombre: 'Aún no compran', describe: 'Sacaron su tarjeta y no vinieron', tono: 'neutro', de: ['sin_visitas'] },
+] as const;
+
+export const grupos = (s: Record<Segmento, number>) => GRUPOS.map((g) => ({ ...g, valor: g.de.reduce<number>((t, k) => t + (s[k as Segmento] ?? 0), 0) }));

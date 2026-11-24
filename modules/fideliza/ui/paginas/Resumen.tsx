@@ -254,7 +254,8 @@ export default function Resumen() {
 
       {puede('program.edit') && <PrimerosPasos pasos={pasos} />}
 
-      <div className="card" style={{ marginBottom: 16 }}>
+      {/* Con el club en marcha, esta tarjeta repetía lo que ya está arriba y en las pestañas. */}
+      {!conHoy && <div className="card" style={{ marginBottom: 16 }}>
         <div className="fz-fila" style={{ justifyContent: 'space-between' }}>
           <div>
             <div className="kpi__label">Programa</div>
@@ -282,7 +283,7 @@ export default function Resumen() {
             )}
           </div>
         </div>
-      </div>
+      </div>}
 
       {link}
     </>

@@ -21,6 +21,7 @@ import { fechaCumple } from '@/modules/fideliza/ui/CumpleCliente';
 import { useFideliza } from '@/modules/fideliza/ui/Contexto';
 import { Cargando, Fallo, Qr, SinPermiso, Vacio } from '@/modules/fideliza/ui/Estados';
 import { useAvisar } from '@/components/panel/Avisos';
+import { useSesion } from '@/components/panel/Sesion';
 import { useCargar } from '@/components/panel/useCargar';
 import { accion, ErrorFideliza, lecturas, mensaje, nuevaClave, sincronizarEnSegundoPlano, type Linea, type Nivel } from '@/modules/fideliza/cliente/api';
 import { urlTarjeta } from '@/modules/fideliza/dominio/config';
@@ -67,18 +68,24 @@ const POR_PAGINA = 25;
 
 /** Se unió en los últimos 7 días: sale con «Nuevo» (la 0021 los pone arriba). */
 const esNuevo = (f: Fila) => !!f.created_at && Date.now() - new Date(f.created_at).getTime() < 7 * 86400000;
+/*
+ * 24-nov-2026: filtros con nombres que entiende cualquiera y de un toque (antes, un desplegable con
+ * «Sin operaciones» o «Wallet con error»). Los de Wallet solo los ve el equipo de Vendemia.
+ */
 const FILTROS = [
   ['all', 'Todos'],
   ['reward', 'Con premio'],
-  ['active30', 'Activos 30 días'],
-  ['inactive30', 'Sin venir 30 días'],
-  ['never', 'Sin operaciones'],
+  ['active30', 'Vinieron este mes'],
+  ['inactive30', 'No vienen hace 30 días'],
+  ['never', 'Aún no compran'],
   ['wallet', 'Con Google Wallet'],
   ['wallet_error', 'Wallet con error'],
 ] as const;
+const SOLO_TECNICO = new Set(['wallet', 'wallet_error']);
 
 function Lista() {
   const { companyId, puede } = useFideliza();
+  const tecnico = useSesion().esAdminPlataforma;
   const avisar = useAvisar();
   const router = useRouter();
   const params = useSearchParams();
@@ -278,24 +285,26 @@ function Lista() {
             aria-label="Buscar clientes"
           />
         </div>
-        <select className="select" value={filtro} onChange={(e) => (setFiltro(e.target.value), setPagina(0))} aria-label="Filtro">
-          {FILTROS.map(([v, t]) => (
-            <option key={v} value={v}>
-              {t}
-            </option>
-          ))}
-        </select>
-        <select className="select" value={estado} onChange={(e) => (setEstado(e.target.value), setPagina(0))} aria-label="Estado">
-          <option value="">Activos y suspendidos</option>
-          <option value="active">Activos</option>
-          <option value="suspended">Suspendidos</option>
-          {puede('members.manage') && <option value="deleted">Borrados</option>}
-        </select>
+        {tecnico && (
+          <select className="select" value={estado} onChange={(e) => (setEstado(e.target.value), setPagina(0))} aria-label="Estado">
+            <option value="">Activos y suspendidos</option>
+            <option value="active">Activos</option>
+            <option value="suspended">Suspendidos</option>
+            {puede('members.manage') && <option value="deleted">Borrados</option>}
+          </select>
+        )}
         {puede('members.create') && (
           <button className="btn btn-primary btn-sm" onClick={() => setAlta({ alias: '', phone: '', email: '', verificado: false, clave: nuevaClave() })}>
             Añadir cliente
           </button>
         )}
+      </div>
+      <div className="chip-tabs fz-filtros" role="group" aria-label="Filtrar clientes">
+        {FILTROS.filter(([v]) => tecnico || !SOLO_TECNICO.has(v)).map(([v, t]) => (
+          <button key={v} type="button" className={filtro === v ? 'active' : ''} aria-pressed={filtro === v} onClick={() => (setFiltro(v), setPagina(0))}>
+            {t}
+          </button>
+        ))}
       </div>
 
       {alta && (

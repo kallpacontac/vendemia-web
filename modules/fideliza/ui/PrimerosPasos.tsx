@@ -24,6 +24,8 @@ export default function PrimerosPasos({ pasos }: { pasos: Paso[] }) {
   const hechos = pasos.filter((p) => p.hecho).length;
   const [abierto, setAbierto] = useState(!listo);
   const siguiente = pasos.find((p) => !p.hecho);
+  // 24-nov-2026: hecho lo necesario, la tarjeta se va (antes se quedaba como «¡Tu Fideliza está listo!»).
+  if (listo) return null;
 
   return (
     <div className="card" style={{ marginBottom: 16 }}>

@@ -90,3 +90,23 @@ test('escríbeles hoy: el mensaje y el enlace de WhatsApp', () => {
   assert.equal(valor.enlaceWhatsapp('+51987654321', 'a b'), 'https://wa.me/51987654321?text=a%20b');
   assert.equal(valor.enlaceWhatsapp('123', 'x'), null);
 });
+
+const numeros = jiti(join(raiz, 'modules/fideliza/dominio/numeros.ts'));
+
+test('números: franjas del día, días de la semana y los 4 grupos', () => {
+  const calor = Array.from({ length: 7 }, () => Array(24).fill(0));
+  calor[5][13] = 4; // sábado 1 pm → almuerzo
+  calor[5][14] = 2; // sábado 2 pm → almuerzo
+  calor[0][9] = 1; // lunes 9 am → mañana
+  calor[2][19] = 3; // miércoles 7 pm → noche
+  const { franjas, celdas } = numeros.porFranja(calor);
+  assert.deepEqual(franjas.map((f) => f.id), ['manana', 'media', 'almuerzo', 'tarde', 'noche']);
+  assert.equal(celdas[2][5], 6);
+  assert.equal(celdas[0][0], 1);
+  assert.equal(celdas[4][2], 3);
+  calor[3][1] = 1; // jueves 1 am → aparece la madrugada
+  assert.equal(numeros.porFranja(calor).franjas.length, 6);
+  assert.deepEqual(numeros.porDia(calor), [1, 0, 3, 1, 0, 6, 0]);
+  const seg = { nuevos: 2, fieles: 3, regulares: 5, atrasados: 4, dormidos: 1, no_regresaron: 7, sin_visitas: 9 };
+  assert.deepEqual(numeros.grupos(seg).map((g) => [g.id, g.valor]), [['vienen', 10], ['yendo', 5], ['una', 7], ['nunca', 9]]);
+});

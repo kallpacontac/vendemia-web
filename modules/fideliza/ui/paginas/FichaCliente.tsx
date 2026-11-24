@@ -14,6 +14,7 @@ import { useFideliza } from '@/modules/fideliza/ui/Contexto';
 import DatosCliente from '@/modules/fideliza/ui/DatosCliente';
 import { Cargando, Fallo, Qr, SinPermiso } from '@/modules/fideliza/ui/Estados';
 import { useAvisar } from '@/components/panel/Avisos';
+import { useSesion } from '@/components/panel/Sesion';
 import { useCargar } from '@/components/panel/useCargar';
 import { accion, mensaje, nuevaClave, sincronizarEnSegundoPlano, type Linea } from '@/modules/fideliza/cliente/api';
 import { urlTarjeta } from '@/modules/fideliza/dominio/config';
@@ -80,6 +81,8 @@ export default function FichaCliente() {
   const { memberId } = useParams<{ memberId: string }>();
   const { companyId, puede } = useFideliza();
   const avisar = useAvisar();
+  // 24-nov-2026: lo técnico (sincronización de Wallet, el libro) solo lo ve el equipo de Vendemia.
+  const tecnico = useSesion().esAdminPlataforma;
   const [enlace, setEnlace] = useState<string | null>(null);
   const [devolucion, setDevolucion] = useState<null | { tx: Ficha['transactions'][number]; importe: string; motivo: string; clave: string }>(null);
   const [ajuste, setAjuste] = useState<null | { units: string; motivo: string; clave: string; linea: string | null }>(null);
@@ -240,29 +243,22 @@ export default function FichaCliente() {
             />
           )}
 
-          <h3 style={{ fontSize: 14, margin: '14px 0 6px' }}>Comunicaciones</h3>
-          <p className="fz-def" style={{ marginTop: 0 }}>
-            Avisos push: {f.consents.push?.granted ? `aceptados (${fechaHora(f.consents.push.at)})` : 'no aceptados'} · {f.push_devices} navegador(es)
+          <p className="fz-def fz-ficha__canales">
+            Avisos al celular: <b>{f.consents.push?.granted ? 'sí' : 'no'}</b> · Google Wallet: <b>{f.wallet ? 'la guardó' : 'no'}</b>
+            {puede('members.manage') && f.consents.push?.granted && (
+              <button className="nc-link" onClick={() => void hacer('miembro.consentimiento', { channel: 'push', granted: false, source: 'panel' }, 'Baja de avisos registrada', false)}>
+                Dar de baja de avisos
+              </button>
+            )}
           </p>
-          {puede('members.manage') && f.consents.push?.granted && (
-            <button className="btn btn-ghost btn-sm" onClick={() => void hacer('miembro.consentimiento', { channel: 'push', granted: false, source: 'panel' }, 'Baja de avisos registrada', false)}>
-              Dar de baja de avisos
-            </button>
-          )}
-
-          <h3 style={{ fontSize: 14, margin: '14px 0 6px' }}>Google Wallet</h3>
-          {f.wallet ? (
+          {tecnico && f.wallet && (
             <p className="fz-def" style={{ marginTop: 0 }}>
-              {f.wallet.state === 'synced' && f.wallet.synced_rev >= f.wallet.desired_rev ? 'Al día' : f.wallet.state === 'error' ? `Error: ${f.wallet.last_error}` : 'Pendiente de actualizar'} ·
-              enlaces emitidos: {f.wallet.save_links_issued} · última sincronización {fechaHora(f.wallet.last_synced_at)}
+              Wallet: {f.wallet.state === 'synced' && f.wallet.synced_rev >= f.wallet.desired_rev ? 'al día' : f.wallet.state === 'error' ? `error: ${f.wallet.last_error}` : 'pendiente'} ·
+              enlaces {f.wallet.save_links_issued} · {fechaHora(f.wallet.last_synced_at)}{' '}
+              {puede('wallet.manage') && (
+                <button className="nc-link" onClick={() => void hacer('wallet.resincronizar', {}, 'Actualización de Wallet en cola')}>Reintentar</button>
+              )}
             </p>
-          ) : (
-            <p className="muted" style={{ fontSize: 13 }}>No ha pedido la tarjeta de Google Wallet.</p>
-          )}
-          {f.wallet && puede('wallet.manage') && (
-            <button className="btn btn-ghost btn-sm" onClick={() => void hacer('wallet.resincronizar', {}, 'Actualización de Wallet en cola')}>
-              Reintentar Wallet
-            </button>
           )}
         </div>
 
@@ -274,6 +270,15 @@ export default function FichaCliente() {
                 Nuevo enlace de tarjeta
               </button>
             )}
+            {puede('ops.refund') && f.status === 'active' && (
+              <button className="btn btn-ghost btn-sm" onClick={() => setAjuste({ units: '', motivo: '', clave: nuevaClave(), linea: null })}>
+                Corregir saldo
+              </button>
+            )}
+          </div>
+          <details className="fz-mas">
+            <summary>Más opciones</summary>
+            <div className="fz-fila">
             {puede('members.manage') && f.status !== 'deleted' && (
               <>
                 <button
@@ -287,11 +292,6 @@ export default function FichaCliente() {
                 </button>
               </>
             )}
-            {puede('ops.refund') && f.status === 'active' && (
-              <button className="btn btn-ghost btn-sm" onClick={() => setAjuste({ units: '', motivo: '', clave: nuevaClave(), linea: null })}>
-                Corregir saldo
-              </button>
-            )}
             {puede('members.export') && (
               <button className="btn btn-ghost btn-sm" onClick={() => void exportar()}>
                 Exportar datos (JSON)
@@ -302,7 +302,8 @@ export default function FichaCliente() {
                 Borrar datos personales
               </button>
             )}
-          </div>
+            </div>
+          </details>
 
           {enlace && (
             <div style={{ marginTop: 14 }}>
@@ -433,7 +434,7 @@ export default function FichaCliente() {
       </div>
 
       <div className="fz-col2" style={{ marginTop: 16 }}>
-        <div className="card">
+        {tecnico && <div className="card">
           <h3 style={{ fontSize: 15, marginBottom: 8 }}>Libro (últimos movimientos)</h3>
           <ul className="fz-lista">
             {f.ledger.filter(enVista).map((l) => (
@@ -449,7 +450,7 @@ export default function FichaCliente() {
             ))}
             {!f.ledger.filter(enVista).length && <li className="muted">Sin movimientos.</li>}
           </ul>
-        </div>
+        </div>}
         <div className="card">
           <h3 style={{ fontSize: 15, marginBottom: 8 }}>Premios</h3>
           <ul className="fz-lista">
