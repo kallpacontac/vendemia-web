@@ -1077,7 +1077,14 @@ a{color:inherit;text-decoration:none}
 .cfg-enlace b{display:block;font-size:13.5px;color:var(--ink)}
 .cfg-enlace small{display:block;font-size:12px;color:var(--ink-soft);margin-top:2px}
 /* ¿Qué citas esperando pago ve el equipo? (datos 0030): tres posturas */
-.cfg-apartadas>div{flex:1 1 100%;min-width:0}
+.cfg-apartadas{display:block}
+.cfg-apartadas>summary{display:flex;align-items:center;justify-content:space-between;gap:12px;cursor:pointer;list-style:none}
+.cfg-apartadas>summary::-webkit-details-marker{display:none}
+.cfg-apartadas>summary>span{min-width:0}
+.cfg-apartadas>summary strong{color:var(--ink);font-weight:800}
+.cfg-apartadas__flecha{flex:none;color:var(--ink-soft);transition:transform .2s ease}
+.cfg-apartadas[open] .cfg-apartadas__flecha{transform:rotate(180deg)}
+.cfg-apartadas[open]>summary{margin-bottom:8px}
 .cfg-apartadas__ops{display:grid;gap:8px;margin-top:10px}
 .cfg-apartadas__op{display:flex;align-items:flex-start;gap:10px;padding:10px 12px;border:1px solid var(--line,#E7E5E0);border-radius:12px;cursor:pointer;background:var(--card,#fff)}
 .cfg-apartadas__op.on{border-color:var(--brand,#FF4F00);box-shadow:0 0 0 1px var(--brand,#FF4F00)}

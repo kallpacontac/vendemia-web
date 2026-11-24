@@ -1562,25 +1562,34 @@ function Configuracion() {
                 { id: 'con_captura', titulo: 'También las que mandaron la captura', texto: 'Ve la cita en cuanto el cliente sube la captura del adelanto, aunque aún no la apruebes. Si luego la rechazas, sigue saliendo hasta que la canceles.' },
                 { id: 'todas', titulo: 'Todas, aunque no hayan pagado', texto: 'Ve también las apartadas sin ningún pago, con lo que falta del adelanto.' },
               ];
+              // Desplegable (Alvaro, 24-nov): cerrado dice la elegida; al tocarlo, las tres.
+              const elegida = OPCIONES.find((o) => o.id === actual) ?? OPCIONES[0];
               return (
-                <div className="cfg-enlace cfg-apartadas" style={{ marginTop: 12 }}>
-                  <div>
-                    <b>¿Qué {palabras} esperando pago ve tu equipo?</b>
-                    <small>En su Mi agenda. Tú y el administrador las ven siempre todas.</small>
-                    <div className="cfg-apartadas__ops" role="radiogroup" aria-label={`Qué ${palabras} esperando pago ve tu equipo`}>
-                      {OPCIONES.map((o) => (
-                        <label key={o.id} className={`cfg-apartadas__op${actual === o.id ? ' on' : ''}`}>
-                          <input type="radio" name="equipo-ve-apartadas" checked={actual === o.id} disabled={!puede}
-                            onChange={() => void cambiarEquipoVeApartadas(o.id)} />
-                          <span>
-                            <b>{o.titulo}</b>
-                            <small>{o.texto}</small>
-                          </span>
-                        </label>
-                      ))}
-                    </div>
+                <details className="cfg-enlace cfg-apartadas" style={{ marginTop: 12 }}>
+                  <summary>
+                    <span>
+                      <b>¿Qué {palabras} esperando pago ve tu equipo?</b>
+                      <small>Ahora: <strong>{elegida.titulo}</strong></small>
+                    </span>
+                    <ChevronDown size={18} className="cfg-apartadas__flecha" aria-hidden />
+                  </summary>
+                  <small>En su Mi agenda. Tú y el administrador las ven siempre todas.</small>
+                  <div className="cfg-apartadas__ops" role="radiogroup" aria-label={`Qué ${palabras} esperando pago ve tu equipo`}>
+                    {OPCIONES.map((o) => (
+                      <label key={o.id} className={`cfg-apartadas__op${actual === o.id ? ' on' : ''}`}>
+                        <input type="radio" name="equipo-ve-apartadas" checked={actual === o.id} disabled={!puede}
+                          onChange={(e) => {
+                            e.currentTarget.closest('details')?.removeAttribute('open');
+                            void cambiarEquipoVeApartadas(o.id);
+                          }} />
+                        <span>
+                          <b>{o.titulo}</b>
+                          <small>{o.texto}</small>
+                        </span>
+                      </label>
+                    ))}
                   </div>
-                </div>
+                </details>
               );
             })()}
           </div>
