@@ -30,6 +30,7 @@ import { accion, lecturas, mensaje, type Campana } from '@/modules/fideliza/clie
 import type { Metricas } from '@/modules/fideliza/dominio/metricas';
 import { AVISOS_AUTO, DIAS_EXTRANAMOS, DIAS_VOLVER, avisoDeFabrica, type PlantillaAuto } from '@/modules/fideliza/dominio/avisos';
 import MisAvisos from '@/modules/fideliza/ui/paginas/MisAvisos';
+import PedirResena from '@/modules/fideliza/ui/PedirResena';
 
 type Plantilla = Campana['template'];
 type Borrador = { title: string; body: string; config: Record<string, number> };
@@ -225,6 +226,13 @@ export default function Campanas() {
                 editar={editable ? () => { setRegalo(regaloActual); setEditando('cumple'); } : undefined}
               />
             )}
+
+            <PedirResena
+              companyId={companyId}
+              editable={editable}
+              negocio={negocio}
+              placeId={((ajustes?.page_style ?? null) as { place_id?: string } | null)?.place_id ?? null}
+            />
 
             {rewardViejo && (
               <Fila

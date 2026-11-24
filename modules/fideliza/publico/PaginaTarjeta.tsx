@@ -51,6 +51,8 @@ export default async function Pagina({ params }: { params: { token: string } }) 
   if (datos.status !== 'ok') return <TarjetaNoEncontrada />;
 
   const qr = await QRCode.toString(datos.member.qr_token, { type: 'svg', margin: 1, errorCorrectionLevel: 'M' });
+  // 0026: el botón de reseña, si el dueño lo puso. Sin la migración (o si falla) no sale y ya.
+  const resena = await rpc<string | null>(servidor(), 'loyalty_srv_resena_tarjeta', { p_slug: datos.brand.slug }).catch(() => null);
   return (
     <Tarjeta
       token={params.token}
@@ -60,6 +62,7 @@ export default async function Pagina({ params }: { params: { token: string } }) 
       vapid={entorno.vapidPublica() || null}
       walletDisponible={Boolean(entorno.walletIssuer() && entorno.walletCredencialesB64())}
       walletDemo={(process.env.GOOGLE_WALLET_MODE ?? 'demo') !== 'production'}
+      resena={typeof resena === 'string' && resena.startsWith('https://') ? resena : null}
     />
   );
 }

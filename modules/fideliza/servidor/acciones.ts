@@ -712,6 +712,25 @@ export const ACCIONES = {
         p_config: d.config,
       }),
   }),
+  /** Pedir la reseña de Google (sql/0026): la configuración y cuántas se pidieron. */
+  'resena.leer': accion({
+    esquema: z.object({ companyId: compania }),
+    ejecutar: (d, { sb }) => rpc(sb, 'loyalty_resena_leer', { p_company: d.companyId }),
+  }),
+  'resena.guardar': accion({
+    esquema: z.object({
+      companyId: compania,
+      datos: z.object({
+        activo: z.boolean(),
+        visita: z.union([z.literal(1), z.literal(2)]),
+        titulo: textoCorto(60).min(1),
+        texto: textoCorto(160).min(1),
+        url: z.string().trim().max(500),
+        en_tarjeta: z.boolean(),
+      }),
+    }),
+    ejecutar: (d, { sb }) => rpc(sb, 'loyalty_resena_guardar', { p_company: d.companyId, p_datos: d.datos }),
+  }),
   /** El regalo de cumpleaños del negocio (sql/0025). '' lo apaga. */
   'cumple.regalo': accion({
     esquema: z.object({ companyId: compania, regalo: z.string().trim().max(120) }),

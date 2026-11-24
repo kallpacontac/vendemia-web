@@ -2,7 +2,7 @@
 
 import { fotoEnCirculo } from '@/modules/fideliza/dominio/encuadre';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ArrowLeft, CalendarPlus, Check, ChevronDown, Gift, Sparkles } from 'lucide-react';
+import { ArrowLeft, CalendarPlus, Check, ChevronDown, Gift, Sparkles, Star } from 'lucide-react';
 import { UNIDAD, diaLargo, fechaHora, horaSola, type TipoRegla } from '@/modules/fideliza/dominio/formato';
 import { AGENDA_URL } from '@/modules/tu-pagina/dominio/config';
 import { colorValido, mezcla, resolverEstilo, tintaSobre, type Estilo } from '@/modules/fideliza/dominio/estilo';
@@ -90,6 +90,8 @@ export default function Tarjeta(props: {
   vapid: string | null;
   walletDisponible: boolean;
   walletDemo: boolean;
+  /** 0026: el enlace para reseñar en Google, si el dueño puso el botón en la tarjeta. */
+  resena?: string | null;
 }) {
   const { token } = props;
   const [d, setD] = useState(props.inicial);
@@ -594,6 +596,16 @@ export default function Tarjeta(props: {
         </p>
       </section>
       <a className="fz-volver" href={urlNegocio(d.brand.slug)}><ArrowLeft size={18} aria-hidden="true" /> Volver a la página de enlaces</a>
+
+      {/* 0026 (24-nov-2026): el botón de reseña, solo si el dueño lo quiere en la tarjeta. Sin premio por reseñar. */}
+      {props.resena && d.member.status === 'active' && (
+        <section className="fz-caja fz-caja--flujo" aria-label="Tu opinión">
+          <p className="fz-nota"><b>¿Te gustó?</b> Cuéntalo en Google: a {d.brand.display_name} le ayuda mucho y toma un minuto.</p>
+          <a className="fz-btn fz-resena-btn" href={props.resena} target="_blank" rel="noopener noreferrer">
+            <Star size={18} aria-hidden="true" /> Dejar mi reseña en Google
+          </a>
+        </section>
+      )}
 
       {pushPosible && d.member.status === 'active' && (
         <section className="fz-caja fz-caja--flujo" aria-label="Avisos">

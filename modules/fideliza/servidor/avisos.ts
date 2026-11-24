@@ -3,6 +3,7 @@ import { log } from './http';
 import { enviarPush, pushConfigurado, type Suscripcion } from './push';
 import { rpc, servidor } from './supabase';
 import { mensajeWallet } from './wallet/google';
+import { enviarCorreo } from '@/lib/correo';
 
 /**
  * El aviso al cliente cuando gana o canjea un premio: push (si lo activó en su
@@ -105,4 +106,61 @@ export async function avisarCumple(companyId: string, memberId: string, regalo: 
   } catch (e) {
     log('aviso_cumple_omitido', { mensaje: e instanceof Error ? e.message.slice(0, 160) : 'x' });
   }
+}
+
+/**
+ * 24-nov-2026 (Alvaro): pedir la reseña de Google, una sola vez, al día siguiente de su 1.ª (o
+ * 2.ª) visita (sql/0026: el cron elige a quién y lo marca). Por aviso al celular, que al tocarlo
+ * abre DIRECTO la ventana de reseña (public/m/sw.js), y por correo si lo dejó. Sin premio por
+ * reseñar y a todos por igual, como pide Google. No cuenta para el tope de avisos al mes.
+ */
+export interface PedidoResena {
+  company_id: string;
+  member_id: string;
+  negocio: string;
+  titulo: string;
+  texto: string;
+  url: string;
+  email: string | null;
+  push: boolean;
+}
+
+const escHtml = (t: string) => t.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
+
+export async function pedirResena(p: PedidoResena): Promise<{ push: boolean; correo: boolean }> {
+  const hecho = { push: false, correo: false };
+  // El enlace ya lo validó la base (solo Google); se vuelve a mirar aquí por si acaso.
+  if (!/^https:\/\/([a-z0-9-]+\.)*(google\.(com|[a-z]{2})(\.[a-z]{2})?|g\.page|goo\.gl|g\.co)\//i.test(p.url)) return hecho;
+  try {
+    if (p.push && pushConfigurado()) {
+      const sb = servidor();
+      const d = await rpc<DatosAviso>(sb, 'loyalty_srv_aviso_datos', { p_company: p.company_id, p_member: p.member_id });
+      if (d.status === 'ok' && d.subscriptions?.length) {
+        const r = await enviarPush(d.subscriptions, { title: p.titulo, body: p.texto, icon: d.logo ?? undefined, url: p.url, tipo: 'resena' });
+        hecho.push = r.aceptados > 0;
+        if (r.caducados.length || r.error) {
+          await rpc(sb, 'loyalty_srv_push_result', { p_member: p.member_id, p_campaign: null, p_accepted: 0, p_gone: r.caducados.length ? r.caducados : null, p_error: r.error });
+        }
+      }
+    }
+  } catch (e) {
+    log('resena_push_fallo', { mensaje: e instanceof Error ? e.message.slice(0, 160) : 'x' });
+  }
+  if (p.email) {
+    const negocio = escHtml(p.negocio || 'tu negocio');
+    hecho.correo = await enviarCorreo({
+      para: p.email,
+      nombre: `${p.negocio || 'Tu negocio'} vía Vendemia`,
+      asunto: p.titulo,
+      texto: `${p.texto}\n\nDejar mi reseña en Google: ${p.url}\n\nTe escribimos una sola vez porque tienes la tarjeta de ${p.negocio}.`,
+      html: `<div style="font-family:system-ui,-apple-system,'Segoe UI',sans-serif;max-width:480px;margin:0 auto;padding:24px 16px;color:#1b1a17">
+<p style="font-size:13px;color:#6b6c66;margin:0 0 8px">${negocio}</p>
+<h1 style="font-size:22px;line-height:1.25;margin:0 0 10px">${escHtml(p.titulo)}</h1>
+<p style="font-size:15px;line-height:1.5;margin:0 0 20px">${escHtml(p.texto)}</p>
+<a href="${escHtml(p.url)}" style="display:inline-block;background:#1a73e8;color:#fff;text-decoration:none;font-weight:700;padding:13px 20px;border-radius:12px">Dejar mi reseña en Google</a>
+<p style="font-size:12px;color:#8a8983;margin:24px 0 0">Te escribimos una sola vez porque tienes la tarjeta de ${negocio}.</p>
+</div>`,
+    });
+  }
+  return hecho;
 }

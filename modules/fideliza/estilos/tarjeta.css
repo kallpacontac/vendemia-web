@@ -210,3 +210,4 @@
 .fz-mov-visita__reservar{width:100%;margin-top:14px;gap:8px;padding:10px 14px;text-align:center;text-decoration:none;background:var(--marca);border-color:var(--marca);color:var(--sobre-marca,#fff)}
 .fz-mov-visita__reservar svg{width:19px;height:19px;flex:0 0 19px}
 @media(prefers-reduced-motion:reduce){.fz-mov-visita__flecha{transition:none}}
+.fz-resena-btn{gap:8px;text-decoration:none}

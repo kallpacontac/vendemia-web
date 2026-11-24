@@ -11,7 +11,7 @@ import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { ArrowLeft } from 'lucide-react';
 import { useFideliza } from '@/modules/fideliza/ui/Contexto';
-import CumpleCliente from '@/modules/fideliza/ui/CumpleCliente';
+import DatosCliente from '@/modules/fideliza/ui/DatosCliente';
 import { Cargando, Fallo, Qr, SinPermiso } from '@/modules/fideliza/ui/Estados';
 import { useAvisar } from '@/components/panel/Avisos';
 import { useCargar } from '@/components/panel/useCargar';
@@ -81,7 +81,6 @@ export default function FichaCliente() {
   const { companyId, puede } = useFideliza();
   const avisar = useAvisar();
   const [enlace, setEnlace] = useState<string | null>(null);
-  const [edicion, setEdicion] = useState<null | { alias: string; phone: string; email: string }>(null);
   const [devolucion, setDevolucion] = useState<null | { tx: Ficha['transactions'][number]; importe: string; motivo: string; clave: string }>(null);
   const [ajuste, setAjuste] = useState<null | { units: string; motivo: string; clave: string; linea: string | null }>(null);
   /** 0018: qué línea se mira en el historial (null = todas). */
@@ -226,66 +225,20 @@ export default function FichaCliente() {
             Alta {fechaHora(f.created_at)} · desde {f.joined_via === 'public' ? 'la página pública' : f.joined_via} · acumulado histórico {f.lifetime_units}
           </p>
 
-          {/* 18-nov-2026 (Kallpa): la ficha de datos junta, a la vista: nombre, celular y cumpleaños. */}
-          <div className="fz-fila" style={{ justifyContent: 'space-between', margin: '14px 0 6px' }}>
-            <h3 style={{ fontSize: 14, margin: 0 }}>Datos del cliente</h3>
-            {puede('members.manage') && f.status !== 'deleted' && !edicion && (
-              <button className="btn btn-ghost btn-sm" onClick={() => setEdicion({ alias: f.alias ?? '', phone: f.contacts?.find((c) => c.kind === 'phone')?.value ?? '', email: f.contacts?.find((c) => c.kind === 'email')?.value ?? '' })}>
-                Editar
-              </button>
-            )}
-          </div>
-          {edicion && (
-            <div style={{ margin: '6px 0 12px' }}>
-              <input className="input" placeholder="Nombre" maxLength={40} value={edicion.alias} onChange={(e) => setEdicion({ ...edicion, alias: e.target.value })} style={{ marginBottom: 8 }} />
-              <input className="input" placeholder="Celular" inputMode="tel" value={edicion.phone} onChange={(e) => setEdicion({ ...edicion, phone: e.target.value })} style={{ marginBottom: 8 }} />
-              <input className="input" placeholder="Correo" value={edicion.email} onChange={(e) => setEdicion({ ...edicion, email: e.target.value })} style={{ marginBottom: 8 }} />
-              <small className="muted">Cambiar un dato le quita la verificación.</small>
-              <div className="fz-fila" style={{ marginTop: 8 }}>
-                <button className="btn btn-primary btn-sm" onClick={() => void hacer('miembro.editar', edicion, 'Datos guardados').then((r) => r !== null && setEdicion(null))}>
-                  Guardar
-                </button>
-                <button className="btn btn-ghost btn-sm" onClick={() => setEdicion(null)}>
-                  Cancelar
-                </button>
-              </div>
-            </div>
+          {/* 24-nov-2026: los datos del cliente en una lista corta y una sola ventana para editarlos (ui/DatosCliente). */}
+          {companyId && f.status !== 'deleted' && (
+            <DatosCliente
+              companyId={companyId}
+              memberId={f.id}
+              alias={f.alias}
+              contactos={f.contacts}
+              verContactos={f.can_see_contacts}
+              editable={puede('members.manage')}
+              puedeVerificar={puede('members.create')}
+              activa={f.status === 'active' || f.status === 'suspended'}
+              alGuardar={releer}
+            />
           )}
-          {!edicion && <ul className="fz-lista">
-            <li>
-              <span>Nombre: {f.alias?.trim() ? <b>{f.alias}</b> : <span className="muted">sin nombre</span>}</span>
-            </li>
-            {!f.contacts?.some((c) => c.kind === 'phone') && (
-              <li>
-                <span>Celular: <span className="muted">sin celular</span></span>
-              </li>
-            )}
-            {(f.contacts ?? []).map((c) => (
-              <li key={c.kind}>
-                <span>
-                  {c.kind === 'phone' ? 'Celular' : 'Correo'}: {f.can_see_contacts ? c.value : '•••'}
-                  {c.kind === 'phone' && f.can_see_contacts && c.value && (
-                    <a className="btn btn-ghost btn-sm" style={{ marginLeft: 8 }} href={`https://wa.me/${c.value.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer">
-                      WhatsApp
-                    </a>
-                  )}
-                </span>
-                {c.verified_at ? (
-                  <span className="badge-pill b-new">Verificado {c.verified_method === 'in_person' ? 'en persona' : ''}</span>
-                ) : (
-                  <span className="fz-fila">
-                    <span className="badge-pill b-mute">Sin verificar</span>
-                    {puede('members.create') && f.status === 'active' && (
-                      <button className="btn btn-ghost btn-sm" onClick={() => void hacer('miembro.verificar', { kind: c.kind }, 'Marcado como verificado en persona', false)}>
-                        Verificar en persona
-                      </button>
-                    )}
-                  </span>
-                )}
-              </li>
-            ))}
-          </ul>}
-          {companyId && f.status !== 'deleted' && <CumpleCliente companyId={companyId} memberId={f.id} nombre={f.alias?.trim() || 'tu cliente'} />}
 
           <h3 style={{ fontSize: 14, margin: '14px 0 6px' }}>Comunicaciones</h3>
           <p className="fz-def" style={{ marginTop: 0 }}>

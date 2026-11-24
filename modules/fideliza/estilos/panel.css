@@ -541,3 +541,25 @@
 .fz-escribe__wa:hover{background:#127a3c;color:#fff}
 .fz-escribe__wa--grande{width:100%;justify-content:center;min-height:50px;font-size:15px;text-decoration:none}
 .fz-escribe__hecho{display:inline-flex;align-items:center;gap:4px;color:#0a8452;font-weight:700;font-size:13px;flex:none}
+/* «Pedir reseña en Google» (0026): el botón en la tarjeta, como sub-opción de la misma fila. */
+.fz-resena__tarjeta{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 12px;border-radius:14px;border:1px dashed #e2e3dd}
+.fz-resena__tarjeta b{display:block;font-size:13.5px}
+.fz-resena__tarjeta small{display:block;color:#6b6c66;font-size:12px;margin-top:2px}
+/* Ficha del cliente: «Datos del cliente» en una lista corta y una ventana para editar (24-nov-2026). */
+.fz-datos{margin:14px 0 6px}
+.fz-datos__cab{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:6px}
+.fz-datos__cab h3{font-size:14px;margin:0}
+.fz-datos__lista{margin:0;display:grid;gap:0;border:1px solid var(--line,#eaeae6);border-radius:14px;overflow:hidden}
+.fz-datos__lista>div{display:grid;grid-template-columns:108px minmax(0,1fr);gap:10px;align-items:baseline;padding:10px 12px;border-top:1px solid var(--line,#eaeae6)}
+.fz-datos__lista>div:first-child{border-top:0}
+.fz-datos__lista dt{font-size:12.5px;color:var(--ink-soft,#5c5c5c);font-weight:600}
+.fz-datos__lista dd{margin:0;font-size:14px;display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;overflow-wrap:anywhere}
+.fz-datos__vacio{color:var(--ink-mute,#93938c)}
+.fz-datos__ok{display:inline-flex;align-items:center;gap:3px;font-size:12px;font-weight:700;color:#0a8452}
+.fz-datos__wa{display:inline-flex;align-items:center;gap:4px;font-size:12.5px;font-weight:700;color:#178f48;text-decoration:none}
+.fz-datos__nota dd{white-space:pre-line}
+.fz-datos__opc{font-weight:500;color:var(--ink-mute,#93938c)}
+.fz-datos__cumple{display:grid;grid-template-columns:96px minmax(0,1fr);gap:8px}
+.fz-datos__verificar{font-size:12.5px;margin-top:6px;align-self:flex-start}
+.fz-datos__fallo{color:#c7353a;font-size:13px;font-weight:600;margin:8px 0 0}
+@media(max-width:520px){.fz-datos__lista>div{grid-template-columns:minmax(0,1fr);gap:2px}}

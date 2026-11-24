@@ -5,7 +5,8 @@
  *   · Cachea recursos estáticos con hash (/_next/static, /wallet). Nada más.
  *   · La tarjeta (/m/<token>) y las APIs van SIEMPRE a la red. Sin conexión se
  *     enseña un aviso, nunca un saldo guardado como si estuviera al día.
- *   · Recibe los avisos push y, al pulsarlos, abre la tarjeta.
+ *   · Recibe los avisos push y, al pulsarlos, abre la tarjeta. El de «deja tu reseña»
+ *     (fideliza 0026) abre directo la ventana de reseña de Google: solo enlaces de Google.
  * No toca el panel, la caja ni las redirecciones de las placas: están fuera de
  * su ámbito y el navegador no le deja interceptarlas.
  */
@@ -59,6 +60,16 @@ self.addEventListener('fetch', (e) => {
   }
 });
 
+/** Solo https a dominios de Google (reseñas y mapas). */
+function esGoogle(u) {
+  try {
+    const x = new URL(u);
+    return x.protocol === 'https:' && /(^|\.)(google\.(com|[a-z]{2})(\.[a-z]{2})?|g\.page|goo\.gl|g\.co)$/.test(x.hostname);
+  } catch (_) {
+    return false;
+  }
+}
+
 self.addEventListener('push', (e) => {
   let d = {};
   try {
@@ -70,7 +81,7 @@ self.addEventListener('push', (e) => {
     self.registration.showNotification(d.title || 'Tu tarjeta', {
       body: d.body || '',
       icon: d.icon || '/wallet/logo-vendemia-1024.png',
-      data: { campaign_id: d.campaign_id || null },
+      data: { campaign_id: d.campaign_id || null, url: d.tipo === 'resena' && esGoogle(d.url) ? d.url : null },
     }),
   );
 });
@@ -78,6 +89,11 @@ self.addEventListener('push', (e) => {
 self.addEventListener('notificationclick', (e) => {
   e.notification.close();
   const campana = (e.notification.data || {}).campaign_id;
+  const directo = (e.notification.data || {}).url;
+  if (directo && esGoogle(directo)) {
+    e.waitUntil(self.clients.openWindow(directo));
+    return;
+  }
   e.waitUntil(
     caches
       .open(META)
