@@ -58,13 +58,12 @@ interface Club {
   visitas: NombreVisita;
   wallet: boolean;
   avisos: boolean;
-  soloQr: boolean;
 }
 
 export default function CrearClub() {
   const { companyId, ajustes, puede, recargar: recargarCtx } = useFideliza();
   const avisar = useAvisar();
-  const [c, setC] = useState<Club>({ negocio: '', nombre: '', logo: '', color: '#FF4900', tarjeta: 'viva', sello: 'check', sellos: 8, premio: '', espera: 0, visitas: 'visitas', wallet: true, avisos: true, soloQr: false });
+  const [c, setC] = useState<Club>({ negocio: '', nombre: '', logo: '', color: '#FF4900', tarjeta: 'viva', sello: 'check', sellos: 8, premio: '', espera: 0, visitas: 'visitas', wallet: true, avisos: true });
   const [rubroVisto, setRubroVisto] = useState<Rubro | null>(null);
   const [porEncuadrar, setPorEncuadrar] = useState<File | null>(null);
   const [vista, setVista] = useState<'web' | 'wallet'>('web');
@@ -107,7 +106,6 @@ export default function CrearClub() {
       visitas: nombreVisita(estilo?.visitas, negocio, SELLOS.find((x) => x.id === estilo?.sello)?.rubro).id,
       wallet: estilo?.wallet !== false,
       avisos: estilo?.avisos !== false,
-      soloQr: estilo?.caja_solo_qr === true,
     });
     // «Pruébalo con tu celular» desde Primeros pasos: solo si el club ya está publicado.
     if (p && p.status !== 'draft' && new URLSearchParams(window.location.search).get('probar')) setPublicado(true);
@@ -182,17 +180,18 @@ export default function CrearClub() {
         datos: { ...(ajustes ? {} : { display_name: c.negocio.trim(), slug: slugDe(c.negocio) }), bg_color: c.color, logo_url: c.logo },
       });
       // 2 · Diseño de la tarjeta e icono (page_style se guarda entero: se conserva lo de «Mi página»).
+      // Releído justo antes: «solo QR» se cambia ahora en Ajustes › Orden del menú y no hay que pisarlo.
+      const fresco = ((await lecturas.ajustes(companyId!))?.page_style ?? ajustes?.page_style ?? {}) as Partial<Estilo>;
       await accion('estilo.guardar', {
         companyId,
         estilo: {
           plantilla: 'clasica',
-          ...((ajustes?.page_style ?? {}) as Partial<Estilo>),
+          ...fresco,
           sello: c.sello,
           tarjeta: c.tarjeta,
           visitas: c.visitas,
           wallet: c.wallet,
           avisos: c.avisos,
-          caja_solo_qr: c.soloQr,
         },
       });
       // 3 · La regla: lo que ya hubiera (compra mínima, sucursales…) se conserva; cambian sellos y premio.
@@ -402,13 +401,6 @@ export default function CrearClub() {
           <ul className="fz-club__opciones">
             <Opcion nombre="Botón «Agregar a Google Wallet»" ayuda="Apagado, la tarjeta no lo ofrece. Quien ya la guardó la sigue teniendo." on={c.wallet} editable={editable} alternar={() => setC({ ...c, wallet: !c.wallet })} />
             <Opcion nombre="Casilla «Quiero que me avise»" ayuda="La de la tarjeta para prender o quitar los avisos. El aviso flotante de instalar y activar sigue igual." on={c.avisos} editable={editable} alternar={() => setC({ ...c, avisos: !c.avisos })} />
-          </ul>
-        </section>
-
-        <section className="card fz-club__sec">
-          <small className="fz-club__paso">Caja · Tu equipo</small>
-          <ul className="fz-club__opciones">
-            <Opcion nombre="El equipo solo suma escaneando el QR" ayuda="Tu equipo (barberos, empleados) no puede buscar por nombre, celular ni código ni crear tarjetas: el cliente tiene que enseñar la suya. Tú y tus administradores buscan como siempre." on={c.soloQr} editable={editable} alternar={() => setC({ ...c, soloQr: !c.soloQr })} />
           </ul>
         </section>
 

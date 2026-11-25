@@ -13,6 +13,8 @@ import { ArrowDown, ArrowUp, Eye, EyeOff } from 'lucide-react';
 import { useMenuDelPanel } from './Sidebar';
 import { useSesion } from './Sesion';
 import { useAvisar } from './Avisos';
+import { useCargar } from './useCargar';
+import { accion, lecturas, mensaje } from '@/modules/fideliza/cliente/api';
 import { demoActivo } from '@/lib/panel/demo';
 import { FIJAS, RUTA_INICIO, SIEMPRE_A_LA_VISTA, SIN_ORDEN, guardarFidelizaEquipo, guardarOrdenMenu, ordenar, useOrdenMenu, type OrdenMenu } from '@/lib/panel/menu';
 
@@ -92,13 +94,18 @@ export default function OrdenDelMenu() {
     <details className="cfg-advanced cfg-advanced--section">
       <summary>Orden del menú</summary>
       <div className="menu-orden">
-        <label className="toggle-row">
-          <span className="t">
-            <b>Tu equipo ve Fideliza</b>
-            <small>Apagado, tus empleados (barberos) no lo ven en su menú. Tú y el administrador sí.</small>
-          </span>
-          <input type="checkbox" checked={equipoVeFideliza} onChange={(e) => void cambiarFideliza(e.target.checked)} />
-        </label>
+        {/* 25-nov-2026 (The 24/7): lo de Fideliza para el equipo, junto y plegable. */}
+        <details className="menu-fz" open>
+          <summary>Fideliza y tu equipo</summary>
+          <label className="toggle-row">
+            <span className="t">
+              <b>Tu equipo ve Fideliza</b>
+              <small>Apagado, tus empleados (barberos) no lo ven en su menú. Tú y el administrador sí.</small>
+            </span>
+            <input type="checkbox" checked={equipoVeFideliza} onChange={(e) => void cambiarFideliza(e.target.checked)} />
+          </label>
+          {equipoVeFideliza && companyId && <SoloQrEquipo companyId={companyId} />}
+        </details>
         <p className="muted">
           Pon arriba lo que más usas. Lo que mandes a «Más» sigue ahí, a un toque. Vale para todo tu equipo.
         </p>
@@ -157,5 +164,48 @@ export default function OrdenDelMenu() {
         </div>
       </div>
     </details>
+  );
+}
+
+/**
+ * «Tu equipo solo suma escaneando el QR» (fideliza page_style.caja_solo_qr, 25-nov-2026). Antes
+ * estaba en Fideliza › Tu club; Alvaro lo quiso aquí, con el resto de lo del equipo. El servidor
+ * lo exige en caja.buscar para el rol de caja. Sin club de Fideliza no sale.
+ */
+function SoloQrEquipo({ companyId }: { companyId: string }) {
+  const avisar = useAvisar();
+  const { datos, recargar } = useCargar(() => lecturas.ajustes(companyId), [companyId]);
+  const [guardando, setGuardando] = useState(false);
+  if (!datos) return null;
+  const estilo = (datos.page_style ?? {}) as Record<string, unknown>;
+  const on = estilo.caja_solo_qr === true;
+
+  async function cambiar(v: boolean) {
+    if (demoActivo()) {
+      avisar('Estás en modo demo: no se guarda nada. Sal del modo demo para cambiar algo de verdad.', 'espera');
+      return;
+    }
+    setGuardando(true);
+    try {
+      // page_style se guarda entero: se relee justo antes para no pisar lo de Mi club ni Mis enlaces.
+      const fresco = ((await lecturas.ajustes(companyId))?.page_style ?? {}) as Record<string, unknown>;
+      await accion('estilo.guardar', { companyId, estilo: { plantilla: 'clasica', ...fresco, caja_solo_qr: v } });
+      recargar();
+      avisar(v ? '✓ Tu equipo ahora suma solo escaneando el QR.' : '✓ Tu equipo vuelve a poder buscar por nombre o celular.', 'ok');
+    } catch (e) {
+      avisar(mensaje(e), 'error');
+    } finally {
+      setGuardando(false);
+    }
+  }
+
+  return (
+    <label className="toggle-row">
+      <span className="t">
+        <b>Solo suman escaneando el QR</b>
+        <small>Tus empleados no buscan por nombre, celular ni código, ni crean tarjetas: el cliente enseña la suya. Tú y el administrador buscan como siempre.</small>
+      </span>
+      <input type="checkbox" checked={on} disabled={guardando} onChange={(e) => void cambiar(e.target.checked)} />
+    </label>
   );
 }
