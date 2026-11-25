@@ -2799,3 +2799,40 @@ button.fpill{font-family:inherit;min-height:36px}
 }
 /* En dos columnas (celular), la última suelta ocupa la fila entera: no queda media fila vacía. */
 @media (max-width:480px){.ticket-chips>:last-child:nth-child(odd){grid-column:1/-1}}
+
+/* ── Ventana larga que se desliza ella sola (25-nov-2026, «Generar ticket» en el celular) ───
+   .modal recorta (overflow:hidden) y no tiene alto máximo: si el formulario no cabe, se movía la
+   página de atrás. Con --largo, la cabecera y los botones quedan fijos y el cuerpo se desliza. */
+.modal--largo{display:flex;flex-direction:column;max-height:calc(100dvh - 24px)}
+.modal--largo .modal__cuerpo{flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;padding-bottom:14px}
+.modal--largo .modal__pie{border-top:1px solid var(--line);background:#fff}
+.modal--largo select.input{appearance:none;-webkit-appearance:none;padding-right:44px;
+  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%239AA1AC' stroke-width='2.5'><path d='M6 9l6 6 6-6'/></svg>");
+  background-repeat:no-repeat;background-position:right 16px center}
+@media (max-width:560px){.modal-fondo:has(.modal--largo){padding:12px}}
+
+/* «Generar ticket» de Mi agenda */
+.gt .modal__cab b{flex:1}
+.gt__cerrar{display:grid;place-items:center;width:36px;height:36px;border:0;border-radius:50%;background:var(--bg-input);color:var(--ink);cursor:pointer}
+.gt .modal__cuerpo{display:grid;gap:16px}
+.gt__nota{margin:0!important}
+.gt__paso{display:grid;gap:8px;border-radius:14px}
+.gt__titulo{font-size:13.5px;font-weight:800;color:var(--ink)}
+.gt__titulo small{font-weight:500;color:var(--ink-soft);font-size:12px;margin-left:4px}
+.gt__chips{display:grid;grid-template-columns:repeat(auto-fill,minmax(118px,1fr));gap:8px}
+.gt__chip{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;min-height:48px;padding:8px 12px;
+  border:1.5px solid var(--line-2);border-radius:12px;background:#fff;font:700 14px 'Plus Jakarta Sans';color:var(--ink);cursor:pointer;text-align:center}
+.gt__chip small{font-weight:500;font-size:11.5px;color:var(--ink-soft)}
+.gt__chip.on{border-color:var(--brand);background:var(--brand-soft);color:var(--brand-txt,var(--ink))}
+.gt__chip.on small{color:inherit}
+.gt__hora{margin-top:2px}
+.gt__opcional{padding:12px;background:var(--bg-input);border:1px dashed var(--line-2)}
+.gt__opcional .input{background:#fff}
+.gt__campo{display:grid;gap:5px;font-size:13px;font-weight:700;color:var(--ink)}
+.gt__campo small{font-weight:500;color:var(--ink-soft);font-size:12px}
+.gt__foto{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;min-height:50px;border:1.5px dashed var(--line-2);
+  border-radius:12px;background:#fff;font:700 14px 'Plus Jakarta Sans';color:var(--ink);cursor:pointer}
+.gt__foto-lista{display:flex;align-items:center;gap:10px;width:100%;padding:8px;border-radius:12px;background:#fff;border:1.5px solid var(--line-2)}
+.gt__foto-lista img{width:52px;height:52px;object-fit:cover;border-radius:9px}
+.gt__foto-lista span{flex:1;font-weight:700;font-size:13px}
+.gt__pie .btn{flex:1;min-height:48px;justify-content:center}

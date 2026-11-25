@@ -56,6 +56,7 @@ import { useAvisar, useComando } from '@/components/panel/Avisos';
 import FotoDelPago from '@/components/panel/FotoDelPago';
 import { supabase } from '@/lib/supabase/client';
 import { achicarImagen } from '@/lib/achicarImagen';
+import { guiarA } from '@/lib/panel/guiar';
 import { fotoParaCobro, type FotoPago } from '@/lib/panel/fotoPago';
 import { useCargar } from '@/components/panel/useCargar';
 import { useSondeo } from '@/components/panel/useSondeo';
@@ -425,6 +426,8 @@ function MisCitas({ companyId }: { companyId: string }) {
           {sinCita && (
             <LlegoSinCita
               companyId={companyId}
+              precios={new Map((fijos.datos?.catalogo ?? []).map((x) => [x.id, Number(x.price ?? 0)]))}
+              sedeReciente={(datos?.citas ?? []).filter((c) => c.employee_id === ficha && c.sede).sort((x, y) => (y.slot_start ?? '').localeCompare(x.slot_start ?? ''))[0]?.sede ?? null}
               alCerrar={() => setSinCita(false)}
               alListo={(id, atendido) => {
                 setSinCita(false);
@@ -778,21 +781,34 @@ interface DatosSinCita {
 }
 
 const SEDE_GUARDADA = 'mag-sede';
-const ahoraHHMM = () => {
-  const d = new Date();
-  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
-};
+const hhmm = (d: Date) => `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+/** «¿Cuándo empezó?» con un toque (25-nov-2026, The 24/7: «más fácil»). null = «Otra hora». */
+const CUANDO: { min: number | null; texto: string }[] = [
+  { min: 0, texto: 'Ahora' },
+  { min: 15, texto: 'Hace 15 min' },
+  { min: 30, texto: 'Hace 30 min' },
+  { min: 60, texto: 'Hace 1 h' },
+  { min: null, texto: 'Otra hora' },
+];
 
 /**
  * «Generar ticket» (antes «Llegó sin cita», tu-pagina 0026): el barbero anota en SU agenda al cliente que tiene en la
  * silla, para que ocupe su sitio y la página no venda esa hora. Hoy, a su nombre, al precio del
- * catálogo: eso lo vuelve a decidir la base. La sede se recuerda en este celular (el barbero
- * suele estar siempre en la misma). Si la sede ya estaba llena, se crea igual y se avisa.
+ * catálogo: eso lo vuelve a decidir la base. Si la sede ya estaba llena, se crea igual y se avisa.
  * Foto opcional del voucher o del ticket de papel (tu-pagina 0037): se sube DESPUÉS de crear el
  * ticket y la ve la caja al cobrar; si falla la subida, el ticket ya existe y solo se avisa.
+ *
+ * 25-nov-2026 (prueba en el celular de The 24/7): la ventana se desliza ella sola (antes se movía
+ * la página de atrás); primero lo obligatorio con botones grandes —servicio, sede, cuándo empezó—
+ * y la guía baja sola al siguiente paso; lo opcional (nombre, celular, foto) al final. La sede sale
+ * puesta: la de su ficha, si no la última que usó en este celular, si no la de su última cita.
  */
-function LlegoSinCita({ companyId, alCerrar, alListo }: {
+function LlegoSinCita({ companyId, precios, sedeReciente, alCerrar, alListo }: {
   companyId: string;
+  /** El precio de carta de cada servicio (catálogo del equipo): es lo que el barbero reconoce. */
+  precios: Map<string, number>;
+  /** La sede de su última cita con sede, por si no tiene ninguna en su ficha ni guardada. */
+  sedeReciente?: string | null;
   alCerrar: () => void;
   alListo: (id?: string, atendido?: boolean) => void;
 }) {
@@ -814,11 +830,23 @@ function LlegoSinCita({ companyId, alCerrar, alListo }: {
       return '';
     }
   });
-  const [horaInicio, setHoraInicio] = useState(ahoraHHMM);
+  // Cuándo empezó: un botón (minutos atrás) u «Otra hora» con su reloj.
+  const [hace, setHace] = useState<number | null>(0);
+  const [otraHora, setOtraHora] = useState(() => hhmm(new Date()));
   const [enviando, setEnviando] = useState(false);
   const [foto, setFoto] = useState<File | null>(null);
   const vistaFoto = useMemo(() => (foto ? URL.createObjectURL(foto) : ''), [foto]);
   useEffect(() => () => { if (vistaFoto) URL.revokeObjectURL(vistaFoto); }, [vistaFoto]);
+  const refSede = useRef<HTMLDivElement>(null);
+  const refCuando = useRef<HTMLDivElement>(null);
+  const refOpcional = useRef<HTMLDivElement>(null);
+
+  // Mientras está abierta, la página de atrás no se mueve: se desliza la ventana.
+  useEffect(() => {
+    const antes = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = antes; };
+  }, []);
 
   /** La foto, pegada al ticket recién creado. Devuelve el error para decirlo, o null. */
   async function subirFoto(citaId: string): Promise<string | null> {
@@ -839,33 +867,53 @@ function LlegoSinCita({ companyId, alCerrar, alListo }: {
     }
   }
 
-  const sedes = datos?.sedes ?? [];
+  const sedes = useMemo(() => datos?.sedes ?? [], [datos]);
   const pideSede = sedes.length > 1;
   const sedeValida = !pideSede || sedes.includes(sede);
-  // Su sede, de su ficha (24-nov-2026): con una, puesta; con varias, la última que usó de entre
-  // ellas o la primera. Sin sedes en su ficha, la última que usó (como antes).
+  // Su sede: la de su ficha (24-nov-2026; con varias, la última que usó de entre ellas o la
+  // primera); sin sedes en su ficha, la última que usó en este celular; si tampoco, la de su
+  // última cita con sede.
   const misSedes = useMemo(() => (datos?.mis_sedes ?? []).filter((x) => sedes.includes(x)), [datos, sedes]);
   useEffect(() => {
-    if (!misSedes.length) return;
-    setSede((actual) => (misSedes.length > 1 && misSedes.includes(actual) ? actual : misSedes[0]));
-  }, [misSedes]);
+    if (misSedes.length) {
+      setSede((actual) => (misSedes.length > 1 && misSedes.includes(actual) ? actual : misSedes[0]));
+      return;
+    }
+    if (sedes.length > 1 && sedeReciente && sedes.includes(sedeReciente)) {
+      setSede((actual) => (sedes.includes(actual) ? actual : sedeReciente));
+    }
+  }, [misSedes, sedes, sedeReciente]);
+
+  /** La hora de inicio, «YYYY-MM-DD HH:MM» (hace N min puede ser de ayer pasada la medianoche). */
+  function inicio(): string {
+    if (hace === null) return `${isoLocal(new Date())} ${otraHora}`;
+    const d = new Date(Date.now() - hace * 60_000);
+    return `${isoLocal(d)} ${hhmm(d)}`;
+  }
+
+  function elegirServicio(id: string) {
+    setServicio(id);
+    if (!id) return;
+    // Guiar al siguiente paso que falte: la sede si no está, si no cuándo empezó.
+    guiarA(pideSede && !sedes.includes(sede) ? refSede.current : refCuando.current);
+  }
 
   async function guardar(e: React.FormEvent) {
     e.preventDefault();
     // Nombre y celular opcionales (24-nov-2026, tu-pagina 0035). El celular, si lo escribe, entero.
     const digitos = tel.replace(/\D/g, '');
-    if (digitos && digitos.length < 9) return avisar('Ese celular no está completo: escribe los 9 dígitos o déjalo vacío.', 'error');
-    if (!servicio) return avisar('Elige el servicio.', 'error');
-    if (!sedeValida) return avisar('Elige en qué sede estás.', 'error');
+    if (!servicio) { avisar('Elige el servicio.', 'error'); return; }
+    if (!sedeValida) { avisar('Elige en qué sede estás.', 'error'); guiarA(refSede.current); return; }
+    if (digitos && digitos.length < 9) { avisar('Ese celular no está completo: escribe los 9 dígitos o déjalo vacío.', 'error'); guiarA(refOpcional.current); return; }
     setEnviando(true);
     const { data, error: e2 } = await supabase().rpc('mi_agenda_sin_cita', {
       p_company: companyId,
       p_datos: {
         nombre: nombre.trim(),
-        telefono: tel.replace(/\D/g, ''),
+        telefono: digitos,
         catalog_item_id: servicio,
         sede: pideSede ? sede : '',
-        slot_start: `${isoLocal(new Date())} ${horaInicio}`,
+        slot_start: inicio(),
       },
     });
     setEnviando(false);
@@ -889,79 +937,103 @@ function LlegoSinCita({ companyId, alCerrar, alListo }: {
 
   return (
     <div className="modal-fondo" role="presentation" onClick={(e) => { if (e.target === e.currentTarget && !enviando) alCerrar(); }}>
-      <form className="modal" role="dialog" aria-modal="true" aria-label="Generar ticket" onSubmit={guardar}>
+      <form className="modal modal--largo gt" role="dialog" aria-modal="true" aria-label="Generar ticket" onSubmit={guardar}>
         <div className="modal__cab">
           <Receipt size={16} />
           <b>Generar ticket</b>
+          <button type="button" className="gt__cerrar" onClick={alCerrar} disabled={enviando} aria-label="Cerrar"><X size={18} /></button>
         </div>
-        <div className="modal__cuerpo" style={{ display: 'grid', gap: 10 }}>
+        <div className="modal__cuerpo">
           {error && <p className="vacio">No se pudo abrir: {error}</p>}
           {!datos && !error && <p className="vacio">Cargando…</p>}
           {datos && (
             <>
-              <p className="muted" style={{ margin: 0 }}>Queda en tu agenda, hoy, al precio de la carta.</p>
-              <label className="field-label" style={{ display: 'grid', gap: 4 }}>
-                <span>Nombre <small className="muted">opcional</small></span>
-                <input className="input" value={nombre} onChange={(e) => setNombre(e.target.value)} autoComplete="off" autoFocus />
-              </label>
-              <label className="field-label" style={{ display: 'grid', gap: 4 }}>
-                <span>Celular <small className="muted">opcional · con él le llegan sus avisos y su tarjeta</small></span>
-                <input className="input" inputMode="tel" placeholder="9…" value={tel} onChange={(e) => setTel(e.target.value)} autoComplete="off" />
-              </label>
-              <label className="field-label" style={{ display: 'grid', gap: 4 }}>
-                Servicio
-                <select className="input" value={servicio} onChange={(e) => setServicio(e.target.value)}>
+              <p className="muted gt__nota">Queda en tu agenda, hoy, al precio de la carta.</p>
+
+              <label className="gt__paso">
+                <span className="gt__titulo">1 · Servicio</span>
+                <select className="input" value={servicio} onChange={(e) => elegirServicio(e.target.value)}>
                   <option value="">Elige el servicio</option>
                   {datos.servicios.map((x) => (
                     <option key={x.id} value={x.id}>
-                      {x.nombre} · {duracion(x.minutos)}
+                      {/* 25-nov-2026 (The 24/7): el precio dice más que los minutos. Sin precio, los minutos. */}
+                      {x.nombre} · {precios.get(x.id) ? soles(precios.get(x.id)!) : duracion(x.minutos)}
                     </option>
                   ))}
                 </select>
               </label>
+
               {pideSede && (
-                <label className="field-label" style={{ display: 'grid', gap: 4 }}>
-                  Sede
-                  <select className="input" value={sedeValida ? sede : ''} onChange={(e) => setSede(e.target.value)}>
-                    <option value="">¿En qué sede estás?</option>
+                <div className="gt__paso" ref={refSede}>
+                  <span className="gt__titulo">2 · ¿En qué sede estás?</span>
+                  <div className="gt__chips" role="radiogroup" aria-label="Sede">
                     {sedes.map((x) => (
-                      <option key={x} value={x}>{x}</option>
+                      <button key={x} type="button" role="radio" aria-checked={sede === x} className={`gt__chip${sede === x ? ' on' : ''}`}
+                        onClick={() => { setSede(x); guiarA(refCuando.current); }}>
+                        {x}
+                      </button>
                     ))}
-                  </select>
-                </label>
-              )}
-              <label className="field-label" style={{ display: 'grid', gap: 4 }}>
-                Empieza
-                <input className="input" type="time" value={horaInicio} onChange={(e) => setHoraInicio(e.target.value)} />
-              </label>
-              <div className="field-label" style={{ display: 'grid', gap: 6 }}>
-                <span>Foto del voucher o del ticket <small className="muted">opcional · la ve la caja al cobrar</small></span>
-                {foto ? (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={vistaFoto} alt="Foto adjunta" style={{ width: 56, height: 56, objectFit: 'cover', borderRadius: 10 }} />
-                    <button type="button" className="btn btn-ghost btn-sm" onClick={() => setFoto(null)} disabled={enviando}><X size={14} /> Quitar</button>
                   </div>
-                ) : (
-                  <label className="btn btn-ghost btn-sm" style={{ justifySelf: 'start', cursor: 'pointer' }}>
-                    <Camera size={14} /> Adjuntar foto
-                    <input type="file" accept="image/*" hidden onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ''; if (f) setFoto(f); }} />
-                  </label>
+                </div>
+              )}
+
+              <div className="gt__paso" ref={refCuando}>
+                <span className="gt__titulo">{pideSede ? '3' : '2'} · ¿Cuándo empezó?</span>
+                <div className="gt__chips" role="radiogroup" aria-label="Cuándo empezó">
+                  {CUANDO.map((x) => (
+                    <button key={x.texto} type="button" role="radio" aria-checked={hace === x.min} className={`gt__chip${hace === x.min ? ' on' : ''}`}
+                      onClick={() => { setHace(x.min); if (x.min !== null) guiarA(refOpcional.current); }}>
+                      {x.texto}
+                      {x.min !== null && <small>{hhmm(new Date(Date.now() - x.min * 60_000))}</small>}
+                    </button>
+                  ))}
+                </div>
+                {hace === null && (
+                  <input className="input gt__hora" type="time" value={otraHora} onChange={(e) => setOtraHora(e.target.value)} aria-label="Hora de inicio" />
                 )}
               </div>
+
+              <div className="gt__paso gt__opcional" ref={refOpcional}>
+                <span className="gt__titulo">Opcional <small>para su tarjeta y sus avisos</small></span>
+                <label className="gt__campo">
+                  <span>Nombre</span>
+                  <input className="input" value={nombre} onChange={(e) => setNombre(e.target.value)} autoComplete="off" placeholder="Ej.: Luis" />
+                </label>
+                <label className="gt__campo">
+                  <span>Celular <small>con él le llegan sus avisos y su tarjeta</small></span>
+                  <input className="input" inputMode="tel" placeholder="9…" value={tel} onChange={(e) => setTel(e.target.value)} autoComplete="off" />
+                </label>
+                <div className="gt__campo">
+                  <span>Foto del voucher o del ticket <small>la ve la caja al cobrar</small></span>
+                  {foto ? (
+                    <div className="gt__foto-lista">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={vistaFoto} alt="Foto adjunta" />
+                      <span>Foto lista</span>
+                      <button type="button" className="btn btn-ghost btn-sm" onClick={() => setFoto(null)} disabled={enviando}><X size={14} /> Quitar</button>
+                    </div>
+                  ) : (
+                    <label className="gt__foto">
+                      <Camera size={18} /> Adjuntar foto
+                      <input type="file" accept="image/*" hidden onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ''; if (f) setFoto(f); }} />
+                    </label>
+                  )}
+                </div>
+              </div>
+
               <label className="gc-suma">
                 <input type="checkbox" checked={yaAtendido} onChange={(e) => setYaAtendido(e.target.checked)} />
                 <span>
                   <b>Ya lo atendí</b>
-                  <small>{yaAtendido ? 'Pasa directo a la Caja para cobrar. Tu parte cuenta cuando la caja lo cobre.' : 'Queda en tu agenda; marcas «Atendido» al terminar.'}</small>
+                  <small>{yaAtendido ? 'Queda «Por cobrar en caja». Tu parte cuenta cuando la caja lo cobre.' : 'Queda en tu agenda; marcas «Atendido» al terminar.'}</small>
                 </span>
               </label>
             </>
           )}
         </div>
-        <div className="modal__pie">
+        <div className="modal__pie gt__pie">
           <button type="button" className="btn btn-ghost" onClick={alCerrar} disabled={enviando}>Cancelar</button>
-          <button type="submit" className="btn btn-primary" disabled={!datos || enviando}>{enviando ? (foto ? 'Generando y subiendo la foto…' : 'Generando…') : 'Generar ticket'}</button>
+          <button type="submit" className="btn btn-primary" disabled={!datos || enviando || !servicio}>{enviando ? (foto ? 'Subiendo la foto…' : 'Generando…') : 'Generar ticket'}</button>
         </div>
       </form>
     </div>
