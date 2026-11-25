@@ -77,6 +77,8 @@ await q(`select lector_codigo_nuevo('neg')`);
 const cod = (await uno(`select codigo from lector_codigos`)).codigo;
 const D = '22222222-2222-2222-2222-222222222222';
 await q(`select lector_srv_vincular($1, $2, $3, 'Xiaomi')`, [cod, D, 'a'.repeat(64)]);
+// Conectado desde ayer: los Yape «de hace unos minutos» de las pruebas son de después de conectar.
+await q(`update lector_dispositivos set vinculado_at = now() - interval '1 day'`);
 let h = 0;
 const yape = (centimos, nombre, minutosAtras = 0, origen = 'Yape') =>
   q(`select lector_srv_recibir($1, 'aviso', $2)`, [D, { huella: 'h-' + String(++h).padStart(8, '0'), centimos, nombre, origen, cuando: Date.now() - minutosAtras * 60_000 }]);
@@ -195,15 +197,13 @@ await q(`insert into appointments (id, company_id, lead_id, service, slot_start,
 await q(`insert into appointment_services values ('t1-s', 't1', 25)`);
 ok('cita registrada después del Yape: se cobra sola', (await est('t1')).pagado_por === 'lector');
 
-// 8b · Un Yape de ANTES de conectar el celular (el teléfono lo tenía guardado): no cobra nada solo.
+// 8b · Un Yape de ANTES de conectar el celular (seguía en la bandeja): ni se guarda ni cobra nada.
 await cita('v1', 'lv1', 'Hugo Paz', 77, -30, 0);
-await yape(7700, 'HUGO PAZ', 0);
-await q(`update lector_avisos set cuando = (select vinculado_at from lector_dispositivos) - interval '2 hours' where id = (select max(id) from lector_avisos)`);
-await q(`update lector_avisos set asignado = '', cita_id = null where id = (select max(id) from lector_avisos)`);
-await q(`delete from pending_payments where appointment_id = 'v1'`);
-await q(`update appointments set pagado_por = '' where id = 'v1'`);
-await q(`select lector_emparejar('neg')`);
-ok('un Yape de antes de conectar no cobra ninguna cita', (await est('v1')).pagado_por === '');
+await q(`update lector_dispositivos set vinculado_at = now() - interval '1 hour'`);  // conectado hace 1 h
+const antesN = (await uno(`select count(*)::int n from lector_avisos`)).n;
+const rAntes = (await uno(`select lector_srv_recibir($1, 'aviso', $2) r`, [D, { huella: 'h-antes-001', centimos: 7700, nombre: 'HUGO PAZ', origen: 'Yape', cuando: Date.now() - 6 * 3_600_000 }])).r;
+ok('un Yape de antes de conectar no se guarda', rAntes.antes_de_conectar === true && (await uno(`select count(*)::int n from lector_avisos`)).n === antesN);
+ok('ni cobra la cita del mismo monto', (await est('v1')).pagado_por === '');
 
 // 9 · Permisos.
 const pf = await uno(`select has_function_privilege('authenticated', 'lector_emparejar(text)', 'execute') a,

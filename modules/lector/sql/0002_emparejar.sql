@@ -17,7 +17,7 @@
 --
 -- Cómo decide (investigación del 24-nov: el nombre ordena, no decide; lo ambiguo nunca se acepta
 -- en silencio; los pagos en partes solo si cuadran sin dudas):
---   · Solo avisos desde 10 min antes de conectar el celular: lo de antes no cobra nada solo.
+--   · Nada de antes de conectar el celular: ni se guarda, ni avisa, ni sale en el cuadre.
 --   · Monto EXACTO = lo que falta, lo que falta del adelanto o lo del comprobante.
 --   · Un solo candidato exacto → se aplica. Varios → gana el que el NOMBRE (o un familiar aprendido)
 --     señala con ventaja clara (75 %+ y 40 puntos sobre el segundo); quien tocó «Ya yapeé» o subió su
@@ -284,9 +284,8 @@ begin
           join public.lector_dispositivos d on d.id = a.dispositivo_id
          where a.company_id = p_company and a.asignado = '' and a.centimos is not null
            and a.cuando > now() - interval '36 hours'
-           -- Lo que el celular tenía guardado de ANTES de conectarlo (pruebas, Yapes de otra cosa) se
-           -- envía y sale en el cuadre, pero no cobra ninguna cita solo (24-nov, primer piloto).
-           and a.cuando >= d.vinculado_at - interval '10 minutes'
+           -- Nada de antes de conectar el celular (lector_srv_recibir ya no lo guarda; esto cubre lo viejo).
+           and a.cuando >= d.vinculado_at
          order by a.cuando, a.id
     loop
         e_cita := null; e_como := null; e_comp := null; e_esp := null; e_motivo := '';
@@ -387,6 +386,9 @@ begin
     if v_centimos is not null and (v_centimos < 1 or v_centimos > 10000000000) then v_centimos := null; end if;
     v_codigo := p_datos->>'codigo';
     if v_codigo is not null and v_codigo !~ '^\d{3}$' then v_codigo := null; end if;
+    -- Un pago de ANTES de conectar este celular no es asunto del panel (24-nov, piloto: un Yape de otra
+    -- cosa, aún en la bandeja, llegó al dueño al conectar). Se contesta bien para que la app no reintente.
+    if v_cuando < v_disp.vinculado_at then return jsonb_build_object('nuevo', false, 'antes_de_conectar', true); end if;
 
     insert into public.lector_avisos (company_id, dispositivo_id, huella, centimos, nombre, codigo, origen,
                                       generico, recuperado, cuando)
@@ -648,4 +650,14 @@ begin
     );
 end $$;
 
+-- Lo que ya entró de antes de conectar (versiones previas): fuera, si no se asignó a nada.
+delete from public.lector_avisos a using public.lector_dispositivos d
+ where d.id = a.dispositivo_id and a.cuando < d.vinculado_at and a.asignado = '';
+
 notify pgrst, 'reload schema';
+
+-- Comprobación: pagos de antes de conectar que SÍ quedaron en una cita. Si sale alguno, en Caja ›
+-- Cierre del día tócalo y «No era de esta cita».
+select a.id, a.cuando, a.centimos / 100.0 as monto, a.nombre, a.cita_id
+  from public.lector_avisos a join public.lector_dispositivos d on d.id = a.dispositivo_id
+ where a.cuando < d.vinculado_at and a.asignado <> '';
