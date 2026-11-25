@@ -20,6 +20,6 @@ drop function if exists public.lector_suena(text);
 drop table if exists public.lector_alias;
 drop table if exists public.lector_esperas;
 alter table public.lector_avisos drop constraint if exists lector_avisos_asignado_chk;
-alter table public.lector_avisos drop column if exists descartes, drop column if exists dudoso, drop column if exists antes,
+alter table public.lector_avisos drop column if exists motivo, drop column if exists descartes, drop column if exists dudoso, drop column if exists antes,
     drop column if exists como, drop column if exists asignado_at, drop column if exists asignado, drop column if exists cita_id;
 notify pgrst, 'reload schema';

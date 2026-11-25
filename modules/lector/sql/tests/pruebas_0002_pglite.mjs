@@ -97,6 +97,7 @@ let e = await est('c1');
 ok('barbero: único candidato → cobrada sola', e.pagado_por === 'lector' && Number(e.pagado) === 30, JSON.stringify(e));
 let a = await ultimo();
 ok('el aviso dice a qué cita fue', a.cita_id === 'c1' && a.asignado === 'auto');
+ok('motivo: única cita con ese monto', a.motivo === 'unico', a.motivo);
 const push = await uno(`select datos from avisos order by n desc limit 1`);
 ok('el push lleva la cita y el cliente', push.datos.cita === 'c1' && push.datos.cliente_cita === 'Carlos Ríos', JSON.stringify(push.datos));
 
@@ -105,6 +106,7 @@ await cita('c2', 'l2', 'Diego Paredes', 35, -30, 0);
 await cita('c3', 'l3', 'Luis Quispe', 35, -30, 0);
 await yape(3500, 'DIEGO PAREDES QUISPE');
 ok('dos iguales: el nombre señala a uno', (await est('c2')).pagado_por === 'lector' && (await est('c3')).pagado_por === '');
+ok('motivo: por el nombre', (await ultimo()).motivo === 'nombre');
 
 // 3 · Dos iguales y el nombre no ayuda → por asignar. El dueño elige y se aprende.
 await cita('c4', 'l4', 'Jorge Mendoza', 40, -30, 0);
@@ -117,6 +119,7 @@ const pa = (await uno(`select lector_por_asignar('neg') r`)).r;
 ok('el panel lo lista con sus 2 opciones', pa.length === 1 && pa[0].opciones.length === 2);
 await q(`select lector_asignar('neg', $1, 'c5')`, [a.id]);
 ok('el dueño elige: cobrada', (await est('c5')).pagado_por === 'lector');
+ok('motivo: lo eligió el dueño', (await uno(`select motivo from lector_avisos where id = $1`, [a.id])).motivo === 'elegido');
 ok('y aprende el familiar', (await uno(`select count(*)::int n from lector_alias where lead_id = 'l5'`)).n === 1);
 // Otra vez Kevin y Jorge con S/ 40; paga ROSA HUAMAN → ahora sabe que es Kevin.
 await q(`update appointments set status = 'cancelled' where id = 'c4'`);
@@ -135,12 +138,14 @@ ok('primer Yape de S/ 1: todavía no adivina', (await est('u1')).pagado_por === 
 ok('y no sale «por asignar» enseguida (3 min de gracia)', (await uno(`select lector_por_asignar('neg') r`)).r.length === 0);
 await yape(100, 'TERESA VEGA');
 ok('segundo Yape de S/ 1: las dos cobradas solas', (await est('u1')).pagado_por === 'lector' && (await est('u2')).pagado_por === 'lector');
+ok('y quedan marcadas «por orden» para corroborar', (await uno(`select count(*)::int n from lector_avisos where centimos = 100 and motivo = 'orden'`)).n >= 1);
 
 // 4 · Pago en partes: S/ 20 y luego S/ 30 de S/ 50.
 await cita('c8', 'l8', 'Piero Vásquez', 50, -20, 10);
 await yape(2000, 'PIERO VASQUEZ');
 e = await est('c8');
 ok('parte 1: a cuenta (el nombre señala a uno)', Number(e.pagado) === 20 && e.pagado_por === '', JSON.stringify(e));
+ok('motivo: pago en partes', (await ultimo()).motivo === 'partes');
 await yape(3000, 'PIERO VASQUEZ');
 e = await est('c8');
 ok('parte 2: lo que faltaba → cobrada', Number(e.pagado) === 50 && e.pagado_por === 'lector', JSON.stringify(e));
@@ -157,6 +162,7 @@ const r1 = (await uno(`select lector_srv_ya_pague('uno', 'w1', '') r`)).r;
 e = await est('w1');
 ok('«Ya yapeé» toma el Yape de antes: confirmada', e.status === 'confirmed' && Number(e.pagado) === 30, JSON.stringify(e) + JSON.stringify(r1));
 ok('y la página lo sabe', r1.estado === 'confirmada', JSON.stringify(r1));
+ok('motivo: el cliente avisó', (await uno(`select motivo from lector_avisos where cita_id = 'w1'`)).motivo === 'aviso');
 ok('la otra sigue apartada', (await est('w2')).status === 'pending_payment');
 const r2 = (await uno(`select lector_srv_ya_pague('uno', 'w2', '') r`)).r;
 ok('sin Yape todavía: esperando', r2.estado === 'esperando');

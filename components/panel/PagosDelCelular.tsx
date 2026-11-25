@@ -6,14 +6,16 @@
  * con toda la información, dentro de lo que ya existe: el cierre del día, donde se cuadra.
  *
  *   · Plegada: una línea con cuántos llegaron, el total y cuántos se asignaron solos.
- *   · Si alguno quedó por asignar (raro: dos citas iguales a la vez y el nombre no decide), sale
- *     arriba, abierto, con sus citas posibles como botones grandes.
- *   · Cada pago: quién pagó, por qué app y a qué hora, y a qué cita fue. Tocarlo enseña el detalle y
- *     «No era de esta cita».
+ *   · Si alguno quedó por asignar (raro), sale arriba, abierto, con sus citas posibles.
+ *   · Abierta, para CORROBORAR (piloto): el cuadre por app (Yape, Plin, Sip, banco) para compararlo con
+ *     los movimientos de cada app, los avisos que no se pudieron leer, cada pago con su cita y POR QUÉ
+ *     se asignó («por orden» en ámbar: cuál Yape fue de cuál cliente es una suposición), y «Copiar
+ *     cuadre» para pegarlo en WhatsApp o Excel.
+ *   · Tocar un pago enseña el detalle y «No era de esta cita».
  * Dueño y administrador. Sin celular conectado ni pagos ese día, no sale.
  */
 import { useState } from 'react';
-import { Check, ChevronDown } from 'lucide-react';
+import { Check, ChevronDown, Copy } from 'lucide-react';
 import { supabase } from '@/lib/supabase/client';
 import { useAvisar } from '@/components/panel/Avisos';
 import { useCargar } from '@/components/panel/useCargar';
@@ -34,6 +36,7 @@ export interface PagoLeido {
   slot?: string | null;
   resultado?: string | null;
   asignado?: string | null;
+  motivo?: string | null;
   por_asignar?: boolean;
 }
 export interface Opcion { cita_id: string; cliente: string; servicio: string; slot: string; falta: number; exacto: boolean }
@@ -41,6 +44,15 @@ export interface PorAsignar { id: number; centimos: number; nombre: string; orig
 
 const RESULTADO: Record<string, string> = {
   cobrada: 'cobrada', confirmada: 'reserva confirmada', a_cuenta: 'a cuenta', parcial: 'a cuenta', cotejado: 'comprobante cotejado',
+};
+/** Por qué se asignó (lector 0002, columna motivo). */
+const MOTIVO: Record<string, string> = {
+  unico: 'única cita con ese monto',
+  aviso: 'el cliente avisó que pagó',
+  nombre: 'por el nombre',
+  orden: 'por orden: compruébalo',
+  partes: 'pago en partes, por el nombre',
+  elegido: 'lo elegiste tú',
 };
 // «7:49 pm», como el resto del panel (el «p. m.» del navegador se parte en dos líneas en el celular).
 const horaLima = (iso: string) =>
@@ -59,9 +71,11 @@ export default function PagosDelCelular({ companyId, dia, recarga }: { companyId
     ]);
     if (estado.error) return null;
     const e = estado.data as { dispositivos: unknown[]; avisos: PagoLeido[] };
+    const delDia = e.avisos.filter((a) => diaLima(a.cuando) === dia);
     return {
       conectado: e.dispositivos.length > 0,
-      pagos: e.avisos.filter((a) => a.centimos !== null && diaLima(a.cuando) === dia),
+      pagos: delDia.filter((a) => a.centimos !== null),
+      sinLeer: delDia.filter((a) => a.centimos === null).length,
       dudas: ((dudas.data ?? []) as PorAsignar[]).filter((d) => diaLima(d.cuando) === dia),
     };
   }, [companyId, dia, recarga]);
@@ -86,19 +100,49 @@ export default function PagosDelCelular({ companyId, dia, recarga }: { companyId
     releer();
   }
 
-  return <PagosDelCelularVista pagos={datos.pagos} dudas={datos.dudas} ocupado={ocupado} alAsignar={asignar} alQuitar={quitar} />;
+  async function copiar(texto: string) {
+    try {
+      await navigator.clipboard.writeText(texto);
+      avisar('Cuadre copiado: pégalo en WhatsApp o Excel.', 'ok');
+    } catch {
+      avisar('No se pudo copiar en este navegador.', 'error');
+    }
+  }
+
+  return (
+    <PagosDelCelularVista dia={dia} pagos={datos.pagos} sinLeer={datos.sinLeer} dudas={datos.dudas} ocupado={ocupado}
+      alAsignar={asignar} alQuitar={quitar} alCopiar={copiar} />
+  );
+}
+
+/** El texto de «Copiar cuadre»: una línea por pago, separada por tabuladores (se pega bien en Excel). */
+export function textoCuadre(dia: string, pagos: PagoLeido[]): string {
+  const filas = [...pagos].reverse().map((a) => [
+    horaLima(a.cuando), a.origen, bonito(a.nombre) || 'Sin nombre', ((a.centimos ?? 0) / 100).toFixed(2),
+    a.cita_id ? a.cliente || 'cita' : a.por_asignar ? 'POR ASIGNAR' : 'sin cita',
+    a.cita_id ? RESULTADO[a.resultado ?? ''] ?? 'asignado' : '',
+    a.cita_id ? MOTIVO[a.motivo ?? ''] ?? '' : '',
+  ].join('\t'));
+  return [`Pagos del celular de cobros · ${dia}`, ['Hora', 'App', 'Pagó', 'Monto', 'Cita', 'Quedó', 'Por qué'].join('\t'), ...filas].join('\n');
 }
 
 /** La sección sin la base (también la usa la vista previa de /dev). */
-export function PagosDelCelularVista({ pagos, dudas, ocupado = 0, alAsignar, alQuitar }: {
-  pagos: PagoLeido[]; dudas: PorAsignar[]; ocupado?: number;
-  alAsignar: (p: PorAsignar, o: Opcion) => void; alQuitar: (a: PagoLeido) => void;
+export function PagosDelCelularVista({ dia, pagos, sinLeer = 0, dudas, ocupado = 0, alAsignar, alQuitar, alCopiar }: {
+  dia: string; pagos: PagoLeido[]; sinLeer?: number; dudas: PorAsignar[]; ocupado?: number;
+  alAsignar: (p: PorAsignar, o: Opcion) => void; alQuitar: (a: PagoLeido) => void; alCopiar: (texto: string) => void;
 }) {
   const [abierta, setAbierta] = useState(false);
   const [detalle, setDetalle] = useState<number | null>(null);
   const total = pagos.reduce((t, a) => t + (a.centimos ?? 0), 0) / 100;
   const solos = pagos.filter((a) => a.cita_id && a.asignado === 'auto').length;
   const sinCita = pagos.filter((a) => !a.cita_id && !a.por_asignar).length;
+  const porOrden = pagos.filter((a) => a.cita_id && a.motivo === 'orden').length;
+  // El cuadre por app: lo que hay que ver igual en los movimientos de Yape, Plin, Sip o el banco.
+  const porApp = Object.entries(pagos.reduce<Record<string, { n: number; total: number }>>((m, a) => {
+    const k = a.origen || 'Otro';
+    m[k] = { n: (m[k]?.n ?? 0) + 1, total: (m[k]?.total ?? 0) + (a.centimos ?? 0) / 100 };
+    return m;
+  }, {}));
 
   return (
     <section className="card ldp ldp-caja" aria-label="Pagos del celular de cobros">
@@ -110,6 +154,7 @@ export function PagosDelCelularVista({ pagos, dudas, ocupado = 0, alAsignar, alQ
               ? `${pagos.length} ${pagos.length === 1 ? 'pago' : 'pagos'} · ${soles(total)}${solos ? ` · ${solos} ${solos === 1 ? 'asignado solo' : 'asignados solos'}` : ''}${sinCita ? ` · ${sinCita} sin cita` : ''}`
               : 'Ninguno este día'}
           </small>
+          {porOrden > 0 && <small className="ldp-ambar">{porOrden === 1 ? '1 asignado por orden: compruébalo' : `${porOrden} asignados por orden: compruébalos`}</small>}
         </span>
         <ChevronDown size={18} aria-hidden="true" style={{ transform: abierta ? 'rotate(180deg)' : undefined, flex: 'none' }} />
       </button>
@@ -131,12 +176,34 @@ export function PagosDelCelularVista({ pagos, dudas, ocupado = 0, alAsignar, alQ
         </article>
       ))}
 
+      {abierta && (
+        <div className="ldp-cuadre">
+          <div className="ldp-cuadre__apps">
+            {porApp.map(([app, v]) => (
+              <span key={app}><b>{app}</b> {v.n} · {soles(v.total)}</span>
+            ))}
+          </div>
+          <small className="muted">Compáralo con los movimientos de este día en cada app.</small>
+          {sinLeer > 0 && (
+            <small className="ldp-ambar">
+              {sinLeer === 1 ? '1 aviso llegó y no se pudo leer: míralo' : `${sinLeer} avisos llegaron y no se pudieron leer: míralos`} en el celular de cobros.
+            </small>
+          )}
+          {pagos.length > 0 && (
+            <button type="button" className="btn btn-ghost btn-sm ldp-cuadre__copiar" onClick={() => alCopiar(textoCuadre(dia, pagos))}>
+              <Copy size={14} aria-hidden="true" /> Copiar cuadre
+            </button>
+          )}
+        </div>
+      )}
+
       {abierta && pagos.length > 0 && (
         <ul className="ldp-lista">
           {pagos.map((a) => {
             const destino = a.cita_id
               ? `${a.cliente || 'Una cita'} · ${RESULTADO[a.resultado ?? ''] ?? 'asignado'}`
               : a.por_asignar ? 'Elige su cita arriba' : 'Sin cita · venta suelta';
+            const ordenado = !!a.cita_id && a.motivo === 'orden';
             return (
               <li key={a.id}>
                 <button type="button" className="ldp-fila" disabled={!a.cita_id} aria-expanded={a.cita_id ? detalle === a.id : undefined}
@@ -145,13 +212,14 @@ export function PagosDelCelularVista({ pagos, dudas, ocupado = 0, alAsignar, alQ
                   <span className="ldp-quien">
                     <b>{bonito(a.nombre) || 'Sin nombre'}</b>
                     <small>{a.cita_id && <Check size={12} aria-hidden="true" />} {a.origen} · {destino}</small>
+                    {ordenado && <small className="ldp-ambar">Por orden: compruébalo</small>}
                   </span>
                   <span className="ldp-monto">{soles((a.centimos ?? 0) / 100)}</span>
                 </button>
                 {detalle === a.id && a.cita_id && (
                   <div className="ldp-detalle">
                     <span>
-                      {a.servicio}{a.slot ? ` · ${hora12(a.slot.slice(11, 16))}` : ''} · {a.asignado === 'auto' ? 'asignado solo' : 'lo asignaste tú'}
+                      {a.servicio}{a.slot ? ` · ${hora12(a.slot.slice(11, 16))}` : ''} · {MOTIVO[a.motivo ?? ''] ?? (a.asignado === 'auto' ? 'asignado solo' : 'lo asignaste tú')}
                     </span>
                     <button type="button" className="ldp-quitar" onClick={() => alQuitar(a)}>No era de esta cita</button>
                   </div>

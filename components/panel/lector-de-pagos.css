@@ -41,3 +41,8 @@
 .ldp-caja__cab > span { display: grid; gap: 2px; min-width: 0; }
 .ldp-caja__cab small { font-size: 12.5px; }
 .ldp-caja .ldp-lista { padding: 0 16px 6px; }
+/* Para corroborar (piloto): el cuadre por app y lo que pide mirarse, en ámbar. */
+.ldp-ambar { display: block; color: var(--warm, #B26B00) !important; font-weight: 600; font-size: 12px; }
+.ldp-cuadre { display: grid; gap: 6px; padding: 12px 16px; margin: 0 16px; border-radius: 12px; background: var(--bg-soft, #F4F4F0); }
+.ldp-cuadre__apps { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 13.5px; font-variant-numeric: tabular-nums; }
+.ldp-cuadre__copiar { justify-self: start; }

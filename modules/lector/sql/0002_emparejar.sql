@@ -41,6 +41,8 @@ alter table public.lector_avisos add column if not exists como        text not n
 alter table public.lector_avisos add column if not exists antes       jsonb;
 alter table public.lector_avisos add column if not exists dudoso      jsonb;
 alter table public.lector_avisos add column if not exists descartes   text[] not null default '{}';
+-- Por qué se asignó, para corroborar en el piloto: unico · aviso · nombre · orden · partes · elegido.
+alter table public.lector_avisos add column if not exists motivo      text not null default '';
 do $$
 begin
     if not exists (select 1 from pg_constraint where conname = 'lector_avisos_asignado_chk') then
@@ -270,7 +272,7 @@ declare
     v_exac  int;
     v_res   text;
     -- La cita elegida (texto: una variable record vacía no se puede leer).
-    e_cita  text; e_como text; e_comp uuid; e_esp uuid;
+    e_cita  text; e_como text; e_comp uuid; e_esp uuid; e_motivo text;
     b_nom numeric; s_nom numeric;
 begin
     -- Un negocio a la vez: dos avisos casi juntos no se pisan.
@@ -282,7 +284,7 @@ begin
            and cuando > now() - interval '36 hours'
          order by cuando, id
     loop
-        e_cita := null; e_como := null; e_comp := null; e_esp := null;
+        e_cita := null; e_como := null; e_comp := null; e_esp := null; e_motivo := '';
         create temp table if not exists lector_tmp_c (cita_id text, como text, exacto boolean, nombre numeric, cerca numeric,
             falta numeric, comprobante uuid, espera uuid, cliente text, servicio text, slot text) on commit drop;
         truncate lector_tmp_c;
@@ -293,8 +295,10 @@ begin
         if (select count(*) from lector_tmp_c where exacto and como in ('espera', 'cotejo', 'revisar')) = 1 then
             select t.cita_id, t.como, t.comprobante, t.espera into e_cita, e_como, e_comp, e_esp
               from lector_tmp_c t where t.exacto and t.como in ('espera', 'cotejo', 'revisar');
+            e_motivo := 'aviso';
         elsif v_exac = 1 then
             select t.cita_id, t.como, t.comprobante, t.espera into e_cita, e_como, e_comp, e_esp from lector_tmp_c t where t.exacto;
+            e_motivo := 'unico';
         elsif v_exac > 1 then
             -- Varios con el mismo monto: el nombre tiene que señalar a UNO sin dudas.
             select t.nombre into b_nom from lector_tmp_c t where t.exacto order by t.nombre desc, t.cerca desc limit 1;
@@ -303,6 +307,7 @@ begin
             if b_nom >= 0.75 and b_nom - s_nom >= 0.4 then
                 select t.cita_id, t.como, t.comprobante, t.espera into e_cita, e_como, e_comp, e_esp
                   from lector_tmp_c t where t.exacto order by t.nombre desc, t.cerca desc limit 1;
+                e_motivo := 'nombre';
             -- Alvaro (24-nov): «si hay dos citas de 1 y me llegan dos Yape de 1, cuadran». Si llegaron
             -- (en la misma hora) tantos Yape de ese monto como citas lo esperan, todas quedan cobradas y da
             -- igual cuál va con cuál: se asigna por nombre y, sin nombre, por orden.
@@ -311,18 +316,25 @@ begin
                       and x.cuando between v_av.cuando - interval '1 hour' and v_av.cuando + interval '1 hour') >= v_exac then
                 select t.cita_id, t.como, t.comprobante, t.espera into e_cita, e_como, e_comp, e_esp
                   from lector_tmp_c t where t.exacto order by t.nombre desc, t.cerca desc, t.slot, t.cita_id limit 1;
+                -- Todas quedan cobradas, pero cuál Yape fue de cuál cliente es una suposición: se marca.
+                e_motivo := 'orden';
             end if;
         else
             -- Pago en partes: solo si el nombre señala a un único candidato.
             if (select count(*) from lector_tmp_c where nombre >= 0.75) = 1 then
                 select t.cita_id, t.como, t.comprobante, t.espera into e_cita, e_como, e_comp, e_esp
                   from lector_tmp_c t where t.nombre >= 0.75;
+                e_motivo := 'partes';
             end if;
         end if;
 
         if e_cita is not null then
             v_res := public.lector_aplicar(v_av.id, e_cita, e_como, e_comp, e_esp, 'auto');
-            if v_res not in ('ya', 'sin_cita', 'sin_sitio') then v_n := v_n + 1; continue; end if;
+            if v_res not in ('ya', 'sin_cita', 'sin_sitio') then
+                update public.lector_avisos set motivo = e_motivo where id = v_av.id;
+                v_n := v_n + 1;
+                continue;
+            end if;
         end if;
 
         -- Sin asignar: se guardan las opciones para el dueño (exactas, o con algo de nombre).
@@ -540,6 +552,7 @@ begin
     end if;
     if v_res = 'sin_cita' then raise exception 'Esa cita no es de este negocio.'; end if;
     if v_res = 'sin_sitio' then raise exception 'Esa reserva ya no tiene sitio a esa hora: muévela y vuelve a asignar.'; end if;
+    update public.lector_avisos set motivo = 'elegido' where id = p_aviso;
     select lead_id into v_lead from public.appointments where id = p_cita and company_id = p_company;
     if coalesce(v_lead, '') <> '' and public.lector_clave_pagador(v_av.nombre) <> '' then
         insert into public.lector_alias (company_id, pagador, lead_id)
@@ -584,7 +597,7 @@ begin
     update public.lector_esperas set aviso_id = null where aviso_id = v_av.id;
     update public.lector_avisos
        set descartes = array_append(descartes, cita_id), cita_id = null, asignado = '', asignado_at = null,
-           como = '', antes = null, dudoso = null
+           como = '', antes = null, dudoso = null, motivo = ''
      where id = v_av.id;
     return jsonb_build_object('ok', true);
 end $$;
@@ -614,7 +627,7 @@ begin
                 select jsonb_build_object(
                     'id', a.id, 'centimos', a.centimos, 'nombre', a.nombre, 'codigo', a.codigo,
                     'origen', a.origen, 'generico', a.generico, 'recuperado', a.recuperado, 'cuando', a.cuando,
-                    'cita_id', a.cita_id, 'asignado', a.asignado, 'resultado', a.antes->>'resultado',
+                    'cita_id', a.cita_id, 'asignado', a.asignado, 'resultado', a.antes->>'resultado', 'motivo', a.motivo,
                     'por_asignar', a.asignado = '' and a.dudoso is not null and jsonb_array_length(a.dudoso) > 0,
                     'cliente', (select coalesce(nullif(c.beneficiario, ''), l.name, '') from public.appointments c
                                   left join public.leads l on l.id = c.lead_id and l.company_id = c.company_id
