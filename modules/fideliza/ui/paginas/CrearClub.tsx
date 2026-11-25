@@ -39,6 +39,10 @@ import { AVISOS_AUTO, avisoDeFabrica, type PlantillaAuto } from '@/modules/fidel
 import { COLORES, PLANTILLAS_TARJETA, colorValido, tarjetaValida, type Estilo, type PlantillaTarjeta } from '@/modules/fideliza/dominio/estilo';
 import { RUBROS, SELLOS, sellosDe, selloValido, sugerirRubro, type Rubro, type Sello } from '@/modules/fideliza/dominio/sellos';
 import { datosArteWallet, svgArteWallet } from '@/modules/fideliza/dominio/wallet-arte';
+import { NOMBRES_VISITA, nombreVisita, type NombreVisita } from '@/modules/fideliza/dominio/tarjetaOpciones';
+
+/** Espera entre un sello y el siguiente a la misma persona (cooldown_hours, sql/0015: máx. 7 días). */
+const ESPERAS = [0, 1, 2, 3, 5, 7];
 
 interface Club {
   negocio: string;
@@ -49,12 +53,18 @@ interface Club {
   sello: Sello;
   sellos: number;
   premio: string;
+  /** 25-nov-2026 (The 24/7): días de espera entre sellos (0 = sin espera). */
+  espera: number;
+  visitas: NombreVisita;
+  wallet: boolean;
+  avisos: boolean;
+  soloQr: boolean;
 }
 
 export default function CrearClub() {
   const { companyId, ajustes, puede, recargar: recargarCtx } = useFideliza();
   const avisar = useAvisar();
-  const [c, setC] = useState<Club>({ negocio: '', nombre: '', logo: '', color: '#FF4900', tarjeta: 'viva', sello: 'check', sellos: 8, premio: '' });
+  const [c, setC] = useState<Club>({ negocio: '', nombre: '', logo: '', color: '#FF4900', tarjeta: 'viva', sello: 'check', sellos: 8, premio: '', espera: 0, visitas: 'visitas', wallet: true, avisos: true, soloQr: false });
   const [rubroVisto, setRubroVisto] = useState<Rubro | null>(null);
   const [porEncuadrar, setPorEncuadrar] = useState<File | null>(null);
   const [vista, setVista] = useState<'web' | 'wallet'>('web');
@@ -92,6 +102,12 @@ export default function CrearClub() {
       sello: selloValido(estilo?.sello),
       sellos: regla.reward_threshold && regla.reward_threshold > 0 ? Math.min(20, regla.reward_threshold) : 8,
       premio: regla.reward_description ?? '',
+      // Horas guardadas → el día más cercano de la lista (12 h, del asistente, se ve como 1 día).
+      espera: regla.cooldown_hours ? ESPERAS.reduce((a, b) => (Math.abs(b * 24 - regla.cooldown_hours!) < Math.abs(a * 24 - regla.cooldown_hours!) ? b : a), 1) : 0,
+      visitas: nombreVisita(estilo?.visitas, negocio, SELLOS.find((x) => x.id === estilo?.sello)?.rubro).id,
+      wallet: estilo?.wallet !== false,
+      avisos: estilo?.avisos !== false,
+      soloQr: estilo?.caja_solo_qr === true,
     });
     // «Pruébalo con tu celular» desde Primeros pasos: solo si el club ya está publicado.
     if (p && p.status !== 'draft' && new URLSearchParams(window.location.search).get('probar')) setPublicado(true);
@@ -166,10 +182,23 @@ export default function CrearClub() {
         datos: { ...(ajustes ? {} : { display_name: c.negocio.trim(), slug: slugDe(c.negocio) }), bg_color: c.color, logo_url: c.logo },
       });
       // 2 · Diseño de la tarjeta e icono (page_style se guarda entero: se conserva lo de «Mi página»).
-      await accion('estilo.guardar', { companyId, estilo: { plantilla: 'clasica', ...((ajustes?.page_style ?? {}) as Partial<Estilo>), sello: c.sello, tarjeta: c.tarjeta } });
+      await accion('estilo.guardar', {
+        companyId,
+        estilo: {
+          plantilla: 'clasica',
+          ...((ajustes?.page_style ?? {}) as Partial<Estilo>),
+          sello: c.sello,
+          tarjeta: c.tarjeta,
+          visitas: c.visitas,
+          wallet: c.wallet,
+          avisos: c.avisos,
+          caja_solo_qr: c.soloQr,
+        },
+      });
       // 3 · La regla: lo que ya hubiera (compra mínima, sucursales…) se conserva; cambian sellos y premio.
       const base = { ...(datos?.version ?? {}), ...(programa?.draft ?? {}) } as Record<string, unknown>;
-      const claves = ['rule_type', 'stamps_per_purchase', 'points_per_unit', 'unit_cents', 'rounding', 'min_purchase_cents', 'reward_threshold', 'reward_description', 'reward_valid_days', 'valid_to', 'location_ids'];
+      // 25-nov-2026: también lo de 0015 (antes se perdía al publicar aquí la espera puesta en el asistente).
+      const claves = ['rule_type', 'stamps_per_purchase', 'points_per_unit', 'unit_cents', 'rounding', 'min_purchase_cents', 'reward_threshold', 'reward_description', 'reward_valid_days', 'valid_to', 'location_ids', 'period', 'tiers', 'cooldown_hours', 'bonus_label', 'bonus_units'];
       const draft = {
         ...Object.fromEntries(Object.entries(base).filter(([k]) => claves.includes(k))),
         rule_type: 'stamps',
@@ -177,6 +206,7 @@ export default function CrearClub() {
         min_purchase_cents: (base.min_purchase_cents as number) ?? 0,
         reward_threshold: c.sellos,
         reward_description: c.premio.trim(),
+        cooldown_hours: c.espera > 0 ? c.espera * 24 : null,
       };
       const id = await accion<string>('programa.guardar', {
         companyId,
@@ -340,6 +370,48 @@ export default function CrearClub() {
           <small className="fz-def">Un sello por compra. Con {c.sellos} sellos, {c.premio.trim() || 'el premio'}. {c.sellos > 12 ? 'Con más de 12, la tarjeta muestra una barra en vez de casillas.' : ''}</small>
         </section>
 
+        <section className="card fz-club__sec">
+          <small className="fz-club__paso">Club · Un sello cada cuánto</small>
+          <div className="fz-fila" role="radiogroup" aria-label="Espera entre sellos" style={{ gap: 6, flexWrap: 'wrap' }}>
+            {ESPERAS.map((d) => (
+              <button key={d} type="button" role="radio" aria-checked={c.espera === d} disabled={!editable}
+                className={`btn btn-sm ${c.espera === d ? 'btn-primary' : 'btn-ghost'}`} onClick={() => setC({ ...c, espera: d })}>
+                {d === 0 ? 'Sin espera' : d === 1 ? '1 día' : `${d} días`}
+              </button>
+            ))}
+          </div>
+          <small className="fz-def">
+            {c.espera === 0
+              ? 'A la misma persona se le puede dar otro sello en cualquier momento.'
+              : `A la misma persona no se le da otro sello hasta ${c.espera === 1 ? '24 horas' : `${c.espera} días`} después del último. La caja avisa desde cuándo puede.`}
+          </small>
+        </section>
+
+        <section className="card fz-club__sec">
+          <small className="fz-club__paso">Tarjeta · Lo que ve tu cliente</small>
+          <label className="field-label">Cada visita se llama</label>
+          <div className="fz-fila" role="radiogroup" aria-label="Cómo se llama cada visita" style={{ gap: 6, flexWrap: 'wrap' }}>
+            {NOMBRES_VISITA.map((n) => (
+              <button key={n.id} type="button" role="radio" aria-checked={c.visitas === n.id} disabled={!editable}
+                className={`btn btn-sm ${c.visitas === n.id ? 'btn-primary' : 'btn-ghost'}`} onClick={() => setC({ ...c, visitas: n.id })}>
+                {n.una}
+              </button>
+            ))}
+          </div>
+          <small className="fz-def">En su tarjeta sale «{NOMBRES_VISITA.find((n) => n.id === c.visitas)!.titulo}».</small>
+          <ul className="fz-club__opciones">
+            <Opcion nombre="Botón «Agregar a Google Wallet»" ayuda="Apagado, la tarjeta no lo ofrece. Quien ya la guardó la sigue teniendo." on={c.wallet} editable={editable} alternar={() => setC({ ...c, wallet: !c.wallet })} />
+            <Opcion nombre="Casilla «Quiero que me avise»" ayuda="La de la tarjeta para prender o quitar los avisos. El aviso flotante de instalar y activar sigue igual." on={c.avisos} editable={editable} alternar={() => setC({ ...c, avisos: !c.avisos })} />
+          </ul>
+        </section>
+
+        <section className="card fz-club__sec">
+          <small className="fz-club__paso">Caja · Tu equipo</small>
+          <ul className="fz-club__opciones">
+            <Opcion nombre="El equipo solo suma escaneando el QR" ayuda="Tu equipo (barberos, empleados) no puede buscar por nombre, celular ni código ni crear tarjetas: el cliente tiene que enseñar la suya. Tú y tus administradores buscan como siempre." on={c.soloQr} editable={editable} alternar={() => setC({ ...c, soloQr: !c.soloQr })} />
+          </ul>
+        </section>
+
         {editable && (
           <div className="fz-club__acciones">
             {v.resumen('Antes de publicar, revisa:')}
@@ -393,5 +465,17 @@ export default function CrearClub() {
         <small className="fz-def" style={{ display: 'block', textAlign: 'center', marginTop: 8 }}>Vista con 3 sellos de ejemplo.</small>
       </aside>
     </div>
+  );
+}
+
+function Opcion({ nombre, ayuda, on, editable, alternar }: { nombre: string; ayuda: string; on: boolean; editable: boolean; alternar: () => void }) {
+  return (
+    <li className="fz-club__opcion">
+      <span>
+        <b>{nombre}</b>
+        <small>{ayuda}</small>
+      </span>
+      <button type="button" className={`toggle${on ? ' on' : ''}`} role="switch" aria-checked={on} aria-label={nombre} disabled={!editable} onClick={alternar} />
+    </li>
   );
 }

@@ -21,7 +21,7 @@
  */
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
-import { Camera, CameraOff, Check, Gift, MonitorSmartphone, Plus, ShoppingBag, Undo2, UserRound } from 'lucide-react';
+import { Camera, CameraOff, Check, Gift, Minus, MonitorSmartphone, Plus, ShoppingBag, Undo2, UserRound } from 'lucide-react';
 import { useFideliza } from '@/modules/fideliza/ui/Contexto';
 import CumpleCliente from '@/modules/fideliza/ui/CumpleCliente';
 import { useSesion } from '@/components/panel/Sesion';
@@ -116,7 +116,10 @@ declare global {
 }
 
 export default function Caja() {
-  const { companyId, ajustes, puede } = useFideliza();
+  const { companyId, ajustes, puede, rol } = useFideliza();
+  // «El equipo solo suma escaneando el QR» (Mi club, 25-nov-2026): al rol de caja solo le queda la
+  // cámara. El servidor lo exige igual en caja.buscar; esto solo evita enseñarle lo que no puede usar.
+  const soloQr = rol === 'cashier' && (ajustes?.page_style as Partial<Estilo> | null)?.caja_solo_qr === true;
   const { companias } = useSesion();
   const avisar = useAvisar();
   const [q, setQ] = useState('');
@@ -296,7 +299,7 @@ export default function Caja() {
   useEffect(() => {
     const t = q.trim();
     // Un código o un token del QR no se sugiere: eso lo resuelve «buscar» de una.
-    if (!companyId || persona || t.length < 2 || /^(vdm-|vq)/i.test(t) || (/^\d+$/.test(t) && t.length < 4)) {
+    if (!companyId || soloQr || persona || t.length < 2 || /^(vdm-|vq)/i.test(t) || (/^\d+$/.test(t) && t.length < 4)) {
       setSugeridos([]);
       return;
     }
@@ -310,7 +313,7 @@ export default function Caja() {
       vigente = false;
       clearTimeout(espera);
     };
-  }, [q, companyId, persona]);
+  }, [q, companyId, persona, soloQr]);
 
   if (!puede('ops.record')) return <SinPermiso que="la caja" />;
   if (!companyId) return <Cargando />;
@@ -495,6 +498,38 @@ export default function Caja() {
     }
   }
 
+  /**
+   * «Restar sello» (25-nov-2026, The 24/7: «deberíamos tener para el cajero / dueño»). Una
+   * corrección de −1 en el libro, con el usuario y el motivo; la base exige ops.refund (dueño y
+   * encargado; el admin del panel entra como encargado desde fideliza 0027). Sin tocar premios ya
+   * ganados: si la resta deja el saldo bajo la meta, el premio ya emitido sigue ahí.
+   */
+  async function restar() {
+    if (!m || m.balance <= 0) return;
+    const una = m.rule_type === 'visits' ? 'una visita' : 'un sello';
+    if (!window.confirm(`¿Restar ${una} a ${nombreDe(m)}? Lleva ${m.balance}; quedará en ${m.balance - 1}.`)) return;
+    setOcupado(true);
+    try {
+      await accion('caja.ajustar', {
+        companyId,
+        memberId: m.id,
+        units: -1,
+        reason: 'Restado en caja',
+        idempotencyKey: nuevaClave(),
+        ...(m.programId ? { programId: m.programId } : {}),
+      });
+      const lista = await accion<MiembroCaja[]>('caja.buscar', { companyId, q: m.public_code });
+      if (lista[0]) setM(lista[0]);
+      setHecho(null);
+      setUltimo({ texto: `A ${nombreDe(m)} se le restó ${una}. Lleva ${m.balance - 1}.`, tono: 'info' });
+      sincronizarEnSegundoPlano(companyId!);
+    } catch (e) {
+      avisar(mensaje(e), 'error');
+    } finally {
+      setOcupado(false);
+    }
+  }
+
   function otroCliente() {
     setHecho(null);
     setM(null);
@@ -547,6 +582,8 @@ export default function Caja() {
         <div className="fz-barra"><i style={{ width: `${Math.max(0, Math.min(1, saldo / Math.max(1, x.threshold ?? 1))) * 100}%` }} /></div>
       </div>
     );
+  // Restar: sellos o visitas (los puntos se corrigen en la ficha, con su cantidad), con saldo, y quien puede devolver.
+  const puedeRestar = (x: MiembroCaja) => puede('ops.refund') && x.rule_type !== 'points' && x.balance > 0;
   const verbo = (x: MiembroCaja) => (x.rule_type === 'visits' ? 'Registrar visita' : x.rule_type === 'points' ? 'Sumar puntos' : 'Dar sello');
 
   // ── Pantallas del mostrador ────────────────────────────────────────────
@@ -630,7 +667,9 @@ export default function Caja() {
 
       <div className="card fz-busca" style={{ marginBottom: 14 }}>
         <label className="field-label" htmlFor="fz-busca">¿A quién atiendes?</label>
+        {soloQr && <p className="fz-def">Escanea el QR de la tarjeta del cliente: en este negocio el equipo suma solo así.</p>}
         <input
+          hidden={soloQr}
           id="fz-busca"
           ref={entrada}
           className="input fz-input-gran"
@@ -673,9 +712,9 @@ export default function Caja() {
               {camara ? <CameraOff size={18} /> : <Camera size={18} />} {camara ? 'Cerrar cámara' : 'Escanear su QR'}
             </button>
           )}
-          <button className="fz-gran fz-gran--ghost" onClick={() => setAlta({ alias: q.trim() && !/\d/.test(q) ? q.trim() : '', phone: /^[+\d\s]{6,}$/.test(q.trim()) ? q.trim() : '', verificado: false, clave: nuevaClave() })}>
+          {!soloQr && <button className="fz-gran fz-gran--ghost" onClick={() => setAlta({ alias: q.trim() && !/\d/.test(q) ? q.trim() : '', phone: /^[+\d\s]{6,}$/.test(q.trim()) ? q.trim() : '', verificado: false, clave: nuevaClave() })}>
             <Plus size={18} /> Nuevo cliente
-          </button>
+          </button>}
         </div>
         {!escanerPosible && <p className="fz-def">Este navegador no puede usar la cámara: busca por nombre, celular o el código que sale bajo el QR.</p>}
       </div>
@@ -870,7 +909,14 @@ export default function Caja() {
               <button className="btn btn-primary btn-sm" onClick={() => void enviar(pendiente)}>Reintentar</button>
             </div>
           )}
-          <button className="btn btn-ghost btn-sm" style={{ marginTop: 10 }} onClick={otroCliente}>Otro cliente</button>
+          <div className="fz-fila" style={{ marginTop: 10, justifyContent: 'space-between' }}>
+            <button className="btn btn-ghost btn-sm" onClick={otroCliente}>Otro cliente</button>
+            {puedeRestar(m) && (
+              <button className="btn btn-ghost btn-sm" disabled={ocupado} onClick={() => void restar()}>
+                <Minus size={14} /> Restar {m.rule_type === 'visits' ? 'visita' : 'sello'}
+              </button>
+            )}
+          </div>
         </div>
       )}
 
@@ -964,11 +1010,18 @@ export default function Caja() {
               </button>
             </div>
           )}
-          {puede('members.read') && (
-            <Link className="btn btn-ghost btn-sm" style={{ marginTop: 12 }} href={`/panel/fideliza/clientes/${(persona ?? m).id}`}>
-              Ver ficha
-            </Link>
-          )}
+          <div className="fz-fila" style={{ marginTop: 12 }}>
+            {puede('members.read') && (
+              <Link className="btn btn-ghost btn-sm" href={`/panel/fideliza/clientes/${(persona ?? m).id}`}>
+                Ver ficha
+              </Link>
+            )}
+            {m.status === 'active' && puedeRestar(m) && (
+              <button className="btn btn-ghost btn-sm" disabled={ocupado} onClick={() => void restar()}>
+                <Minus size={14} /> Restar {m.rule_type === 'visits' ? 'visita' : 'sello'}
+              </button>
+            )}
+          </div>
         </div>
       )}
     </div>

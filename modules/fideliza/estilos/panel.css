@@ -389,6 +389,12 @@
 .fz-club__stepper button{display:grid;place-items:center;width:36px;height:36px;border-radius:50%;border:1.5px solid var(--line-2);background:#fff;cursor:pointer}
 .fz-club__stepper button:disabled{opacity:.4;cursor:default}
 .fz-club__stepper b{min-width:28px;text-align:center;font-size:22px}
+.fz-club__opciones{list-style:none;margin:12px 0 0;padding:0;display:flex;flex-direction:column;gap:2px}
+.fz-club__opcion{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:10px 0;border-top:1px solid var(--line-2)}
+.fz-club__opcion:first-child{border-top:0}
+.fz-club__opcion span{display:flex;flex-direction:column;gap:2px;min-width:0}
+.fz-club__opcion small{color:var(--ink-soft);font-size:12px;line-height:1.35}
+.fz-club__opcion .toggle{flex:none}
 .fz-club__acciones{display:flex;flex-direction:column;gap:8px;align-items:flex-start}
 .fz-club__publicar{min-height:48px;padding:0 22px;font-size:15px}
 .fz-club-listo{max-width:560px;margin:20px auto;text-align:center;padding:32px 20px}

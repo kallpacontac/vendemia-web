@@ -9,6 +9,7 @@ import { avisarPremio, avisarSello } from './avisos';
 import { drenar } from './worker';
 import { urlAyuda, urlSuelta } from '../dominio/botones';
 import { IDS_SELLO } from '../dominio/sellos';
+import { IDS_NOMBRE_VISITA, esTokenQr } from '../dominio/tarjetaOpciones';
 import { MAX_POSICION, MAX_TRABAJOS } from '../dominio/portafolio';
 
 /**
@@ -161,6 +162,23 @@ async function miembroDeLinea(sb: Parameters<typeof rpc>[0], companyId: string, 
   return rpc<string>(sb, 'loyalty_line_member', { p_company: companyId, p_member: memberId, p_program: programId });
 }
 
+/**
+ * 25-nov-2026 · «el barbero solo puede escanear el QR», configurable en Mi club
+ * (page_style.caja_solo_qr). Solo frena al rol de caja; dueño, encargado y
+ * Vendemia buscan como siempre. Ante cualquier duda de lectura, no frena: la
+ * caja no se puede quedar sin funcionar por esto.
+ */
+async function soloQrParaMi(sb: Parameters<typeof rpc>[0], companyId: string): Promise<boolean> {
+  try {
+    const rol = await rpc<string | null>(sb, 'loyalty_role', { p_company: companyId });
+    if (rol !== 'cashier') return false;
+    const { data } = await (sb as SupabaseClient).from('loyalty_settings').select('page_style').eq('company_id', companyId).maybeSingle();
+    return (data?.page_style as { caja_solo_qr?: unknown } | null)?.caja_solo_qr === true;
+  } catch {
+    return false;
+  }
+}
+
 const enlace = z
   .object({
     label: textoCorto(40).min(1),
@@ -278,6 +296,11 @@ export const ACCIONES = {
           place_nombre: textoCorto(120).optional(),
           historia: z.enum(['instagram', 'tiktok', '']).optional(),
           sello: z.enum(IDS_SELLO).optional(),
+          // 25-nov-2026 · dominio/tarjetaOpciones.ts: lo que el dueño prende o apaga de la tarjeta.
+          visitas: z.enum(IDS_NOMBRE_VISITA).optional(),
+          wallet: z.boolean().optional(),
+          avisos: z.boolean().optional(),
+          caja_solo_qr: z.boolean().optional(),
           // Trabajos con foto (dominio/portafolio.ts). El tope de tamaño lo pone sql/0020.
           portafolio: z
             .object({
@@ -485,7 +508,12 @@ export const ACCIONES = {
   'caja.buscar': accion({
     esquema: z.object({ companyId: compania, q: textoCorto(120).min(1) }),
     limite: ['buscar', 120],
-    ejecutar: (d, { sb }) => rpc(sb, 'loyalty_lookup', { p_company: d.companyId, p_query: d.q }),
+    ejecutar: async (d, { sb }) => {
+      // «Solo con el QR» (Mi club): quien tiene rol de caja no busca por nombre, celular ni código;
+      // solo el token que lleva el QR del cliente. Dueño y encargado buscan como siempre.
+      if (!esTokenQr(d.q) && (await soloQrParaMi(sb, d.companyId))) throw new Error('loyalty:solo_qr');
+      return rpc(sb, 'loyalty_lookup', { p_company: d.companyId, p_query: d.q });
+    },
   }),
   'caja.registrar': accion({
     esquema: z.object({

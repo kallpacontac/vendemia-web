@@ -13,6 +13,7 @@
  */
 import type { Sello } from './sellos';
 import type { Portafolio } from './portafolio';
+import type { OpcionesTarjeta } from './tarjetaOpciones';
 
 export type Plantilla = 'clasica' | 'oscura' | 'vidrio' | 'foto' | 'marco' | 'color';
 export type PlantillaTarjeta = 'viva' | 'organica' | 'nocturna';
@@ -28,7 +29,8 @@ export type Forma = 'auto' | 'pildora' | 'redondeado' | 'recto';
 export type PosicionRedes = 'auto' | 'arriba' | 'abajo';
 export type RedHistoria = 'instagram' | 'tiktok';
 
-export interface Estilo {
+/** Con OpcionesTarjeta (25-nov-2026): nombre de las visitas, Wallet, avisos y «solo QR» de la caja. */
+export interface Estilo extends OpcionesTarjeta {
   plantilla: Plantilla;
   /** Diseño de la tarjeta de fidelidad web y de la ilustración del pase. */
   tarjeta?: PlantillaTarjeta;

@@ -7,7 +7,8 @@ import { UNIDAD, diaLargo, fechaHora, horaSola, type TipoRegla } from '@/modules
 import { AGENDA_URL } from '@/modules/tu-pagina/dominio/config';
 import { colorValido, mezcla, resolverEstilo, tintaSobre, type Estilo } from '@/modules/fideliza/dominio/estilo';
 import { urlNegocio } from '@/modules/fideliza/dominio/config';
-import { selloValido, trazoSello } from '@/modules/fideliza/dominio/sellos';
+import { SELLOS, selloValido, trazoSello } from '@/modules/fideliza/dominio/sellos';
+import { conAvisosEnTarjeta, conWalletEnTarjeta, nombreVisita } from '@/modules/fideliza/dominio/tarjetaOpciones';
 import AvisoActivar from './AvisoActivar';
 import AvisoInstalar, { type EventoInstalar } from './AvisoInstalar';
 import { instalarGuardado, soltarInstalarGuardado } from '@/components/panel/Instalable';
@@ -115,8 +116,6 @@ export default function Tarjeta(props: {
   const [permisoAvisos, setPermisoAvisos] = useState<NotificationPermission>('default');
   // Mientras se ofrece activar los avisos no sale el de instalar: uno por visita.
   const [cederInstalar, setCederInstalar] = useState(false);
-  const [alias, setAlias] = useState(props.inicial.member.alias ?? '');
-  const [borrado, setBorrado] = useState(false);
   // El «Instalar» de Android llega una sola vez al cargar: se guarda para el aviso y el botón.
   const [instalar, setInstalar] = useState<EventoInstalar | null>(null);
   const [avisoVisible, setAvisoVisible] = useState(false);
@@ -345,43 +344,17 @@ export default function Tarjeta(props: {
     }
   }
 
-  async function guardarAlias() {
-    setOcupado('alias');
-    try {
-      await pedir({ accion: 'alias', token, alias });
-      await actualizar();
-    } catch (e) {
-      setAviso(e instanceof Error ? e.message : 'No se pudo guardar.');
-    } finally {
-      setOcupado(null);
-    }
-  }
-
-  async function borrar() {
-    if (!window.confirm('Se borrarán tu nombre, tus datos de contacto y tus avisos, y esta tarjeta dejará de funcionar. Tus premios sin canjear se pierden. ¿Continuar?')) return;
-    setOcupado('borrar');
-    try {
-      await pedir({ accion: 'borrar', token, confirmo: true });
-      try {
-        localStorage.removeItem(`fz:card:${d.brand.slug}`);
-      } catch {
-        /* nada */
-      }
-      setBorrado(true);
-    } catch (e) {
-      setAviso(e instanceof Error ? e.message : 'No se pudo borrar.');
-    } finally {
-      setOcupado(null);
-    }
-  }
-
   // Lo de instalar va en el aviso de abajo; la caja lo repite solo si el aviso no está a la vista.
-  const conWallet = plataforma !== 'ios' && props.walletDisponible && (walletVerificada || !d.wallet?.links_issued);
+  // 25-nov-2026: el dueño puede apagar Wallet en Mi club; entonces es como si no hubiera.
+  const walletOn = props.walletDisponible && conWalletEnTarjeta(d.brand.style);
+  const conWallet = plataforma !== 'ios' && walletOn && (walletVerificada || !d.wallet?.links_issued);
   // Sin el permiso del teléfono no llega nada, aunque la base diga que sí los quiere.
   const avisosActivos = d.push.consent && d.push.devices > 0 && permisoAvisos === 'granted';
   const respaldoIos = plataforma === 'ios' && !enApp && !avisoVisible;
   const respaldoInstalar = plataforma !== 'ios' && !enApp && instalar !== null && !avisoVisible;
-  const notaFavoritos = plataforma === 'otra' && !props.walletDisponible && !enApp;
+  const notaFavoritos = plataforma === 'otra' && !walletOn && !enApp;
+  // «Tus últimos cortes / cafés / visitas»: lo elige el dueño en Mi club o se sugiere por el rubro.
+  const visitaDe = nombreVisita(d.brand.style?.visitas, d.brand.display_name, SELLOS.find((x) => x.id === d.brand.style?.sello)?.rubro);
 
   const marca = colorValido(d.brand.bg_color);
   const plantilla = resolverEstilo(d.brand.style);
@@ -397,17 +370,6 @@ export default function Tarjeta(props: {
     '--suave': fondoOscuro ? '#C7C5C6' : '#666661',
     '--borde': fondoOscuro ? '#48464B' : '#E9E8E4',
   } as React.CSSProperties;
-
-  if (borrado) {
-    return (
-      <main className="fz" style={estilo}>
-        <div className="fz-caja" role="status">
-          <p className="fz-grande">Tus datos se borraron.</p>
-          <p className="fz-nota">Esta tarjeta ya no funciona. Si vuelves, puedes crear una nueva.</p>
-        </div>
-      </main>
-    );
-  }
 
   return (
     <main className="fz" style={estilo} data-plantilla={plantilla.plantilla} data-tarjeta={plantilla.tarjeta}>
@@ -595,7 +557,7 @@ export default function Tarjeta(props: {
           </button>
         </p>
       </section>
-      <a className="fz-volver" href={urlNegocio(d.brand.slug)}><ArrowLeft size={18} aria-hidden="true" /> Volver a la página de enlaces</a>
+      <a className="fz-volver" href={urlNegocio(d.brand.slug)}><ArrowLeft size={18} aria-hidden="true" /> Ver la página de {d.brand.display_name}</a>
 
       {/* 0026 (24-nov-2026): el botón de reseña, solo si el dueño lo quiere en la tarjeta. Sin premio por reseñar. */}
       {props.resena && d.member.status === 'active' && (
@@ -607,7 +569,7 @@ export default function Tarjeta(props: {
         </section>
       )}
 
-      {pushPosible && d.member.status === 'active' && (
+      {pushPosible && d.member.status === 'active' && conAvisosEnTarjeta(d.brand.style) && (
         <section className="fz-caja fz-caja--flujo" aria-label="Avisos">
           {avisosActivos ? (
             <>
@@ -637,9 +599,9 @@ export default function Tarjeta(props: {
       )}
 
       {d.movements.length > 0 && (
-        <section className="fz-caja" aria-label="Últimos movimientos">
-          <h2>Últimos movimientos</h2>
-          {d.movements.some((m) => m.visit) && <p className="fz-mini fz-movs__ayuda">Toca una visita para ver la fecha, la hora y quién te atendió.</p>}
+        <section className="fz-caja" aria-label={visitaDe.titulo}>
+          <h2>{visitaDe.titulo}</h2>
+          {d.movements.some((m) => m.visit) && <p className="fz-mini fz-movs__ayuda">Toca {visitaDe.art} {visitaDe.una.toLowerCase()} para ver la fecha, la hora y quién te atendió.</p>}
           <ul className="fz-movs">
             {d.movements.map((m, i) => {
               const sumo = <b>{m.units > 0 ? `+${m.units}` : m.units}</b>;
@@ -659,7 +621,7 @@ export default function Tarjeta(props: {
                   <button type="button" className="fz-mov-visita__fila" aria-expanded={abierta} aria-controls={`fz-visita-${i}`}
                     onClick={() => setVisitaAbierta(abierta ? null : i)}>
                     <span className="fz-mov-visita__que">
-                      <span>{v.servicio ?? 'Visita'}</span>
+                      <span>{v.servicio ?? visitaDe.una}</span>
                       <span className="fz-nota">{fechaHora(m.at)}{v.barbero ? ` · ${v.barbero}` : ''}</span>
                     </span>
                     {sumo}
@@ -688,22 +650,16 @@ export default function Tarjeta(props: {
         </section>
       )}
 
+      {/* 25-nov-2026: sin «Guardar nombre» ni «Borrar mis datos» (pedido de The 24/7: un toque y se
+          perdían sellos y premios). La ley pide una vía para borrar, no un botón: el local lo hace
+          desde la ficha del cliente (Más opciones › Borrar datos personales). */}
       <details className="fz-caja">
         <summary>Mis datos</summary>
-        <label className="fz-label" htmlFor="alias">
-          Tu nombre en la tarjeta
-        </label>
-        <input id="alias" className="fz-input" maxLength={40} value={alias} onChange={(e) => setAlias(e.target.value)} />
-        <button type="button" className="fz-btn" onClick={() => void guardarAlias()} disabled={ocupado === 'alias'}>
-          Guardar nombre
-        </button>
         <p className="fz-nota">
           ¿Cambias de teléfono? Pide en el local que te den un enlace nuevo: comprobarán que eres tú en persona.
           {d.contacts.some((c) => c.verified) ? ' Tu contacto ya está verificado.' : ''}
         </p>
-        <button type="button" className="fz-btn fz-peligro" onClick={() => void borrar()} disabled={ocupado === 'borrar'}>
-          Borrar mis datos y esta tarjeta
-        </button>
+        <p className="fz-nota">¿Quieres cambiar tu nombre o borrar tus datos? Pídelo en {d.brand.display_name}.</p>
       </details>
 
       {fiesta && (
