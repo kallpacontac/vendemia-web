@@ -22,6 +22,7 @@ import { useCargar } from './useCargar';
 import MenuArrastrable, { igualZonas, type FilaMenu, type Zonas } from './MenuArrastrable';
 import { accion, lecturas, mensaje } from '@/modules/fideliza/cliente/api';
 import { demoActivo } from '@/lib/panel/demo';
+import { esCita } from '@/lib/panel/modo';
 import {
   FIJAS,
   RUTA_AJUSTES,
@@ -31,6 +32,7 @@ import {
   guardarFidelizaEquipo,
   guardarOrdenMenu,
   ordenar,
+  pestanasArriba,
   useOrdenMenu,
   type OrdenMenu,
 } from '@/lib/panel/menu';
@@ -216,7 +218,8 @@ export default function OrdenDelMenu() {
         </details>
         <div className="menu-orden__cabeza">
           <p className="muted">
-            Arrastra para ordenar. Lo que pongas en «Más» sigue ahí, a un toque. Se guarda solo y vale para todo tu equipo.
+            Arrastra para ordenar. Las {pestanasArriba(esCita(modo))} primeras salen también en las pestañas de arriba
+            (marcadas «Pestaña»). Lo que pongas en «Más» sigue ahí, a un toque. Se guarda solo y vale para todo tu equipo.
           </p>
           <span className={`menu-orden__estado menu-orden__estado--${estado}`} role="status" aria-live="polite">
             {estado === 'guardando' ? 'Guardando…' : estado === 'guardado' ? '✓ Guardado' : ''}
@@ -228,6 +231,7 @@ export default function OrdenDelMenu() {
           alCambiar={cambiar}
           alSoltar={programarGuardado}
           alArrastrar={setArrastrando}
+          enPestanas={personalizado || borrador ? pestanasArriba(esCita(modo)) : 0}
         />
         {personalizado && borrador === null && estado === 'quieto' && (
           <div className="menu-orden__pie">

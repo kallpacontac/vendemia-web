@@ -44,3 +44,9 @@
 @media (max-width: 480px) {
   .menu-orden__vis-txt { display: none; }
 }
+
+/* «Pestaña»: esta fila sale también en las pestañas de arriba (Topbar). */
+.menu-orden__pestana {
+  flex: none; padding: 2px 7px; border-radius: 999px; background: var(--brand-soft); color: var(--brand-txt);
+  font-size: 10.5px; font-weight: 800; letter-spacing: .02em;
+}

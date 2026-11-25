@@ -50,6 +50,7 @@ export default function MenuArrastrable({
   alCambiar,
   alSoltar,
   alArrastrar,
+  enPestanas = 0,
 }: {
   zonas: Zonas;
   /** Nombre e icono de cada dirección. Dashboard y Ajustes salen fijos si están aquí. */
@@ -57,12 +58,21 @@ export default function MenuArrastrable({
   alCambiar: (z: Zonas) => void;
   alSoltar: () => void;
   alArrastrar?: (arrastrando: boolean) => void;
+  /** Cuántas de arriba salen también como pestaña (Dashboard incluido). 0 = no se marca. */
+  enPestanas?: number;
 }) {
   const listaRef = useRef<HTMLOListElement>(null);
   const [arrastrada, setArrastrada] = useState<string | null>(null);
   // Lo último que se movió, sin esperar al re-render: el puntero va más rápido que React.
   const zonasRef = useRef(zonas);
   zonasRef.current = zonas;
+
+  /** ¿Sale como pestaña arriba? Las primeras `enPestanas` de «A la vista», Dashboard incluido. */
+  const conInicio = filas.has(RUTA_INICIO) ? 1 : 0;
+  const esPestana = (href: string) =>
+    href === RUTA_INICIO ? enPestanas > 0 : zonas.vista.indexOf(href) >= 0 && zonas.vista.indexOf(href) + conInicio < enPestanas;
+  const marca = (href: string) =>
+    esPestana(href) ? <span className="menu-orden__pestana" title="También sale en las pestañas de arriba">Pestaña</span> : null;
 
   function cambiar(z: Zonas) {
     if (igualZonas(z, zonasRef.current)) return;
@@ -198,6 +208,7 @@ export default function MenuArrastrable({
           {f.nombre}
           <small> · {nota}</small>
         </span>
+        {marca(href)}
       </li>
     );
   }
@@ -222,6 +233,7 @@ export default function MenuArrastrable({
         </button>
         <span className="menu-orden__ico"><f.Icono size={16} /></span>
         <span className="menu-orden__txt">{f.nombre}</span>
+        {!enMas && marca(href)}
         <button
           type="button"
           className="btn btn-ghost btn-sm menu-orden__vis"

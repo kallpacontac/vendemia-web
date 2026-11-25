@@ -36,6 +36,13 @@ export const personalizado = (o: OrdenMenu) => o.orden.length > 0 || o.enMas.len
 export const FIJAS = [RUTA_INICIO, RUTA_AJUSTES];
 
 /**
+ * Cuántas pestañas caben arriba (Topbar): 5 en un negocio de citas, 6 en los demás (17-nov: «hay
+ * demasiadas opciones»). Con orden propio, son las primeras de «A la vista», Dashboard incluido,
+ * sin Ajustes. El editor (OrdenDelMenu) las marca para que se vea qué se está cambiando.
+ */
+export const pestanasArriba = (deCitas: boolean) => (deCitas ? 5 : 6);
+
+/**
  * `nav` en el orden elegido; lo que no está en `orden`, detrás y en su orden de siempre.
  * El Dashboard primero y Ajustes el último, diga lo que diga `orden`.
  */

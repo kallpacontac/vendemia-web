@@ -30,7 +30,8 @@ import { CORTE_DE_ROLES, corteDeRoles } from '@/lib/panel/roles';
 import { RUTA_MI_AGENDA, RUTA_MI_CATALOGO, RUTA_MI_COMISION, rutaPermitida } from '@/lib/panel/rutas';
 import { getEquipo } from '@/lib/supabase/queries';
 import { useCargar } from './useCargar';
-import { useOrdenMenu } from '@/lib/panel/menu';
+import { RUTA_AJUSTES, pestanasArriba, useOrdenMenu } from '@/lib/panel/menu';
+import { useMenuDelPanel } from './Sidebar';
 
 /**
  * ══════════════════════════════════════════════════════════════════════════
@@ -111,6 +112,9 @@ function NavegacionPanel() {
   const modo = compania?.business_mode;
   // ¿El negocio le esconde Fideliza a su equipo? (datos 0022)
   const fidelizaEquipo = useOrdenMenu(companyId ?? null).equipoFideliza ?? null;
+  // El orden del menú de Ajustes (25-nov: «no me deja modificar la barra principal»): antes estas
+  // pestañas eran fijas y el orden solo movía el menú lateral y su «Más».
+  const { rail, etiqueta, personalizado } = useMenuDelPanel({ modo });
 
   if (!compania && esAdminPlataforma) {
     return (
@@ -146,7 +150,27 @@ function NavegacionPanel() {
     { href: '/panel/caja', label: 'Caja', rutas: ['/panel/caja', '/panel/comprobantes', '/panel/catalogo', '/panel/equipo', '/panel/comisiones'] },
     { href: '/panel/metricas', label: 'Reportes', rutas: ['/panel/metricas'] },
   ];
-  const tabs = esCita(modo) ? tabsCita : tabsTodos;
+  const deSerie = esCita(modo) ? tabsCita : tabsTodos;
+  /**
+   * Con orden propio, las primeras de «A la vista» en ese orden (Dashboard primero, sin Ajustes).
+   * Cada una conserva su nombre de pestaña y su grupo de rutas («Caja» se enciende también en
+   * Comprobantes), menos las rutas que ya son pestaña por sí mismas: si no, se encenderían dos.
+   */
+  const tabs = (() => {
+    if (!personalizado) return deSerie;
+    const elegidas = rail.filter((n) => n.href !== RUTA_AJUSTES).slice(0, pestanasArriba(esCita(modo)));
+    const propias = new Set(elegidas.map((n) => n.href));
+    const conocida = (href: string) => [...tabsCita, ...tabsTodos].find((t) => t.href === href);
+    return elegidas.map((n) => {
+      const t = conocida(n.href);
+      const grupo = [...tabsCita, ...tabsTodos].filter((x) => x.href === n.href).flatMap((x) => x.rutas);
+      return {
+        href: n.href,
+        label: t?.label ?? etiqueta(n),
+        rutas: [n.href, ...grupo.filter((r) => r !== n.href && !propias.has(r))],
+      };
+    });
+  })();
   const activa = (rutas: string[]) => rutas.some((r) => (r === '/panel' ? ruta === r : ruta.startsWith(r)));
   /**
    * Las pestañas, según el rol (fase 4 del plan de roles; antes del corte no
