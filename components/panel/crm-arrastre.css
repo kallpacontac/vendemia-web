@@ -1,0 +1,55 @@
+/* Arrastrar en el CRM (TableroClientes.tsx, datos 0035, 25-nov-2026). La base del tablero está en
+   tablero-clientes.css; esto añade el asa, el menú «Mover a…», la copia flotante y las columnas
+   que admiten o no la tarjeta. */
+
+.tcl__regla { margin: -4px 0 0; font-size: 12.5px; color: var(--tcl-suave); }
+
+/* La tarjeta movible: el asa a la izquierda y el enlace al chat ocupando el resto. El borde pasa
+   del enlace a la caja, para que se vean como una sola tarjeta. */
+.tcl__caja {
+  position: relative; display: flex; align-items: stretch; min-width: 0;
+  border: 1px solid var(--tcl-linea); border-radius: 12px; background: var(--tcl-tarjeta);
+  box-shadow: 0 1px 2px rgba(20, 33, 26, .05); cursor: grab;
+}
+.tcl__caja:hover { border-color: var(--tcl-acento); }
+.tcl__caja .tcl__tarjeta { flex: 1; border: 0; box-shadow: none; background: transparent; padding-left: 2px; cursor: inherit; }
+.tcl__caja--en-vuelo { opacity: .35; }
+
+.tcl__asa {
+  flex: none; display: inline-flex; align-items: center; justify-content: center; width: 30px;
+  padding: 0; border: 0; border-radius: 12px 0 0 12px; background: transparent; color: var(--tcl-suave);
+  cursor: grab; touch-action: none;
+}
+.tcl__asa:hover, .tcl__asa[aria-expanded='true'] { background: var(--tcl-fondo); color: var(--tcl-tinta); }
+.tcl__asa:focus-visible { outline: 2px solid var(--tcl-acento); outline-offset: -2px; }
+
+.tcl__sello--mano { background: var(--tcl-fondo); color: var(--tcl-tinta); }
+
+/* «Mover a…» */
+.tcl__menu {
+  position: absolute; z-index: 5; top: calc(100% + 4px); left: 0; min-width: 210px; max-width: calc(100vw - 32px);
+  display: grid; gap: 2px; padding: 6px; border: 1px solid var(--tcl-linea); border-radius: 12px;
+  background: var(--tcl-tarjeta); box-shadow: 0 12px 28px rgba(20, 33, 26, .16); cursor: default;
+}
+.tcl__menu-titulo { margin: 2px 8px 4px; font-size: 11.5px; font-weight: 700; color: var(--tcl-suave); }
+.tcl__menu button {
+  padding: 9px 10px; border: 0; border-radius: 8px; background: transparent; color: var(--tcl-tinta);
+  font: inherit; font-size: 13.5px; text-align: left; cursor: pointer;
+}
+.tcl__menu button:hover, .tcl__menu button:focus-visible { background: var(--tcl-fondo); outline: none; }
+.tcl__menu .tcl__menu-mia { margin-top: 4px; border-top: 1px solid var(--tcl-linea); border-radius: 0 0 8px 8px; color: var(--tcl-suave); }
+
+/* Mientras se arrastra: las columnas que no la admiten se apagan; la de debajo se marca. */
+.tcl__columnas--arrastrando { user-select: none; -webkit-user-select: none; cursor: grabbing; }
+.tcl__col { transition: opacity .12s, box-shadow .12s; }
+.tcl__col--no { opacity: .45; }
+.tcl__col--admite { box-shadow: inset 0 0 0 2px var(--tcl-linea); }
+.tcl__col--encima { box-shadow: inset 0 0 0 2px var(--tcl-acento); }
+
+/* La copia que va pegada al puntero. Sin eventos: debajo se mira qué columna hay. */
+.tcl__fantasma {
+  position: fixed; top: 0; left: 0; z-index: 60; pointer-events: none; display: grid; gap: 2px;
+  padding: 10px 12px; border: 1px solid var(--tcl-acento); border-radius: 12px; background: var(--tcl-tarjeta);
+  box-shadow: 0 14px 32px rgba(20, 33, 26, .22); font-size: 13px; color: var(--tcl-suave);
+}
+.tcl__fantasma b { font-size: 14.5px; color: var(--tcl-tinta); overflow-wrap: anywhere; }

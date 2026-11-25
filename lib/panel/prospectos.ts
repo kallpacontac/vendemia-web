@@ -20,9 +20,16 @@
  * El orden de arriba es la prioridad: quien tiene la demo agendada está en
  * «Demo agendada» aunque también esté interesado.
  *
- * Solo se LEE. No se arrastra porque no hay a dónde escribir: las columnas son
- * hechos, y para cambiar una hay que cambiar el hecho (agendar, contestar,
- * reactivar a Mia). Ver la cabecera de app/(panel)/panel/leads/page.tsx.
+ * A MANO (datos 0035, Alvaro 25-nov-2026): arrastrar depende de cómo atiende
+ * el negocio, y lo decide la base (`crm_regla`), no esta pantalla:
+ *
+ *   'auto'     Mia cierra sola: las columnas son hechos y no se arrastran.
+ *   'hibrido'  Mia te deja la llamada agendada: a mano, solo a lo que es de la
+ *              persona, «Demo agendada» y «Cliente». Lo demás lo lleva Mia.
+ *   'manual'   Sin bot (o «Lo contestas tú»): la mano manda siempre.
+ *
+ * Lo puesto a mano gana a lo deducido mientras la regla lo permita; con
+ * «Que lo decida Mia» se borra. Sin la 0035 en la base, todo es 'auto'.
  */
 import { supabase } from '@/lib/supabase/client';
 import { demoActivo } from './demo';
@@ -40,11 +47,25 @@ export const ETAPAS: { id: Etapa; titulo: string; ayuda: string }[] = [
   { id: 'bot', titulo: 'Atiende un bot', ayuda: 'Contesta un bot del negocio, no una persona' },
 ];
 
+export type ReglaCrm = 'auto' | 'hibrido' | 'manual';
+
+/** En el híbrido, las columnas que mueve la persona: la llamada y la venta. */
+export const ETAPAS_DE_LA_PERSONA: Etapa[] = ['demo', 'cliente'];
+
+/** ¿Se puede soltar a mano en esta columna? La misma regla que crm_etapa_poner. */
+export const sePuedePoner = (regla: ReglaCrm, etapa: Etapa): boolean =>
+  regla === 'manual' || (regla === 'hibrido' && ETAPAS_DE_LA_PERSONA.includes(etapa));
+
 export interface Prospecto {
   id: string;
   nombre: string;
   telefono: string;
+  /** La columna en la que sale: la puesta a mano si vale con la regla de hoy; si no, la deducida. */
   etapa: Etapa;
+  /** La que dicen los hechos, sin lo puesto a mano. */
+  etapaAuto: Etapa;
+  /** Está donde está porque alguien la movió. */
+  aMano: boolean;
   miaEnPausa: boolean;
   ultimoMensaje: string;
   ultimoDeQuien: 'cliente' | 'nosotros' | '';
@@ -91,10 +112,42 @@ interface FilaLead {
   suyo?: { id: string }[];
 }
 
-export async function getProspectos(companyId: string): Promise<Prospecto[]> {
-  if (demoActivo()) return [];
+export interface TableroCrm {
+  prospectos: Prospecto[];
+  regla: ReglaCrm;
+}
+
+/** Lo puesto a mano y la regla del negocio. Sin la 0035 (o sin respuesta): 'auto', nada a mano. */
+async function getAMano(companyId: string): Promise<{ regla: ReglaCrm; etapas: Map<string, Etapa> }> {
+  const { data, error } = await supabase().rpc('crm_etapas_a_mano', { p_company: companyId });
+  if (error || !data) return { regla: 'auto', etapas: new Map() };
+  const d = data as { regla?: string; etapas?: { lead_id: string; etapa: string }[] };
+  const regla: ReglaCrm = d.regla === 'manual' || d.regla === 'hibrido' ? d.regla : 'auto';
+  const validas = new Set<string>(ETAPAS.map((e) => e.id));
+  return {
+    regla,
+    etapas: new Map((d.etapas ?? []).filter((e) => validas.has(e.etapa)).map((e) => [e.lead_id, e.etapa as Etapa])),
+  };
+}
+
+/**
+ * Mueve a un contacto de columna. Con `null`, «que lo decida Mia».
+ * Devuelve el error en palabras del panel, o null si quedó.
+ */
+export async function ponerEtapa(companyId: string, leadId: string, etapa: Etapa | null): Promise<string | null> {
+  if (demoActivo()) return 'Estás en modo demo: no se guarda nada. Sal del modo demo para cambiar algo de verdad.';
+  const { error } = await supabase().rpc('crm_etapa_poner', { p_company: companyId, p_lead: leadId, p_etapa: etapa });
+  if (!error) return null;
+  if (error.code === 'PGRST202' || /crm_etapa_poner/.test(error.message ?? '')) {
+    return 'Falta preparar la base para esto (datos 0035). Avísanos y lo activamos.';
+  }
+  return error.message;
+}
+
+export async function getProspectos(companyId: string): Promise<TableroCrm> {
+  if (demoActivo()) return { prospectos: [], regla: 'auto' };
   const sb = supabase();
-  const [leads, escal, citas] = await Promise.all([
+  const [leads, escal, citas, aMano] = await Promise.all([
     sb.from('leads')
       .select('id, phone, name, notas_salon, status, intent, bot_active, ultimo:messages(role, content, created_ts, media_type), suyo:messages(id)')
       .eq('company_id', companyId)
@@ -105,6 +158,7 @@ export async function getProspectos(companyId: string): Promise<Prospecto[]> {
       .limit(500),
     sb.from('escalations').select('lead_id, kind').eq('company_id', companyId).eq('status', 'pending'),
     sb.from('appointments').select('lead_id').eq('company_id', companyId).neq('status', 'cancelled'),
+    getAMano(companyId),
   ]);
   if (leads.error) throw leads.error;
 
@@ -117,14 +171,14 @@ export async function getProspectos(companyId: string): Promise<Prospecto[]> {
   }
   const conCita = new Set(((citas.data ?? []) as { lead_id: string }[]).map((c) => c.lead_id));
 
-  return ((leads.data ?? []) as unknown as FilaLead[])
+  const prospectos = ((leads.data ?? []) as unknown as FilaLead[])
     // Sin un solo mensaje no hay conversación que seguir: son altas de prueba o
     // contactos creados a mano a los que nadie escribió. Siguen en Clientes.
     .filter((l) => (l.ultimo?.length ?? 0) > 0)
     .map((l) => {
       const ultimo = l.ultimo?.[0];
       const delCliente = ultimo?.role === 'user';
-      const etapa = etapaDe({
+      const etapaAuto = etapaDe({
         status: l.status,
         intent: l.intent,
         botActivo: l.bot_active !== 0,
@@ -133,11 +187,15 @@ export async function getProspectos(companyId: string): Promise<Prospecto[]> {
         tieneCita: conCita.has(l.id),
         escalaciones: escPorLead.get(l.id) ?? new Set(),
       });
+      const puesta = aMano.etapas.get(l.id);
+      const vale = puesta !== undefined && sePuedePoner(aMano.regla, puesta);
       return {
         id: l.id,
         nombre: nombreDe(l.name, l.notas_salon, l.phone),
         telefono: l.phone,
-        etapa,
+        etapa: vale ? puesta : etapaAuto,
+        etapaAuto,
+        aMano: vale,
         miaEnPausa: l.bot_active === 0,
         ultimoMensaje: ultimo?.content?.trim() || (ultimo?.media_type ? '[adjunto]' : ''),
         ultimoDeQuien: ultimo ? (delCliente ? 'cliente' : 'nosotros') : '',
@@ -145,4 +203,5 @@ export async function getProspectos(companyId: string): Promise<Prospecto[]> {
       } satisfies Prospecto;
     })
     .sort((a, b) => (b.ultimoAt?.getTime() ?? 0) - (a.ultimoAt?.getTime() ?? 0));
+  return { prospectos, regla: aMano.regla };
 }
