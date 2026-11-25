@@ -231,6 +231,14 @@ await q(`insert into appointment_services values ('n1-s', 'n1', 63)`);
 await q(`select lector_srv_recibir($1, 'aviso', $2)`, [D, { huella: 'h-medianoche', centimos: 6300, nombre: 'NICO VERA', origen: 'Yape', cuando: Date.now() }]);
 ok('una cita de antes de medianoche se cobra con un Yape de después', (await est('n1')).pagado_por === 'lector');
 
+// 8d · El aviso flotante de la Caja: solo lo nuevo; al abrir no anuncia lo viejo.
+const nv0 = (await uno(`select lector_nuevos('neg') r`)).r;
+ok('al abrir la Caja: solo el último id, nada que anunciar', nv0.conectado === true && nv0.avisos.length === 0 && nv0.ultimo > 0);
+await q(`select lector_srv_recibir($1, 'aviso', $2)`, [D, { huella: 'h-en-vivo', centimos: 4200, nombre: 'KEVIN SHUPINGAHUA', origen: 'Yape', cuando: Date.now() }]);
+const nv1 = (await uno(`select lector_nuevos('neg', $1) r`, [nv0.ultimo])).r;
+ok('llega un Yape: sale en el aviso flotante', nv1.avisos.length === 1 && nv1.avisos[0].centimos === 4200 && nv1.ultimo > nv0.ultimo);
+ok('y la siguiente vuelta ya no lo repite', (await uno(`select lector_nuevos('neg', $1) r`, [nv1.ultimo])).r.avisos.length === 0);
+
 // 9 · Permisos.
 const pf = await uno(`select has_function_privilege('authenticated', 'lector_emparejar(text)', 'execute') a,
                              has_function_privilege('anon', 'lector_asignar(text, bigint, text)', 'execute') b,

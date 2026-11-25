@@ -676,6 +676,38 @@ end $$;
 revoke execute on function public.lector_desasignar(text, bigint) from public, anon;
 grant execute on function public.lector_desasignar(text, bigint) to authenticated;
 
+-- El aviso flotante de la Caja en la computadora (YapeEnVivo.tsx): solo lo NUEVO desde el último id que
+-- vio la pantalla. Sin p_despues (al abrir la Caja) devuelve solo el último id: lo viejo no se anuncia.
+-- conectado = false → la pantalla deja de preguntar (The 24/7 y todo negocio sin celular).
+create or replace function public.lector_nuevos(p_company text, p_despues bigint default null)
+returns jsonb language plpgsql stable security definer set search_path = public as $$
+declare
+    v_conectado boolean;
+    v_ultimo bigint;
+begin
+    if not public.lector_puede(p_company) then
+        raise exception 'No tienes acceso a los pagos de este negocio.' using errcode = '42501';
+    end if;
+    v_conectado := exists (select 1 from public.lector_dispositivos where company_id = p_company and revocado_at is null);
+    select max(id) into v_ultimo from public.lector_avisos where company_id = p_company;
+    if p_despues is null or not v_conectado then
+        return jsonb_build_object('conectado', v_conectado, 'ultimo', coalesce(v_ultimo, 0), 'avisos', '[]'::jsonb);
+    end if;
+    return jsonb_build_object('conectado', true, 'ultimo', coalesce(v_ultimo, 0), 'avisos', coalesce((
+        select jsonb_agg(jsonb_build_object(
+                   'id', a.id, 'centimos', a.centimos, 'nombre', a.nombre, 'origen', a.origen, 'cuando', a.cuando,
+                   'resultado', a.antes->>'resultado',
+                   'cliente', (select coalesce(nullif(c.beneficiario, ''), l.name, '') from public.appointments c
+                                 left join public.leads l on l.id = c.lead_id and l.company_id = c.company_id
+                                where c.id = a.cita_id and c.company_id = a.company_id)) order by a.id)
+          from (select * from public.lector_avisos
+                 where company_id = p_company and id > p_despues and centimos is not null
+                   and cuando > now() - interval '15 minutes'
+                 order by id limit 10) a), '[]'::jsonb));
+end $$;
+revoke execute on function public.lector_nuevos(text, bigint) from public, anon;
+grant execute on function public.lector_nuevos(text, bigint) to authenticated;
+
 -- El estado del panel ahora dice a qué cita fue cada pago.
 create or replace function public.lector_estado(p_company text, p_desde timestamptz default null)
 returns jsonb language plpgsql stable security definer set search_path = public as $$
