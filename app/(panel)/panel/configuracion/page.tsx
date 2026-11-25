@@ -38,6 +38,15 @@ import { useSearchParams } from 'next/navigation';
 import AvisosCelular from '@/components/panel/AvisosCelular';
 import GoogleCalendar from '@/components/panel/GoogleCalendar';
 import LectorDePagos from '@/components/panel/LectorDePagos';
+import ComoAtiendeMia from '@/components/panel/ComoAtiendeMia';
+import {
+  hibridoRoto,
+  leerCanalCierre,
+  leerModoAtencion,
+  serviciosDeCierre,
+  type CanalCierre,
+  type ModoAtencion,
+} from '@/lib/panel/modoAtencion';
 import {
   ArrowLeft,
   ArrowRight,
@@ -168,6 +177,10 @@ interface Formulario {
   closing_media: AdjuntoNota[];
   custom_rules: string;
   return_policy: string;
+  /** Cómo atiende Mia (bot 0049). Ver lib/panel/modoAtencion.ts y ComoAtiendeMia. */
+  modo_atencion: ModoAtencion;
+  servicio_cierre: string;
+  canal_cierre: CanalCierre;
 }
 
 /**
@@ -437,6 +450,10 @@ function Configuracion() {
       closing_media: leerAdjuntosNota(e.closing_media),
       custom_rules: e.custom_rules ?? '',
       return_policy: e.return_policy ?? '',
+      // Sin la 0049 en el espejo llegan undefined: 'cierra' / 'llamada' / '', y como no cambian no viajan.
+      modo_atencion: leerModoAtencion(e.modo_atencion),
+      servicio_cierre: e.servicio_cierre ?? '',
+      canal_cierre: leerCanalCierre(e.canal_cierre),
     };
     const vieja = !e.welcome_note?.trim() && Boolean(e.hook_question?.trim());
     setForm(inicial);
@@ -647,6 +664,23 @@ function Configuracion() {
       );
       setVista('mia');
       setPaso(4);
+      return;
+    }
+
+    // El híbrido sin servicio que agendar no se guarda. Solo si lo acaban de tocar: un servicio de
+    // cierre que se borró después no bloquea guardar el tono (la tarjeta ya lo avisa, y el bot
+    // atiende como «cierra» mientras tanto).
+    const tocoAtencion = ['modo_atencion', 'servicio_cierre', 'canal_cierre'].some((k) => k in patch);
+    const atencionRota = hibridoRoto(
+      form.modo_atencion,
+      form.business_mode,
+      form.servicio_cierre,
+      serviciosDeCierre(datos?.catalogo ?? []),
+    );
+    if (tocoAtencion && atencionRota) {
+      avisar(`Cómo atiende ${form.bot_name || 'Mia'}: ${atencionRota}`, 'error');
+      setVista('mia');
+      setPaso(3);
       return;
     }
 
@@ -862,6 +896,18 @@ function Configuracion() {
               </div>
             </div>
           </div>
+
+          {/* Sin la 0049 del bot en el espejo no hay columna donde guardarlo: la tarjeta no sale. */}
+          {datos?.empresa && 'modo_atencion' in datos.empresa && (
+            <ComoAtiendeMia
+              valor={form}
+              alCambiar={(c) => setForm((f) => (f ? { ...f, ...c } : f))}
+              businessMode={form.business_mode}
+              servicios={serviciosDeCierre(datos.catalogo ?? [])}
+              asistente={form.bot_name || 'Mia'}
+              puede={gestiona}
+            />
+          )}
 
           <div className="sec">
             <h4>

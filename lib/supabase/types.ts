@@ -105,6 +105,20 @@ export interface CompanyRow {
    */
   welcome_media?: string | null;
   closing_media?: string | null;
+  /**
+   * Cómo atiende Mia (bot, 0049_modo_atencion, 24-nov-2026). Opcionales: un
+   * espejo anterior a la 0049 no los trae, y entonces es 'cierra'.
+   *  · 'cierra'  vende sola, de principio a fin (por defecto).
+   *  · 'hibrido' atiende a los curiosos y a los interesados les agenda la
+   *    llamada de `servicio_cierre` (solo en business_mode 'appointment').
+   *  · 'dueno'   no contesta: guarda y abre la escalación `por_contestar`.
+   * Ver lib/panel/modoAtencion.ts.
+   */
+  modo_atencion?: string | null;
+  /** 'llamada' | 'meet'. Solo cuenta en el híbrido. */
+  canal_cierre?: string | null;
+  /** id del servicio del catálogo que se agenda como llamada. '' = ninguno. */
+  servicio_cierre?: string | null;
   hook_question: string | null;
   delivery_type: 'delivery' | 'pickup' | 'both' | null;
   location: string | null;

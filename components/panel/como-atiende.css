@@ -1,0 +1,12 @@
+/* «Cómo atiende Mia» (ComoAtiendeMia.tsx). Las tarjetas son las .opcion de panel.css. */
+
+/* El híbrido en un negocio que no es de citas: se ve, con el motivo, pero no se elige. */
+.opcion.opcion--off,
+.opcion:disabled { cursor: not-allowed; }
+.opcion.opcion--off { opacity: .6; }
+.opcion.opcion--off:hover { border-color: var(--line-2); }
+
+.atiende-cierre { margin-top: 14px; }
+@media (max-width: 720px) { .atiende-cierre { grid-template-columns: 1fr; } }
+
+.atiende-aviso { margin: 12px 0 0; }

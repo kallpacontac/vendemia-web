@@ -755,4 +755,8 @@ export const CAMPOS_EDITABLES = [
   // Adjuntos del saludo y el cierre (bot 21-oct-2026; nube: modules/datos/sql/0006).
   'welcome_media',
   'closing_media',
+  // Cómo atiende Mia (bot 24-nov-2026, 0049; nube: modules/datos/sql/0034).
+  'modo_atencion',
+  'canal_cierre',
+  'servicio_cierre',
 ] as const;

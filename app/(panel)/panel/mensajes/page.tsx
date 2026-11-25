@@ -50,6 +50,7 @@ import {
   getEscalaciones,
   getMensajes,
   getMensajesDesde,
+  getModoAtencion,
   getMovimientosDeLead,
   getTrabajadores,
   type Cita,
@@ -107,6 +108,12 @@ function etiquetaEscalacion(kind: string, detalle: Record<string, unknown>, v: V
      pactado de un servicio o un plan todavía no llega al cobro, así que Mia no
      lo cierra: se lo pasa a una persona (bot, tools/oferta.ts). */
   if (kind === 'oferta_por_confirmar') return 'Aceptó la oferta que le mandaste: confírmale el precio';
+  /* El freno de bucle (bot, services/parece-bot.ts, 24-nov-2026): por tiempos y repeticiones, nunca
+     leyendo el texto, el bot cree que al otro lado hay otro bot y deja a Mia en pausa SIN hora de
+     vuelta. Por eso la escalación trae su propio «reactivar a Mia». */
+  if (kind === 'parece_bot') return 'Parece que te contesta un bot: Mia dejó de responder';
+  /* Modo «Lo contestas tú» (services/modo-atencion): Mia no contesta y deja una por conversación. */
+  if (kind === 'por_contestar') return 'Te escribió y espera tu respuesta';
   return kind;
 }
 
@@ -192,17 +199,18 @@ function Mensajes() {
 
   const { datos, recargar } = useCargar(async () => {
     if (!companyId) return null;
-    const [citas, escalaciones, trabajadores] = await Promise.all([
+    const [citas, escalaciones, trabajadores, modoAtencion] = await Promise.all([
       getCitas(companyId),
       getEscalaciones(companyId),
       // Para poner nombre a quien atendió cada cita. Si falla, la ficha sale
       // sin nombres de profesional, pero la bandeja no se cae por eso.
       getTrabajadores(companyId).catch(() => []),
+      getModoAtencion(companyId),
     ]);
     // Lo que debe cada cliente por sus inscripciones (la seña reserva el
     // cupo). Si falla, la ficha sale sin el bloque de pagos y nada más.
     const ventas = await getVentas(companyId, citas).catch(() => new Map<string, VentaLead>());
-    return { citas, escalaciones, trabajadores, ventas };
+    return { citas, escalaciones, trabajadores, ventas, modoAtencion };
   }, [companyId]);
 
   /**
@@ -267,6 +275,15 @@ function Mensajes() {
   const activo: Conversacion | null = leads.find((l) => l.id === activoId) ?? null;
 
   const botActivo = activo ? (botPendiente[activo.id] ?? activo.botActivo) : true;
+  /**
+   * ¿Contesta Mia en ESTE chat? Con «Lo contestas tú» (Ajustes → Asistente) no,
+   * aunque el lead tenga el bot encendido: el bot guarda el mensaje y abre un
+   * `por_contestar`. Ahí el cuadro de escribir no se bloquea — obligar a pausar a
+   * Mia para contestar a alguien a quien Mia no contesta no tendría sentido. El
+   * bot manda el `send_message` igual con el bot encendido o apagado.
+   */
+  const loContestasTu = datos?.modoAtencion === 'dueno';
+  const miaContesta = botActivo && !loContestasTu;
 
   /* ── El chat ────────────────────────────────────────────────────────── */
   useEffect(() => {
@@ -445,7 +462,7 @@ function Mensajes() {
 
   async function enviar() {
     const texto = borrador.trim();
-    if (!activo || (!texto && !adjunto) || botActivo || subiendoAdjunto) return;
+    if (!activo || (!texto && !adjunto) || miaContesta || subiendoAdjunto) return;
     // Doble clic, Enter repetido y reenvíos tras un «se está aplicando»: todo
     // eso lo resuelve useEnviarMensaje. Aquí solo se decide qué mandar.
     const r = await enviarMensaje({ lead_id: activo.id }, texto, adjunto);
@@ -454,7 +471,44 @@ function Mensajes() {
     if (r) {
       setBorrador('');
       quitarAdjunto();
+      // Contestado: el «espera tu respuesta» de este chat se cierra solo. El bot abre uno por
+      // conversación pendiente, así que dejarlo abierto taparía el siguiente mensaje del cliente.
+      void cerrarPorContestar(activo.id);
     }
+  }
+
+  async function cerrarPorContestar(leadId: string) {
+    const abiertas = (datos?.escalaciones ?? []).filter(
+      (e) => e.lead_id === leadId && e.kind === 'por_contestar' && e.status === 'pending' && !resueltas.has(e.id),
+    );
+    if (!abiertas.length) return;
+    for (const e of abiertas) {
+      // Sin aviso de «resuelta»: el que importa es el del mensaje enviado.
+      const ok = await comando('resolve_escalation', { escalation_id: e.id });
+      if (ok) setResueltas((s) => new Set(s).add(e.id));
+    }
+    recargar();
+  }
+
+  /**
+   * `parece_bot`: el dueño miró el chat y es una persona. Reactiva a Mia en esta
+   * conversación (que el freno dejó en pausa sin hora de vuelta) y cierra la
+   * escalación. Si el bot no reactiva, la escalación sigue abierta.
+   */
+  async function esUnaPersona(escalacionId: string) {
+    if (!activo) return;
+    setBotPendiente((p) => ({ ...p, [activo.id]: true }));
+    const r = await comando<{ lead_id: string; bot_active: number }>(
+      'toggle_bot',
+      { lead_id: activo.id, active: true },
+      'Mia vuelve a responder a este cliente',
+    );
+    if (!r) {
+      setBotPendiente((p) => ({ ...p, [activo.id]: activo.botActivo }));
+      return;
+    }
+    recargarBandeja();
+    await resolver(escalacionId);
   }
 
   async function resolver(id: string) {
@@ -596,8 +650,14 @@ function Mensajes() {
             </div>
             <div className="bot-ctrl">
               <div className="lbl">
-                <b>{botActivo ? '🤖 Bot activo' : '👤 Modo manual'}</b>
-                <small>{botActivo ? 'respondiendo automáticamente' : 'tú respondes'}</small>
+                <b>{miaContesta ? '🤖 Bot activo' : loContestasTu && botActivo ? '👤 Lo contestas tú' : '👤 Modo manual'}</b>
+                <small>
+                  {miaContesta
+                    ? 'respondiendo automáticamente'
+                    : loContestasTu && botActivo
+                      ? 'Mia no contesta en tu negocio'
+                      : 'tú respondes'}
+                </small>
               </div>
               <div
                 className={`toggle ${botActivo ? 'on' : ''}`}
@@ -639,22 +699,22 @@ function Mensajes() {
             )}
           </div>
 
-          {adjunto && !botActivo && (
+          {adjunto && !miaContesta && (
             <div className="composer__adjunto">
               <ChipAdjunto adjunto={adjunto} alQuitar={quitarAdjunto} />
             </div>
           )}
-          <div className={`composer ${botActivo ? 'locked' : ''}`}>
+          <div className={`composer ${miaContesta ? 'locked' : ''}`}>
             <BotonAdjunto
               alElegir={(f) => void elegirAdjunto(f)}
-              deshabilitado={botActivo || enviando}
+              deshabilitado={miaContesta || enviando}
               subiendo={subiendoAdjunto}
             />
             <input
               value={borrador}
-              disabled={botActivo || enviando}
+              disabled={miaContesta || enviando}
               placeholder={
-                botActivo
+                miaContesta
                   ? 'Pausa a Mia para escribir tú'
                   : adjunto
                     ? 'Añade un texto (opcional)…'
@@ -669,7 +729,7 @@ function Mensajes() {
             <button
               className="send"
               onClick={() => void enviar()}
-              disabled={botActivo || enviando || subiendoAdjunto}
+              disabled={miaContesta || enviando || subiendoAdjunto}
             >
               <Send size={16} />
             </button>
@@ -882,7 +942,13 @@ function Mensajes() {
             escalacionesDelLead.map((e) => (
               <div className="esc" key={e.id}>
                 <b>⚠️ {etiquetaEscalacion(e.kind, e.detalle, v)}</b>
-                <p>{resumenDetalle(e.detalle)}</p>
+                <p>{resumenEscalacion(e.kind, e.detalle)}</p>
+                {/* Mia sigue en pausa hasta que alguien diga que es una persona: sin esto no vuelve nunca. */}
+                {e.kind === 'parece_bot' && !botActivo && (
+                  <button onClick={() => void esUnaPersona(e.id)} style={{ marginRight: 6 }}>
+                    Es una persona: reactivar a Mia
+                  </button>
+                )}
                 <button onClick={() => void resolver(e.id)}>
                   <Check size={11} /> Resolver
                 </button>
@@ -930,6 +996,19 @@ function escalacionesPendientes(
   resueltas: Set<string>,
 ): number {
   return (escalaciones ?? []).filter((e) => e.status === 'pending' && !resueltas.has(e.id)).length;
+}
+
+/** Lo que va debajo de la etiqueta. Los dos del 24-nov dicen qué hacer, no su JSON. */
+function resumenEscalacion(kind: string, detalle: Record<string, unknown>): string {
+  // `porque` ya viene escrito para el dueño («contesta al instante textos largos, dos veces seguidas»).
+  if (kind === 'parece_bot') {
+    const porque = typeof detalle.porque === 'string' ? detalle.porque.trim().replace(/\.+$/, '') : '';
+    const base = 'Mia queda en pausa en este chat hasta que la reactives.';
+    return porque ? `Por qué: ${porque}. ${base}` : base;
+  }
+  // Sin `detail`: el mensaje está en el chat.
+  if (kind === 'por_contestar') return 'Mia no le respondió (modo «Lo contestas tú»). Contéstale desde el chat: al enviar, esto se cierra solo.';
+  return resumenDetalle(detalle);
 }
 
 /** El `detail` es JSON abierto: se enseña algo legible sin dar por hecho su forma. */

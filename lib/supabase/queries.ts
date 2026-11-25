@@ -90,6 +90,7 @@ import { esPlan, PLAN_POR_DEFECTO } from '@/lib/planes';
 import type { Consumo } from '@/lib/panel/consumo';
 import { esInscripcionViva, ventasPorLead, type Saldo, type VentaLead } from '@/lib/panel/saldo';
 import { esPuntual, pagosDeCitas } from '@/lib/panel/adelantos';
+import { leerModoAtencion, type ModoAtencion } from '@/lib/panel/modoAtencion';
 
 /* ── Compañías del usuario ──────────────────────────────────────────────── */
 
@@ -1097,6 +1098,22 @@ export async function getEscalaciones(companyId: string): Promise<Escalacion[]> 
     detalle: json<Record<string, unknown>>(e.detail, {}),
     creada: fecha(e.created_ts),
   }));
+}
+
+/**
+ * Cómo atiende Mia en este negocio (bot 0049). Lo usa Mensajes: con «Lo
+ * contestas tú» Mia no responde aunque el lead tenga el bot encendido, así que
+ * el cuadro de escribir no se bloquea. Sin la columna (espejo anterior a la
+ * 0049) o sin respuesta, 'cierra': lo de siempre.
+ */
+export async function getModoAtencion(companyId: string): Promise<ModoAtencion> {
+  const { data, error } = await supabase()
+    .from('companies')
+    .select('modo_atencion')
+    .eq('id', companyId)
+    .maybeSingle();
+  if (error) return 'cierra';
+  return leerModoAtencion((data as { modo_atencion?: string | null } | null)?.modo_atencion);
 }
 
 /* ── Huecos de conocimiento: lo que Mia no supo contestar ───────────────── */
