@@ -86,6 +86,27 @@ async function listar(q: Consulta): Promise<string[] | undefined> {
 
 export default function SonidoReservas() {
   const { companyId, rol, compania, canchas } = useSesion();
+
+  // Un aviso push con el panel a la vista: suena el de Vendemia aquí y el worker saca la
+  // notificación callada (public/panel-sw.js, pedirSonido). Para todos los roles: el barbero
+  // también recibe avisos. Con «Sonar con el panel abierto» apagado, contesta que no sonó y
+  // suena la del celular.
+  useEffect(() => {
+    if (typeof navigator === 'undefined' || !navigator.serviceWorker) return;
+    prepararAudio();
+    const alMensaje = (ev: MessageEvent) => {
+      if (!ev.data || ev.data.tipo !== 'vm-aviso') return;
+      const sono = sonidoActivo() && document.visibilityState === 'visible' && sonarAviso();
+      try {
+        ev.ports?.[0]?.postMessage({ sono });
+      } catch {
+        /* el worker ya no espera */
+      }
+    };
+    navigator.serviceWorker.addEventListener('message', alMensaje);
+    return () => navigator.serviceWorker.removeEventListener('message', alMensaje);
+  }, []);
+
   const modo = compania?.business_mode ?? null;
   const ve = Boolean(companyId) && rol !== 'empleado';
   const vistos = useRef<Partial<Record<Fuente, Set<string>>>>({});

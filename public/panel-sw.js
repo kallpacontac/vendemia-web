@@ -76,9 +76,15 @@ self.addEventListener('push', (e) => {
     d = { title: 'Vendemia', body: e.data ? e.data.text() : '' };
   }
   const url = typeof d.url === 'string' && d.url.startsWith('/panel') ? d.url : '/panel';
-  e.waitUntil(
-    self.registration.showNotification(d.title || 'Vendemia', {
+  e.waitUntil((async () => {
+    // Con el panel a la vista, suena EL DE VENDEMIA (24-nov-2026, Alvaro: «aparece pero no suena
+    // nuestro sonido»): se le pide a la ventana que lo toque, y si contesta que sonó, la
+    // notificación sale callada (un solo sonido). Si no hay panel, o no pudo sonar (nadie tocó la
+    // pantalla todavía), suena la del celular como siempre.
+    const sono = await pedirSonido(d);
+    await self.registration.showNotification(d.title || 'Vendemia', {
       body: d.body || '',
+      silent: sono,
       // Marca propia: el logo del negocio, si el aviso lo trae (lib/panel/marcaPropia.ts). Se había
       // perdido al rehacer este worker para «sin conexión» (44df7b0); vuelto el 21-nov-2026.
       icon: propio(d.icon) || '/icons/panel-192.png',
@@ -89,9 +95,33 @@ self.addEventListener('push', (e) => {
       renotify: Boolean(d.tag),
       vibrate: [200, 100, 200],
       data: { url },
-    }),
-  );
+    });
+  })());
 });
+
+/** Le pide a cada panel abierto y a la vista que suene; true si alguno contestó que sonó (≤ 400 ms). */
+async function pedirSonido(d) {
+  let ventanas = [];
+  try {
+    ventanas = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+  } catch {
+    return false;
+  }
+  const vistas = ventanas.filter((v) => v.visibilityState === 'visible' && new URL(v.url).pathname.startsWith('/panel'));
+  if (!vistas.length) return false;
+  const respuestas = vistas.map((v) => new Promise((ok) => {
+    const canal = new MessageChannel();
+    const reloj = setTimeout(() => ok(false), 400);
+    canal.port1.onmessage = (m) => { clearTimeout(reloj); ok(Boolean(m.data && m.data.sono)); };
+    try {
+      v.postMessage({ tipo: 'vm-aviso', titulo: d.title || '' }, [canal.port2]);
+    } catch {
+      clearTimeout(reloj);
+      ok(false);
+    }
+  }));
+  return (await Promise.all(respuestas)).some(Boolean);
+}
 
 /*
  * Al tocar un aviso: la pantalla donde se actúa, CARGADA DE NUEVO (lo que se ve

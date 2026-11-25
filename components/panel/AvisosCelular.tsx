@@ -266,7 +266,7 @@ export default function AvisosCelular() {
       {/* El panel abierto (la computadora o la tablet del mostrador): suena aunque no tenga los
           avisos. Con los avisos de reservas activados aquí, suena el aviso y esto calla. */}
       {!(activos && prefs.reserva) && (
-        <div className="toggle-row" style={{ marginTop: 12 }}>
+        <div className="toggle-row avisos-celular__sonido" style={{ marginTop: 12 }}>
           <div className="t">
             <b>Sonar con el panel abierto</b>
             <small>Suena cuando entra una reserva o un pedido, mientras el panel esté abierto en esta pantalla.</small>
