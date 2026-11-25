@@ -179,7 +179,7 @@ export function redactar(eventos: EventoPendiente[]): Mensaje {
             ? `✓ ${cap(QUE[String(e.datos.resultado)] ?? "asignado")}: llegó${nombre(e)}${horaDeAviso(e.datos.cuando)}.`
             : e.datos.dudoso
               ? `Llegó${nombre(e)}${horaDeAviso(e.datos.cuando)}. ¿De qué cita es? Elígela en Caja › Cierre del día.`
-              : `Llegó${nombre(e)}${horaDeAviso(e.datos.cuando)}. Leído en el celular de cobros.`,
+              : `Llegó${nombre(e)}${horaDeAviso(e.datos.cuando)}. No es de ninguna cita por cobrar: queda como venta suelta.`,
           url: cita ? '/panel/agenda' : '/panel/caja?ver=cierre',
           tag: `${e.company_id}:lector:${e.id}`,
         }
