@@ -2,13 +2,14 @@
 
 /**
  * El paso de pagar una cita apartada cuando el negocio tiene el celular de cobros conectado
- * (Vendemia Caja, lector 0002): el cliente yapea y toca «Ya yapeé»; la reserva se confirma sola
- * cuando el aviso llega a ese celular. Sin captura y sin IA.
+ * (Vendemia Caja, lector 0002). Alvaro, 24-nov: SOLO la captura, y la IA no es de confiar: la captura
+ * solo aporta el monto y la hora; lo que confirma es el aviso de pago que llega a ese celular,
+ * cruzado por monto y hora (±3 min).
  *
- *   · Cuenta el Yape aunque haya llegado unos minutos ANTES de tocar el botón.
- *   · La captura queda siempre a la mano («¿Algo falló? Sube tu captura»), y pasa al frente si en
- *     5 minutos no llegó nada.
- *   · Sin lector conectado (o sin la SQL), es SubirComprobante de siempre.
+ *   · El cliente sube la captura → «Esperando que llegue tu pago…» → se confirma sola.
+ *   · Si en 5 minutos no llega el aviso, queda para que el negocio la revise (como siempre).
+ *   · Sin lector conectado (o sin la SQL), es SubirComprobante de siempre: sube y verifica el dueño
+ *     o la cajera.
  */
 import { useEffect, useRef, useState } from 'react';
 import { Check, Loader2 } from 'lucide-react';
@@ -34,6 +35,11 @@ export function useLectorActivo(slug: string, pedir = true): boolean | null {
 
 type Estado = 'inicio' | 'esperando' | 'confirmada' | 'cobrada' | 'tarde';
 
+const ESPERANDO = {
+  titulo: 'Recibimos tu captura',
+  detalle: 'Ahora esperamos que tu pago llegue a nuestra cuenta: se confirma sola, en segundos.',
+};
+
 export default function PagoConLector({ slug, codigo, telefono, que = 'cita', activo, alSubir }: {
   slug: string; codigo: string; telefono: string; que?: QueSeReserva;
   /** De useLectorActivo: el que la pinta decide también el texto de los pasos. */
@@ -41,7 +47,6 @@ export default function PagoConLector({ slug, codigo, telefono, que = 'cita', ac
   alSubir?: (d: { tieneTarjeta?: boolean }) => void;
 }) {
   const [estado, setEstado] = useState<Estado>('inicio');
-  const [verCaptura, setVerCaptura] = useState(false);
   const desde = useRef(0);
   // En una ref: la página se redibuja cada segundo (cuenta regresiva del plazo) y eso no puede
   // reiniciar la consulta.
@@ -51,25 +56,23 @@ export default function PagoConLector({ slug, codigo, telefono, que = 'cita', ac
   useEffect(() => {
     if (estado !== 'esperando') return;
     let vivo = true;
+    let reloj = 0;
     const preguntar = async () => {
       try {
         const r = await fetch('/api/tu-pagina/publico/ya-pague', {
-          method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ slug, codigo, telefono }),
+          method: 'POST', headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ slug, codigo, telefono, modo: 'captura' }),
         });
         const j = (await r.json().catch(() => ({}))) as { estado?: string };
         if (!vivo) return;
-        if (j.estado === 'confirmada' || j.estado === 'cobrada') {
-          setEstado(j.estado);
-          alListo.current?.({});
-          return;
-        }
-        if (j.estado === 'sin_lector') { setEstado('tarde'); setVerCaptura(true); return; }
+        if (j.estado === 'confirmada' || j.estado === 'cobrada') { setEstado(j.estado); return; }
+        if (j.estado === 'sin_lector') { setEstado('tarde'); return; }
       } catch { /* sin red: se vuelve a preguntar */ }
       if (!vivo) return;
-      if (Date.now() - desde.current > HASTA_MS) { setEstado('tarde'); setVerCaptura(true); return; }
+      if (Date.now() - desde.current > HASTA_MS) { setEstado('tarde'); return; }
       reloj = window.setTimeout(preguntar, CADA_MS);
     };
-    let reloj = window.setTimeout(preguntar, 0);
+    reloj = window.setTimeout(preguntar, 0);
     return () => { vivo = false; window.clearTimeout(reloj); };
   }, [estado, slug, codigo, telefono]);
 
@@ -93,23 +96,19 @@ export default function PagoConLector({ slug, codigo, telefono, que = 'cita', ac
   return (
     <div className="tp-subir">
       {estado === 'inicio' && (
-        <button type="button" className="tp-boton" onClick={() => { desde.current = Date.now(); setEstado('esperando'); }}>
-          <Check size={20} aria-hidden="true" /> Ya yapeé
-        </button>
+        <SubirComprobante slug={slug} codigo={codigo} telefono={telefono} que={que} textoRevisar={ESPERANDO}
+          alSubir={(d) => { desde.current = Date.now(); setEstado('esperando'); alListo.current?.(d); }} />
       )}
       {estado === 'esperando' && (
         <p className="tp-subir__ok tp-subir__ok--aviso" role="status">
           <Loader2 size={18} aria-hidden="true" className="tp-girando" />
-          <span><b>Esperando tu Yape…</b>Se confirma sola en cuanto nos llega. No cierres esta página.</span>
+          <span><b>Esperando que llegue tu pago…</b>Se confirma sola en cuanto nos llega. No cierres esta página.</span>
         </p>
       )}
       {estado === 'tarde' && (
-        <p className="tp-aviso" role="alert">Aún no nos llega tu pago. Sube la captura aquí abajo y el negocio lo revisa.</p>
-      )}
-      {verCaptura ? (
-        <SubirComprobante slug={slug} codigo={codigo} telefono={telefono} que={que} alSubir={alSubir} />
-      ) : (
-        <button type="button" className="tp-enlace" onClick={() => setVerCaptura(true)}>¿Algo falló? Sube tu captura</button>
+        <p className="tp-subir__ok tp-subir__ok--aviso" role="status">
+          <span><b>Recibimos tu captura</b>Tu pago aún no nos llega. El negocio lo revisa y te confirma; mientras tanto, tu cita sigue apartada.</span>
+        </p>
       )}
     </div>
   );

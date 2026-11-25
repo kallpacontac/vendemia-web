@@ -37,7 +37,9 @@ export async function POST(req: Request) {
     if (!SLUG.test(slug) || !/^R-[0-9A-Z]{4}$/.test(codigo) || telefono.replace(/\D/g, '').length < 9) {
       return responder({ estado: 'no_encontrada' }, 400);
     }
-    const r = await rpc<{ estado: string; pagado?: number; total?: number }>(servidor(), 'lector_srv_ya_pague', {
+    // Tras subir la captura solo se pregunta (lector_srv_tras_captura); «Ya yapeé» abre una espera.
+    const fn = b.modo === 'captura' ? 'lector_srv_tras_captura' : 'lector_srv_ya_pague';
+    const r = await rpc<{ estado: string; pagado?: number; total?: number }>(servidor(), fn, {
       p_slug: slug, p_codigo: codigo, p_telefono: telefono,
     });
     return responder(r);

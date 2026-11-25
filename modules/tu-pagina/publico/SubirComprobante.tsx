@@ -24,7 +24,7 @@ const PALABRAS: Record<QueSeReserva, { la: string; resto: string; despedida: str
   cita: { la: 'tu cita', resto: 'en el local', despedida: 'Te esperamos.' },
 };
 
-function textoOk(r: Resultado, d: { pagado?: number; total?: number; falta?: number; minimo?: number }, que: QueSeReserva = 'cancha'): { titulo: string; detalle: string } {
+function textoOk(r: Resultado, d: { pagado?: number; total?: number; falta?: number; minimo?: number }, que: QueSeReserva = 'cancha', revisar?: { titulo: string; detalle: string }): { titulo: string; detalle: string } {
   const falta = d.falta ?? 0;
   const w = PALABRAS[que];
   switch (r) {
@@ -40,12 +40,14 @@ function textoOk(r: Resultado, d: { pagado?: number; total?: number; falta?: num
         detalle: `El adelanto es ${soles(d.minimo ?? 0)}. Yapea ${soles(Math.max((d.minimo ?? 0) - (d.pagado ?? 0), 0))} más al mismo número y sube esa captura aquí. ${w.la.charAt(0).toUpperCase() + w.la.slice(1)} sigue apartada mientras tanto.`,
       };
     default:
-      return { titulo: 'Recibimos tu comprobante', detalle: `El negocio lo revisa y te confirma. Mientras tanto, ${w.la} sigue apartada.` };
+      return revisar ?? { titulo: 'Recibimos tu comprobante', detalle: `El negocio lo revisa y te confirma. Mientras tanto, ${w.la} sigue apartada.` };
   }
 }
 
-export default function SubirComprobante({ slug, codigo, telefono, ejemplo = false, faltaEjemplo = 0, alValidar, que = 'cancha', alSubir }: {
+export default function SubirComprobante({ slug, codigo, telefono, ejemplo = false, faltaEjemplo = 0, alValidar, que = 'cancha', alSubir, textoRevisar }: {
   slug: string; codigo: string; telefono: string; ejemplo?: boolean; faltaEjemplo?: number; alValidar?: () => void; que?: QueSeReserva;
+  /** Con lector (PagoConLector): «por revisar» no significa que lo revise una persona, sino que espera el aviso. */
+  textoRevisar?: { titulo: string; detalle: string };
   /** La captura quedó guardada (no «parcial»). `tieneTarjeta`: undefined = no se sabe (sql/0022). */
   alSubir?: (d: { tieneTarjeta?: boolean }) => void;
 }) {
@@ -91,7 +93,7 @@ export default function SubirComprobante({ slug, codigo, telefono, ejemplo = fal
     }
   }
 
-  const ok = listo && textoOk(listo.resultado, listo, que);
+  const ok = listo && textoOk(listo.resultado, listo, que, textoRevisar);
   const terminado = listo && listo.resultado !== 'parcial';
 
   return (

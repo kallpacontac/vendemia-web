@@ -535,6 +535,34 @@ end $$;
 revoke execute on function public.lector_srv_ya_pague(text, text, text) from public, authenticated;
 grant execute on function public.lector_srv_ya_pague(text, text, text) to anon;
 
+-- Con lector, la página pide SOLO la captura (Alvaro, 24-nov). Tras subirla, la página pregunta aquí:
+-- se empareja y se dice si ya llegó el aviso. No abre una espera: la captura ya se cruza con el aviso
+-- por su monto y su hora (±3 min), que es más preciso que «tocó el botón».
+create or replace function public.lector_srv_tras_captura(p_slug text, p_codigo text, p_telefono text)
+returns jsonb language plpgsql security definer set search_path = public as $$
+declare
+    v_cita  public.appointments;
+    v_total numeric;
+    v_pag   numeric;
+begin
+    perform public.loyalty_srv_check();
+    v_cita := public.v2_comprobante_cita(p_slug, p_codigo, p_telefono);
+    if v_cita.id is null then return jsonb_build_object('estado', 'no_encontrada'); end if;
+    if not public.lector_srv_activo(p_slug) then return jsonb_build_object('estado', 'sin_lector'); end if;
+    perform public.lector_emparejar(v_cita.company_id);
+    select * into v_cita from public.appointments where id = v_cita.id;
+    select coalesce(sum(s.price), 0) into v_total from public.appointment_services s where s.appointment_id = v_cita.id;
+    select coalesce(sum(p.amount), 0) into v_pag from public.pending_payments p where p.company_id = v_cita.company_id and p.appointment_id = v_cita.id;
+    return jsonb_build_object(
+        'estado', case when coalesce(v_cita.pagado_por, '') <> '' then 'cobrada'
+                       when v_cita.status = 'pending_payment' then 'esperando'
+                       when exists (select 1 from public.lector_avisos a where a.cita_id = v_cita.id and a.company_id = v_cita.company_id) then 'confirmada'
+                       else 'esperando' end,
+        'pagado', v_pag, 'total', v_total);
+end $$;
+revoke execute on function public.lector_srv_tras_captura(text, text, text) from public, authenticated;
+grant execute on function public.lector_srv_tras_captura(text, text, text) to anon;
+
 -- ── 9 · Panel: lo que quedó por asignar, elegir y deshacer ──────────────────
 create or replace function public.lector_por_asignar(p_company text)
 returns jsonb language plpgsql stable security definer set search_path = public as $$

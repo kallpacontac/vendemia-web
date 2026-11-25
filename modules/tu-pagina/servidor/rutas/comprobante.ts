@@ -78,14 +78,23 @@ export async function POST(req: Request) {
     const previa = await rpc<{ status: string }>(db, 'comprobante_srv_repetido', { ...args, p_hash: hash });
     if (previa.status === 'repetida') return fallo(MENSAJES.repetida, 409);
 
-    const manual = cita.validacion === 'manual' || !puedeLeer();
+    // Con el celular de cobros conectado (lector 0002, Alvaro 24-nov): la IA solo LEE monto y hora; nunca
+    // confirma. Confirma el aviso que llega al celular, cruzado por monto y hora (±3 min). Se lee aunque
+    // la validación del negocio sea manual: sin la hora, el cruce es mucho menos preciso.
+    const conLector = await rpc<boolean>(db, 'lector_srv_activo', { p_slug: slug }).catch(() => false);
+    const manual = (!conLector && cita.validacion === 'manual') || !puedeLeer();
     const [lectura, url] = await Promise.all<[Promise<LecturaComprobante | null>, Promise<string>]>([
       manual ? Promise.resolve(null) : leerComprobante(imagen, tipo),
       guardarComprobante(imagen, tipo, cita.company_id ?? slug),
     ]);
-    const { decision, motivo } = manual
+    const evaluada = manual
       ? { decision: 'revisar' as const, motivo: 'Lo revisas tú: la validación automática está apagada.' }
       : evaluarLectura(lectura, cita.numeros ?? [], Date.now(), { reservadaMs: Number(cita.reservada_ms) || null, sospechoso: cita.sospechoso === true });
+    // Con lector: lo que la IA aprobaría queda «por revisar» hasta que llegue el aviso; lo que rechaza
+    // (no es un comprobante, pago a otro número, antiguo) se rechaza igual.
+    const { decision, motivo } = conLector && evaluada.decision === 'aprobar'
+      ? { decision: 'revisar' as const, motivo: 'Esperando que el pago llegue al celular de cobros.' }
+      : evaluada;
     // Sin captura guardada nadie podría revisarla: se pide de nuevo antes que dejar al dueño a ciegas.
     if (decision === 'revisar' && !url) return fallo(MENSAJES.noGuardado, 503);
 

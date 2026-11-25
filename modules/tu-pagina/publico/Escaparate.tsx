@@ -236,8 +236,8 @@ export default function Escaparate({ esc: todo, slug, whatsapp, puedePedir, pued
             </li>
             {lector ? (
               <>
-                <li><b>Toca «Ya yapeé» aquí abajo</b><span>Apenas yapees.</span></li>
-                <li><b>Se confirma sola</b><span>En cuanto nos llega tu Yape. Si algo falla, puedes subir la captura.</span></li>
+                <li><b>Sube aquí la captura del pago</b><span>Con el monto y la hora a la vista.</span></li>
+                <li><b>Se confirma sola</b><span>En cuanto tu pago nos llega, en segundos.</span></li>
               </>
             ) : (
               <>
