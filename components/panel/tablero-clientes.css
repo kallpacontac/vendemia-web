@@ -1,0 +1,51 @@
+/* Tablero de clientes (components/panel/TableroClientes.tsx).
+   Celular: bloques uno debajo de otro. Desde 768 px: columnas de ancho fijo que se desplazan a lo ancho. */
+.tcl {
+  --tcl-acento: var(--brand, #183D2B);
+  --tcl-tinta: var(--ink, #14211A);
+  --tcl-suave: var(--ink-soft, #5C655F);
+  --tcl-linea: var(--line, #E3E7E3);
+  --tcl-tarjeta: var(--bg-card, #FFFFFF);
+  --tcl-fondo: var(--bg-soft, #F3F6F3);
+  --tcl-toca: #FFF1DC; --tcl-toca-t: #8A4B00;
+  --tcl-ok: #E3F4E8; --tcl-ok-t: #14622F;
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+  color: var(--tcl-tinta);
+}
+.tcl *, .tcl *::before, .tcl *::after { box-sizing: border-box; }
+
+.tcl__barra { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 12px; }
+.tcl__resumen { margin: 0; font-size: 14px; color: var(--tcl-suave); }
+.tcl__resumen b { color: var(--tcl-tinta); }
+.tcl__buscar { flex: 1 1 240px; max-width: 360px; }
+
+.tcl__columnas { display: grid; gap: 14px; min-width: 0; }
+.tcl__col { display: grid; align-content: start; gap: 6px; min-width: 0; padding: 10px; border-radius: 16px; background: var(--tcl-fondo); }
+.tcl__cabeza { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 0; font-size: 14px; font-weight: 700; }
+.tcl__cabeza b { min-width: 26px; padding: 1px 8px; border-radius: 999px; background: var(--tcl-tarjeta); text-align: center; font-size: 12.5px; }
+.tcl__col--te_toca { background: var(--tcl-toca); }
+.tcl__col--te_toca .tcl__cabeza { color: var(--tcl-toca-t); }
+.tcl__col--cliente .tcl__cabeza b, .tcl__col--demo .tcl__cabeza b { background: var(--tcl-ok); color: var(--tcl-ok-t); }
+.tcl__ayuda { margin: 0 0 4px; font-size: 12.5px; color: var(--tcl-suave); }
+.tcl__lista { display: grid; gap: 8px; min-width: 0; }
+.tcl__vacia { margin: 0; padding: 12px; border: 1px dashed var(--tcl-linea); border-radius: 12px; color: var(--tcl-suave); font-size: 13px; text-align: center; }
+
+.tcl__tarjeta { display: grid; gap: 4px; min-width: 0; padding: 10px 12px; border: 1px solid var(--tcl-linea); border-radius: 12px;
+  background: var(--tcl-tarjeta); color: inherit; text-decoration: none; box-shadow: 0 1px 2px rgba(20, 33, 26, .05); }
+.tcl__tarjeta:hover { border-color: var(--tcl-acento); }
+.tcl__tarjeta:focus-visible { outline: 2px solid var(--tcl-acento); outline-offset: 2px; }
+.tcl__fila { display: flex; align-items: baseline; gap: 8px; min-width: 0; }
+.tcl__nombre { flex: 1; min-width: 0; font-size: 14.5px; overflow-wrap: anywhere; }
+.tcl__cuando { flex: none; font-size: 12px; color: var(--tcl-suave); }
+.tcl__tel { font-size: 12.5px; color: var(--tcl-suave); }
+.tcl__ultimo { font-size: 13px; color: var(--tcl-tinta); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; }
+.tcl__pie { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 2px; }
+.tcl__sello { display: inline-flex; align-items: center; gap: 4px; padding: 1px 8px; border-radius: 999px; background: var(--tcl-toca); color: var(--tcl-toca-t); font-size: 12px; font-weight: 600; }
+.tcl__abrir { display: inline-flex; align-items: center; gap: 4px; margin-left: auto; font-size: 12px; color: var(--tcl-acento); font-weight: 600; }
+
+@media (min-width: 768px) {
+  .tcl__columnas { grid-auto-flow: column; grid-auto-columns: 264px; overflow-x: auto; padding-bottom: 8px; scroll-snap-type: x proximity; }
+  .tcl__col { scroll-snap-align: start; max-height: calc(100vh - 220px); overflow-y: auto; }
+}

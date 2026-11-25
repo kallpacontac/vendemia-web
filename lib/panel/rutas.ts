@@ -65,6 +65,7 @@ const PANTALLAS: [string, (rol: RolNegocio | null) => boolean][] = [
   [RUTA_MI_CATALOGO, (rol) => rol === 'empleado' && rolPuede(rol, 'catalogo.ver')],
   ['/panel/asistente', puedeUsarAsistente],
   ['/panel/mensajes', con('clientes.ver')],
+  ['/panel/crm', con('clientes.ver')],
   ['/panel/leads', con('clientes.ver')],
   ['/panel/retargeting', con('clientes.ver')],
   ['/panel/alumnos', con('clientes.ver')],

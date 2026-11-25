@@ -140,7 +140,7 @@ function NavegacionPanel() {
   ];
   const tabsTodos = [
     { href: '/panel', label: 'Resumen', rutas: ['/panel'] },
-    { href: '/panel/mensajes', label: 'Actividad', rutas: ['/panel/mensajes'] },
+    { href: '/panel/mensajes', label: 'Actividad', rutas: ['/panel/mensajes', '/panel/crm'] },
     { href: operacion, label: operacionLabel, rutas: [operacion] },
     { href: '/panel/leads', label: 'Clientes', rutas: ['/panel/leads', '/panel/alumnos', '/panel/retargeting', '/panel/fideliza'] },
     { href: '/panel/caja', label: 'Caja', rutas: ['/panel/caja', '/panel/comprobantes', '/panel/catalogo', '/panel/equipo', '/panel/comisiones'] },

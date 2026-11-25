@@ -29,6 +29,7 @@ import {
   UserCog,
   Users,
   Wallet,
+  SquareKanban,
 } from 'lucide-react';
 import { useSesion } from './Sesion';
 import MarcaMia from './MarcaMia';
@@ -61,6 +62,8 @@ const NAV = [
   // «Mia Gerente»: el nombre comercial del asistente del dueño (Alvaro, 14-oct-2026).
   { href: '/panel/asistente', icon: Sparkles, label: 'Mia Gerente', sinEmpleado: true },
   { href: '/panel/mensajes', icon: MessageCircle, label: 'Mensajes' },
+  // El embudo de los contactos en columnas, sacadas de hechos (lib/panel/prospectos.ts).
+  { href: '/panel/crm', icon: SquareKanban, label: 'CRM' },
   { href: '/panel/leads', icon: Users, label: 'Clientes' },
   { href: '/panel/retargeting', icon: Send, label: 'Retargeting' },
   // Agenda es de todo negocio que agenda: citas Y grupos recurrentes.
