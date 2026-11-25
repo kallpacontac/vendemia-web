@@ -8,9 +8,9 @@
  * navegador). Esto es para el panel ABIERTO, sobre todo la computadora o la
  * tablet del mostrador que no tiene los avisos activados.
  *
- * El sonido es un archivo del banco de sonidos de Vendemia, copiado en
- * public/sonidos/reserva-nueva.mp3: «glass/notification» de UI SFX (romainsimon,
- * uisfx.com, CC0, sin crédito), elegido por Alvaro el 21-nov-2026. Se descarga y se decodifica una sola vez, al
+ * El sonido es el de Vendemia: public/sonidos/vendemia-notificacion.mp3 (24-nov-2026, lo
+ * mandó Alvaro: «este es el sonido de Vendemia»). Antes, public/sonidos/reserva-nueva.mp3
+ * («glass/notification» de UI SFX, CC0), que se queda de respaldo. Se descarga y se decodifica una sola vez, al
  * primer toque. Si falta o no se puede leer, suena el «din-don» hecho con Web
  * Audio de abajo.
  *
@@ -45,7 +45,7 @@ export function guardarSonido(activo: boolean): void {
 
 /* ── El audio ──────────────────────────────────────────────────────────── */
 
-const ARCHIVO = '/sonidos/reserva-nueva.mp3';
+const ARCHIVO = '/sonidos/vendemia-notificacion.mp3';
 /** El archivo ya suena fuerte: esto lo deja a la altura de un aviso, no de una alarma. */
 const VOLUMEN_ARCHIVO = 0.8;
 
