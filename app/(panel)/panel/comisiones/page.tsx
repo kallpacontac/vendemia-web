@@ -187,7 +187,7 @@ export default function Comisiones() {
             </b>{' '}
             ({soles(resumen!.esperandoCaja.importe)}). La comisión cuenta al cobrarse, en{' '}
             <Link href="/panel/caja" style={{ fontWeight: 700 }}>
-              Caja → Listos para cobrar
+              Caja → Por cobrar en caja
             </Link>
             .
           </div>

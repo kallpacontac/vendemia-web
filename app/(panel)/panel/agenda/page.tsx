@@ -1614,7 +1614,7 @@ function PorConfirmar({
       'marcar_cumplido',
       { tipo: 'appointment', id: c.id, vino },
       vino
-        ? c.pagado_por ? 'Anotado: atendido.' : 'Atendido: ya sale en Caja › «Listos para cobrar».'
+        ? c.pagado_por ? 'Anotado: atendido.' : 'Atendido: queda en Caja › «Por cobrar en caja».'
         // Con adelanto (sql/0027): la hora ya quedó libre y el dinero, a su favor, arriba de la Agenda.
         : (pagosCitas.get(c.id)?.pagado ?? 0) > 0
           ? 'Anotado: no vino. La hora queda libre y su adelanto, en «Adelantos por reprogramar».'

@@ -550,7 +550,7 @@ function Caja() {
 
         {/* Sin nadie en la cola: qué va a salir aquí y el botón para cobrar a mano, a la vista. */}
         {!cierre && calculo && calculo.listos.length === 0 && !ticket && !gasto && (
-          <section className="card listos-vacio" aria-label="Listos para cobrar">
+          <section className="card listos-vacio" aria-label="Por cobrar en caja">
             <div>
               <b><Campana size={16} /> Nadie esperando para pagar</b>
               <p className="muted">
@@ -592,7 +592,7 @@ function Caja() {
               <small className="muted">{soles(calculo.porCobrarTotal)}</small>
             </summary>
               {calculo.porCobrar.length === 0 ? (
-                <p className="vacio">Nada pendiente: lo atendido sale arriba, en «Listos para cobrar».</p>
+                <p className="vacio">Nada pendiente: lo atendido sale arriba, en «Por cobrar en caja».</p>
               ) : (
                 <>
                   <p className="muted" style={{ fontSize: 12.5, marginBottom: 10 }}>

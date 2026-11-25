@@ -309,7 +309,7 @@ function MisCitas({ companyId }: { companyId: string }) {
     await comando(
       'marcar_cumplido',
       { tipo: 'appointment', id: c.id, vino },
-      vino ? (c.pagado_por ? 'Anotado: atendido.' : 'Atendido: ya sale en Caja para cobrar. Tu parte cuenta cuando la cobren.') : 'Anotado: no vino.',
+      vino ? (c.pagado_por ? 'Anotado: atendido.' : 'Atendido: queda «Por cobrar en caja». Tu parte cuenta cuando la cobren.') : 'Anotado: no vino.',
       releer,
     );
     setEnVuelo(null);
@@ -425,7 +425,7 @@ function MisCitas({ companyId }: { companyId: string }) {
                 // «Listos para cobrar»; su parte cuenta cuando la caja la cobre.
                 if (id && atendido) {
                   void comando('marcar_cumplido', { tipo: 'appointment', id, vino: true },
-                    'Anotado y atendido: ya sale en Caja para cobrar, con tu nombre.', releer);
+                    'Ticket listo: queda «Por cobrar en caja», con tu nombre.', releer);
                 } else {
                   releer();
                 }
@@ -522,7 +522,7 @@ function FilaCita({
   const etiqueta = c.status === 'pending_payment' && (pago?.por_revisar || adelanto?.por_revisar)
     ? { label: 'Pago sin verificar', color: '#B26B00' }
     : esperaCaja(c)
-      ? { label: 'Atendido · esperando caja', color: '#C2410C' }
+      ? { label: 'Atendido · por cobrar en caja', color: '#C2410C' }
       : cobradaYa
         ? { label: importe?.tuParte != null ? `Cobrado · tu parte ${soles(importe.tuParte)}` : 'Cobrado', color: '#0B7A4B' }
         : sello;
@@ -549,7 +549,7 @@ function FilaCita({
           ) : c.status === 'completed' && !esperaCaja(c) && !cobradaYa && (
             c.pagado_por
               ? <span className="badge-pill" style={{ color: '#0B7A4B', background: '#0FA96818' }}>Cobrado</span>
-              : <span className="badge-pill" style={{ color: '#C2410C', background: '#C2410C18' }}>En caja · por cobrar</span>
+              : <span className="badge-pill" style={{ color: '#C2410C', background: '#C2410C18' }}>Por cobrar en caja</span>
           )}
         </div>
         <b>{c.service || 'Sin servicio indicado'}</b>

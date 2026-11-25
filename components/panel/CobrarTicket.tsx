@@ -288,7 +288,7 @@ export default function CobrarTicket({
     const texto = `${soles(Number(r.total))} · ${r.servicio}${r.barbero ? ` · ${r.barbero}` : ''}`;
     if (pagado === undefined) {
       // El ticket existe; solo faltó el cobro: queda en «Listos para cobrar».
-      avisar(`Anotado ${texto}. Si no aparece como cobrado, cóbralo en «Listos para cobrar».`, 'espera');
+      avisar(`Anotado ${texto}. Si no aparece como cobrado, cóbralo en «Por cobrar en caja».`, 'espera');
     } else {
       avisar(`Cobrado con ${etiquetaMetodo(metodo).toLowerCase()}: ${texto}`, 'ok');
     }

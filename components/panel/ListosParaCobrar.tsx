@@ -112,10 +112,10 @@ export default function ListosParaCobrar({
     setAbierto((a) => (a?.id === id && a.que === que ? null : { id, que }));
 
   return (
-    <section className="card listos" aria-label="Listos para cobrar">
+    <section className="card listos" aria-label="Por cobrar en caja">
       <div className="card-mini-head">
         <h3>
-          <Campana size={17} /> Listos para cobrar · {filas.length}
+          <Campana size={17} /> Por cobrar en caja · {filas.length}
         </h3>
         <small className="muted">{soles(total)}</small>
       </div>
