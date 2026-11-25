@@ -81,7 +81,9 @@ export default function LectorDePagos({ companyId }: { companyId: string }) {
   }, [companyId]);
 
   // Con un código a la vista se pregunta seguido: cambia solo cuando el celular se conecta.
-  useSondeo(() => { releer(); setAhora(Date.now()); }, codigo ? 4_000 : 30_000);
+  // Alvaro (25-nov): que lo vean todos, pero que no afecte a quien no lo usa (The 24/7): sin celular
+  // conectado ni código a la vista, no se vuelve a preguntar.
+  useSondeo(() => { releer(); setAhora(Date.now()); }, codigo ? 4_000 : 30_000, !!codigo || (datos?.dispositivos.length ?? 0) > 0);
 
   const conectados = datos?.dispositivos.length ?? 0;
   const [conectadosAntes, setConectadosAntes] = useState(conectados);
@@ -96,10 +98,7 @@ export default function LectorDePagos({ companyId }: { companyId: string }) {
     QRCode.toDataURL(enlace, { margin: 1, width: 220 }).then(setQr, () => setQr(''));
   }, [codigo]);
 
-  // Solo negocios del piloto o que ya tienen un celular conectado (Alvaro, 25-nov: «que nada afecte a
-  // The 24/7»). El piloto: NEXT_PUBLIC_LECTOR_PILOTO, ids de negocio separados por comas.
-  const piloto = (process.env.NEXT_PUBLIC_LECTOR_PILOTO ?? '').split(',').map((s) => s.trim()).includes(companyId);
-  if (!datos || (!piloto && !datos.dispositivos.length)) return null;
+  if (!datos) return null;
 
   async function pedirCodigo() {
     setOcupado(true);
