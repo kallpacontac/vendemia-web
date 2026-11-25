@@ -485,6 +485,7 @@ export default function Agenda() {
               telefono={lead?.phone ?? ''}
               negocio={datos?.empresa?.name ?? ''}
               trabajadores={datos?.trabajadores ?? []}
+              catalogo={datos?.catalogo ?? []}
               pago={datos?.pagosCitas.get(fichaCita.id)}
               v={v}
               enDonde={canchas ? 'en la cancha' : 'en el local'}

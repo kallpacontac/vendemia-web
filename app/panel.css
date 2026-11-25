@@ -1314,8 +1314,17 @@ body:has(.demo-banda) .sidebar{padding-top:44px}
 .ficha-reserva__nota{margin-top:8px}
 .ficha-reserva__pago{margin-top:8px}
 .ficha-reserva .tc-revisar{margin:10px 0 6px}
-.ficha-reserva__pie{flex-wrap:wrap}
-.ficha-reserva__pie .btn{display:inline-flex;align-items:center;gap:7px;text-decoration:none}
+/* Pie: «Validar pago» a lo ancho arriba; debajo, los demás repartidos en filas parejas (el que
+   queda solo ocupa la fila entera, no se arrincona a la derecha). Gana a las reglas de .modal__pie
+   para tablet y celular (grid / column-reverse). */
+.modal__pie.ficha-reserva__pie{display:flex;flex-direction:row;flex-wrap:wrap;gap:10px}
+.modal__pie.ficha-reserva__pie .btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;text-decoration:none;flex:1 1 180px;width:auto;min-height:46px;margin:0}
+.modal__pie.ficha-reserva__pie .btn-primary{flex-basis:100%}
+/* Validar pago: importe y método en una fila, «Guardar | Cancelar» en otra, todo del mismo ancho. */
+.ficha-reserva__pago .saldos__form{display:grid;grid-template-columns:1fr 1fr;gap:10px;align-items:stretch}
+.ficha-reserva__pago .saldos__form>*{grid-column:1/-1}
+.ficha-reserva__pago .saldos__form>.input,.ficha-reserva__pago .saldos__form>.select,.ficha-reserva__pago .saldos__form>.btn{grid-column:auto;width:100%;max-width:none;min-width:0;min-height:46px}
+.ficha-reserva__pago .saldos__form>.input{font-weight:700;font-size:16px}
 .btn-peligro:hover{filter:brightness(.95)}
 
 /* Arrastrar una cita a otro hueco. */

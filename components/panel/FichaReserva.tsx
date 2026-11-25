@@ -47,7 +47,26 @@ import { cobroPorApuntar } from '@/lib/panel/metodosPago';
 import { selloCita } from '@/lib/panel/adelantos';
 import type { Saldo } from '@/lib/panel/saldo';
 import type { Vocabulario } from '@/lib/panel/vocabulario';
-import type { Cita, Trabajador } from '@/lib/supabase/queries';
+import { getServiciosDeCitas, type Cita, type ItemCatalogo, type Trabajador } from '@/lib/supabase/queries';
+
+const normal = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').trim().toLowerCase();
+
+/**
+ * Lo que vale la cita entera: la suma de sus líneas (appointment_services: cada servicio o
+ * producto que pidió, a su precio). Sin líneas —citas viejas o hechas a mano—, el precio del
+ * catálogo por el nombre del servicio («Corte + Barba» suma los dos). 0 = no se sabe.
+ */
+function totalDeLaCita(precios: number[], servicio: string | null, catalogo: ItemCatalogo[]): number {
+  const suma = precios.reduce((a, p) => a + (Number(p) || 0), 0);
+  if (suma > 0) return Math.round(suma * 100) / 100;
+  if (!servicio) return 0;
+  const precio = new Map(catalogo.map((c) => [normal(c.name), Number(c.price) || 0]));
+  const entero = precio.get(normal(servicio));
+  if (entero) return entero;
+  const partes = servicio.split(/\s*(?:\+|,|\by\b)\s*/i).filter(Boolean);
+  const total = partes.reduce((a, p) => a + (precio.get(normal(p)) ?? 0), 0);
+  return Math.round(total * 100) / 100;
+}
 
 const primerNombre = (s: string) => {
   const n = (s ?? '').trim().split(/\s+/)[0] ?? '';
@@ -61,6 +80,7 @@ export default function FichaReserva({
   telefono,
   negocio,
   trabajadores,
+  catalogo = [],
   pago,
   v,
   enDonde = 'en el local',
@@ -74,6 +94,8 @@ export default function FichaReserva({
   telefono: string;
   negocio: string;
   trabajadores: Trabajador[];
+  /** Para el precio cuando la cita no tiene líneas (ver totalDeLaCita). */
+  catalogo?: ItemCatalogo[];
   /** Lo pagado de la cita (getPagosDeCitas). Sin pagos, undefined. */
   pago?: Saldo;
   v: Vocabulario;
@@ -99,10 +121,11 @@ export default function FichaReserva({
   // Y el celular del barbero (datos 0018), que solo lee el dueño o el administrador.
   const puedeFicha = rol === 'dueno' || rol === 'admin';
   const { datos, recargar } = useCargar(async () => {
-    const [lista, pagina, fichas] = await Promise.all([
+    const [lista, pagina, fichas, lineas] = await Promise.all([
       supabase().rpc('comprobantes_panel', { p_company: companyId }),
       supabase().from('tu_pagina').select('secciones').eq('company_id', companyId).maybeSingle(),
       puedeFicha ? supabase().rpc('empleado_fichas_leer', { p_company: companyId }) : Promise.resolve({ data: null, error: null }),
+      getServiciosDeCitas([cita.id]).catch(() => []),
     ]);
     const adelanto = Number((pagina.data as { secciones?: { canchas?: { adelanto?: number } } } | null)?.secciones?.canchas?.adelanto) || 0;
     const slot = cita.slot_start.slice(0, 16);
@@ -111,7 +134,7 @@ export default function FichaReserva({
       (c) => String(c.slot ?? '').slice(0, 16) === slot && (!tel || String(c.telefono ?? '').replace(/\D/g, '') === tel),
     );
     const telefonos = fichas.error ? {} : ((fichas.data ?? {}) as Record<string, { telefono?: string }>);
-    return { comprobantes, adelanto, telefonos };
+    return { comprobantes, adelanto, telefonos, precios: lineas.map((l) => Number(l.price ?? 0)) };
   }, [companyId, cita.id, cita.pagado_por, cita.status, puedeFicha]);
 
   const persona = quienDeCita(cita, cliente);
@@ -121,6 +144,9 @@ export default function FichaReserva({
   const sello = selloCita(cita, pago, soles);
   const pagada = Boolean(cita.pagado_por) || Boolean(pago?.completo);
   const porRevisar = datos?.comprobantes ?? [];
+  /** Con qué arranca «Validar pago»: lo que falta si ya pagó algo; si no, la cita entera. */
+  const total = totalDeLaCita(datos?.precios ?? [], cita.service, catalogo);
+  const sugerido = pago ? pago.saldo : total;
 
   /** El saludo al cliente: ya escrito, se retoca en WhatsApp antes de enviarlo. */
   const waCliente = useMemo(() => {
@@ -188,8 +214,10 @@ export default function FichaReserva({
               )}
               {pagada && <span className="badge-pill" style={{ color: '#0FA968', background: '#0FA96818' }}><Check size={12} /> Pagada</span>}
             </dd>
-            {pago && pago.total > 0 && (
+            {pago && pago.total > 0 ? (
               <><dt>Pago</dt><dd>Pagó {soles(pago.pagado)} de {soles(pago.total)}{pago.saldo > 0 ? ` · faltan ${soles(pago.saldo)}` : ''}</dd></>
+            ) : total > 0 && (
+              <><dt>Total</dt><dd><b>{soles(total)}</b></dd></>
             )}
           </dl>
           {sello?.ayuda && <p className="muted">{sello.ayuda}</p>}
@@ -210,9 +238,10 @@ export default function FichaReserva({
             pagando ? (
               <div className="form-cita ficha-reserva__pago">
                 <RegistrarPago
+                  key={sugerido}
                   leadId={cita.lead_id}
                   appointmentId={cita.id}
-                  sugerido={pago?.saldo ?? 0}
+                  sugerido={sugerido}
                   alCerrar={() => setPagando(false)}
                   alGuardar={() => {
                     recargar();
