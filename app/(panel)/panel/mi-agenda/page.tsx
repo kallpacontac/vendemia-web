@@ -877,7 +877,7 @@ function LlegoSinCita({ companyId, alCerrar, alListo }: {
               </label>
               {pideSede && (
                 <label className="field-label" style={{ display: 'grid', gap: 4 }}>
-                  <span>Sede {misSedes.includes(sede) && <small className="muted">la tuya</small>}</span>
+                  Sede
                   <select className="input" value={sedeValida ? sede : ''} onChange={(e) => setSede(e.target.value)}>
                     <option value="">¿En qué sede estás?</option>
                     {sedes.map((x) => (
