@@ -178,9 +178,9 @@ export function redactar(eventos: EventoPendiente[]): Mensaje {
           body: cita
             ? `✓ ${cap(QUE[String(e.datos.resultado)] ?? "asignado")}: llegó${nombre(e)}${horaDeAviso(e.datos.cuando)}.`
             : e.datos.dudoso
-              ? `Llegó${nombre(e)}${horaDeAviso(e.datos.cuando)}. ¿De qué cita es? Elígela en la Agenda.`
-              : `Llegó${nombre(e)}${horaDeAviso(e.datos.cuando)}. Leído en el celular de la caja.`,
-          url: cita || e.datos.dudoso ? '/panel/agenda' : '/panel/configuracion#facturacion',
+              ? `Llegó${nombre(e)}${horaDeAviso(e.datos.cuando)}. ¿De qué cita es? Elígela en Caja › Cierre del día.`
+              : `Llegó${nombre(e)}${horaDeAviso(e.datos.cuando)}. Leído en el celular de cobros.`,
+          url: cita ? '/panel/agenda' : '/panel/caja?ver=cierre',
           tag: `${e.company_id}:lector:${e.id}`,
         }
       : {

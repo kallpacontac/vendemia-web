@@ -1,0 +1,12 @@
+/* «Yape por asignar» en la Agenda (YapePorAsignar.tsx): el pago arriba y sus citas posibles como
+   botones grandes. En el celular, uno debajo del otro y a todo el ancho. */
+.ypa { padding: 10px 14px 12px; border-top: 1px solid var(--line, #EAEAE6); display: grid; gap: 8px; }
+.ypa__pago { margin: 0; font-size: 13.5px; }
+.ypa__pago b { font-size: 15px; font-variant-numeric: tabular-nums; }
+.ypa__opciones { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 8px; }
+.ypa__opcion { display: grid; gap: 2px; min-height: 48px; padding: 8px 12px; border: 1px solid var(--line-2, #DEDED9); border-radius: 12px; background: var(--bg-card, #fff); color: var(--ink, #0A0A0A); font: inherit; font-size: 13.5px; text-align: left; cursor: pointer; }
+.ypa__opcion span { font-size: 12.5px; color: var(--ink-soft, #5C5C5C); }
+.ypa__opcion:hover { border-color: var(--ink, #0A0A0A); }
+.ypa__opcion:disabled { opacity: .6; cursor: progress; }
+@media (max-width: 560px) { .ypa__opciones { grid-template-columns: 1fr; } }
+.ypa--en-caja { background: #fff8ec; }

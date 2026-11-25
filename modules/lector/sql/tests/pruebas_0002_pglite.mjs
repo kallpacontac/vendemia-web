@@ -112,6 +112,7 @@ await cita('c5', 'l5', 'Kevin Arévalo', 40, -30, 0);
 await yape(4000, 'ROSA HUAMAN');
 a = await ultimo();
 ok('sin dudas no se adivina: queda por asignar', a.asignado === '' && a.dudoso?.length === 2 && (await est('c4')).pagado_por === '');
+await q(`update lector_avisos set recibido_at = now() - interval '5 minutes' where id = $1`, [a.id]);
 const pa = (await uno(`select lector_por_asignar('neg') r`)).r;
 ok('el panel lo lista con sus 2 opciones', pa.length === 1 && pa[0].opciones.length === 2);
 await q(`select lector_asignar('neg', $1, 'c5')`, [a.id]);
@@ -125,6 +126,15 @@ await q(`insert into appointments (id, company_id, lead_id, service, slot_start,
 await q(`insert into appointment_services values ('c7-s', 'c7', 40)`);
 await yape(4000, 'Rosa Huamán');
 ok('familiar aprendido: va solo a Kevin', (await est('c7')).pagado_por === 'lector' && (await est('c6')).pagado_por === '');
+
+// 3b · Dos citas de S/ 1 y llegan dos Yape de S/ 1 sin nombre que ayude: cuadran, las dos cobradas.
+await cita('u1', 'lu1', 'Andrés Rojas', 1, -30, 0);
+await cita('u2', 'lu2', 'Pablo Soto', 1, -30, 0);
+await yape(100, 'CARMEN DIAZ');
+ok('primer Yape de S/ 1: todavía no adivina', (await est('u1')).pagado_por === '' && (await est('u2')).pagado_por === '');
+ok('y no sale «por asignar» enseguida (3 min de gracia)', (await uno(`select lector_por_asignar('neg') r`)).r.length === 0);
+await yape(100, 'TERESA VEGA');
+ok('segundo Yape de S/ 1: las dos cobradas solas', (await est('u1')).pagado_por === 'lector' && (await est('u2')).pagado_por === 'lector');
 
 // 4 · Pago en partes: S/ 20 y luego S/ 30 de S/ 50.
 await cita('c8', 'l8', 'Piero Vásquez', 50, -20, 10);

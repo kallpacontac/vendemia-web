@@ -58,6 +58,7 @@ import { useCargar } from '@/components/panel/useCargar';
 import { useVocabulario } from '@/components/panel/useVocabulario';
 import { BotonCobrar } from '@/components/panel/BotonCobrar';
 import ComprobantesDelDia from '@/components/panel/ComprobantesDelDia';
+import PagosDelCelular from '@/components/panel/PagosDelCelular';
 import { fotoParaCobro, type FotoPago } from '@/lib/panel/fotoPago';
 import { RegistrarPago, SaldosPendientes } from '@/components/panel/Saldos';
 import { diaMes, hora, hora12, isoLocal, soles, telefono } from '@/lib/panel/format';
@@ -775,6 +776,8 @@ function Caja() {
         )}
 
         {cierre && companyId && <ComprobantesDelDia companyId={companyId} dia={dia} recarga={datos} />}
+        {/* Lo que leyó el celular de cobros (lector): plegado; solo pide algo si un Yape quedó sin cita clara. */}
+        {cierre && companyId && (rol === 'dueno' || rol === 'admin') && <PagosDelCelular companyId={companyId} dia={dia} recarga={datos} />}
 
         {cierre && <SaldosPendientes key={companyId} alCambiar={releer} />}
 

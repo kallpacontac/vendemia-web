@@ -21,6 +21,7 @@
 --   · Un solo candidato exacto → se aplica. Varios → gana el que el NOMBRE (o un familiar aprendido)
 --     señala con ventaja clara (75 %+ y 40 puntos sobre el segundo); quien tocó «Ya yapeé» o subió su
 --     captura va antes que quien no dijo nada. Si no, queda «por asignar» y el dueño elige con un toque.
+--   · Tantos Yape de ese monto (en la misma hora) como citas lo esperan → todas cobradas, en orden.
 --   · Monto MENOR (pago en partes) → solo si el nombre señala a un único candidato: «a cuenta».
 --   · Aplicar = v2_comprobante_aplicar, lo mismo que aprobar un comprobante: confirma la reserva si
 --     llega al adelanto, la cobra si llega al total (pagado_por = 'lector') o la deja a cuenta.
@@ -302,6 +303,14 @@ begin
             if b_nom >= 0.75 and b_nom - s_nom >= 0.4 then
                 select t.cita_id, t.como, t.comprobante, t.espera into e_cita, e_como, e_comp, e_esp
                   from lector_tmp_c t where t.exacto order by t.nombre desc, t.cerca desc limit 1;
+            -- Alvaro (24-nov): «si hay dos citas de 1 y me llegan dos Yape de 1, cuadran». Si llegaron
+            -- (en la misma hora) tantos Yape de ese monto como citas lo esperan, todas quedan cobradas y da
+            -- igual cuál va con cuál: se asigna por nombre y, sin nombre, por orden.
+            elsif (select count(*) from public.lector_avisos x
+                    where x.company_id = p_company and x.asignado = '' and x.centimos = v_av.centimos
+                      and x.cuando between v_av.cuando - interval '1 hour' and v_av.cuando + interval '1 hour') >= v_exac then
+                select t.cita_id, t.como, t.comprobante, t.espera into e_cita, e_como, e_comp, e_esp
+                  from lector_tmp_c t where t.exacto order by t.nombre desc, t.cerca desc, t.slot, t.cita_id limit 1;
             end if;
         else
             -- Pago en partes: solo si el nombre señala a un único candidato.
@@ -390,7 +399,8 @@ begin
             jsonb_build_object('clase', 'lector', 'monto', v_centimos / 100.0, 'nombre', left(coalesce(p_datos->>'nombre', ''), 60),
                                'origen', left(coalesce(nullif(p_datos->>'origen', ''), 'Yape'), 60), 'cuando', v_cuando,
                                'cita', v_av.cita_id, 'cliente_cita', v_cliente, 'resultado', v_av.antes->>'resultado',
-                               'dudoso', v_av.dudoso is not null and v_av.cita_id is null),
+                               -- Sin «¿de qué cita es?»: una duda suele resolverse sola en un minuto (otro Yape igual).
+                               'dudoso', false),
             v_cuando);
     end if;
     return jsonb_build_object('nuevo', true);
@@ -497,7 +507,9 @@ begin
                                             'cuando', a.cuando, 'opciones', a.dudoso) order by a.cuando desc)
           from public.lector_avisos a
          where a.company_id = p_company and a.asignado = '' and a.dudoso is not null
-           and jsonb_array_length(a.dudoso) > 0 and a.cuando > now() - interval '36 hours'), '[]'::jsonb);
+           and jsonb_array_length(a.dudoso) > 0 and a.cuando > now() - interval '36 hours'
+           -- 3 min de gracia: el segundo Yape del mismo monto suele llegar enseguida y lo resuelve solo.
+           and a.recibido_at < now() - interval '3 minutes'), '[]'::jsonb);
 end $$;
 revoke execute on function public.lector_por_asignar(text) from public, anon;
 grant execute on function public.lector_por_asignar(text) to authenticated;

@@ -27,7 +27,7 @@ interface Dispositivo {
   por_enviar: number;
   sin_leer: number;
 }
-interface Aviso {
+export interface Aviso {
   id: number;
   centimos: number | null;
   nombre: string;
@@ -42,15 +42,11 @@ interface Aviso {
   por_asignar?: boolean;
 }
 
-const RESULTADO: Record<string, string> = {
-  cobrada: 'cobrada', confirmada: 'reserva confirmada', a_cuenta: 'a cuenta', parcial: 'a cuenta', cotejado: 'comprobante cotejado',
-};
 interface Estado {
   dispositivos: Dispositivo[];
   avisos: Aviso[];
 }
 
-const ULTIMOS = 8;
 /** El celular manda señal cada ~15 min mientras está despierto; dormido, cuando llega un aviso. */
 const VIVO_MIN = 30;
 
@@ -111,13 +107,6 @@ export default function LectorDePagos({ companyId }: { companyId: string }) {
     setCodigo(data as { codigo: string; expira: string });
   }
 
-  async function noEra(a: Aviso) {
-    if (!window.confirm(`¿Quitar este pago de la cita de ${a.cliente || 'ese cliente'}? La cita vuelve a quedar por cobrar.`)) return;
-    const { error: e } = await supabase().rpc('lector_desasignar', { p_company: companyId, p_aviso: a.id });
-    if (e) return setError(e.message);
-    releer();
-  }
-
   async function desconectar(d: Dispositivo) {
     if (!window.confirm(`¿Desconectar ${d.modelo || 'este celular'}? Dejará de mandar los pagos al panel.`)) return;
     const { error: e } = await supabase().rpc('lector_desvincular', { p_company: companyId, p_dispositivo: d.id });
@@ -148,7 +137,6 @@ export default function LectorDePagos({ companyId }: { companyId: string }) {
     ? `https://wa.me/?text=${encodeURIComponent(`Código para conectar Vendemia Caja: ${codigo.codigo}
 Ábrelo en el celular de cobros: ${enlace}`)}`
     : '';
-  const ultimos = datos.avisos.filter((a) => a.centimos !== null).slice(0, ULTIMOS);
 
   return (
     <div className="sec ldp" id="celular-de-cobros">
@@ -226,33 +214,14 @@ export default function LectorDePagos({ companyId }: { companyId: string }) {
       )}
 
       {conectados > 0 && (
-        ultimos.length ? (
-          <>
-            <small className="muted">Últimos pagos que leyó</small>
-            <ul className="ldp-lista">
-              {ultimos.map((a) => (
-                <li key={a.id}>
-                  <span className="ldp-hora">{hora(a.cuando)}</span>
-                  <span className="ldp-quien">
-                    <b>{nombreBonito(a.nombre) || 'Sin nombre'}</b>
-                    <small>
-                      {a.origen}
-                      {a.cita_id
-                        ? ` · → ${a.cliente || 'cita'}${a.servicio ? `, ${a.servicio}` : ''}${a.slot ? ` ${a.slot.slice(11, 16)}` : ''} (${RESULTADO[a.resultado ?? ''] ?? 'asignado'})`
-                        : a.por_asignar ? ' · por asignar: elígelo en la Agenda' : ' · sin cita (venta suelta)'}
-                    </small>
-                    {a.cita_id && <button type="button" className="ldp-quitar" onClick={() => noEra(a)}>No era de esta cita</button>}
-                  </span>
-                  <span className="ldp-monto">{soles((a.centimos ?? 0) / 100)}</span>
-                </li>
-              ))}
-            </ul>
-          </>
-        ) : (
-          <p className="muted ldp-nota">Conectado. Para probar, que te yapeen S/ 1: aparecerá aquí.</p>
-        )
+        <p className="muted ldp-nota">
+          {datos.avisos.length
+            ? `Leyó ${datos.avisos.length} ${datos.avisos.length === 1 ? 'pago' : 'pagos'} esta semana. Se revisan en Caja › Cierre del día.`
+            : 'Conectado. Para probar, que te yapeen S/ 1: lo verás en Caja › Cierre del día.'}
+        </p>
       )}
       {error && <p className="ldp-aviso">{error}</p>}
     </div>
   );
 }
+

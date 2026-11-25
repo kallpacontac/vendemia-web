@@ -18,15 +18,26 @@
 .ldp-nota { margin: 0; font-size: 13px; }
 
 .ldp-lista { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
-.ldp-lista li { display: grid; grid-template-columns: 64px minmax(0, 1fr) auto; align-items: center; gap: 10px; padding: 8px 0; border-top: 1px solid var(--line, #EAEAE6); }
+.ldp-lista li { border-top: 1px solid var(--line, #EAEAE6); }
+.ldp-fila { width: 100%; display: grid; grid-template-columns: 58px minmax(0, 1fr) auto; align-items: center; gap: 10px; padding: 10px 0; border: 0; background: none; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.ldp-fila:disabled { cursor: default; opacity: 1; }
+.ldp-detalle { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px 12px; padding: 0 0 10px 68px; font-size: 12.5px; color: var(--ink-soft, #5C5C5C); }
+@media (max-width: 480px) { .ldp-detalle { padding-left: 0; } }
 .ldp-hora { font-size: 12.5px; color: var(--ink-soft, #5C5C5C); font-variant-numeric: tabular-nums; }
 .ldp-quien { display: grid; min-width: 0; font-size: 13.5px; }
 .ldp-quien b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.ldp-quien small { font-size: 12px; color: var(--ink-soft, #5C5C5C); }
+.ldp-quien small { display: block; font-size: 12px; color: var(--ink-soft, #5C5C5C); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ldp-quien small svg { vertical-align: -1px; }
 .ldp-monto { font-weight: 700; font-size: 15px; font-variant-numeric: tabular-nums; }
 .ldp-sinleer { color: var(--warm, #B26B00); }
 .ldp-aviso { margin: 0; font-size: 12.5px; color: #B42318; font-weight: 600; }
 
 .ldp-que { margin: 0; font-size: 13px; line-height: 1.45; color: var(--ink-soft, #5C5C5C); }
 
-.ldp-quien .ldp-quitar { justify-self: start; padding: 2px 0; }
+
+/* «Pagos del celular de cobros» en Caja › Cierre del día (PagosDelCelular.tsx): plegada en una línea. */
+.ldp-caja { margin-top: 16px; gap: 0; padding: 0; overflow: hidden; }
+.ldp-caja__cab { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 16px; border: 0; background: none; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.ldp-caja__cab > span { display: grid; gap: 2px; min-width: 0; }
+.ldp-caja__cab small { font-size: 12.5px; }
+.ldp-caja .ldp-lista { padding: 0 16px 6px; }

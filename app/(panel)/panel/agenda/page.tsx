@@ -44,7 +44,6 @@ import { esDeSede, sedeCorta, useSedeElegida, useSedes } from '@/components/pane
 import TableroCanchas from '@/components/panel/TableroCanchas';
 import ComprobantesPorRevisar from '@/components/panel/ComprobantesPorRevisar';
 import AdelantosPorReprogramar from '@/components/panel/AdelantosPorReprogramar';
-import YapePorAsignar from '@/components/panel/YapePorAsignar';
 import Consumos from '@/components/panel/Consumos';
 import TurnosFijos from '@/components/panel/TurnosFijos';
 import FaltanSeguido from '@/components/panel/FaltanSeguido';
@@ -149,7 +148,7 @@ function pidenAlgo(pasadas: Cita[], conCobro = false): Cita[] {
 }
 
 export default function Agenda() {
-  const { companyId, canchas, rol } = useSesion();
+  const { companyId, canchas } = useSesion();
   const [offset, setOffset] = useState(0);
   const [vista, setVista] = useState<'negocio' | 'cliente'>('negocio');
   /**
@@ -465,9 +464,6 @@ export default function Agenda() {
 
         {/* Citas con adelanto (sql/0021): la captura que subió el cliente, arriba de todo para que no se pierda. */}
         {!canchas && companyId && <ComprobantesPorRevisar companyId={companyId} recarga={datos?.citas} alCambiar={recargar} enDonde="en el local" />}
-
-        {/* Yape que leyó el celular de cobros y no se pudo casar solo con una cita (lector 0002): un toque. */}
-        {companyId && (rol === 'dueno' || rol === 'admin') && <YapePorAsignar companyId={companyId} recarga={datos?.citas} alCambiar={recargar} />}
 
         {/* Quien no vino o canceló con adelanto pagado (sql/0027): su dinero sigue a su favor. */}
         {!canchas && companyId && <AdelantosPorReprogramar companyId={companyId} sedes={sedes} recarga={datos?.citas} alCambiar={recargar} />}
