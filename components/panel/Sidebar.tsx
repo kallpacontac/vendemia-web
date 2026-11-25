@@ -41,7 +41,7 @@ import { esAppointmentFamily, esCita, esEcommerce, esRecurrente } from '@/lib/pa
 import { vocabulario } from '@/lib/panel/vocabulario';
 import { estadoConsumo } from '@/lib/panel/consumo';
 import { PLANES, miles } from '@/lib/planes';
-import { getConsumo } from '@/lib/supabase/queries';
+import { getConsumo, getModoAtencion } from '@/lib/supabase/queries';
 import type { BusinessMode } from '@/lib/supabase/types';
 import { useLoQueHaceLaPagina } from '@/modules/tu-pagina/ui/secciones';
 import { RUTA_AJUSTES, ordenar, personalizado, useOrdenMenu, vaEnMas, type OrdenMenu } from '@/lib/panel/menu';
@@ -148,6 +148,15 @@ export function useMenuDelPanel({
   // tipo: entonces también le toca la Agenda o Pedidos, que es donde entra lo de la página.
   const pagina = useLoQueHaceLaPagina(soloGlobal ? null : companyId);
   const guardado = useOrdenMenu(soloGlobal ? null : companyId);
+  // El CRM, a la vista donde Mia no cierra sola (híbrido o «lo contestas tú»): ahí una persona trabaja
+  // el embudo. Con «Cierra la venta» se queda en «Más», con lo que no es del día a día.
+  const [conCrm, setConCrm] = useState(false);
+  useEffect(() => {
+    let vivo = true;
+    if (soloGlobal || !companyId) setConCrm(false);
+    else void getModoAtencion(companyId).then((m) => { if (vivo) setConCrm(m !== 'cierra'); });
+    return () => { vivo = false; };
+  }, [companyId, soloGlobal]);
   const orden = ordenProbado ?? guardado;
   const conOrden = !soloGlobal && personalizado(orden);
 
@@ -187,8 +196,8 @@ export function useMenuDelPanel({
     : nav.filter((n) =>
         (esCita(modo)
           // Barbería o salón: solo lo del día a día; Mia, mensajes y clientes, en «Más».
-          ? ['/panel', RUTA_MI_AGENDA, RUTA_MI_COMISION, RUTA_MI_CATALOGO, '/panel/agenda', '/panel/caja', '/panel/fideliza', '/panel/catalogo', '/panel/metricas', '/panel/configuracion']
-          : [...(pagina.mesasFija ? ['/panel/mesas'] : []), '/panel', RUTA_MI_AGENDA, RUTA_MI_COMISION, RUTA_MI_CATALOGO, '/panel/asistente', '/panel/mensajes', rutaOperacion, '/panel/leads', '/panel/caja', '/panel/configuracion']
+          ? ['/panel', RUTA_MI_AGENDA, RUTA_MI_COMISION, RUTA_MI_CATALOGO, '/panel/agenda', ...(conCrm ? ['/panel/crm'] : []), '/panel/caja', '/panel/fideliza', '/panel/catalogo', '/panel/metricas', '/panel/configuracion']
+          : [...(pagina.mesasFija ? ['/panel/mesas'] : []), '/panel', RUTA_MI_AGENDA, RUTA_MI_COMISION, RUTA_MI_CATALOGO, '/panel/asistente', '/panel/mensajes', ...(conCrm ? ['/panel/crm'] : []), rutaOperacion, '/panel/leads', '/panel/caja', '/panel/configuracion']
         ).includes(n.href),
       );
   const railExtra = nav.filter((n) => !rail.some((r) => r.href === n.href));
