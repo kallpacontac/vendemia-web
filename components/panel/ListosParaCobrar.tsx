@@ -13,7 +13,7 @@
  * descuenta stock y, si es un servicio, cuenta para la comisión del barbero (datos 0011).
  */
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Plus, Scissors, Wallet, X } from 'lucide-react';
+import { Camera, Plus, Scissors, Wallet, X } from 'lucide-react';
 import { BotonCobrar } from '@/components/panel/BotonCobrar';
 import Campana from '@/components/panel/Campana';
 import FiltroProductos, { ordenarPorVentas, useMasVendidos } from '@/components/panel/ProductosFiltro';
@@ -92,6 +92,20 @@ export default function ListosParaCobrar({
     vistos.current = new Set(ahora);
   }, [ids]);
 
+  // La foto del voucher o del ticket que el barbero adjuntó al generarlo (tu-pagina 0037). Sin la
+  // migración, o si falla, no sale y ya: es una ayuda para comparar, no parte del cobro.
+  const [fotos, setFotos] = useState<Map<string, string>>(new Map());
+  useEffect(() => {
+    if (!ids) return;
+    let vivo = true;
+    void supabase().from('ticket_fotos').select('appointment_id, url').in('appointment_id', ids.split(','))
+      .then(({ data, error }) => {
+        if (!vivo || error) return;
+        setFotos(new Map((data as { appointment_id: string; url: string }[]).map((f) => [f.appointment_id, f.url])));
+      });
+    return () => { vivo = false; };
+  }, [ids]);
+
   if (filas.length === 0) return null;
   const total = filas.reduce((t, x) => t + (x.pagos ? x.pagos.saldo : x.importe), 0);
   const alternar = (id: string, que: 'cuenta' | 'agregar') =>
@@ -124,6 +138,11 @@ export default function ListosParaCobrar({
                   {cita.sede && conSede ? ` · ${sedeCorta(cita.sede)}` : ''}
                   {pagos ? ` · pagó ${soles(pagos.pagado)} a cuenta` : ''}
                 </small>
+                {fotos.get(cita.id) && (
+                  <a className="listo-foto" href={fotos.get(cita.id)} target="_blank" rel="noopener noreferrer">
+                    <Camera size={13} /> Ver foto del ticket
+                  </a>
+                )}
               </div>
               <b className="listo-monto">{soles(pagos ? pagos.saldo : importe)}</b>
               <div className="listo-acciones">

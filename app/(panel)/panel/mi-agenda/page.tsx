@@ -46,7 +46,7 @@
  */
 import { Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { AlertTriangle, Banknote, Check, ChevronLeft, ChevronRight, UserPlus, X } from 'lucide-react';
+import { AlertTriangle, Banknote, Camera, Check, ChevronLeft, ChevronRight, Receipt, X } from 'lucide-react';
 import Link from 'next/link';
 import Topbar from '@/components/panel/Topbar';
 import AvisosDelEquipo from '@/components/panel/AvisosDelEquipo';
@@ -55,6 +55,7 @@ import { useSesion } from '@/components/panel/Sesion';
 import { useAvisar, useComando } from '@/components/panel/Avisos';
 import FotoDelPago from '@/components/panel/FotoDelPago';
 import { supabase } from '@/lib/supabase/client';
+import { achicarImagen } from '@/lib/achicarImagen';
 import { fotoParaCobro, type FotoPago } from '@/lib/panel/fotoPago';
 import { useCargar } from '@/components/panel/useCargar';
 import { useSondeo } from '@/components/panel/useSondeo';
@@ -406,10 +407,11 @@ function MisCitas({ companyId }: { companyId: string }) {
                   : `${delDia.length} ${delDia.length === 1 ? palabra : palabras}`}
               </span>
             )}
-            {/* Quien llega sin cita: solo hoy y con ficha (tu-pagina 0026). Así ocupa su silla. */}
+            {/* Quien llega sin cita: solo hoy y con ficha (tu-pagina 0026). Así ocupa su silla.
+                25-nov-2026 (The 24/7): se llama «Generar ticket», que es lo que el barbero hace. */}
             {datos && ficha && dia === hoy && (
               <button type="button" className="btn btn-primary btn-sm" onClick={() => setSinCita(true)}>
-                <UserPlus size={14} /> Llegó sin cita
+                <Receipt size={14} /> Generar ticket
               </button>
             )}
           </div>
@@ -770,10 +772,12 @@ const ahoraHHMM = () => {
 };
 
 /**
- * «Llegó sin cita» (tu-pagina 0026): el barbero anota en SU agenda al cliente que tiene en la
+ * «Generar ticket» (antes «Llegó sin cita», tu-pagina 0026): el barbero anota en SU agenda al cliente que tiene en la
  * silla, para que ocupe su sitio y la página no venda esa hora. Hoy, a su nombre, al precio del
  * catálogo: eso lo vuelve a decidir la base. La sede se recuerda en este celular (el barbero
  * suele estar siempre en la misma). Si la sede ya estaba llena, se crea igual y se avisa.
+ * Foto opcional del voucher o del ticket de papel (tu-pagina 0037): se sube DESPUÉS de crear el
+ * ticket y la ve la caja al cobrar; si falla la subida, el ticket ya existe y solo se avisa.
  */
 function LlegoSinCita({ companyId, alCerrar, alListo }: {
   companyId: string;
@@ -800,6 +804,28 @@ function LlegoSinCita({ companyId, alCerrar, alListo }: {
   });
   const [horaInicio, setHoraInicio] = useState(ahoraHHMM);
   const [enviando, setEnviando] = useState(false);
+  const [foto, setFoto] = useState<File | null>(null);
+  const vistaFoto = useMemo(() => (foto ? URL.createObjectURL(foto) : ''), [foto]);
+  useEffect(() => () => { if (vistaFoto) URL.revokeObjectURL(vistaFoto); }, [vistaFoto]);
+
+  /** La foto, pegada al ticket recién creado. Devuelve el error para decirlo, o null. */
+  async function subirFoto(citaId: string): Promise<string | null> {
+    if (!foto) return null;
+    try {
+      const { data } = await supabase().auth.getSession();
+      const token = data.session?.access_token;
+      if (!token) return 'Tu sesión terminó.';
+      const form = new FormData();
+      form.append('companyId', companyId);
+      form.append('cita', citaId);
+      form.append('archivo', await achicarImagen(foto), 'ticket.jpg');
+      const r = await fetch('/api/agenda/foto-ticket', { method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: form });
+      const j = (await r.json().catch(() => ({}))) as { status?: string; mensaje?: string };
+      return j.status === 'ok' ? null : (j.mensaje ?? 'No se pudo subir.');
+    } catch {
+      return 'Sin conexión.';
+    }
+  }
 
   const sedes = datos?.sedes ?? [];
   const pideSede = sedes.length > 1;
@@ -838,6 +864,12 @@ function LlegoSinCita({ companyId, alCerrar, alListo }: {
       /* sin almacenamiento: la próxima vez la vuelve a elegir */
     }
     const r = data as { id?: string; servicio?: string; slot_start?: string; aviso?: string | null };
+    if (foto && r.id) {
+      setEnviando(true);
+      const malFoto = await subirFoto(r.id);
+      setEnviando(false);
+      if (malFoto) avisar(`Ticket hecho, pero la foto no se subió: ${malFoto}`, 'error');
+    }
     if (!yaAtendido) avisar(`Anotado: ${r.servicio ?? 'la cita'} a las ${(r.slot_start ?? '').slice(11, 16)}.`, 'ok');
     if (r.aviso) avisar(r.aviso, 'error');
     alListo(r.id, yaAtendido);
@@ -845,10 +877,10 @@ function LlegoSinCita({ companyId, alCerrar, alListo }: {
 
   return (
     <div className="modal-fondo" role="presentation" onClick={(e) => { if (e.target === e.currentTarget && !enviando) alCerrar(); }}>
-      <form className="modal" role="dialog" aria-modal="true" aria-label="Llegó sin cita" onSubmit={guardar}>
+      <form className="modal" role="dialog" aria-modal="true" aria-label="Generar ticket" onSubmit={guardar}>
         <div className="modal__cab">
-          <UserPlus size={16} />
-          <b>Llegó sin cita</b>
+          <Receipt size={16} />
+          <b>Generar ticket</b>
         </div>
         <div className="modal__cuerpo" style={{ display: 'grid', gap: 10 }}>
           {error && <p className="vacio">No se pudo abrir: {error}</p>}
@@ -890,6 +922,21 @@ function LlegoSinCita({ companyId, alCerrar, alListo }: {
                 Empieza
                 <input className="input" type="time" value={horaInicio} onChange={(e) => setHoraInicio(e.target.value)} />
               </label>
+              <div className="field-label" style={{ display: 'grid', gap: 6 }}>
+                <span>Foto del voucher o del ticket <small className="muted">opcional · la ve la caja al cobrar</small></span>
+                {foto ? (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={vistaFoto} alt="Foto adjunta" style={{ width: 56, height: 56, objectFit: 'cover', borderRadius: 10 }} />
+                    <button type="button" className="btn btn-ghost btn-sm" onClick={() => setFoto(null)} disabled={enviando}><X size={14} /> Quitar</button>
+                  </div>
+                ) : (
+                  <label className="btn btn-ghost btn-sm" style={{ justifySelf: 'start', cursor: 'pointer' }}>
+                    <Camera size={14} /> Adjuntar foto
+                    <input type="file" accept="image/*" hidden onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ''; if (f) setFoto(f); }} />
+                  </label>
+                )}
+              </div>
               <label className="gc-suma">
                 <input type="checkbox" checked={yaAtendido} onChange={(e) => setYaAtendido(e.target.checked)} />
                 <span>
@@ -902,7 +949,7 @@ function LlegoSinCita({ companyId, alCerrar, alListo }: {
         </div>
         <div className="modal__pie">
           <button type="button" className="btn btn-ghost" onClick={alCerrar} disabled={enviando}>Cancelar</button>
-          <button type="submit" className="btn btn-primary" disabled={!datos || enviando}>{enviando ? 'Anotando…' : (yaAtendido ? 'Anotar y atendido' : 'Anotar')}</button>
+          <button type="submit" className="btn btn-primary" disabled={!datos || enviando}>{enviando ? (foto ? 'Generando y subiendo la foto…' : 'Generando…') : 'Generar ticket'}</button>
         </div>
       </form>
     </div>

@@ -2215,6 +2215,8 @@ body{background:var(--bg-app)}
 .listo-quien b{font-size:15px}
 .listo-barbero{display:inline-flex;align-items:center;gap:5px;width:fit-content;font-size:12px;font-weight:800;
   color:var(--brand-txt);background:var(--brand-soft);padding:3px 9px;border-radius:999px}
+.listo-foto{display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:600;color:var(--brand-txt);text-decoration:none;margin-top:2px}
+.listo-foto:hover{text-decoration:underline}
 .listo-monto{font-size:20px;font-weight:800;white-space:nowrap}
 .listo-acciones{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;align-items:center}
 .listo-acciones .btn{min-height:44px}
