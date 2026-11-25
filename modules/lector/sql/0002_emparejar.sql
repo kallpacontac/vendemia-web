@@ -14,9 +14,12 @@
 --   · COTEJO   comprobante que la IA dio por bueno y nadie ha cotejado: el Yape lo confirma
 --              («Llegó») sin sumar otro pago.
 --   · REVISAR  comprobante por revisar a mano: el Yape lo aprueba.
---   · APARTADA reserva online esperando el adelanto, sin «Ya yapeé» ni captura.
---   · BARBERO  cita de hoy, confirmada o atendida, sin cobrar: desde 1 h antes de su hora hasta 4 h
---              después de terminar.
+--   · APARTADA reserva online esperando el adelanto, sin captura: NUNCA se asigna sola (sin evidencia);
+--              solo sale como opción en «¿De qué cita es?».
+--   · BARBERO  cita o ticket sin cobrar CON LA FOTO del comprobante que subió el barbero (Mi agenda ›
+--              «Generar ticket», tu-pagina 0037). Alvaro, 25-nov: «para que se valide automáticamente, sí
+--              o sí suba el comprobante». Solo un Yape de 30 min antes a 10 min después de la foto. Sin
+--              foto (o sin la 0037) no hay automático: queda como opción si el dueño tiene que elegir.
 --
 -- Cómo decide (investigación del 24-nov: el nombre ordena, no decide; lo ambiguo nunca se acepta
 -- en silencio; los pagos en partes solo si cuadran sin dudas):
@@ -155,6 +158,18 @@ exception when others then
     return null;
 end $$;
 
+-- Cuándo subió el barbero la foto del comprobante de esa cita (tu-pagina 0037, ticket_fotos). null si
+-- no hay foto o la 0037 no está aplicada: entonces esa cita no se cobra sola.
+create or replace function public.lector_foto_ticket(p_cita text)
+returns timestamptz language plpgsql stable security definer set search_path = public as $$
+declare v timestamptz;
+begin
+    if to_regclass('public.ticket_fotos') is null then return null; end if;
+    execute 'select created_at from public.ticket_fotos where appointment_id = $1' into v using p_cita;
+    return v;
+end $$;
+revoke execute on function public.lector_foto_ticket(text) from public, anon, authenticated;
+
 -- ── 3 · Candidatos de un aviso ──────────────────────────────────────────────
 -- Una fila por cita posible. `exacto`: el monto cuadra; `nombre`: 0..1 (1 si es un familiar aprendido).
 create or replace function public.lector_candidatos(p_aviso public.lector_avisos)
@@ -217,14 +232,19 @@ begin
            and not exists (select 1 from public.comprobantes_web c where c.appointment_id = b.id and c.company_id = b.company_id and c.estado in ('revisar', 'aprobado'))
            and not exists (select 1 from public.lector_esperas e where e.appointment_id = b.id and e.company_id = b.company_id and e.aviso_id is null)
         union all
-        -- BARBERO: cita de ese día, confirmada o atendida, sin cobrar. Más cerca cuanto más cerca del final.
-        select b.id, 'barbero', b.total - b.pagado, null, null, null, null,
-               case when p_aviso.cuando between f.fin - interval '30 minutes' and f.fin + interval '90 minutes' then 1.0 else 0.6 end,
+        -- BARBERO: cita o ticket sin cobrar. Con la foto del comprobante («ticket»: evidencia, va primero
+        -- y solo con un Yape de 30 min antes a 10 min después de la foto); sin foto («barbero»: solo como
+        -- opción para el dueño, en el rango de la cita).
+        select b.id, case when ft.foto is not null then 'ticket' else 'barbero' end, b.total - b.pagado, null, null, null, null,
+               case when ft.foto is not null then 1.0
+                    when p_aviso.cuando between f.fin - interval '30 minutes' and f.fin + interval '90 minutes' then 1.0 else 0.6 end,
                b.lead_id, b.lead_nombre, coalesce(b.beneficiario, ''), b.service, b.slot_start
           from base b
          cross join lateral (select (to_timestamp(b.slot_start, 'YYYY-MM-DD HH24:MI')::timestamp at time zone 'America/Lima') as ini,
                                     (to_timestamp(coalesce(nullif(b.slot_end, ''), b.slot_start), 'YYYY-MM-DD HH24:MI')::timestamp at time zone 'America/Lima') as fin) f
+         cross join lateral (select public.lector_foto_ticket(b.id) as foto) ft
          where b.status in ('confirmed', 'completed') and coalesce(b.pagado_por, '') = '' and b.total > b.pagado
+           and (ft.foto is null or p_aviso.cuando between ft.foto - interval '30 minutes' and ft.foto + interval '10 minutes')
            -- Ayer u hoy: una cita de las 11:30 pm se paga pasada la medianoche. Lo que decide es el rango
            -- de abajo (1 h antes de su hora hasta 4 h después de terminar), no el día del calendario.
            and left(b.slot_start, 10) between to_char((p_aviso.cuando - interval '1 day') at time zone 'America/Lima', 'YYYY-MM-DD') and v_dia
@@ -245,7 +265,7 @@ begin
       from pos p
      where p.falta > 0 or p.como = 'cotejo'
      -- Si una cita sale por varias vías, gana la más concreta.
-     order by p.id, array_position(array['cotejo', 'revisar', 'espera', 'apartada', 'barbero'], p.como);
+     order by p.id, array_position(array['cotejo', 'revisar', 'ticket', 'espera', 'apartada', 'barbero'], p.como);
 end $$;
 revoke execute on function public.lector_candidatos(public.lector_avisos) from public, anon, authenticated;
 
@@ -331,23 +351,24 @@ begin
         truncate lector_tmp_c;
         insert into lector_tmp_c select * from public.lector_candidatos(v_av);
 
-        select count(*) into v_exac from lector_tmp_c where exacto;
-        -- Quien DIJO que pagó («Ya yapeé» o subió su captura) va primero que quien no dijo nada.
-        if (select count(*) from lector_tmp_c where exacto and como in ('espera', 'cotejo', 'revisar')) = 1 then
+        -- Alvaro (25-nov): solo se asigna SOLO lo que tiene evidencia (captura, foto del ticket o
+        -- «Ya yapeé»). Lo demás (reserva apartada sin captura, cita sin foto) solo es opción para elegir.
+        select count(*) into v_exac from lector_tmp_c where exacto and como in ('espera', 'cotejo', 'revisar', 'ticket');
+        if v_exac = 1 then
             select t.cita_id, t.como, t.comprobante, t.espera into e_cita, e_como, e_comp, e_esp
-              from lector_tmp_c t where t.exacto and t.como in ('espera', 'cotejo', 'revisar');
-            e_motivo := 'aviso';
-        elsif v_exac = 1 then
-            select t.cita_id, t.como, t.comprobante, t.espera into e_cita, e_como, e_comp, e_esp from lector_tmp_c t where t.exacto;
-            e_motivo := 'unico';
+              from lector_tmp_c t where t.exacto and t.como in ('espera', 'cotejo', 'revisar', 'ticket');
+            e_motivo := case when e_como = 'ticket' then 'foto' else 'aviso' end;
         elsif v_exac > 1 then
             -- Varios con el mismo monto: el nombre tiene que señalar a UNO sin dudas.
-            select t.nombre into b_nom from lector_tmp_c t where t.exacto order by t.nombre desc, t.cerca desc limit 1;
-            select t.nombre into s_nom from lector_tmp_c t where t.exacto order by t.nombre desc, t.cerca desc offset 1 limit 1;
+            select t.nombre into b_nom from lector_tmp_c t where t.exacto and t.como in ('espera', 'cotejo', 'revisar', 'ticket')
+             order by t.nombre desc, t.cerca desc limit 1;
+            select t.nombre into s_nom from lector_tmp_c t where t.exacto and t.como in ('espera', 'cotejo', 'revisar', 'ticket')
+             order by t.nombre desc, t.cerca desc offset 1 limit 1;
             -- Ventaja clara: «DIEGO PAREDES QUISPE» es Diego Paredes (1) aunque Luis Quispe comparta apellido (0,5).
             if b_nom >= 0.75 and b_nom - s_nom >= 0.4 then
                 select t.cita_id, t.como, t.comprobante, t.espera into e_cita, e_como, e_comp, e_esp
-                  from lector_tmp_c t where t.exacto order by t.nombre desc, t.cerca desc limit 1;
+                  from lector_tmp_c t where t.exacto and t.como in ('espera', 'cotejo', 'revisar', 'ticket')
+                 order by t.nombre desc, t.cerca desc limit 1;
                 e_motivo := 'nombre';
             -- Alvaro (24-nov): «si hay dos citas de 1 y me llegan dos Yape de 1, cuadran». Si llegaron
             -- (en la misma hora) tantos Yape de ese monto como citas lo esperan, todas quedan cobradas y da
@@ -356,15 +377,16 @@ begin
                     where x.company_id = p_company and x.asignado = '' and x.centimos = v_av.centimos
                       and x.cuando between v_av.cuando - interval '1 hour' and v_av.cuando + interval '1 hour') >= v_exac then
                 select t.cita_id, t.como, t.comprobante, t.espera into e_cita, e_como, e_comp, e_esp
-                  from lector_tmp_c t where t.exacto order by t.nombre desc, t.cerca desc, t.slot, t.cita_id limit 1;
+                  from lector_tmp_c t where t.exacto and t.como in ('espera', 'cotejo', 'revisar', 'ticket')
+                 order by t.nombre desc, t.cerca desc, t.slot, t.cita_id limit 1;
                 -- Todas quedan cobradas, pero cuál Yape fue de cuál cliente es una suposición: se marca.
                 e_motivo := 'orden';
             end if;
         else
-            -- Pago en partes: solo si el nombre señala a un único candidato.
-            if (select count(*) from lector_tmp_c where nombre >= 0.75) = 1 then
+            -- Pago en partes: solo con evidencia y si el nombre señala a un único candidato.
+            if (select count(*) from lector_tmp_c where nombre >= 0.75 and como in ('espera', 'cotejo', 'revisar', 'ticket')) = 1 then
                 select t.cita_id, t.como, t.comprobante, t.espera into e_cita, e_como, e_comp, e_esp
-                  from lector_tmp_c t where t.nombre >= 0.75;
+                  from lector_tmp_c t where t.nombre >= 0.75 and t.como in ('espera', 'cotejo', 'revisar', 'ticket');
                 e_motivo := 'partes';
             end if;
         end if;
@@ -507,6 +529,31 @@ end $$;
 drop trigger if exists lector_lineas on public.appointment_services;
 create trigger lector_lineas after insert on public.appointment_services
     for each row execute function public.lector_tg_lineas();
+
+-- La foto del ticket se sube DESPUÉS de crear el ticket: también dispara. Solo si existe la 0037.
+create or replace function public.lector_tg_foto() returns trigger
+language plpgsql security definer set search_path = public as $$
+begin
+    if coalesce(current_setting('lector.emparejando', true), '') = '1' then return null; end if;
+    if exists (select 1 from public.lector_dispositivos d where d.company_id = new.company_id and d.revocado_at is null)
+       and exists (select 1 from public.lector_avisos a where a.company_id = new.company_id and a.asignado = ''
+                    and a.centimos is not null and a.cuando > now() - interval '36 hours') then
+        begin
+            perform public.lector_emparejar(new.company_id);
+        exception when others then
+            raise warning 'lector_tg_foto: %', sqlerrm;
+        end;
+    end if;
+    return null;
+end $$;
+do $$
+begin
+    if to_regclass('public.ticket_fotos') is not null then
+        execute 'drop trigger if exists lector_foto on public.ticket_fotos';
+        execute 'create trigger lector_foto after insert or update of created_at on public.ticket_fotos
+                 for each row execute function public.lector_tg_foto()';
+    end if;
+end $$;
 
 -- ── 8 · La página: «Ya yapeé» ───────────────────────────────────────────────
 -- ¿Este negocio tiene el celular de cobros conectado? Si no, la página pide la captura como siempre.
@@ -675,6 +722,47 @@ begin
 end $$;
 revoke execute on function public.lector_desasignar(text, bigint) from public, anon;
 grant execute on function public.lector_desasignar(text, bigint) to authenticated;
+
+-- «Esperando su Yape» en el Cierre del día: cobros CON evidencia (foto del ticket o captura de la página)
+-- de ese día que todavía no tienen su aviso. Con todo lo que se sabe para corroborar.
+create or replace function public.lector_esperando(p_company text, p_dia date)
+returns jsonb language plpgsql stable security definer set search_path = public as $$
+declare
+    v_res jsonb := '[]'::jsonb;
+    v_ini timestamptz := p_dia::timestamp at time zone 'America/Lima';
+begin
+    if not public.lector_puede(p_company) then
+        raise exception 'No tienes acceso a los pagos de este negocio.' using errcode = '42501';
+    end if;
+    -- Capturas de la página por revisar (con lector, la IA no confirma: esperan el aviso).
+    select coalesce(jsonb_agg(jsonb_build_object(
+               'tipo', 'captura', 'cita_id', a.id, 'cliente', coalesce(nullif(a.beneficiario, ''), l.name, ''), 'servicio', a.service,
+               'slot', a.slot_start, 'monto', c.monto, 'hora', coalesce(public.lector_hora_captura(c.fecha_pago), c.creado_at),
+               'url', c.url) order by c.creado_at desc), '[]'::jsonb)
+      into v_res
+      from public.comprobantes_web c
+      join public.appointments a on a.id = c.appointment_id and a.company_id = c.company_id
+      left join public.leads l on l.id = a.lead_id and l.company_id = a.company_id
+     where c.company_id = p_company and c.estado = 'revisar' and c.creado_at >= v_ini and c.creado_at < v_ini + interval '1 day';
+    if to_regclass('public.ticket_fotos') is not null then
+        execute $q$
+            select $1 || coalesce(jsonb_agg(jsonb_build_object(
+                       'tipo', 'ticket', 'cita_id', a.id, 'cliente', coalesce(nullif(a.beneficiario, ''), l.name, ''), 'servicio', a.service,
+                       'slot', a.slot_start,
+                       'monto', (select coalesce(sum(s.price), 0) from public.appointment_services s where s.appointment_id = a.id)
+                                - (select coalesce(sum(p.amount), 0) from public.pending_payments p where p.company_id = a.company_id and p.appointment_id = a.id),
+                       'hora', f.created_at, 'url', f.url) order by f.created_at desc), '[]'::jsonb)
+              from public.ticket_fotos f
+              join public.appointments a on a.id = f.appointment_id and a.company_id = f.company_id
+              left join public.leads l on l.id = a.lead_id and l.company_id = a.company_id
+             where f.company_id = $2 and f.created_at >= $3 and f.created_at < $3 + interval '1 day'
+               and a.status in ('confirmed', 'completed') and coalesce(a.pagado_por, '') = ''
+        $q$ into v_res using v_res, p_company, v_ini;
+    end if;
+    return v_res;
+end $$;
+revoke execute on function public.lector_esperando(text, date) from public, anon;
+grant execute on function public.lector_esperando(text, date) to authenticated;
 
 -- El aviso flotante de la Caja en la computadora (YapeEnVivo.tsx): solo lo NUEVO desde el último id que
 -- vio la pantalla. Sin p_despues (al abrir la Caja) devuelve solo el último id: lo viejo no se anuncia.

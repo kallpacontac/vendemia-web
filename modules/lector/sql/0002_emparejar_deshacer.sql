@@ -8,6 +8,12 @@ drop function if exists public.lector_tg_lineas();
 drop function if exists public.lector_desasignar(text, bigint);
 drop function if exists public.lector_asignar(text, bigint, text);
 drop function if exists public.lector_por_asignar(text);
+drop function if exists public.lector_esperando(text, date);
+do $$ begin
+    if to_regclass('public.ticket_fotos') is not null then execute 'drop trigger if exists lector_foto on public.ticket_fotos'; end if;
+end $$;
+drop function if exists public.lector_tg_foto();
+drop function if exists public.lector_foto_ticket(text);
 drop function if exists public.lector_nuevos(text, bigint);
 drop function if exists public.lector_srv_ya_pague(text, text, text);
 drop function if exists public.lector_srv_tras_captura(text, text, text);

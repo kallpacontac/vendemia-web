@@ -49,6 +49,8 @@ create table comprobantes_web (id uuid primary key default gen_random_uuid(), co
   motivo text default '', cotejo text default '', cotejado_at timestamptz, creado_at timestamptz default now(),
   fecha_pago text not null default '');
 create table tu_pagina (company_id text, slug text, publicada boolean);
+create table ticket_fotos (appointment_id text primary key, company_id text, url text default '', hash text default '',
+  subida_por text default '', created_at timestamptz default now());
 insert into tu_pagina values ('neg', 'uno', true);
 create function public.v2_adelanto_minimo(c text, t numeric) returns numeric language sql as $$ select round(t / 2, 2) $$;
 create function public.v2_canchas_cfg(c text) returns jsonb language sql as $$ select null::jsonb $$;
@@ -86,11 +88,15 @@ let h = 0;
 const yape = (centimos, nombre, minutosAtras = 0, origen = 'Yape') =>
   q(`select lector_srv_recibir($1, 'aviso', $2)`, [D, { huella: 'h-' + String(++h).padStart(8, '0'), centimos, nombre, origen, cuando: Date.now() - minutosAtras * 60_000 }]);
 const lima = async (min) => (await uno(`select to_char((now() + make_interval(mins => $1::int)) at time zone 'America/Lima', 'YYYY-MM-DD HH24:MI') t`, [min])).t;
-const cita = async (id, lead, nombre, precio, desdeMin, hastaMin, estado = 'completed') => {
+const foto = (id) => q(`insert into ticket_fotos (appointment_id, company_id) values ($1, 'neg')
+                          on conflict (appointment_id) do update set created_at = now()`, [id]);
+const cita = async (id, lead, nombre, precio, desdeMin, hastaMin, estado = 'completed', conFoto = true) => {
   await q(`insert into leads values ($1, 'neg', $2, '9' || $1)`, [lead, nombre]);
   await q(`insert into appointments (id, company_id, lead_id, service, slot_start, slot_end, slot_minutes, employee_id, status, created_at)
            values ($1, 'neg', $2, 'Corte', $3, $4, 30, 'e1', $5, extract(epoch from now())::bigint)`, [id, lead, await lima(desdeMin), await lima(hastaMin), estado]);
   await q(`insert into appointment_services values ($1 || '-s', $1, $2)`, [id, precio]);
+  // Alvaro (25-nov): del barbero solo se cobra solo lo que tiene la foto del comprobante.
+  if (conFoto && (estado === 'completed' || estado === 'confirmed')) await foto(id);
 };
 const est = (id) => uno(`select a.status, a.pagado_por, (select coalesce(sum(amount),0) from pending_payments p where p.appointment_id = a.id)::numeric pagado from appointments a where id = $1`, [id]);
 const ultimo = () => uno(`select * from lector_avisos order by id desc limit 1`);
@@ -102,9 +108,15 @@ let e = await est('c1');
 ok('barbero: único candidato → cobrada sola', e.pagado_por === 'lector' && Number(e.pagado) === 30, JSON.stringify(e));
 let a = await ultimo();
 ok('el aviso dice a qué cita fue', a.cita_id === 'c1' && a.asignado === 'auto');
-ok('motivo: única cita con ese monto', a.motivo === 'unico', a.motivo);
+ok('motivo: el barbero subió el comprobante', a.motivo === 'foto', a.motivo);
 const push = await uno(`select datos from avisos order by n desc limit 1`);
 ok('el push lleva la cita y el cliente', push.datos.cita === 'c1' && push.datos.cliente_cita === 'Carlos Ríos', JSON.stringify(push.datos));
+
+// 1b · Sin la foto del comprobante, una cita del barbero NO se cobra sola (queda como opción).
+await cita('s1', 'ls1', 'Sergio Lima', 88, -30, 0, 'completed', false);
+await yape(8800, 'SERGIO LIMA');
+ok('cita sin foto: no se cobra sola', (await est('s1')).pagado_por === '');
+ok('pero queda como opción para elegir', (await ultimo()).dudoso?.some((o) => o.cita_id === 's1'));
 
 // 2 · Dos citas de S/ 35 a la vez: decide el nombre.
 await cita('c2', 'l2', 'Diego Paredes', 35, -30, 0);
@@ -132,6 +144,7 @@ await cita('c6', 'l4b', 'Jorge Mendoza', 40, -30, 0);
 await q(`insert into appointments (id, company_id, lead_id, service, slot_start, slot_end, slot_minutes, employee_id, status, created_at)
          values ('c7', 'neg', 'l5', 'Corte', $1, $2, 30, 'e1', 'completed', 0)`, [await lima(-30), await lima(0)]);
 await q(`insert into appointment_services values ('c7-s', 'c7', 40)`);
+await foto('c7');
 await yape(4000, 'Rosa Huamán');
 ok('familiar aprendido: va solo a Kevin', (await est('c7')).pagado_por === 'lector' && (await est('c6')).pagado_por === '');
 
@@ -212,7 +225,15 @@ await q(`insert into leads values ('lt', 'neg', 'Franco Huamán', '9lt')`);
 await q(`insert into appointments (id, company_id, lead_id, service, slot_start, slot_end, slot_minutes, employee_id, status, created_at)
          values ('t1', 'neg', 'lt', 'Barba', $1, $2, 20, 'e1', 'completed', 0)`, [await lima(-25), await lima(-5)]);
 await q(`insert into appointment_services values ('t1-s', 't1', 25)`);
-ok('cita registrada después del Yape: se cobra sola', (await est('t1')).pagado_por === 'lector');
+ok('ticket sin foto todavía: no se cobra', (await est('t1')).pagado_por === '');
+await foto('t1');
+ok('el barbero sube la foto después del Yape: se cobra al subirla', (await est('t1')).pagado_por === 'lector');
+
+// 8a · Un Yape de más de 30 min antes de la foto no la toma.
+await cita('f1', 'lf1', 'Elsa Ruiz', 91, -120, -60, 'completed', false);
+await q(`select lector_srv_recibir($1, 'aviso', $2)`, [D, { huella: 'h-lejos-foto', centimos: 9100, nombre: 'ELSA RUIZ', origen: 'Yape', cuando: Date.now() - 50 * 60_000 }]);
+await foto('f1');
+ok('Yape fuera del rango de la foto: no se cobra', (await est('f1')).pagado_por === '');
 
 // 8b · Un Yape de ANTES de conectar el celular (seguía en la bandeja): ni se guarda ni cobra nada.
 await cita('v1', 'lv1', 'Hugo Paz', 77, -30, 0);
@@ -228,6 +249,7 @@ await q(`insert into appointments (id, company_id, lead_id, service, slot_start,
          values ('n1', 'neg', 'ln', 'Corte', to_char((now() - interval '50 minutes') at time zone 'America/Lima', 'YYYY-MM-DD HH24:MI'),
                  to_char((now() - interval '20 minutes') at time zone 'America/Lima', 'YYYY-MM-DD HH24:MI'), 30, 'e1', 'completed', 0)`);
 await q(`insert into appointment_services values ('n1-s', 'n1', 63)`);
+await foto('n1');
 await q(`select lector_srv_recibir($1, 'aviso', $2)`, [D, { huella: 'h-medianoche', centimos: 6300, nombre: 'NICO VERA', origen: 'Yape', cuando: Date.now() }]);
 ok('una cita de antes de medianoche se cobra con un Yape de después', (await est('n1')).pagado_por === 'lector');
 
@@ -238,6 +260,14 @@ await q(`select lector_srv_recibir($1, 'aviso', $2)`, [D, { huella: 'h-en-vivo',
 const nv1 = (await uno(`select lector_nuevos('neg', $1) r`, [nv0.ultimo])).r;
 ok('llega un Yape: sale en el aviso flotante', nv1.avisos.length === 1 && nv1.avisos[0].centimos === 4200 && nv1.ultimo > nv0.ultimo);
 ok('y la siguiente vuelta ya no lo repite', (await uno(`select lector_nuevos('neg', $1) r`, [nv1.ultimo])).r.avisos.length === 0);
+
+// 8e · «Esperando su Yape»: ticket con foto y sin su aviso.
+await cita('e1', 'le1', 'Iván Soto', 33, -20, 0);
+const esp = (await uno(`select lector_esperando('neg', (now() at time zone 'America/Lima')::date) r`)).r;
+ok('la foto sin su Yape sale en «Esperando su Yape»', esp.some((x) => x.cita_id === 'e1' && x.tipo === 'ticket' && Number(x.monto) === 33),
+   JSON.stringify(esp.map((x) => x.cita_id)));
+await yape(3300, 'IVAN SOTO');
+ok('y al llegar su Yape sale de la lista', !(await uno(`select lector_esperando('neg', (now() at time zone 'America/Lima')::date) r`)).r.some((x) => x.cita_id === 'e1'));
 
 // 9 · Permisos.
 const pf = await uno(`select has_function_privilege('authenticated', 'lector_emparejar(text)', 'execute') a,

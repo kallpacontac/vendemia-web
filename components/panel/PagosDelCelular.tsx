@@ -40,6 +40,8 @@ export interface PagoLeido {
   por_asignar?: boolean;
 }
 export interface Opcion { cita_id: string; cliente: string; servicio: string; slot: string; falta: number; exacto: boolean }
+/** Un cobro con evidencia (foto del barbero o captura de la página) que todavía no tiene su Yape. */
+export interface Esperando { tipo: 'ticket' | 'captura'; cita_id: string; cliente: string; servicio: string; slot: string; monto: number | null; hora: string; url: string }
 export interface PorAsignar { id: number; centimos: number; nombre: string; origen: string; cuando: string; opciones: Opcion[] }
 
 const RESULTADO: Record<string, string> = {
@@ -49,6 +51,7 @@ const RESULTADO: Record<string, string> = {
 const MOTIVO: Record<string, string> = {
   unico: 'única cita con ese monto',
   aviso: 'el cliente avisó que pagó',
+  foto: 'el barbero subió el comprobante',
   nombre: 'por el nombre',
   orden: 'por orden: compruébalo',
   partes: 'pago en partes, por el nombre',
@@ -65,9 +68,10 @@ export default function PagosDelCelular({ companyId, dia, recarga }: { companyId
   const [ocupado, setOcupado] = useState(0);
   const { datos, releer } = useCargar(async () => {
     const desde = new Date(`${dia}T00:00:00-05:00`).toISOString();
-    const [estado, dudas] = await Promise.all([
+    const [estado, dudas, esperando] = await Promise.all([
       supabase().rpc('lector_estado', { p_company: companyId, p_desde: desde }),
       supabase().rpc('lector_por_asignar', { p_company: companyId }),
+      supabase().rpc('lector_esperando', { p_company: companyId, p_dia: dia }),
     ]);
     if (estado.error) return null;
     const e = estado.data as { dispositivos: unknown[]; avisos: PagoLeido[] };
@@ -77,6 +81,7 @@ export default function PagosDelCelular({ companyId, dia, recarga }: { companyId
       pagos: delDia.filter((a) => a.centimos !== null),
       sinLeer: delDia.filter((a) => a.centimos === null).length,
       dudas: ((dudas.data ?? []) as PorAsignar[]).filter((d) => diaLima(d.cuando) === dia),
+      esperando: (esperando.data ?? []) as Esperando[],
     };
   }, [companyId, dia, recarga]);
   // Sin celular conectado no se vuelve a preguntar (The 24/7 y todo negocio sin lector: ni una consulta de más).
@@ -111,7 +116,7 @@ export default function PagosDelCelular({ companyId, dia, recarga }: { companyId
   }
 
   return (
-    <PagosDelCelularVista dia={dia} pagos={datos.pagos} sinLeer={datos.sinLeer} dudas={datos.dudas} ocupado={ocupado}
+    <PagosDelCelularVista dia={dia} pagos={datos.pagos} sinLeer={datos.sinLeer} dudas={datos.dudas} esperando={datos.esperando} ocupado={ocupado}
       alAsignar={asignar} alQuitar={quitar} alCopiar={copiar} />
   );
 }
@@ -128,8 +133,8 @@ export function textoCuadre(dia: string, pagos: PagoLeido[]): string {
 }
 
 /** La sección sin la base (también la usa la vista previa de /dev). */
-export function PagosDelCelularVista({ dia, pagos, sinLeer = 0, dudas, ocupado = 0, alAsignar, alQuitar, alCopiar }: {
-  dia: string; pagos: PagoLeido[]; sinLeer?: number; dudas: PorAsignar[]; ocupado?: number;
+export function PagosDelCelularVista({ dia, pagos, sinLeer = 0, dudas, esperando = [], ocupado = 0, alAsignar, alQuitar, alCopiar }: {
+  dia: string; pagos: PagoLeido[]; sinLeer?: number; dudas: PorAsignar[]; esperando?: Esperando[]; ocupado?: number;
   alAsignar: (p: PorAsignar, o: Opcion) => void; alQuitar: (a: PagoLeido) => void; alCopiar: (texto: string) => void;
 }) {
   const [abierta, setAbierta] = useState(false);
@@ -156,6 +161,7 @@ export function PagosDelCelularVista({ dia, pagos, sinLeer = 0, dudas, ocupado =
               : 'Ninguno este día'}
           </small>
           {porOrden > 0 && <small className="ldp-ambar">{porOrden === 1 ? '1 asignado por orden: compruébalo' : `${porOrden} asignados por orden: compruébalos`}</small>}
+          {esperando.length > 0 && <small className="ldp-ambar">{esperando.length === 1 ? '1 cobro esperando su Yape' : `${esperando.length} cobros esperando su Yape`}</small>}
         </span>
         <ChevronDown size={18} aria-hidden="true" style={{ transform: abierta ? 'rotate(180deg)' : undefined, flex: 'none' }} />
       </button>
@@ -195,6 +201,30 @@ export function PagosDelCelularVista({ dia, pagos, sinLeer = 0, dudas, ocupado =
               <Copy size={14} aria-hidden="true" /> Copiar cuadre
             </button>
           )}
+        </div>
+      )}
+
+      {/* Cobros con evidencia que aún no tienen su Yape: se emparejan solos en cuanto llega. */}
+      {abierta && esperando.length > 0 && (
+        <div className="ldp-esperando">
+          <small className="muted">Esperando su Yape · se emparejan solos al llegar</small>
+          <ul className="ldp-lista">
+            {esperando.map((x) => (
+              <li key={`${x.tipo}-${x.cita_id}`}>
+                <div className="ldp-fila">
+                  <span className="ldp-hora">{horaLima(x.hora)}</span>
+                  <span className="ldp-quien">
+                    <b>{x.cliente || 'Cliente'}</b>
+                    <small>
+                      {x.servicio} · {x.tipo === 'ticket' ? 'foto del barbero' : 'captura de la página'}
+                      {x.url && <> · <a href={x.url} target="_blank" rel="noopener">ver</a></>}
+                    </small>
+                  </span>
+                  <span className="ldp-monto">{x.monto !== null ? soles(Number(x.monto)) : '—'}</span>
+                </div>
+              </li>
+            ))}
+          </ul>
         </div>
       )}
 
