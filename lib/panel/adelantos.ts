@@ -115,7 +115,7 @@ export function selloCita(
   if (!c.pagado_por && pagos?.hayPago && !pagos.completo) {
     return {
       clave: 'por_cobrar',
-      label: `Por cobrar · ${soles(pagos.pagado)} de ${soles(pagos.total)}`,
+      label: `Pagó ${soles(pagos.pagado)} · falta ${soles(pagos.saldo)}`,
       color: '#C2410C',
       ayuda: `Pagó ${soles(pagos.pagado)} a cuenta y faltan ${soles(pagos.saldo)}. Pasa a cobrada cuando se pague todo.`,
     };
@@ -123,7 +123,7 @@ export function selloCita(
   if (apartada && apartadaCaducada(c, ahora)) {
     return {
       clave: 'caducada',
-      label: 'Caducada — hora libre',
+      label: 'Caducada · hora libre',
       color: '#8A8D86',
       ayuda: `Pasaron ${PAGO_CADUCA_HORAS} h sin pago: ya no ocupa la hora y otro cliente puede tomarla.`,
     };
@@ -135,7 +135,7 @@ export function selloCita(
       : '';
     return {
       clave: 'esperando_pago',
-      label: 'Esperando pago',
+      label: 'Esperando adelanto',
       color: '#E08A00',
       ayuda: `Apartada a su nombre hasta que llegue el comprobante.${hasta ? ` Si no paga antes del ${hasta}, la hora se libera.` : ''}`,
     };

@@ -42,7 +42,8 @@ import { useSesion } from '@/components/panel/Sesion';
 import { supabase } from '@/lib/supabase/client';
 import { fechaCorta } from '@/lib/panel/cobro-cancha';
 import { quienDeCita } from '@/lib/panel/ficha';
-import { ESTADO_CITA, soles } from '@/lib/panel/format';
+import { soles } from '@/lib/panel/format';
+import { estadoDeCita } from '@/lib/panel/estadoCita';
 import { cobroPorApuntar } from '@/lib/panel/metodosPago';
 import { selloCita } from '@/lib/panel/adelantos';
 import type { Saldo } from '@/lib/panel/saldo';
@@ -140,7 +141,7 @@ export default function FichaReserva({
   const persona = quienDeCita(cita, cliente);
   const cuando = fechaCorta(cita.slot_start);
   const barbero = trabajadores.find((t) => t.id === cita.employee_id);
-  const estado = ESTADO_CITA[cita.status ?? 'confirmed'];
+  const estado = estadoDeCita(cita);
   const sello = selloCita(cita, pago, soles);
   const pagada = Boolean(cita.pagado_por) || Boolean(pago?.completo);
   const porRevisar = datos?.comprobantes ?? [];

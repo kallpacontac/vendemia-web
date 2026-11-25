@@ -66,6 +66,7 @@ import { vocabulario } from '@/lib/panel/vocabulario';
 import { claveGrupo, hoyLima, ocupa, reservando } from '@/lib/panel/inscripciones';
 import { quienDeCita } from '@/lib/panel/ficha';
 import { calcularComisiones, DESDE_COBRO, esperaCaja } from '@/lib/panel/comisiones';
+import { POR_COBRAR_EN_CAJA, pagoAMedias } from '@/lib/panel/estadoCita';
 import {
   getCatalogoDelEquipo,
   getCitasDelPeriodo,
@@ -135,7 +136,7 @@ function minutosDe(c: Cita): number {
  * igual que en la Agenda del dueño. Lo que viene es solo de esta pantalla.
  */
 function selloDe(c: Cita, ahora: number, esProxima: boolean, palabra = 'cita'): { label: string; color: string; enCurso: boolean } {
-  if (c.status === 'pending_payment') return { label: 'Esperando pago', color: '#B26B00', enCurso: false };
+  if (c.status === 'pending_payment') return { label: 'Esperando adelanto', color: '#B26B00', enCurso: false };
   const inicio = c.inicio?.getTime() ?? 0;
   const fin = inicio + Math.max(minutosDe(c), 15) * 60000;
   if (c.status === 'confirmed' && inicio <= ahora && ahora < fin) return { label: 'En curso', color: '#CC3A00', enCurso: true };
@@ -143,9 +144,9 @@ function selloDe(c: Cita, ahora: number, esProxima: boolean, palabra = 'cita'): 
     const s = selloCumplido('appointment', c.status, c.cumplido_por);
     return { label: s.label, color: s.color, enCurso: false };
   }
-  // «Cita agendada», no «Próxima» ni «Confirmada» (23-nov-2026, Alvaro): dice que está en pie.
+  // «Agendada» (25-nov-2026, estados unificados: la misma palabra que la Agenda del dueño).
   // La más cercana sigue en naranja para que se vea cuál viene.
-  const label = `${palabra[0].toUpperCase()}${palabra.slice(1)} agendad${palabra === 'pedido' ? 'o' : 'a'}`;
+  const label = palabra === 'pedido' ? 'Agendado' : 'Agendada';
   return { label, color: esProxima ? '#CC3A00' : '#93938C', enCurso: false };
 }
 
@@ -225,7 +226,13 @@ function MisCitas({ companyId }: { companyId: string }) {
         saldos = Object.fromEntries(Object.entries(data as Record<string, unknown>).map(([k, n]) => [k, Number(n)]));
       }
     }
-    return { lunes, negocio, citas, clientes, saldos, adelantos, pagos, lineas: [...lineas], congeladas: [...congeladas], pct };
+    // Las que llevan foto del voucher o del ticket (tu-pagina 0037). Sin la tabla, ninguna.
+    const conFoto = new Set<string>();
+    if (vivas.length) {
+      const { data, error } = await supabase().from('ticket_fotos').select('appointment_id').in('appointment_id', vivas);
+      if (!error && data) for (const f of data as { appointment_id: string }[]) conFoto.add(f.appointment_id);
+    }
+    return { lunes, negocio, citas, clientes, saldos, adelantos, pagos, conFoto, lineas: [...lineas], congeladas: [...congeladas], pct };
   }, [companyId, lunes, cobra, vePorPagar, veConCaptura]);
 
   // Lo que casi no cambia: el catálogo (tarifas y qué es producto). Se relee cada 5 min.
@@ -451,6 +458,7 @@ function MisCitas({ companyId }: { companyId: string }) {
                 falta={datos?.saldos[c.id] ?? 0}
                 adelanto={c.status === 'pending_payment' ? datos?.adelantos[c.id] : undefined}
                 pago={datos?.pagos[c.id]}
+                conFoto={datos?.conFoto.has(c.id) ?? false}
                 importe={c.employee_id === ficha ? importes.get(c.id) : undefined}
                 cobrando={cobrando === c.id}
                 alCobrar={(abrir) => setCobrando(abrir ? c.id : null)}
@@ -485,6 +493,7 @@ function FilaCita({
   alCobrar,
   companyId,
   alCobrado,
+  conFoto,
 }: {
   filaRef?: React.Ref<HTMLDivElement>;
   c: Cita;
@@ -500,6 +509,8 @@ function FilaCita({
   adelanto?: Adelanto;
   /** Cómo va su pago (datos 0032). */
   pago?: PagoCita;
+  /** Lleva la foto del voucher o del ticket que adjuntó al generarlo (tu-pagina 0037). */
+  conFoto: boolean;
   /** El precio de sus servicios y, ya atendida, lo que gana él. Solo en las suyas. */
   importe?: { precio: number; tuParte: number | null };
   cobrando: boolean;
@@ -520,9 +531,9 @@ function FilaCita({
   // Atendida: la comisión cuenta al cobrarse (24-nov-2026). Que lo diga sin rodeos.
   const cobradaYa = c.status === 'completed' && Boolean(c.pagado_por) && (c.slot_start ?? '') >= DESDE_COBRO;
   const etiqueta = c.status === 'pending_payment' && (pago?.por_revisar || adelanto?.por_revisar)
-    ? { label: 'Pago sin verificar', color: '#B26B00' }
+    ? { label: 'Adelanto por validar', color: '#B26B00' }
     : esperaCaja(c)
-      ? { label: 'Atendido · por cobrar en caja', color: '#C2410C' }
+      ? { label: POR_COBRAR_EN_CAJA, color: '#C2410C' }
       : cobradaYa
         ? { label: importe?.tuParte != null ? `Cobrado · tu parte ${soles(importe.tuParte)}` : 'Cobrado', color: '#0B7A4B' }
         : sello;
@@ -543,13 +554,14 @@ function FilaCita({
             {etiqueta.label}
           </span>
           {!c.employee_id && <span className="mia-sin">Sin asignar</span>}
+          {conFoto && <span className="badge-pill" style={{ color: '#3D5AF1', background: '#3D5AF118' }}>Con foto del ticket</span>}
           {/* Cómo va el pago (datos 0032). Sin ella, lo de antes: ¿pasó por caja lo que ya atendió? */}
           {estado ? (
             pagoAparte && <span className="badge-pill" style={{ color: estado.color, background: `${estado.color}18` }}>{estado.label}</span>
           ) : c.status === 'completed' && !esperaCaja(c) && !cobradaYa && (
             c.pagado_por
               ? <span className="badge-pill" style={{ color: '#0B7A4B', background: '#0FA96818' }}>Cobrado</span>
-              : <span className="badge-pill" style={{ color: '#C2410C', background: '#C2410C18' }}>Por cobrar en caja</span>
+              : <span className="badge-pill" style={{ color: '#C2410C', background: '#C2410C18' }}>{POR_COBRAR_EN_CAJA}</span>
           )}
         </div>
         <b>{c.service || 'Sin servicio indicado'}</b>
@@ -635,10 +647,10 @@ function estadoDelPago(c: Cita, p: PagoCita | undefined):
   const total = Number(p.total) || 0;
   const pagado = Number(p.pagado) || 0;
   if (total <= 0 && !p.cobrada) return null;
-  if (p.cobrada || pagado >= total) return { tipo: 'pagado', label: 'Pagado', color: '#0B7A4B' };
-  if (p.por_revisar) return { tipo: 'sinVerificar', label: 'Pago sin verificar', color: '#B26B00' };
+  if (p.cobrada || pagado >= total) return { tipo: 'pagado', label: 'Cobrado', color: '#0B7A4B' };
+  if (p.por_revisar) return { tipo: 'sinVerificar', label: 'Pago por validar', color: '#B26B00' };
   const falta = Math.round((total - pagado) * 100) / 100;
-  if (pagado > 0) return { tipo: 'falta', label: `Falta pagar ${soles(falta)}`, color: '#C2410C' };
+  if (pagado > 0) return { tipo: 'falta', label: pagoAMedias(soles(pagado), soles(falta)), color: '#C2410C' };
   return { tipo: 'porPagar', label: `Por pagar ${soles(total)}`, color: '#C2410C' };
 }
 

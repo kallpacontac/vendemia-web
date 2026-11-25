@@ -24,7 +24,7 @@ export function etiquetaCobro(r: Pick<ReservaTablero, 'estado' | 'pagado' | 'tot
     cobrada: 'Cobrada',
     a_cuenta: `Por cobrar · ${soles(r.pagado)} de ${soles(r.total)}`,
     por_cobrar: 'Por cobrar',
-    esperando_pago: 'Esperando pago',
+    esperando_pago: 'Esperando adelanto',
     no_vino: 'No vino',
   };
   return textos[r.estado];
@@ -314,7 +314,7 @@ export default function TableroCanchasVista({ tablero, fecha, hoy, ahora, alFech
           <ul className="tc__leyenda" aria-label="Leyenda">
             <li><i className="tc__punto tc__punto--cobrada" /> Cobrada</li>
             <li><i className="tc__punto tc__punto--por_cobrar" /> Por cobrar</li>
-            <li><i className="tc__punto tc__punto--esperando_pago" /> Esperando pago</li>
+            <li><i className="tc__punto tc__punto--esperando_pago" /> Esperando adelanto</li>
             <li><i className="tc__punto tc__punto--libre" /> Libre: tócala para reservar</li>
           </ul>
         </>

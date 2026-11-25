@@ -136,7 +136,7 @@ export default function ListosParaCobrar({
                   {quienEnUnaLinea(quienDeCita(cita, cliente(cita.lead_id)))}
                   {cita.inicio ? ` · ${hora(cita.inicio)}` : ''}
                   {cita.sede && conSede ? ` · ${sedeCorta(cita.sede)}` : ''}
-                  {pagos ? ` · pagó ${soles(pagos.pagado)} a cuenta` : ''}
+                  {pagos ? ` · pagó ${soles(pagos.pagado)} · falta ${soles(pagos.saldo)}` : ''}
                 </small>
                 {fotos.get(cita.id) && (
                   <a className="listo-foto" href={fotos.get(cita.id)} target="_blank" rel="noopener noreferrer">

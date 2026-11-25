@@ -60,9 +60,10 @@ import { cobroPorApuntar, etiquetaMetodo, type MetodoPago } from '@/lib/panel/me
 import { BotonCobrar } from '@/components/panel/BotonCobrar';
 import { fotoParaCobro, type FotoPago } from '@/lib/panel/fotoPago';
 import { RegistrarPago } from '@/components/panel/Saldos';
-import { diaMes, ESTADO_CITA, hora as horaDe, hora12, isoLocal, soles } from '@/lib/panel/format';
+import { diaMes, hora as horaDe, hora12, isoLocal, soles } from '@/lib/panel/format';
 import { estadoInscripcion, type EstadoInscripcion, type Saldo, type VentaLead } from '@/lib/panel/saldo';
 import { selloCita, type SelloCita } from '@/lib/panel/adelantos';
+import { estadoDeCita } from '@/lib/panel/estadoCita';
 import { quienDeCita, quienEnUnaLinea } from '@/lib/panel/ficha';
 import {
   adelantada,
@@ -1361,7 +1362,8 @@ function Proximas({
         {pag.visibles.map((c) => {
           const persona = quienDeCita(c, nombrePorLead.get(c.lead_id));
           const quien = quienEnUnaLinea(persona);
-          const estado = ESTADO_CITA[c.status ?? 'confirmed'];
+          // La frase única (lib/panel/estadoCita.ts): atendida, por cobrar en caja o cobrado.
+          const estado = estadoDeCita(c);
           /* Apartada (esperando pago / caducada), pagó sin hora, o por cobrar (pagos a cuenta).
              En una apartada el sello SUSTITUYE al estado: «Esperando pago»
              dos veces no dice nada, y «Caducada» es lo que hay que ver. */

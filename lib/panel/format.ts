@@ -30,10 +30,11 @@ export const STATUS = Object.fromEntries(ESTADOS.map((k) => [k, ESTADO[k]])) as 
 const SIN_CLASIFICAR = { label: 'Sin clasificar', color: '#A0AEC0' };
 
 export const ESTADO_CITA: Record<AppointmentStatus, { label: string; color: string }> = {
-  pending_payment: { label: 'Esperando pago', color: '#FFA502' },
-  confirmed: { label: 'Confirmada', color: '#3D5AF1' },
+  // 25-nov-2026: las frases únicas (lib/panel/estadoCita.ts). Con el dinero, usar estadoDeCita.
+  pending_payment: { label: 'Esperando adelanto', color: '#FFA502' },
+  confirmed: { label: 'Agendada', color: '#3D5AF1' },
   cancelled: { label: 'Cancelada', color: '#A0AEC0' },
-  completed: { label: 'Completada', color: '#0FA968' },
+  completed: { label: 'Atendido', color: '#0FA968' },
   no_show: { label: 'No vino', color: '#FF5B79' },
 };
 

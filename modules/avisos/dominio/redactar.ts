@@ -191,6 +191,57 @@ export function redactar(eventos: EventoPendiente[]): Mensaje {
         };
   }
 
+  // avisos 0006 · El barbero marcó «Atendido» y falta cobrar: a la caja, con la misma frase que la
+  // pantalla («Por cobrar en caja»). Va con los pagos (su preferencia) pero en su propio aviso.
+  if (e.datos.clase === 'por_cobrar') {
+    const total = eventos.reduce((t, x) => t + (Number(x.datos.monto) || 0), 0);
+    const barbero = typeof e.datos.barbero === 'string' && e.datos.barbero ? e.datos.barbero : '';
+    return n === 1
+      ? {
+          title: `${prefijo}Por cobrar en caja · ${String(e.datos.servicio || 'Atención')}`,
+          body: [barbero && `Atendió ${barbero}`, quien, soles(e.datos.monto)].filter(Boolean).join(' · '),
+          url: '/panel/caja',
+          tag: `${e.company_id}:por_cobrar`,
+        }
+      : {
+          title: `${prefijo}${n} por cobrar en caja · ${soles(total)}`,
+          body: eventos.slice(0, 3).map((x) => `${String(x.datos.servicio || 'Atención')}${x.datos.barbero ? ` (${String(x.datos.barbero)})` : ''}`).join(' · '),
+          url: '/panel/caja',
+          tag: `${e.company_id}:por_cobrar`,
+        };
+  }
+
+  // avisos 0006 · Al barbero: le cobraron su atención (toda) o una parte. Sin teléfonos.
+  if (e.datos.clase === 'cobro') {
+    const url = '/panel/mi-agenda';
+    const quienEs = atendido(e, 'Cliente');
+    const servicio = String(e.datos.servicio || 'Atención');
+    if (n > 1) {
+      const partes = eventos.filter((x) => x.datos.que === 'cobrada').reduce((t, x) => t + (Number(x.datos.parte) || 0), 0);
+      return {
+        title: `${prefijo}${n} cobros de tu agenda`,
+        body: partes > 0 ? `Tu parte suma ${soles(partes)}.` : 'Ábrela para verlos.',
+        url,
+        tag: `${e.company_id}:cobro`,
+      };
+    }
+    if (e.datos.que === 'abono') {
+      return {
+        title: `${prefijo}Pagó ${soles(e.datos.pagado)} · falta ${soles(e.datos.falta)}`,
+        body: `${servicio} · ${quienEs}. Sigue «Por cobrar en caja».`,
+        url,
+        tag: `${e.company_id}:cobro:${String(e.datos.cita ?? '')}`,
+      };
+    }
+    const parte = e.datos.parte === null || e.datos.parte === undefined ? null : Number(e.datos.parte);
+    return {
+      title: `${prefijo}Cobrado · ${servicio}`,
+      body: `${parte !== null && Number.isFinite(parte) ? `Tu parte ${soles(parte)}` : `Se cobró ${soles(e.datos.monto)}`} · ${quienEs}`,
+      url,
+      tag: `${e.company_id}:cobro:${String(e.datos.cita ?? '')}`,
+    };
+  }
+
   // Un comprobante subido en la página que tiene que mirar una persona (tu-pagina 0017).
   if (e.datos.clase === 'comprobante_por_revisar') {
     return {
@@ -536,7 +587,7 @@ export function planificar(eventos: EventoPendiente[], resumenes: Resumen[]): En
   for (const e of eventos) {
     for (const d of e.destinos) {
       // Una mesa llamando no se mezcla con las reservas o la agenda del mismo tipo de aviso.
-      const aparte: Record<string, string> = { web_mesa: 'mesa', comprobante_esperando: 'espera', lector: 'lector' };
+      const aparte: Record<string, string> = { web_mesa: 'mesa', comprobante_esperando: 'espera', lector: 'lector', por_cobrar: 'por_cobrar', cobro: 'cobro' };
       const clave = `${d.id}|${e.company_id}|${aparte[String(e.datos.clase)] ?? e.tipo}`;
       const g = grupos.get(clave) ?? { destino: d, eventos: [] };
       g.eventos.push(e);

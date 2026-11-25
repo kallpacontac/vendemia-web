@@ -723,7 +723,7 @@ function Caja() {
         {cierre && calculo && (calculo.esperando.length > 0 || calculo.sinHora.length > 0) && (
           <div className="card" style={{ marginTop: 16 }}>
             <div className="card-mini-head">
-              <h3>Esperando pago</h3>
+              <h3>Esperando adelanto</h3>
               <small className="muted">no son cobros olvidados</small>
             </div>
             <p className="muted" style={{ fontSize: 12.5, marginBottom: 10 }}>
