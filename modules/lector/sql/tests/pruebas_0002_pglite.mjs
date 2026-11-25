@@ -195,6 +195,16 @@ await q(`insert into appointments (id, company_id, lead_id, service, slot_start,
 await q(`insert into appointment_services values ('t1-s', 't1', 25)`);
 ok('cita registrada después del Yape: se cobra sola', (await est('t1')).pagado_por === 'lector');
 
+// 8b · Un Yape de ANTES de conectar el celular (el teléfono lo tenía guardado): no cobra nada solo.
+await cita('v1', 'lv1', 'Hugo Paz', 77, -30, 0);
+await yape(7700, 'HUGO PAZ', 0);
+await q(`update lector_avisos set cuando = (select vinculado_at from lector_dispositivos) - interval '2 hours' where id = (select max(id) from lector_avisos)`);
+await q(`update lector_avisos set asignado = '', cita_id = null where id = (select max(id) from lector_avisos)`);
+await q(`delete from pending_payments where appointment_id = 'v1'`);
+await q(`update appointments set pagado_por = '' where id = 'v1'`);
+await q(`select lector_emparejar('neg')`);
+ok('un Yape de antes de conectar no cobra ninguna cita', (await est('v1')).pagado_por === '');
+
 // 9 · Permisos.
 const pf = await uno(`select has_function_privilege('authenticated', 'lector_emparejar(text)', 'execute') a,
                              has_function_privilege('anon', 'lector_asignar(text, bigint, text)', 'execute') b,

@@ -17,6 +17,7 @@
 --
 -- Cómo decide (investigación del 24-nov: el nombre ordena, no decide; lo ambiguo nunca se acepta
 -- en silencio; los pagos en partes solo si cuadran sin dudas):
+--   · Solo avisos desde 10 min antes de conectar el celular: lo de antes no cobra nada solo.
 --   · Monto EXACTO = lo que falta, lo que falta del adelanto o lo del comprobante.
 --   · Un solo candidato exacto → se aplica. Varios → gana el que el NOMBRE (o un familiar aprendido)
 --     señala con ventaja clara (75 %+ y 40 puntos sobre el segundo); quien tocó «Ya yapeé» o subió su
@@ -279,10 +280,14 @@ begin
     perform pg_advisory_xact_lock(hashtext('lector:' || p_company));
     perform set_config('lector.emparejando', '1', true);
     for v_av in
-        select * from public.lector_avisos
-         where company_id = p_company and asignado = '' and centimos is not null
-           and cuando > now() - interval '36 hours'
-         order by cuando, id
+        select a.* from public.lector_avisos a
+          join public.lector_dispositivos d on d.id = a.dispositivo_id
+         where a.company_id = p_company and a.asignado = '' and a.centimos is not null
+           and a.cuando > now() - interval '36 hours'
+           -- Lo que el celular tenía guardado de ANTES de conectarlo (pruebas, Yapes de otra cosa) se
+           -- envía y sale en el cuadre, pero no cobra ninguna cita solo (24-nov, primer piloto).
+           and a.cuando >= d.vinculado_at - interval '10 minutes'
+         order by a.cuando, a.id
     loop
         e_cita := null; e_como := null; e_comp := null; e_esp := null; e_motivo := '';
         create temp table if not exists lector_tmp_c (cita_id text, como text, exacto boolean, nombre numeric, cerca numeric,
