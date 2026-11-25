@@ -99,7 +99,12 @@ self.addEventListener('push', (e) => {
   })());
 });
 
-/** Le pide a cada panel abierto y a la vista que suene; true si alguno contestó que sonó (≤ 400 ms). */
+/**
+ * Le pide a UN panel abierto que suene: primero el que está a la vista, luego los de fondo
+ * (minimizado, otra pestaña, la app en segundo plano: 24-nov-2026, Alvaro). De uno en uno, para
+ * que dos pestañas no suenen a la vez. true si alguno contestó que sonó (≤ 400 ms cada uno).
+ * Con el panel CERRADO no hay a quién pedírselo: suena la del celular (la web no puede elegirla).
+ */
 async function pedirSonido(d) {
   let ventanas = [];
   try {
@@ -107,20 +112,24 @@ async function pedirSonido(d) {
   } catch {
     return false;
   }
-  const vistas = ventanas.filter((v) => v.visibilityState === 'visible' && new URL(v.url).pathname.startsWith('/panel'));
-  if (!vistas.length) return false;
-  const respuestas = vistas.map((v) => new Promise((ok) => {
-    const canal = new MessageChannel();
-    const reloj = setTimeout(() => ok(false), 400);
-    canal.port1.onmessage = (m) => { clearTimeout(reloj); ok(Boolean(m.data && m.data.sono)); };
-    try {
-      v.postMessage({ tipo: 'vm-aviso', titulo: d.title || '' }, [canal.port2]);
-    } catch {
-      clearTimeout(reloj);
-      ok(false);
-    }
-  }));
-  return (await Promise.all(respuestas)).some(Boolean);
+  const paneles = ventanas
+    .filter((v) => new URL(v.url).pathname.startsWith('/panel'))
+    .sort((a, b) => (a.visibilityState === 'visible' ? 0 : 1) - (b.visibilityState === 'visible' ? 0 : 1));
+  for (const v of paneles) {
+    const sono = await new Promise((ok) => {
+      const canal = new MessageChannel();
+      const reloj = setTimeout(() => ok(false), 400);
+      canal.port1.onmessage = (m) => { clearTimeout(reloj); ok(Boolean(m.data && m.data.sono)); };
+      try {
+        v.postMessage({ tipo: 'vm-aviso', titulo: d.title || '' }, [canal.port2]);
+      } catch {
+        clearTimeout(reloj);
+        ok(false);
+      }
+    });
+    if (sono) return true;
+  }
+  return false;
 }
 
 /*

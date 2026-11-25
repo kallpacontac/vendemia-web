@@ -87,7 +87,7 @@ async function listar(q: Consulta): Promise<string[] | undefined> {
 export default function SonidoReservas() {
   const { companyId, rol, compania, canchas } = useSesion();
 
-  // Un aviso push con el panel a la vista: suena el de Vendemia aquí y el worker saca la
+  // Un aviso push con el panel abierto (a la vista o de fondo): suena el de Vendemia aquí y el worker saca la
   // notificación callada (public/panel-sw.js, pedirSonido). Para todos los roles: el barbero
   // también recibe avisos. Con «Sonar con el panel abierto» apagado, contesta que no sonó y
   // suena la del celular.
@@ -96,7 +96,8 @@ export default function SonidoReservas() {
     prepararAudio();
     const alMensaje = (ev: MessageEvent) => {
       if (!ev.data || ev.data.tipo !== 'vm-aviso') return;
-      const sono = sonidoActivo() && document.visibilityState === 'visible' && sonarAviso();
+      // También minimizado o en segundo plano: si el audio ya despertó (hubo un toque), suena.
+      const sono = sonidoActivo() && sonarAviso();
       try {
         ev.ports?.[0]?.postMessage({ sono });
       } catch {
