@@ -96,7 +96,10 @@ export default function LectorDePagos({ companyId }: { companyId: string }) {
     QRCode.toDataURL(enlace, { margin: 1, width: 220 }).then(setQr, () => setQr(''));
   }, [codigo]);
 
-  if (!datos) return null;
+  // Solo negocios del piloto o que ya tienen un celular conectado (Alvaro, 25-nov: «que nada afecte a
+  // The 24/7»). El piloto: NEXT_PUBLIC_LECTOR_PILOTO, ids de negocio separados por comas.
+  const piloto = (process.env.NEXT_PUBLIC_LECTOR_PILOTO ?? '').split(',').map((s) => s.trim()).includes(companyId);
+  if (!datos || (!piloto && !datos.dispositivos.length)) return null;
 
   async function pedirCodigo() {
     setOcupado(true);

@@ -18,6 +18,7 @@ drop function if exists public.lector_hora_captura(text);
 drop function if exists public.lector_clave_pagador(text);
 drop function if exists public.lector_parecido(text, text);
 drop function if exists public.lector_palabras(text);
+drop function if exists public.lector_palabras_crudas(text);
 drop function if exists public.lector_suena(text);
 drop table if exists public.lector_alias;
 drop table if exists public.lector_esperas;

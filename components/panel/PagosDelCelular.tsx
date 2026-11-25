@@ -79,7 +79,8 @@ export default function PagosDelCelular({ companyId, dia, recarga }: { companyId
       dudas: ((dudas.data ?? []) as PorAsignar[]).filter((d) => diaLima(d.cuando) === dia),
     };
   }, [companyId, dia, recarga]);
-  useSondeo(releer, 30_000);
+  // Sin celular conectado no se vuelve a preguntar (The 24/7 y todo negocio sin lector: ni una consulta de más).
+  useSondeo(releer, 30_000, !!datos?.conectado);
 
   if (!datos || (!datos.conectado && !datos.pagos.length)) return null;
 

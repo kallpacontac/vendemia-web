@@ -72,6 +72,8 @@ ok('suena igual (Baldez = Valdez)', (await par('JORGE BALDEZ', 'Jorge Valdez')) 
 ok('la ch no se pierde (Chávez ≠ Cavez)', (await par('LUIS CHAVEZ', 'Luis Cavez')) === 0.5);
 ok('un familiar no se parece', (await par('MARIA TORRES', 'Diego Ramos')) === 0);
 ok('inicial vale media', (await par('Alvaro F.', 'Alvaro Franco')) === 0.75);
+ok('Yape recorta con asterisco («Nora Aqu*» = Nora Aquino)', (await par('Nora Aqu*', 'Nora Aquino')) === 1);
+ok('«Alex Cas*» = Alexander Castillo', (await par('Alex Cas*', 'Alexander Castillo')) === 1);
 
 // ── Ayudas ──
 await q(`select lector_codigo_nuevo('neg')`);
@@ -219,6 +221,15 @@ const antesN = (await uno(`select count(*)::int n from lector_avisos`)).n;
 const rAntes = (await uno(`select lector_srv_recibir($1, 'aviso', $2) r`, [D, { huella: 'h-antes-001', centimos: 7700, nombre: 'HUGO PAZ', origen: 'Yape', cuando: Date.now() - 6 * 3_600_000 }])).r;
 ok('un Yape de antes de conectar no se guarda', rAntes.antes_de_conectar === true && (await uno(`select count(*)::int n from lector_avisos`)).n === antesN);
 ok('ni cobra la cita del mismo monto', (await est('v1')).pagado_por === '');
+
+// 8c · Cita de las 11:30 pm pagada pasada la medianoche (pasó en las pruebas del 25-nov a las 00:02).
+await q(`insert into leads values ('ln', 'neg', 'Nico Vera', '9ln')`);
+await q(`insert into appointments (id, company_id, lead_id, service, slot_start, slot_end, slot_minutes, employee_id, status, created_at)
+         values ('n1', 'neg', 'ln', 'Corte', to_char((now() - interval '50 minutes') at time zone 'America/Lima', 'YYYY-MM-DD HH24:MI'),
+                 to_char((now() - interval '20 minutes') at time zone 'America/Lima', 'YYYY-MM-DD HH24:MI'), 30, 'e1', 'completed', 0)`);
+await q(`insert into appointment_services values ('n1-s', 'n1', 63)`);
+await q(`select lector_srv_recibir($1, 'aviso', $2)`, [D, { huella: 'h-medianoche', centimos: 6300, nombre: 'NICO VERA', origen: 'Yape', cuando: Date.now() }]);
+ok('una cita de antes de medianoche se cobra con un Yape de después', (await est('n1')).pagado_por === 'lector');
 
 // 9 · Permisos.
 const pf = await uno(`select has_function_privilege('authenticated', 'lector_emparejar(text)', 'execute') a,

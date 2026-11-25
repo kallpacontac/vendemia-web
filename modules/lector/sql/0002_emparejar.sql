@@ -93,6 +93,14 @@ returns text language sql immutable as $$
            'x', 'ch');
 $$;
 
+-- Las palabras de un nombre tal cual (sin tildes ni signos), sin partículas. Para comparar por inicio:
+-- Yape recorta con asterisco («Nora Aqu*») y «aqu» suena «ak», demasiado corto para compararlo.
+create or replace function public.lector_palabras_crudas(p text)
+returns text[] language sql immutable as $$
+    select coalesce(array_agg(w) filter (where w <> '' and w not in ('de', 'del', 'la', 'las', 'los', 'y', 'san', 'e')), '{}')
+      from regexp_split_to_table(regexp_replace(translate(lower(coalesce(p, '')), 'áéíóúüñ', 'aeiouun'), '[^a-z ]', ' ', 'g'), '\s+') w;
+$$;
+
 -- Las palabras de un nombre, sin partículas.
 create or replace function public.lector_palabras(p text)
 returns text[] language sql immutable as $$
@@ -106,16 +114,22 @@ $$;
 create or replace function public.lector_parecido(p_pagador text, p_cliente text)
 returns numeric language plpgsql immutable as $$
 declare
+    -- Las dos formas, en el mismo orden: «como suena» para igualar, «tal cual» para comparar por inicio.
     v_pag text[] := public.lector_palabras(p_pagador);
     v_cli text[] := public.lector_palabras(p_cliente);
-    w text; x text; v_mejor numeric; v_suma numeric := 0;
+    r_pag text[] := public.lector_palabras_crudas(p_pagador);
+    r_cli text[] := public.lector_palabras_crudas(p_cliente);
+    i int; j int; w text; x text; rw text; rx text; v_mejor numeric; v_suma numeric := 0;
 begin
     if coalesce(array_length(v_cli, 1), 0) = 0 or coalesce(array_length(v_pag, 1), 0) = 0 then return null; end if;
-    foreach w in array v_cli loop
+    for i in 1 .. array_length(v_cli, 1) loop
+        w := v_cli[i]; rw := r_cli[i];
         v_mejor := 0;
-        foreach x in array v_pag loop
+        for j in 1 .. array_length(v_pag, 1) loop
+            x := v_pag[j]; rx := r_pag[j];
             if x = w then v_mejor := 1;
             elsif least(length(x), length(w)) >= 3 and (x like w || '%' or w like x || '%') then v_mejor := greatest(v_mejor, 1);
+            elsif least(length(rx), length(rw)) >= 3 and (rx like rw || '%' or rw like rx || '%') then v_mejor := greatest(v_mejor, 1);
             elsif least(length(x), length(w)) = 1 and left(x, 1) = left(w, 1) then v_mejor := greatest(v_mejor, 0.5);
             end if;
         end loop;
@@ -211,7 +225,9 @@ begin
          cross join lateral (select (to_timestamp(b.slot_start, 'YYYY-MM-DD HH24:MI')::timestamp at time zone 'America/Lima') as ini,
                                     (to_timestamp(coalesce(nullif(b.slot_end, ''), b.slot_start), 'YYYY-MM-DD HH24:MI')::timestamp at time zone 'America/Lima') as fin) f
          where b.status in ('confirmed', 'completed') and coalesce(b.pagado_por, '') = '' and b.total > b.pagado
-           and left(b.slot_start, 10) = v_dia
+           -- Ayer u hoy: una cita de las 11:30 pm se paga pasada la medianoche. Lo que decide es el rango
+           -- de abajo (1 h antes de su hora hasta 4 h después de terminar), no el día del calendario.
+           and left(b.slot_start, 10) between to_char((p_aviso.cuando - interval '1 day') at time zone 'America/Lima', 'YYYY-MM-DD') and v_dia
            and p_aviso.cuando between f.ini - interval '1 hour' and f.fin + interval '4 hours'
            and not exists (select 1 from public.lector_esperas e where e.appointment_id = b.id and e.company_id = b.company_id and e.aviso_id is null)
            and not exists (select 1 from public.comprobantes_web c where c.appointment_id = b.id and c.company_id = b.company_id
