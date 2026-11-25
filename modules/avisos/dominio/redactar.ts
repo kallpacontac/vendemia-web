@@ -167,17 +167,26 @@ export function redactar(eventos: EventoPendiente[]): Mensaje {
       return s ? ` de ${s}` : '';
     };
     const total = eventos.reduce((t, x) => t + (Number(x.datos.monto) || 0), 0);
+    // lector 0002: a qué cita fue, o que hay que elegirla.
+    const QUE: Record<string, string> = {
+      cobrada: 'cobrada', confirmada: 'reserva confirmada', a_cuenta: 'a cuenta', parcial: 'a cuenta del adelanto', cotejado: 'comprobante cotejado',
+    };
+    const cita = typeof e.datos.cita === 'string' && e.datos.cita ? String(e.datos.cliente_cita || 'una cita') : '';
     return n === 1
       ? {
-          title: `${prefijo}${origen(e)} · ${soles(e.datos.monto)}`,
-          body: `Llegó${nombre(e)}${horaDeAviso(e.datos.cuando)}. Leído en el celular de la caja.`,
-          url: '/panel/caja',
+          title: `${prefijo}${origen(e)} · ${soles(e.datos.monto)}${cita ? ` · ${cita}` : ''}`,
+          body: cita
+            ? `✓ ${cap(QUE[String(e.datos.resultado)] ?? "asignado")}: llegó${nombre(e)}${horaDeAviso(e.datos.cuando)}.`
+            : e.datos.dudoso
+              ? `Llegó${nombre(e)}${horaDeAviso(e.datos.cuando)}. ¿De qué cita es? Elígela en la Agenda.`
+              : `Llegó${nombre(e)}${horaDeAviso(e.datos.cuando)}. Leído en el celular de la caja.`,
+          url: cita || e.datos.dudoso ? '/panel/agenda' : '/panel/configuracion#facturacion',
           tag: `${e.company_id}:lector:${e.id}`,
         }
       : {
           title: `${prefijo}${n} pagos llegaron · ${soles(total)}`,
           body: eventos.slice(0, 3).map((x) => `${origen(x)} ${soles(x.datos.monto)}${nombre(x)}`).join(' · '),
-          url: '/panel/caja',
+          url: '/panel/agenda',
           tag: `${e.company_id}:lector:${e.id}`,
         };
   }

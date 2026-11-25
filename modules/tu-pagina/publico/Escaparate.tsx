@@ -46,7 +46,7 @@ import {
 } from '@/modules/tu-pagina/dominio/tienda';
 import { CONTRA_ENTREGA, aPagarAntes, avisoAlPedir, metodosAlPedir } from '@/modules/tu-pagina/dominio/cobroPedidos';
 import { montoAdelanto, type Sede } from '@/modules/tu-pagina/dominio/adelantoCitas';
-import SubirComprobante from '@/modules/tu-pagina/publico/SubirComprobante';
+import PagoConLector, { useLectorActivo } from '@/modules/tu-pagina/publico/PagoConLector';
 import InvitarTarjeta from '@/modules/tu-pagina/publico/InvitarTarjeta';
 
 interface Props {
@@ -180,6 +180,8 @@ export default function Escaparate({ esc: todo, slug, whatsapp, puedePedir, pued
   const [hecho, setHecho] = useState<Hecho | null>(null);
   // Tras subir el comprobante, si ese celular no tiene tarjeta en el club (sql/0022).
   const [invitar, setInvitar] = useState(false);
+  // Con el celular de cobros conectado, la cita se paga con «Ya yapeé» en vez de la captura (lector 0002).
+  const lector = useLectorActivo(slug, !!hecho?.apartada && !hecho?.demo);
   const claveCarrito = `tu_pagina:carrito:${slug}`;
   const [carrito, setCarrito] = useState<EnCarrito[]>([]);
 
@@ -232,11 +234,20 @@ export default function Escaparate({ esc: todo, slug, whatsapp, puedePedir, pued
                 <span>¿Prefieres pagar todo de una vez? Paga {soles(hecho.apartada.total ?? 0)} y no pagas nada en el local.</span>
               )}
             </li>
-            <li><b>Sube aquí la captura del pago</b><span>Sin la captura tu cita no se confirma.</span></li>
-            <li><b>Te confirmamos</b><span>En cuanto revisemos el pago.</span></li>
+            {lector ? (
+              <>
+                <li><b>Toca «Ya yapeé» aquí abajo</b><span>Apenas yapees.</span></li>
+                <li><b>Se confirma sola</b><span>En cuanto nos llega tu Yape. Si algo falla, puedes subir la captura.</span></li>
+              </>
+            ) : (
+              <>
+                <li><b>Sube aquí la captura del pago</b><span>Sin la captura tu cita no se confirma.</span></li>
+                <li><b>Te confirmamos</b><span>En cuanto revisemos el pago.</span></li>
+              </>
+            )}
           </ol>
         )}
-        {hecho.apartada && !hecho.demo && <SubirComprobante slug={slug} codigo={hecho.codigo} telefono={hecho.apartada.telefono} que="cita"
+        {hecho.apartada && !hecho.demo && <PagoConLector slug={slug} codigo={hecho.codigo} telefono={hecho.apartada.telefono} que="cita" activo={lector}
           // Un respiro para que lea «Recibimos tu comprobante» antes de la invitación. Si no se
           // sabe (sin la 0022), se invita igual: es mejor que no ofrecerla nunca.
           alSubir={({ tieneTarjeta }) => { if (tarjeta && tieneTarjeta !== true) window.setTimeout(() => setInvitar(true), 1200); }} />}

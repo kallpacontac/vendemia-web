@@ -29,3 +29,4 @@
 
 .ldp-que { margin: 0; font-size: 13px; line-height: 1.45; color: var(--ink-soft, #5C5C5C); }
 
+.ldp-quien .ldp-quitar { justify-self: start; padding: 2px 0; }

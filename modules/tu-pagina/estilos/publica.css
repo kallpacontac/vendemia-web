@@ -90,6 +90,11 @@
 .tp-subir__ocupado { opacity: .65; pointer-events: none; }
 .tp-subir__ok { display: flex; gap: 10px; margin: 0; padding: 12px 14px; text-align: left; border-radius: var(--tp-radio); background: #e7f6ec; color: #14622f; }
 .tp-subir__ok--aviso { background: #fff1dc; color: #8a4b00; }
+/* «Ya yapeé» (PagoConLector.tsx): el enlace a la captura y el círculo que gira mientras espera. */
+.tp-enlace { border: 0; background: none; padding: 6px 0; color: inherit; opacity: .75; font: inherit; font-size: 14px; text-decoration: underline; cursor: pointer; }
+.tp-girando { animation: tp-gira 1s linear infinite; flex: none; }
+@keyframes tp-gira { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .tp-girando { animation: none; } }
 .tp-subir__ok b { display: block; }
 .tp-subir__op { display: block; margin-top: 4px; font-size: 12.5px; font-weight: 600; font-variant-numeric: tabular-nums; opacity: .85; }
 .tp-pago { width: 100%; margin: 0; padding: 14px 16px 14px 34px; display: grid; gap: 12px; text-align: left; border: 1px solid var(--tp-borde); border-radius: var(--tp-radio); }

@@ -33,13 +33,24 @@ interface Aviso {
   nombre: string;
   origen: string;
   cuando: string;
+  /** lector 0002: a qué cita fue, o si quedó por asignar. */
+  cita_id?: string | null;
+  cliente?: string | null;
+  servicio?: string | null;
+  slot?: string | null;
+  resultado?: string | null;
+  por_asignar?: boolean;
 }
+
+const RESULTADO: Record<string, string> = {
+  cobrada: 'cobrada', confirmada: 'reserva confirmada', a_cuenta: 'a cuenta', parcial: 'a cuenta', cotejado: 'comprobante cotejado',
+};
 interface Estado {
   dispositivos: Dispositivo[];
   avisos: Aviso[];
 }
 
-const ULTIMOS = 5;
+const ULTIMOS = 8;
 /** El celular manda señal cada ~15 min mientras está despierto; dormido, cuando llega un aviso. */
 const VIVO_MIN = 30;
 
@@ -98,6 +109,13 @@ export default function LectorDePagos({ companyId }: { companyId: string }) {
     setOcupado(false);
     if (e) return setError(e.message);
     setCodigo(data as { codigo: string; expira: string });
+  }
+
+  async function noEra(a: Aviso) {
+    if (!window.confirm(`¿Quitar este pago de la cita de ${a.cliente || 'ese cliente'}? La cita vuelve a quedar por cobrar.`)) return;
+    const { error: e } = await supabase().rpc('lector_desasignar', { p_company: companyId, p_aviso: a.id });
+    if (e) return setError(e.message);
+    releer();
   }
 
   async function desconectar(d: Dispositivo) {
@@ -217,7 +235,13 @@ export default function LectorDePagos({ companyId }: { companyId: string }) {
                   <span className="ldp-hora">{hora(a.cuando)}</span>
                   <span className="ldp-quien">
                     <b>{nombreBonito(a.nombre) || 'Sin nombre'}</b>
-                    <small>{a.origen}</small>
+                    <small>
+                      {a.origen}
+                      {a.cita_id
+                        ? ` · → ${a.cliente || 'cita'}${a.servicio ? `, ${a.servicio}` : ''}${a.slot ? ` ${a.slot.slice(11, 16)}` : ''} (${RESULTADO[a.resultado ?? ''] ?? 'asignado'})`
+                        : a.por_asignar ? ' · por asignar: elígelo en la Agenda' : ' · sin cita (venta suelta)'}
+                    </small>
+                    {a.cita_id && <button type="button" className="ldp-quitar" onClick={() => noEra(a)}>No era de esta cita</button>}
                   </span>
                   <span className="ldp-monto">{soles((a.centimos ?? 0) / 100)}</span>
                 </li>
