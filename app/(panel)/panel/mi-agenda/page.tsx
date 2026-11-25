@@ -759,6 +759,8 @@ interface DatosSinCita {
   ficha: string | null;
   servicios: { id: string; nombre: string; minutos: number }[];
   sedes: string[];
+  /** Las sedes de su ficha (Equipo, tu-pagina 0036). [] = trabaja en todas. */
+  mis_sedes?: string[];
 }
 
 const SEDE_GUARDADA = 'mag-sede';
@@ -802,6 +804,13 @@ function LlegoSinCita({ companyId, alCerrar, alListo }: {
   const sedes = datos?.sedes ?? [];
   const pideSede = sedes.length > 1;
   const sedeValida = !pideSede || sedes.includes(sede);
+  // Su sede, de su ficha (24-nov-2026): con una, puesta; con varias, la última que usó de entre
+  // ellas o la primera. Sin sedes en su ficha, la última que usó (como antes).
+  const misSedes = useMemo(() => (datos?.mis_sedes ?? []).filter((x) => sedes.includes(x)), [datos, sedes]);
+  useEffect(() => {
+    if (!misSedes.length) return;
+    setSede((actual) => (misSedes.length > 1 && misSedes.includes(actual) ? actual : misSedes[0]));
+  }, [misSedes]);
 
   async function guardar(e: React.FormEvent) {
     e.preventDefault();
@@ -868,7 +877,7 @@ function LlegoSinCita({ companyId, alCerrar, alListo }: {
               </label>
               {pideSede && (
                 <label className="field-label" style={{ display: 'grid', gap: 4 }}>
-                  Sede
+                  <span>Sede {misSedes.includes(sede) && <small className="muted">la tuya</small>}</span>
                   <select className="input" value={sedeValida ? sede : ''} onChange={(e) => setSede(e.target.value)}>
                     <option value="">¿En qué sede estás?</option>
                     {sedes.map((x) => (
