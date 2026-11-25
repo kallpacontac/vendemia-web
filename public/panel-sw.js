@@ -81,21 +81,36 @@ self.addEventListener('push', (e) => {
     // nuestro sonido»): se le pide a la ventana que lo toque, y si contesta que sonó, la
     // notificación sale callada (un solo sonido). Si no hay panel, o no pudo sonar (nadie tocó la
     // pantalla todavía), suena la del celular como siempre.
-    const sono = await pedirSonido(d);
-    await self.registration.showNotification(d.title || 'Vendemia', {
+    let sono = false;
+    try {
+      sono = await pedirSonido(d);
+    } catch {
+      sono = false;
+    }
+    const titulo = d.title || 'Vendemia';
+    const opciones = {
       body: d.body || '',
-      silent: sono,
       // Marca propia: el logo del negocio, si el aviso lo trae (lib/panel/marcaPropia.ts). Se había
       // perdido al rehacer este worker para «sin conexión» (44df7b0); vuelto el 21-nov-2026.
       icon: propio(d.icon) || '/icons/panel-192.png',
       badge: propio(d.badge) || '/icons/panel-192.png',
       tag: d.tag || undefined,
-      // Un aviso nuevo del mismo tipo reemplaza al anterior en la bandeja, pero VUELVE a sonar
-      // y vibrar: es otra reserva. El sonido es el del celular (la web no puede elegir otro).
+      // Un aviso nuevo del mismo tipo reemplaza al anterior en la bandeja, pero VUELVE a avisar:
+      // es otra reserva.
       renotify: Boolean(d.tag),
-      vibrate: [200, 100, 200],
       data: { url },
-    });
+    };
+    // ⚠️ `silent: true` con `vibrate` es un TypeError (lo dice la especificación) y el aviso NO
+    // salía (24-nov-2026: «suena pero no veo la notificación»). Callada: sin vibrate. Con sonido
+    // del celular: vibra como siempre.
+    if (sono) opciones.silent = true;
+    else opciones.vibrate = [200, 100, 200];
+    try {
+      await self.registration.showNotification(titulo, opciones);
+    } catch {
+      // Pase lo que pase, el aviso tiene que verse: lo mínimo.
+      await self.registration.showNotification(titulo, { body: d.body || '', icon: '/icons/panel-192.png', data: { url } });
+    }
   })());
 });
 
