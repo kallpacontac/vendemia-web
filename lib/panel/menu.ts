@@ -114,16 +114,31 @@ export function useOrdenMenu(companyId: string | null): OrdenMenu {
 
 /** Guarda el orden. Con `SIN_ORDEN`, vuelve al de siempre. */
 export async function guardarOrdenMenu(companyId: string, o: OrdenMenu): Promise<string | null> {
+  const enMas = o.enMas.filter((h) => !SIEMPRE_A_LA_VISTA.includes(h));
   const { error } = await supabase().rpc('menu_orden_guardar', {
     p_company: companyId,
     p_orden: o.orden,
-    p_en_mas: o.enMas.filter((h) => !SIEMPRE_A_LA_VISTA.includes(h)),
+    p_en_mas: enMas,
   });
   if (error) {
     if (error.code === 'PGRST202' || /menu_orden_guardar/.test(error.message ?? '')) {
       return 'Falta preparar la base para esto (datos 0020). Avísanos y lo activamos.';
     }
     return error.message;
+  }
+  /*
+   * La caché primero, y luego el aviso. useOrdenMenu, al recibirlo, pinta lo de la caché mientras
+   * vuelve a pedirlo a la base: con la caché vieja, la barra y el editor enseñaban el orden de
+   * ANTES hasta que contestaba la base, y parecía que guardar no había hecho nada (25-nov-2026).
+   */
+  try {
+    const previo = deCache(companyId);
+    localStorage.setItem(
+      clave(companyId),
+      JSON.stringify({ orden: o.orden, en_mas: enMas, equipo_fideliza: previo.equipoFideliza ?? null }),
+    );
+  } catch {
+    /* sin almacenamiento: la base lo trae en un momento */
   }
   window.dispatchEvent(new Event(EVENTO_MENU));
   return null;
@@ -141,6 +156,13 @@ export async function guardarFidelizaEquipo(companyId: string, ve: boolean): Pro
       return 'Falta preparar la base para esto (modules/datos/sql/0022_fideliza_para_el_equipo.sql).';
     }
     return error.message;
+  }
+  // La caché, como en guardarOrdenMenu: si no, el interruptor volvía un momento a como estaba.
+  try {
+    const previo = deCache(companyId);
+    localStorage.setItem(clave(companyId), JSON.stringify({ orden: previo.orden, en_mas: previo.enMas, equipo_fideliza: ve }));
+  } catch {
+    /* sin almacenamiento */
   }
   window.dispatchEvent(new Event(EVENTO_MENU));
   return null;

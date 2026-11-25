@@ -7,16 +7,36 @@
  *
  * Enseña la lista que sale en la barra (useMenuDelPanel, el mismo cálculo), así que lo que se ve
  * aquí es lo que se ve allí. El Dashboard va primero y Ajustes al final, antes de «Más»: no se mueven.
+ *
+ * 25-nov-2026 (Alvaro: «no veo que funcione al guardar; debería ser drag and drop»):
+ *  · Se ARRASTRA (MenuArrastrable): dentro de «A la vista», y hacia «Más» o desde «Más».
+ *  · Se GUARDA SOLO al soltar, como los interruptores de al lado. Antes había un botón «Guardar
+ *    orden» al pie de la lista, que no era el «Guardar» grande de Ajustes y no se veía; y tras
+ *    guardar, la lista volvía un momento al orden viejo (la caché del navegador, ver menu.ts).
  */
-import { useEffect, useMemo, useState } from 'react';
-import { ArrowDown, ArrowUp, Eye, EyeOff } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useMenuDelPanel } from './Sidebar';
 import { useSesion } from './Sesion';
 import { useAvisar } from './Avisos';
 import { useCargar } from './useCargar';
+import MenuArrastrable, { igualZonas, type FilaMenu, type Zonas } from './MenuArrastrable';
 import { accion, lecturas, mensaje } from '@/modules/fideliza/cliente/api';
 import { demoActivo } from '@/lib/panel/demo';
-import { FIJAS, RUTA_INICIO, SIEMPRE_A_LA_VISTA, SIN_ORDEN, guardarFidelizaEquipo, guardarOrdenMenu, ordenar, useOrdenMenu, type OrdenMenu } from '@/lib/panel/menu';
+import {
+  FIJAS,
+  RUTA_AJUSTES,
+  RUTA_INICIO,
+  SIEMPRE_A_LA_VISTA,
+  SIN_ORDEN,
+  guardarFidelizaEquipo,
+  guardarOrdenMenu,
+  ordenar,
+  useOrdenMenu,
+  type OrdenMenu,
+} from '@/lib/panel/menu';
+
+/** Lo que espera tras soltar antes de guardar: dos arrastres seguidos son un solo guardado. */
+const ESPERA_GUARDAR_MS = 500;
 
 export default function OrdenDelMenu() {
   const { companyId, compania } = useSesion();
@@ -30,8 +50,10 @@ export default function OrdenDelMenu() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [rail.map((n) => n.href).join(), railExtra.map((n) => n.href).join()],
   );
-  const [borrador, setBorrador] = useState<OrdenMenu | null>(null);
-  const [guardando, setGuardando] = useState(false);
+  /** Lo que se está moviendo o guardando. null = lo de la barra. */
+  const [borrador, setBorrador] = useState<Zonas | null>(null);
+  const [estado, setEstado] = useState<'quieto' | 'guardando' | 'guardado'>('quieto');
+  const [arrastrando, setArrastrando] = useState(false);
   useEffect(() => setBorrador(null), [companyId]);
   // ¿El equipo ve Fideliza? (datos 0022). null = como siempre (sí).
   const guardadoFideliza = useOrdenMenu(companyId ?? null).equipoFideliza ?? null;
@@ -55,39 +77,125 @@ export default function OrdenDelMenu() {
     avisar(ve ? '✓ Tu equipo ya ve Fideliza.' : '✓ Listo: tu equipo ya no ve Fideliza.', 'ok');
   }
 
-  const vista = borrador ?? actual;
-  const lista = ordenar(nav, vista);
-  const cambio = borrador !== null && JSON.stringify(borrador) !== JSON.stringify(actual);
+  /** Nombre e icono de cada entrada, como en la barra. */
+  const filas = useMemo(
+    () => new Map<string, FilaMenu>(nav.map((n) => [n.href, { nombre: etiqueta(n), Icono: n.icon }])),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [nav.map((n) => n.href).join(), modo],
+  );
 
-  function mover(i: number, d: -1 | 1) {
-    const hrefs = lista.map((n) => n.href);
-    const j = i + d;
-    // El Dashboard (primero) y Ajustes (último) no se mueven, ni nadie pasa por encima de ellos.
-    if (j < 0 || j >= hrefs.length || FIJAS.includes(hrefs[i]) || FIJAS.includes(hrefs[j])) return;
-    [hrefs[i], hrefs[j]] = [hrefs[j], hrefs[i]];
-    setBorrador({ ...vista, orden: hrefs });
+  /** Lo de la barra, partido en las dos zonas. */
+  const deLaBarra = useMemo<Zonas>(() => {
+    const lista = ordenar(nav, actual).map((n) => n.href).filter((h) => !FIJAS.includes(h));
+    const mas = new Set(actual.enMas.filter((h) => !SIEMPRE_A_LA_VISTA.includes(h)));
+    return { vista: lista.filter((h) => !mas.has(h)), mas: lista.filter((h) => mas.has(h)) };
+  }, [nav, actual]);
+  const zonas = borrador ?? deLaBarra;
+  const zonasRef = useRef(zonas);
+  zonasRef.current = zonas;
+  const barraRef = useRef(deLaBarra);
+  barraRef.current = deLaBarra;
+
+  /** Las dos zonas, como las guarda la base: Dashboard, lo de la vista, Ajustes y luego «Más». */
+  const aOrden = ({ vista, mas }: Zonas): OrdenMenu => ({
+    orden: [
+      ...(filas.has(RUTA_INICIO) ? [RUTA_INICIO] : []),
+      ...vista,
+      ...(filas.has(RUTA_AJUSTES) ? [RUTA_AJUSTES] : []),
+      ...mas,
+    ],
+    enMas: mas,
+  });
+
+  /* ── Guardar solo, un momento después del último cambio ─────────────── */
+  const reloj = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const enVuelo = useRef(false);
+  const otraVez = useRef(false);
+
+  async function guardarYa() {
+    if (!companyId) return;
+    if (enVuelo.current) {
+      // Llegó otro cambio mientras se guardaba: se guarda al terminar, con lo último.
+      otraVez.current = true;
+      return;
+    }
+    enVuelo.current = true;
+    setEstado('guardando');
+    const error = await guardarOrdenMenu(companyId, aOrden(zonasRef.current));
+    enVuelo.current = false;
+    if (error) {
+      otraVez.current = false;
+      avisar(error, 'error');
+      setBorrador(null); // vuelve a lo que de verdad tiene la barra
+      setEstado('quieto');
+      return;
+    }
+    if (otraVez.current) {
+      otraVez.current = false;
+      void guardarYa();
+      return;
+    }
+    setEstado('guardado');
   }
 
-  function alternar(href: string) {
-    const enMas = vista.enMas.includes(href) ? vista.enMas.filter((h) => h !== href) : [...vista.enMas, href];
-    setBorrador({ orden: lista.map((n) => n.href), enMas });
+  function cambiar(z: Zonas) {
+    zonasRef.current = z;
+    setBorrador(z);
+    setEstado('quieto');
   }
 
-  async function guardar(o: OrdenMenu, texto: string) {
+  function programarGuardado() {
+    if (demoActivo()) {
+      avisar('Estás en modo demo: no se guarda nada. Sal del modo demo para cambiar algo de verdad.', 'espera');
+      setBorrador(null);
+      return;
+    }
+    // Soltada donde estaba (o devuelta a su sitio): no hay nada que guardar.
+    if (!enVuelo.current && !reloj.current && igualZonas(zonasRef.current, barraRef.current)) {
+      setBorrador(null);
+      return;
+    }
+    if (reloj.current) clearTimeout(reloj.current);
+    reloj.current = setTimeout(() => {
+      reloj.current = null;
+      void guardarYa();
+    }, ESPERA_GUARDAR_MS);
+  }
+  useEffect(
+    () => () => {
+      if (reloj.current) clearTimeout(reloj.current);
+    },
+    [],
+  );
+
+  // Cuando la barra ya enseña lo guardado —y no hay nada más a medias—, el borrador sobra.
+  useEffect(() => {
+    if (!borrador || arrastrando || estado === 'guardando' || reloj.current || enVuelo.current) return;
+    if (igualZonas(borrador, deLaBarra)) setBorrador(null);
+  }, [borrador, deLaBarra, estado, arrastrando]);
+
+  // «✓ Guardado» se queda un rato y se va.
+  useEffect(() => {
+    if (estado !== 'guardado') return;
+    const t = setTimeout(() => setEstado('quieto'), 2500);
+    return () => clearTimeout(t);
+  }, [estado]);
+
+  async function volverAlDeSiempre() {
     if (demoActivo()) {
       avisar('Estás en modo demo: no se guarda nada. Sal del modo demo para cambiar algo de verdad.', 'espera');
       return;
     }
     if (!companyId) return;
-    setGuardando(true);
-    const error = await guardarOrdenMenu(companyId, o);
-    setGuardando(false);
+    setEstado('guardando');
+    const error = await guardarOrdenMenu(companyId, SIN_ORDEN);
+    setEstado('quieto');
     if (error) {
       avisar(error, 'error');
       return;
     }
     setBorrador(null);
-    avisar(texto, 'ok');
+    avisar('El menú volvió al orden de siempre.', 'ok');
   }
 
   return (
@@ -106,62 +214,28 @@ export default function OrdenDelMenu() {
           </label>
           {equipoVeFideliza && companyId && <SoloQrEquipo companyId={companyId} />}
         </details>
-        <p className="muted">
-          Pon arriba lo que más usas. Lo que mandes a «Más» sigue ahí, a un toque. Vale para todo tu equipo.
-        </p>
-        <ol className="menu-orden__lista">
-          {lista.map((n, i) => {
-            const fijo = FIJAS.includes(n.href);
-            const enMas = vista.enMas.includes(n.href) && !SIEMPRE_A_LA_VISTA.includes(n.href);
-            const Icono = n.icon;
-            return (
-              <li key={n.href} className={`menu-orden__fila ${enMas ? 'menu-orden__fila--mas' : ''}`}>
-                <span className="menu-orden__ico"><Icono size={16} /></span>
-                <span className="menu-orden__txt">
-                  {etiqueta(n)}
-                  {fijo && <small>{n.href === RUTA_INICIO ? ' · siempre primero' : ' · siempre al final, antes de «Más»'}</small>}
-                </span>
-                {!fijo && (
-                  <span className="menu-orden__btns">
-                    <button type="button" className="btn btn-ghost btn-sm" aria-label={`Subir ${etiqueta(n)}`} disabled={i <= 0 || FIJAS.includes(lista[i - 1].href)} onClick={() => mover(i, -1)}>
-                      <ArrowUp size={15} />
-                    </button>
-                    <button type="button" className="btn btn-ghost btn-sm" aria-label={`Bajar ${etiqueta(n)}`} disabled={i >= lista.length - 1 || FIJAS.includes(lista[i + 1].href)} onClick={() => mover(i, 1)}>
-                      <ArrowDown size={15} />
-                    </button>
-                    {!SIEMPRE_A_LA_VISTA.includes(n.href) && (
-                      <button
-                        type="button"
-                        className={`btn btn-sm menu-orden__vis ${enMas ? 'btn-ghost' : ''}`}
-                        aria-pressed={!enMas}
-                        onClick={() => alternar(n.href)}
-                      >
-                        {enMas ? <EyeOff size={14} /> : <Eye size={14} />} {enMas ? 'En «Más»' : 'A la vista'}
-                      </button>
-                    )}
-                  </span>
-                )}
-              </li>
-            );
-          })}
-        </ol>
-        <div className="menu-orden__pie">
-          {personalizado && !cambio && (
-            <button type="button" className="btn btn-ghost" disabled={guardando} onClick={() => void guardar(SIN_ORDEN, 'El menú volvió al orden de siempre.')}>
+        <div className="menu-orden__cabeza">
+          <p className="muted">
+            Arrastra para ordenar. Lo que pongas en «Más» sigue ahí, a un toque. Se guarda solo y vale para todo tu equipo.
+          </p>
+          <span className={`menu-orden__estado menu-orden__estado--${estado}`} role="status" aria-live="polite">
+            {estado === 'guardando' ? 'Guardando…' : estado === 'guardado' ? '✓ Guardado' : ''}
+          </span>
+        </div>
+        <MenuArrastrable
+          zonas={zonas}
+          filas={filas}
+          alCambiar={cambiar}
+          alSoltar={programarGuardado}
+          alArrastrar={setArrastrando}
+        />
+        {personalizado && borrador === null && estado === 'quieto' && (
+          <div className="menu-orden__pie">
+            <button type="button" className="btn btn-ghost" onClick={() => void volverAlDeSiempre()}>
               Volver al de siempre
             </button>
-          )}
-          {cambio && (
-            <>
-              <button type="button" className="btn btn-ghost" disabled={guardando} onClick={() => setBorrador(null)}>
-                Descartar
-              </button>
-              <button type="button" className="btn btn-primary" disabled={guardando} onClick={() => void guardar(vista, 'Orden del menú guardado.')}>
-                {guardando ? 'Guardando…' : 'Guardar orden'}
-              </button>
-            </>
-          )}
-        </div>
+          </div>
+        )}
       </div>
     </details>
   );
