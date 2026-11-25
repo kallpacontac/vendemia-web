@@ -26,6 +26,7 @@ import { sumarMin, type DatosAgenda } from '@/modules/tu-pagina/dominio/agenda';
 import { fechaCorta, telefonoBonito, telefonoNormal } from '@/modules/tu-pagina/dominio/envio';
 import { normalizarCobro, type CobroPedidos } from '@/modules/tu-pagina/dominio/cobroPedidos';
 import { indicacionesDe, porcentajeAdelanto, sedesDe, type Sede } from '@/modules/tu-pagina/dominio/adelantoCitas';
+import { pctDescuentoWeb } from '@/modules/tu-pagina/dominio/promos';
 
 /* ── Lo que llega de la base ─────────────────────────────────────────────── */
 
@@ -95,6 +96,8 @@ export interface ComoSeOfrece {
   cobroPedidos?: unknown;
   /** Adelanto para separar citas (dominio/adelantoCitas.ts). Se normaliza al armar. */
   citas?: unknown;
+  /** «20 % si reservas por aquí» (dominio/promos.ts). Se normaliza al armar. */
+  descuentoWeb?: unknown;
 }
 
 /** Una cosa del catálogo, lo justo para decidir su tipo. */
@@ -179,6 +182,8 @@ export interface Escaparate {
   cobro?: CobroPedidos;
   /** % del precio que se paga antes para confirmar una cita (dominio/adelantoCitas.ts). 0 = nada. */
   adelantoCitas?: number;
+  /** % de descuento en la primera cita reservada por la página (dominio/promos.ts). 0 = nada. */
+  descuentoWeb?: number;
   /** «Antes de tu cita»: tolerancia, sede… (secciones.citas.indicaciones). */
   indicacionesCitas?: string[];
   /** Los locales (secciones.citas.sedes). Con 2 o más, se elige sede al reservar. */
@@ -316,6 +321,7 @@ export function armarEscaparate(c: DatosCrudos, como?: ComoSeOfrece | null): Esc
     ahora: c.ahora,
     cobro: normalizarCobro(como?.cobroPedidos),
     adelantoCitas: porcentajeAdelanto(como?.citas),
+    descuentoWeb: pctDescuentoWeb(como?.descuentoWeb),
     indicacionesCitas: indicacionesDe(como?.citas),
     sedes: sedesDe(como?.citas),
   };

@@ -1706,3 +1706,24 @@ button.tp-canchas__casilla { cursor: pointer; }
   .tp-luxury-hero[data-alterna='2'] { background-image: var(--tp-alterna-2-movil) !important; }
   .tp-luxury-hero[data-alterna='3'] { background-image: var(--tp-alterna-3-movil) !important; }
 }
+
+/* ── Promos de Mi página (dominio/promos.ts, 25-nov-2026) ─────────────────── */
+.tp-precio-antes { color: var(--tp-muted); font-weight: 500; margin-right: 4px; }
+.tp-descuento-nota { margin: 10px 0 0; font-size: 12.5px; line-height: 1.4; color: var(--tp-muted); }
+.tp-descuento-hecho { margin: 14px auto 0; max-width: 420px; padding: 10px 14px; border-radius: 12px; font-weight: 700; font-size: 14px;
+  background: color-mix(in srgb, var(--tp-color) 12%, #ffffff); color: var(--tp-ink); }
+.tp-descuento-hecho--usado { font-weight: 500; background: #f3f3f1; color: var(--tp-muted); }
+.tp-popup { position: fixed; inset: 0; z-index: 90; display: grid; place-items: center; padding: 16px; background: rgba(12, 12, 14, .55);
+  animation: tp-popup-fondo .2s ease-out; }
+.tp-popup__caja { position: relative; width: min(100%, 380px); max-height: calc(100dvh - 32px); overflow: auto; border-radius: 20px; background: #fff;
+  color: #191919; box-shadow: 0 24px 60px rgba(0, 0, 0, .3); animation: tp-popup-entra .25s cubic-bezier(.2, .9, .3, 1.2); }
+.tp-popup__foto { display: block; width: 100%; aspect-ratio: 4 / 3; object-fit: cover; }
+.tp-popup__cuerpo { padding: 20px 20px 22px; text-align: center; }
+.tp-popup__cuerpo h2 { margin: 0 0 8px; font-size: 22px; line-height: 1.2; color: var(--tp-ink, #191919); }
+.tp-popup__cuerpo p { margin: 0 0 16px; font-size: 15px; line-height: 1.45; color: #4a4a4a; white-space: pre-line; }
+.tp-popup__boton { display: flex; width: 100%; }
+.tp-popup__cerrar { position: absolute; top: 10px; right: 10px; display: grid; place-items: center; width: 34px; height: 34px; border: 0;
+  border-radius: 50%; background: rgba(255, 255, 255, .92); color: #191919; cursor: pointer; box-shadow: 0 2px 8px rgba(0, 0, 0, .15); }
+@keyframes tp-popup-fondo { from { opacity: 0; } }
+@keyframes tp-popup-entra { from { opacity: 0; transform: translateY(16px) scale(.96); } }
+@media (prefers-reduced-motion: reduce) { .tp-popup, .tp-popup__caja { animation: none; } }

@@ -12,6 +12,9 @@ import { fotoDePlantilla } from '@/modules/tu-pagina/dominio/fotos';
 import LuxuryPortada from '@/modules/tu-pagina/publico/LuxuryPortada';
 import AnimacionesPlantilla from '@/modules/tu-pagina/publico/AnimacionesPlantilla';
 import TarjetaPuntos from '@/modules/tu-pagina/publico/TarjetaPuntos';
+import PromoPopup from '@/modules/tu-pagina/publico/PromoPopup';
+import { popupDe } from '@/modules/tu-pagina/dominio/promos';
+import { urlWhatsApp } from '@/modules/tu-pagina/dominio/envio';
 import type { TarjetaPublica } from '@/modules/tu-pagina/dominio/tarjeta';
 import '@/modules/tu-pagina/estilos/publica.css';
 
@@ -57,12 +60,19 @@ export default function Marco({ pagina, children, vista, portada, tarjeta }: { p
     ? (plantillaValida(pagina.plantilla) ? pagina.plantilla : plantillaPorDefecto(tipo))
     : undefined;
   const promocion = pagina.secciones.apariencia?.promocionTexto?.trim();
+  // El aviso al abrir (dominio/promos.ts): solo en la página de inicio, no en cada subpágina.
+  const popup = portada ? popupDe(pagina.secciones.popup) : null;
+  const accionPopup = !popup || popup.boton === 'ninguno' ? null
+    : popup.boton === 'whatsapp' && pagina.whatsapp
+      ? { href: urlWhatsApp(pagina.whatsapp, `Hola, vi la promoción «${popup.titulo || 'de la página'}» en su página.`), etiqueta: 'Escríbenos por WhatsApp' }
+      : pagina.secciones.reservar ? { href: `./${pagina.slug}/reservar`, etiqueta: 'Reservar ahora' } : null;
   return (
     // «Atención en mesa» se viste como «Carta visual»: lo suyo es lo que hace, no el aspecto de la portada.
     <div className="tp" data-diseno={tipo} data-plantilla={plantilla === 'mesa' ? 'restaurante' : plantilla} data-portada={portada ? 'si' : 'no'} style={estiloDe(pagina)}>
       <AnimacionesPlantilla />
       {promocion && !(plantilla === 'restaurante' && portada) && <CintaPromocion texto={promocion} />}
       {children}
+      {popup && <PromoPopup slug={pagina.slug} titulo={popup.titulo} texto={popup.texto} imagen={popup.imagen} accion={accionPopup} />}
       {tarjeta && <TarjetaPuntos tarjeta={tarjeta} negocio={pagina.titulo} />}
       {/* El Libro de Reclamaciones va en el pie de TODA la página, también la de inicio (sql/0006). */}
       {pagina.secciones.reclamos && pagina.secciones.proveedor?.ruc && (

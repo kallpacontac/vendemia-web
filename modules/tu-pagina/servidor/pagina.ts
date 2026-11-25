@@ -10,6 +10,7 @@ import type { AjustesCarta } from '@/modules/tu-pagina/dominio/mesa';
 import type { ConfigTarjeta } from '@/modules/tu-pagina/dominio/tarjeta';
 import type { CobroPedidos } from '@/modules/tu-pagina/dominio/cobroPedidos';
 import type { ConfigCitas } from '@/modules/tu-pagina/dominio/adelantoCitas';
+import type { DescuentoWeb, PopupPagina } from '@/modules/tu-pagina/dominio/promos';
 
 export interface Secciones {
   catalogo?: boolean;
@@ -31,6 +32,10 @@ export interface Secciones {
   cobroPedidos?: CobroPedidos;
   /** Adelanto y comprobante para separar citas (dominio/adelantoCitas.ts, sql/0021). */
   citas?: ConfigCitas;
+  /** «20 % si reservas por aquí», una vez por cliente (dominio/promos.ts, sql/0038). */
+  descuentoWeb?: DescuentoWeb;
+  /** Aviso al abrir la página (dominio/promos.ts). */
+  popup?: PopupPagina;
 }
 
 export interface PaginaPublica {

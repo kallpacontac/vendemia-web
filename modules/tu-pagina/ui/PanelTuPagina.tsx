@@ -42,6 +42,8 @@ import { urlEjemploPara } from '@/modules/tu-pagina/dominio/ejemplo';
 import { FOTOS_PLANTILLA, FOTOS_SERVICIOS_LUXURY, esFotoPlantilla, fotoPlantillaPorDefecto } from '@/modules/tu-pagina/dominio/fotos';
 import { subirImagenMarca } from '@/modules/fideliza/cliente/imagenMarca';
 import EncuadrarFoto from '@/modules/fideliza/ui/EncuadrarFoto';
+import { DescuentoWebEditor, PopupEditor } from '@/modules/tu-pagina/ui/PromosPagina';
+import type { DescuentoWeb, PopupPagina } from '@/modules/tu-pagina/dominio/promos';
 
 /**
  * La página con otra plantilla o color, sin guardar: se sirve en el dominio del
@@ -93,6 +95,7 @@ interface Pagina {
     catalogo?: boolean; reservar?: boolean; envios?: boolean; tipos?: TiposDePagina; apariencia?: AparienciaPagina;
     reclamos?: boolean; proveedor?: Partial<Proveedor>; canchas?: ConfigCanchas; fideliza?: ConfigTarjeta;
     citas?: ConfigCitas;
+    descuentoWeb?: DescuentoWeb; popup?: PopupPagina;
   };
   logo_url: string | null;
   portada_url: string | null;
@@ -221,8 +224,11 @@ function MiPagina({ companyId, nombre, pagina, agendaNube, alGuardar }: {
   // Adelanto de citas (sql/0021): hoy solo se elige aquí quién valida la captura; el resto lo pone Vendemia.
   const citasCfg = pagina?.secciones?.citas;
   const conAdelantoCitas = porcentajeAdelanto(citasCfg) > 0;
+  // Promos (25-nov-2026, dominio/promos.ts): descuento por reservar aquí y aviso al abrir.
+  const [descuentoWeb, setDescuentoWeb] = useState<DescuentoWeb>(pagina?.secciones?.descuentoWeb ?? { activo: false, pct: 20 });
+  const [popup, setPopup] = useState<PopupPagina>(pagina?.secciones?.popup ?? { activo: false });
   const [validacionCitas, setValidacionCitas] = useState<'manual' | 'automatica'>(citasCfg?.validacion === 'automatica' ? 'automatica' : 'manual');
-  const [funcionesAbiertas, setFuncionesAbiertas] = useState(Boolean(pagina?.secciones?.envios || pagina?.secciones?.reclamos || pagina?.secciones?.canchas?.activo || pagina?.secciones?.fideliza?.activo));
+  const [funcionesAbiertas, setFuncionesAbiertas] = useState(Boolean(pagina?.secciones?.envios || pagina?.secciones?.reclamos || pagina?.secciones?.canchas?.activo || pagina?.secciones?.fideliza?.activo || pagina?.secciones?.descuentoWeb?.activo || pagina?.secciones?.popup?.activo));
   const [proveedor, setProveedor] = useState<Proveedor>({
     razon_social: pagina?.secciones?.proveedor?.razon_social ?? '',
     ruc: pagina?.secciones?.proveedor?.ruc ?? '',
@@ -325,6 +331,8 @@ function MiPagina({ companyId, nombre, pagina, agendaNube, alGuardar }: {
             fideliza: { ...tarjeta, activo: Boolean(tarjeta.activo && tarjeta.slug), slug: tarjeta.slug ?? '' },
             // Guardar reemplaza la clave entera: se mandan sus sedes, indicaciones y plazo tal cual.
             ...(citasCfg ? { citas: { ...citasCfg, validacion: validacionCitas } } : {}),
+            descuentoWeb: { activo: Boolean(reservar && descuentoWeb.activo), pct: descuentoWeb.pct ?? 20 },
+            popup: { ...popup, activo: Boolean(popup.activo && (popup.titulo?.trim() || popup.texto?.trim())), titulo: popup.titulo?.trim() ?? '', texto: popup.texto?.trim() ?? '' },
           },
           distritos: distritos.split(/[,\n]/).map((d) => d.trim()).filter(Boolean),
         },
@@ -577,7 +585,7 @@ function MiPagina({ companyId, nombre, pagina, agendaNube, alGuardar }: {
 
         {/* Lo que no todos necesitan: se enciende si se quiere y solo entonces pide sus datos. */}
         <details className="tp-panel-avanzado" open={funcionesAbiertas} onToggle={(e) => setFuncionesAbiertas(e.currentTarget.open)}>
-          <summary>Agregar funciones <small>Tarjeta de puntos, {reservar ? 'canchas, envíos y Libro de Reclamaciones' : 'envíos y Libro de Reclamaciones'}, si los necesitas</small></summary>
+          <summary>Agregar funciones <small>Tarjeta de puntos, {reservar ? 'descuento por reservar aquí, aviso al abrir, canchas, envíos y Libro de Reclamaciones' : 'aviso al abrir, envíos y Libro de Reclamaciones'}, si los necesitas</small></summary>
           <div className="tp-panel-avanzado__contenido">
         <div className="tp-panel-campo">
           <span>Apartados opcionales</span>
@@ -602,6 +610,14 @@ function MiPagina({ companyId, nombre, pagina, agendaNube, alGuardar }: {
                 </small>
               </label>
             )}
+            {reservar && (
+              <Apartado activo={Boolean(descuentoWeb.activo)} alCambiar={(activo) => setDescuentoWeb({ ...descuentoWeb, activo })} titulo="Descuento por reservar aquí" describe="Ej.: 20 % en la primera cita que reservan desde tu página. Así prefieren reservar solos.">
+                <DescuentoWebEditor valor={descuentoWeb} alCambiar={setDescuentoWeb} />
+              </Apartado>
+            )}
+            <Apartado activo={Boolean(popup.activo)} alCambiar={(activo) => setPopup({ ...popup, activo })} titulo="Aviso al abrir tu página" describe="Una ventana con tu promo que sale al entrar: título, texto, foto y un botón.">
+              <PopupEditor companyId={companyId} valor={popup} reservar={reservar} alCambiar={setPopup} />
+            </Apartado>
             <Apartado activo={envios} alCambiar={setEnvios} titulo="Agendar envíos" describe="Tus clientes te piden un recojo: dirección, distrito y fecha.">
               <label className="tp-panel-campo"><span>Distritos que atiendes <small className="muted">(vacío = cualquiera)</small></span><textarea className="input" rows={2} value={distritos} placeholder="Miraflores, Surco, San Isidro" onChange={(e) => setDistritos(e.target.value)} /></label>
             </Apartado>

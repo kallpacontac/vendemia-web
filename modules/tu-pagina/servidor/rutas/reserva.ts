@@ -136,6 +136,15 @@ export async function POST(req: Request) {
         .catch((e) => { log('tu_pagina_sede_error', { mensaje: e instanceof Error ? e.message.slice(0, 120) : 'x' }); return null; });
       if (s?.status === 'lleno') return responder({ status: 'lleno' }, 409);
     }
+    // «20 % si reservas por aquí», una vez por celular (sql/0038). Antes de apartar: el adelanto se
+    // calcula sobre el precio ya rebajado. Un fallo no tumba la reserva: queda a precio de carta.
+    let descuento: { pct: number; precio: number; antes: number } | { usado: true } | undefined;
+    if (datos.tipo === 'cita' && r.codigo && esc.descuentoWeb) {
+      const d = await rpc<{ status: string; pct?: number; precio?: number; precio_antes?: number }>(servidor(), 'cita_srv_descuento_web', { p_slug: c.slug, p_codigo: r.codigo, p_telefono: c.telefono })
+        .catch((e) => { log('tu_pagina_descuento_error', { mensaje: e instanceof Error ? e.message.slice(0, 120) : 'x' }); return null; });
+      if (d?.status === 'ok' && d.pct) descuento = { pct: d.pct, precio: Number(d.precio), antes: Number(d.precio_antes) };
+      else if (d?.status === 'usado') descuento = { usado: true };
+    }
     // Apartada: cuánto tiempo tiene para pagar (sql/0024; sin ella, las 24 h de siempre y la
     // página no enseña plazo) y a dónde pagar (sin la 0017 o sin métodos: por WhatsApp).
     let plazo: { minutos: number; venceMs: number; vence: string } | undefined;
@@ -166,7 +175,7 @@ export async function POST(req: Request) {
       });
       meet = ev?.meet;
     }
-    return responder({ status: 'ok', codigo: r.codigo, estado: r.estado, metodos, plazo, meet });
+    return responder({ status: 'ok', codigo: r.codigo, estado: r.estado, metodos, plazo, meet, descuento });
   } catch (e) {
     log('tu_pagina_reserva_error', { mensaje: e instanceof Error ? e.message.slice(0, 120) : 'x' });
     return responder({ status: 'error' }, 503);

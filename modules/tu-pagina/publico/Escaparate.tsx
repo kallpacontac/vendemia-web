@@ -46,6 +46,7 @@ import {
 } from '@/modules/tu-pagina/dominio/tienda';
 import { CONTRA_ENTREGA, aPagarAntes, avisoAlPedir, metodosAlPedir } from '@/modules/tu-pagina/dominio/cobroPedidos';
 import { montoAdelanto, type Sede } from '@/modules/tu-pagina/dominio/adelantoCitas';
+import { precioConDescuento } from '@/modules/tu-pagina/dominio/promos';
 import PagoConLector, { useLectorActivo } from '@/modules/tu-pagina/publico/PagoConLector';
 import InvitarTarjeta from '@/modules/tu-pagina/publico/InvitarTarjeta';
 
@@ -105,6 +106,8 @@ interface Hecho {
     plazo?: { minutos: number; venceMs: number; vence: string } };
   /** «Antes de tu cita» (secciones.citas.indicaciones): solo en citas. */
   indicaciones?: string[];
+  /** «−20 % por reservar aquí» (sql/0038): aplicado, o ya usado antes por ese celular. */
+  descuento?: { pct: number; precio: number; antes: number } | { usado: true };
 }
 
 const DIAS_A_LA_VISTA = 14;
@@ -220,6 +223,9 @@ export default function Escaparate({ esc: todo, slug, whatsapp, puedePedir, pued
         <h2 className="tp-h1">{hecho.titulo}</h2>
         <p className="tp-lead">Tu código es</p>
         <div className="tp-codigo">{hecho.codigo}</div>
+        {hecho.descuento && ('precio' in hecho.descuento
+          ? <p className="tp-descuento-hecho" role="status">¡Se aplicó tu −{hecho.descuento.pct} % por reservar aquí! Pagas {soles(hecho.descuento.precio)} en vez de {soles(hecho.descuento.antes)}.</p>
+          : <p className="tp-descuento-hecho tp-descuento-hecho--usado" role="status">Tu descuento por reservar aquí ya lo usaste antes: esta cita va a precio normal.</p>)}
         {hecho.apartada?.plazo && <PlazoApartada plazo={hecho.apartada.plazo} />}
         {hecho.apartada && (
           <ol className="tp-pago" aria-label="Cómo confirmar tu cita">
@@ -687,6 +693,9 @@ function ResumenCita({ item, esc, inicio, profesional, esBarberia, sede = '' }: 
   const laSede = (esc.sedes ?? []).find((x) => x.nombre === sede);
   const nombreProfesional = esc.agenda.equipo.find((persona) => persona.id === profesional)?.nombre
     ?? (esBarberia ? 'Cualquiera' : 'El primero libre');
+  // «−20 % por reservar aquí» (sql/0038): lo que se espera pagar; la base dice al final si aplica.
+  const conDescuento = Boolean(esc.descuentoWeb && item.precio && item.precio > 0);
+  const precioWeb = conDescuento ? precioConDescuento(item.precio, esc.descuentoWeb!) : item.precio;
   return (
     <section className="tp-reserva-resumen" aria-label="Resumen de tu cita">
       <span className="tp-reserva-resumen__etiqueta">RESUMEN DE TU CITA</span>
@@ -699,9 +708,12 @@ function ResumenCita({ item, esc, inicio, profesional, esBarberia, sede = '' }: 
         {(esc.sedes?.length ?? 0) > 0
           ? <div className="tp-reserva-resumen__sede"><dt>Sede</dt><dd>{laSede ? <>{laSede.nombre}<small>{laSede.direccion}</small></> : <span className="tp-reserva-resumen__falta">Elige una sede arriba</span>}</dd></div>
           : esc.direccion && <div><dt>Dirección</dt><dd>{esc.direccion}</dd></div>}
-        {item.precio !== null && <div className="tp-reserva-resumen__precio"><dt>Precio</dt><dd>{soles(item.precio)}</dd></div>}
-        {montoAdelanto(item.precio, esc.adelantoCitas ?? 0) > 0 && <div><dt>Adelanto ({esc.adelantoCitas} %)</dt><dd>{soles(montoAdelanto(item.precio, esc.adelantoCitas ?? 0))}</dd></div>}
+        {item.precio !== null && (conDescuento
+          ? <div className="tp-reserva-resumen__precio"><dt>Precio por la web (−{esc.descuentoWeb} %)</dt><dd><s className="tp-precio-antes">{soles(item.precio)}</s> {soles(precioWeb)}</dd></div>
+          : <div className="tp-reserva-resumen__precio"><dt>Precio</dt><dd>{soles(item.precio)}</dd></div>)}
+        {montoAdelanto(precioWeb, esc.adelantoCitas ?? 0) > 0 && <div><dt>Adelanto ({esc.adelantoCitas} %)</dt><dd>{soles(montoAdelanto(precioWeb, esc.adelantoCitas ?? 0))}</dd></div>}
       </dl>
+      {conDescuento && <p className="tp-descuento-nota">El −{esc.descuentoWeb} % es para tu primera reserva por aquí. Si ya lo usaste, pagas el precio normal.</p>}
     </section>
   );
 }
@@ -890,7 +902,8 @@ function Reservar({ item, esc, slug, alTerminar, presentacion, esBarberia = fals
   const [fallo, setFallo] = useState('');
   const { enviar, enviando } = useEnviar('/api/tu-pagina/publico/reserva');
   // Lo que se paga antes para confirmar (0 = nada). Postgres decide si la cita nace apartada.
-  const adelanto = montoAdelanto(item.precio, esc.adelantoCitas ?? 0);
+  const precioEstimado = esc.descuentoWeb && item.precio ? precioConDescuento(item.precio, esc.descuentoWeb) : item.precio;
+  const adelanto = montoAdelanto(precioEstimado, esc.adelantoCitas ?? 0);
   const notaAntes = adelanto > 0
     ? `Para confirmar tu cita pagas un adelanto de ${soles(adelanto)} (${esc.adelantoCitas} %) por Yape y subes la captura aquí mismo.`
     : 'Después de separar tu horario, podrás avisar al negocio por WhatsApp.';
@@ -969,17 +982,22 @@ function Reservar({ item, esc, slug, alTerminar, presentacion, esBarberia = fals
     if (j.status === 'ok' && typeof j.codigo === 'string') {
       recordar(cliente);
       const pro = esc.agenda.equipo.find((x) => x.id === profesional)?.nombre;
-      const apartada = j.estado === 'pending_payment' && adelanto > 0
-        ? { monto: adelanto, total: item.precio ?? undefined, porcentaje: esc.adelantoCitas ?? 0, telefono: cliente.telefono, metodos: Array.isArray(j.metodos) ? (j.metodos as NonNullable<Hecho['apartada']>['metodos']) : [],
+      // El precio de verdad lo dice la base: rebajado si aplicó el descuento, el de carta si no.
+      const desc = j.descuento && typeof j.descuento === 'object' ? (j.descuento as NonNullable<Hecho['descuento']>) : undefined;
+      const precioFinal = desc && 'precio' in desc ? desc.precio : item.precio;
+      const adelantoFinal = montoAdelanto(precioFinal, esc.adelantoCitas ?? 0);
+      const apartada = j.estado === 'pending_payment' && adelantoFinal > 0
+        ? { monto: adelantoFinal, total: precioFinal ?? undefined, porcentaje: esc.adelantoCitas ?? 0, telefono: cliente.telefono, metodos: Array.isArray(j.metodos) ? (j.metodos as NonNullable<Hecho['apartada']>['metodos']) : [],
             plazo: j.plazo && typeof j.plazo === 'object' ? (j.plazo as NonNullable<Hecho['apartada']>['plazo']) : undefined }
         : undefined;
       alTerminar({
         titulo: apartada ? 'Tu cita está apartada: falta el adelanto' : '¡Tu cita está separada!',
         apartada,
+        descuento: desc,
         indicaciones: esc.indicacionesCitas,
         codigo: j.codigo,
         mensaje: mensajeReserva(j.codigo, {
-          servicio: item.nombre, precio: item.precio, inicio, profesional: pro, beneficiario: '', nombre: cliente.nombre, esGrupo: false, sede: sede || undefined,
+          servicio: item.nombre, precio: precioFinal, inicio, profesional: pro, beneficiario: '', nombre: cliente.nombre, esGrupo: false, sede: sede || undefined,
         }),
       });
       return;
