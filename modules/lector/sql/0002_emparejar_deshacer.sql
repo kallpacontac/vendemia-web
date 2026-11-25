@@ -13,6 +13,7 @@ drop function if exists public.lector_srv_activo(text);
 drop function if exists public.lector_emparejar(text);
 drop function if exists public.lector_aplicar(bigint, text, text, uuid, uuid, text);
 drop function if exists public.lector_candidatos(public.lector_avisos);
+drop function if exists public.lector_hora_captura(text);
 drop function if exists public.lector_clave_pagador(text);
 drop function if exists public.lector_parecido(text, text);
 drop function if exists public.lector_palabras(text);

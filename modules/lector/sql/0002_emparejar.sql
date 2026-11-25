@@ -8,6 +8,9 @@
 -- Contra qué se compara (solo lo pendiente de cobro):
 --   · ESPERA   el cliente tocó «Ya yapeé» en la página (lector_srv_ya_pague). Cuenta lo que llegó
 --              desde 10 min ANTES de tocarlo (pudo pagar primero) hasta 30 min después.
+--   · CAPTURA  (cotejo o revisar) con la hora leída: solo un aviso de ±3 min de esa hora. Probado con
+--              capturas reales (24-nov): monto y hora coinciden al minuto entre el que paga y el que
+--              recibe; el n.º de operación es distinto en cada app y no sirve para cruzar.
 --   · COTEJO   comprobante que la IA dio por bueno y nadie ha cotejado: el Yape lo confirma
 --              («Llegó») sin sumar otro pago.
 --   · REVISAR  comprobante por revisar a mano: el Yape lo aprueba.
@@ -127,6 +130,17 @@ returns text language sql immutable as $$
     select array_to_string(array(select unnest(public.lector_palabras(p)) order by 1), ' ');
 $$;
 
+-- La hora del pago que se lee en la captura (comprobantes_web.fecha_pago: ISO con -05:00). null si
+-- no se leyó o no se entiende: entonces la captura no aporta hora y se usa la ventana ancha.
+create or replace function public.lector_hora_captura(p text)
+returns timestamptz language plpgsql immutable as $$
+begin
+    if coalesce(btrim(p), '') = '' then return null; end if;
+    return p::timestamptz;
+exception when others then
+    return null;
+end $$;
+
 -- ── 3 · Candidatos de un aviso ──────────────────────────────────────────────
 -- Una fila por cita posible. `exacto`: el monto cuadra; `nombre`: 0..1 (1 si es un familiar aprendido).
 create or replace function public.lector_candidatos(p_aviso public.lector_avisos)
@@ -164,14 +178,21 @@ begin
         select b.id, 'cotejo', c.monto, null, c.monto, c.id, null, 1.0, b.lead_id, b.lead_nombre, coalesce(b.beneficiario, ''), b.service, b.slot_start
           from public.comprobantes_web c join base b on b.id = c.appointment_id
          where c.company_id = p_aviso.company_id and c.estado = 'aprobado' and c.revisado_por = 'automatico' and c.cotejo = ''
-           and c.monto is not null and p_aviso.cuando between c.creado_at - interval '3 hours' and c.creado_at + interval '30 minutes'
+           and c.monto is not null
+           and case when public.lector_hora_captura(c.fecha_pago) is not null
+                    then p_aviso.cuando between public.lector_hora_captura(c.fecha_pago) - interval '3 minutes'
+                                            and public.lector_hora_captura(c.fecha_pago) + interval '3 minutes'
+                    else p_aviso.cuando between c.creado_at - interval '3 hours' and c.creado_at + interval '30 minutes' end
         union all
         -- REVISAR: comprobante esperando a una persona.
         select b.id, 'revisar', b.total - b.pagado, greatest(public.v2_adelanto_minimo(b.company_id, b.total) - b.pagado, 0),
                c.monto, c.id, null, 1.0, b.lead_id, b.lead_nombre, coalesce(b.beneficiario, ''), b.service, b.slot_start
           from public.comprobantes_web c join base b on b.id = c.appointment_id
          where c.company_id = p_aviso.company_id and c.estado = 'revisar'
-           and p_aviso.cuando between c.creado_at - interval '3 hours' and c.creado_at + interval '30 minutes'
+           and case when public.lector_hora_captura(c.fecha_pago) is not null
+                    then p_aviso.cuando between public.lector_hora_captura(c.fecha_pago) - interval '3 minutes'
+                                            and public.lector_hora_captura(c.fecha_pago) + interval '3 minutes'
+                    else p_aviso.cuando between c.creado_at - interval '3 hours' and c.creado_at + interval '30 minutes' end
         union all
         -- APARTADA: reserva online esperando el adelanto, sin espera ni captura.
         select b.id, 'apartada', b.total - b.pagado, greatest(public.v2_adelanto_minimo(b.company_id, b.total) - b.pagado, 0),

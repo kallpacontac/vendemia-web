@@ -46,7 +46,8 @@ create table pending_payments (id text primary key, lead_id text, company_id tex
   image_hash text, verified int, order_id text, appointment_id text, created_at bigint default extract(epoch from now())::bigint);
 create table comprobantes_web (id uuid primary key default gen_random_uuid(), company_id text, appointment_id text, lead_id text,
   url text default '', image_hash text default '', estado text, revisado_por text default '', revisado_at timestamptz, monto numeric,
-  motivo text default '', cotejo text default '', cotejado_at timestamptz, creado_at timestamptz default now());
+  motivo text default '', cotejo text default '', cotejado_at timestamptz, creado_at timestamptz default now(),
+  fecha_pago text not null default '');
 create table tu_pagina (company_id text, slug text, publicada boolean);
 insert into tu_pagina values ('neg', 'uno', true);
 create function public.v2_adelanto_minimo(c text, t numeric) returns numeric language sql as $$ select round(t / 2, 2) $$;
@@ -178,6 +179,20 @@ await q(`insert into comprobantes_web (company_id, appointment_id, lead_id, esta
 await yape(1500, 'JOEL SALDANA');
 const ck = await uno(`select cotejo from comprobantes_web where appointment_id = 'k1'`);
 ok('cotejo: «Llegó» solo, sin pago doble', ck.cotejo === 'llego' && Number((await est('k1')).pagado) === 15);
+
+// 6b · Dos reservas de S/ 5 con captura por revisar: la HORA leída en cada captura decide (capturas reales
+// del 24-nov: el que paga y el que recibe ven la misma hora al minuto).
+await cita('m1', 'lm1', 'Rocío Lara', 10, 300, 330, 'pending_payment');
+await cita('m2', 'lm2', 'Sofía Paz', 10, 340, 370, 'pending_payment');
+const hace = (min) => new Date(Date.now() - min * 60_000).toISOString();
+await q(`insert into comprobantes_web (company_id, appointment_id, lead_id, estado, monto, fecha_pago, creado_at) values
+         ('neg', 'm1', 'lm1', 'revisar', 5, $1, now()), ('neg', 'm2', 'lm2', 'revisar', 5, $2, now())`, [hace(20), hace(1)]);
+await yape(500, 'PLIN - ALVARO FRANCO', 1);
+ok('la hora de la captura decide entre dos iguales', (await est('m2')).status === 'confirmed' && (await est('m1')).status === 'pending_payment',
+   JSON.stringify([await est('m1'), await est('m2')]));
+ok('y la captura queda aprobada por el lector', (await uno(`select revisado_por from comprobantes_web where appointment_id = 'm2'`)).revisado_por === 'lector');
+await yape(500, 'X', 0);
+ok('otro Yape igual fuera de los ±3 min de la otra captura no la toma', (await est('m1')).status === 'pending_payment');
 
 // 7 · «No era de esta cita».
 const a1 = await uno(`select id from lector_avisos where cita_id = 'c1'`);
