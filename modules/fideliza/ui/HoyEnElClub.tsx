@@ -40,6 +40,10 @@ interface Premio {
 
 const MAX_PREMIOS = 8;
 
+/** «tu 6.º corte o barba gratis» lo escribe el dueño para el cliente; aquí lo lee el equipo. */
+const sinTu = (t: string) => t.trim().replace(/^tu\s+/i, '').replace(/^./, (c) => c.toUpperCase());
+const fechaCorta = (iso: string) => new Date(iso).toLocaleDateString('es-PE', { timeZone: 'America/Lima', day: 'numeric', month: 'short' });
+
 function venceEn(iso: string | null): string | null {
   if (!iso) return null;
   const dias = Math.ceil((new Date(iso).getTime() - Date.now()) / 86400000);
@@ -175,27 +179,34 @@ export default function HoyEnElClub({
             <b>Premios por entregar</b>
             <span className="muted">· el que vence antes, primero</span>
           </div>
+          {/* 26-nov-2026 (The 24/7): «no se entiende». Qué es la lista y qué hace el botón. */}
+          <p className="muted fz-premios__que">
+            Completaron su tarjeta y su premio está esperando. Dáselo cuando venga: {puedeSumar ? '«Entregar» abre la Caja con su tarjeta y ahí lo marcas como entregado.' : 'lo marca la caja al entregarlo.'}
+          </p>
           <ul>
-            {datos.premios.slice(0, MAX_PREMIOS).map((p) => {
+            {datos.premios.slice(0, MAX_PREMIOS).map((p, _i, visibles) => {
               const quien = p.persona;
               const vence = venceEn(p.expires_at);
+              const nombre = quien ? quien.alias?.trim() || quien.public_code : '';
+              // Dos con el mismo nombre: el código los distingue (es el que se busca en Caja).
+              const repetido = Boolean(quien?.alias?.trim()) && visibles.filter((x) => (x.persona?.alias?.trim() || '').toLowerCase() === nombre.toLowerCase()).length > 1;
               return (
                 <li key={p.id}>
                   <div className="fz-premios__quien">
                     {quien ? (
-                      <Link href={`/panel/fideliza/clientes/${quien.id}`}>{quien.alias?.trim() || quien.public_code}</Link>
+                      <Link href={`/panel/fideliza/clientes/${quien.id}`}>{nombre}{repetido && <span className="muted fz-premios__codigo"> · {quien.public_code}</span>}</Link>
                     ) : (
                       <span className="muted">Cliente</span>
                     )}
                     <small>
-                      {p.description}
+                      Premio: {sinTu(p.description)} · lo ganó el {fechaCorta(p.issued_at)}
                       {lineas.length ? ` · ${nombreDe(p.program_id)}` : ''}
                       {vence && <em className={vence.startsWith('vence hoy') || vence === 'vence mañana' ? 'fz-premios__urge' : ''}> · {vence}</em>}
                     </small>
                   </div>
                   {puedeSumar && quien && (
                     <Link className="btn btn-sm" href={`/panel/fideliza/caja?q=${encodeURIComponent(quien.public_code)}`}>
-                      Entregar
+                      Entregar premio
                     </Link>
                   )}
                 </li>

@@ -480,6 +480,8 @@
 .fz-premios__quien em{font-style:normal}
 .fz-premios__urge{color:#B4232A;font-weight:600}
 .fz-premios__mas{font-size:12.5px;margin:8px 0 0}
+.fz-premios__que{font-size:13px;margin:-2px 0 8px}
+.fz-premios__codigo{font-weight:500;font-size:12.5px}
 @media(max-width:820px){.fz-hoy__cab .fz-fila{width:100%}.fz-hoy__cab .btn{flex:1;justify-content:center}}
 
 /* Caja · buscar mientras escribe (paginas/Caja.tsx) */
