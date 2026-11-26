@@ -1,0 +1,273 @@
+:root{--red:#e50025;--deep:#9d1626;--cream:#fff8e9;--ink:#2c1918;--line:rgba(255,248,233,.36)}
+*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:var(--cream);color:var(--ink);font-family:'DM Sans',sans-serif;overflow-x:hidden}a{color:inherit;text-decoration:none}button,a{ -webkit-tap-highlight-color:transparent}img{display:block;max-width:100%}.skip-link{position:fixed;z-index:100;top:-60px;left:15px;padding:12px;background:var(--ink);color:white}.skip-link:focus{top:15px}
+.site-header{height:78px;padding:0 clamp(22px,4vw,72px);position:fixed;z-index:50;top:0;left:0;width:100%;display:flex;align-items:center;justify-content:space-between;gap:24px;background:rgba(255,248,233,.87);backdrop-filter:blur(16px);border-bottom:1px solid rgba(44,25,24,.08);transition:background .35s,color .35s,transform .35s}.site-header.on-red{background:rgba(194,0,28,.94);color:var(--cream);border-color:rgba(255,255,255,.13)}.site-header.on-red .header-brand img{filter:brightness(0) invert(1)}.site-header nav{display:flex;gap:clamp(20px,3vw,54px);font-size:13px;font-weight:800;text-transform:uppercase;letter-spacing:.1em}.site-header nav a:hover{text-decoration:underline;text-underline-offset:5px}.header-brand{width:115px;height:54px;overflow:hidden;display:flex;align-items:center}.header-brand img{width:115px;max-width:none;transition:filter .35s}.header-order{background:var(--red);color:var(--cream);padding:13px 19px;border-radius:99px;font-size:13px;font-weight:800;white-space:nowrap}.header-order span{margin-left:14px}.site-header.on-red .header-order{background:var(--cream);color:var(--red)}
+.hero-scroll{height:240vh;position:relative;background:var(--cream)}.hero-sticky{height:100vh;min-height:550px;position:sticky;top:0;overflow:hidden;display:flex;align-items:center;justify-content:center}.hero-kicker{position:absolute;z-index:3;top:calc(78px + 7vh);left:clamp(22px,4vw,72px);font-size:12px;font-weight:800;letter-spacing:.23em;color:var(--red);display:flex;align-items:center;gap:9px}.kicker-dot{height:8px;width:8px;border-radius:100%;background:var(--red)}.hero-logo-wrap{width:min(70vw,900px);z-index:2;transform-origin:50% 50%;will-change:transform,opacity}.hero-logo{width:100%;filter:drop-shadow(0 12px 2px rgba(112,15,24,.015))}.hero-bottom{position:absolute;z-index:3;bottom:5.5vh;left:clamp(22px,4vw,72px);right:clamp(22px,4vw,72px);display:flex;align-items:end;justify-content:space-between;gap:20px;color:var(--red)}.hero-bottom p{font-size:clamp(16px,2vw,25px);font-weight:800;line-height:1.12;margin:0}.scroll-cue{font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.13em;display:flex;gap:28px;align-items:center}.scroll-cue span{font-size:23px;animation:cue 1.4s ease-in-out infinite}.hero-number{font-size:12px;font-weight:800;letter-spacing:.12em}.hero-red-swipe{position:absolute;inset:auto 0 0;background:var(--red);height:0;z-index:1;will-change:height}@keyframes cue{50%{transform:translateY(6px)}}
+.flying-mascot{position:fixed;width:clamp(115px,15vw,190px);height:auto;z-index:12;pointer-events:none;left:0;top:0;overflow:visible;will-change:transform,opacity;filter:drop-shadow(0 6px 1px rgba(0,0,0,.02))}.flying-mascot image{width:100%;height:100%}
+.menu-section{background:var(--red);color:var(--cream);padding:0 clamp(22px,4vw,72px) clamp(80px,10vw,150px);position:relative;overflow:hidden}.menu-section:before{content:'';position:absolute;top:560px;left:-80px;width:220px;height:220px;border:1px solid rgba(255,255,255,.2);border-radius:50%;pointer-events:none}.menu-intro{min-height:87vh;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;padding:120px 0 60px}.eyebrow{font-size:11px;font-weight:800;letter-spacing:.25em;line-height:1.4;margin:0 0 24px}.eyebrow.cream{color:#ffd8cf}.menu-intro h1{font-family:Outfit,sans-serif;font-size:clamp(90px,17vw,260px);font-weight:900;letter-spacing:-.095em;line-height:.78;margin:0;position:relative;text-transform:uppercase}.stroke-star{font-size:.3em;position:absolute;top:-.15em;right:-.6em;letter-spacing:0;transform:rotate(-10deg)}.menu-intro>p:not(.eyebrow){max-width:380px;font-size:16px;line-height:1.5;margin:34px auto 34px}.menu-nav{display:flex;gap:9px;justify-content:center;flex-wrap:wrap}.menu-nav a{border:1px solid var(--line);padding:12px 18px;border-radius:99px;text-transform:uppercase;font-size:11px;font-weight:800;letter-spacing:.1em;transition:background .2s,color .2s}.menu-nav a span{padding-left:18px}.menu-nav a:hover{background:var(--cream);color:var(--red)}
+.marquee{border-block:1px solid var(--line);padding:14px 0;overflow:hidden;white-space:nowrap;margin:5px calc(clamp(22px,4vw,72px) * -1) 120px;font-family:Outfit,sans-serif;font-size:17px;font-weight:900;letter-spacing:.08em}.marquee div{width:max-content;animation:marquee 28s linear infinite}@keyframes marquee{to{transform:translateX(-50%)}}.section-heading{display:flex;justify-content:space-between;align-items:end;gap:30px;margin:0 0 34px;scroll-margin-top:120px}.section-heading h2{font-family:Outfit,sans-serif;font-size:clamp(54px,7vw,105px);line-height:.94;letter-spacing:-.07em;text-transform:uppercase;margin:0}.section-heading em{font-family:Georgia,serif;font-weight:400;text-transform:none;letter-spacing:-.09em}.section-heading>p{font-size:15px;line-height:1.55;max-width:270px;margin:0 0 6px}.featured-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}.product-card{background:var(--cream);color:var(--ink);border-radius:12px;overflow:hidden}.product-photo{height:clamp(360px,46vw,650px);position:relative;overflow:hidden;background:#ffdbb3}.product-photo img{width:100%;height:100%;object-fit:cover;transition:transform .6s cubic-bezier(.2,.7,.2,1)}.product-card:hover img,.snack-card:hover img{transform:scale(1.045)}.photo-stamp{position:absolute;left:22px;top:22px;background:var(--cream);color:var(--red);padding:11px 14px;border-radius:99px;font-size:11px;font-weight:800;letter-spacing:.12em}.product-info{display:flex;justify-content:space-between;align-items:end;gap:16px;padding:28px 30px 34px}.item-index{font-size:10px;font-weight:800;letter-spacing:.17em;color:var(--red)}.product-info h3,.snack-card h3{font-family:Outfit,sans-serif;font-size:clamp(29px,3.4vw,48px);letter-spacing:-.06em;line-height:1;margin:8px 0}.product-info p,.snack-card p{font-size:14px;line-height:1.5;margin:0;max-width:360px}.price{white-space:nowrap;font-family:Outfit,sans-serif;font-size:clamp(25px,3vw,39px);letter-spacing:-.06em;color:var(--red);font-weight:800}.more-burgers{margin:30px 0 150px;border-top:1px solid var(--line)}.more-title{display:block;font-size:11px;font-weight:800;letter-spacing:.2em;text-transform:uppercase;padding:21px 0 10px;color:#ffd5d6}.more-burgers>div{display:grid;grid-template-columns:1fr 1.6fr 80px;gap:16px;align-items:center;padding:17px 0;border-bottom:1px solid var(--line)}.more-burgers strong{font-family:Outfit,sans-serif;font-size:25px;letter-spacing:-.04em}.more-burgers span:not(.more-title){font-size:13px}.more-burgers b{text-align:right;font-size:17px}.snack-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:150px}.snack-card{display:grid;grid-template-columns:45% 55%;background:var(--cream);border-radius:12px;color:var(--ink);overflow:hidden;min-height:340px}.snack-photo{height:100%;overflow:hidden}.snack-photo img{width:100%;height:100%;object-fit:cover;transition:transform .6s}.snack-card>div:last-child{padding:30px;display:flex;flex-direction:column;align-items:start;justify-content:center}.snack-card h3{font-size:clamp(25px,3vw,42px)}.snack-card strong{font-family:Outfit,sans-serif;font-size:28px;color:var(--red);margin-top:20px}.drink-banner{scroll-margin-top:105px;background:var(--cream);color:var(--red);border-radius:12px;overflow:hidden;display:grid;grid-template-columns:47% 53%;min-height:600px}.drink-banner>img{width:100%;height:100%;object-fit:cover}.drink-banner>div{padding:clamp(35px,6vw,95px);display:flex;flex-direction:column;justify-content:center;align-items:start}.drink-banner h2{font-family:Outfit,sans-serif;font-size:clamp(55px,6.5vw,105px);line-height:.85;letter-spacing:-.08em;text-transform:uppercase;margin:0 0 25px}.drink-banner>div>p:not(.eyebrow){font-size:16px;line-height:1.5;color:var(--ink);max-width:310px}.drink-banner a,.studio-copy a{display:inline-block;margin-top:25px;border-radius:99px;background:var(--red);color:var(--cream);padding:14px 21px;font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.1em}.drink-banner a span,.studio-copy a span{margin-left:20px}
+.studio-section{padding:clamp(80px,10vw,160px) clamp(22px,4vw,72px);display:grid;grid-template-columns:1fr 1fr;gap:clamp(30px,6vw,95px);align-items:center;background:var(--cream);scroll-margin-top:75px}.studio-copy .eyebrow{color:var(--red)}.studio-copy h2{font-family:Outfit,sans-serif;color:var(--red);font-size:clamp(55px,6.8vw,105px);line-height:.92;letter-spacing:-.08em;text-transform:uppercase;margin:0 0 28px}.studio-copy h2 em{font-family:Georgia,serif;text-transform:none;font-weight:400}.studio-copy>p:not(.eyebrow){font-size:18px;line-height:1.5}.studio-image{position:relative;overflow:hidden;border-radius:12px}.studio-image img{width:100%;height:620px;object-fit:cover}.studio-image span{position:absolute;bottom:22px;left:22px;background:var(--cream);color:var(--red);padding:12px 15px;font-size:11px;font-weight:800;letter-spacing:.1em;border-radius:99px}footer{background:var(--red);color:var(--cream);padding:65px clamp(22px,4vw,72px) 35px;display:grid;grid-template-columns:1fr 1fr;gap:55px;align-items:end}footer img{width:min(360px,100%);filter:brightness(0) invert(1)}footer div{justify-self:end;font-size:17px;font-weight:700}footer div a{text-decoration:underline;text-underline-offset:5px}footer>span{grid-column:1/-1;border-top:1px solid var(--line);padding-top:25px;font-size:11px;letter-spacing:.1em;text-transform:uppercase}.reveal{opacity:0;transform:translateY(48px);transition:opacity .7s ease,transform .8s cubic-bezier(.2,.7,.2,1)}.reveal.visible{opacity:1;transform:translateY(0)}
+@media(max-width:760px){.site-header{height:66px;padding:0 18px}.header-brand,.header-brand img{width:87px}.site-header nav{display:none}.header-order{font-size:11px;padding:12px 14px}.header-order span{margin-left:8px}.hero-scroll{height:205vh}.hero-sticky{min-height:480px}.hero-kicker{top:calc(66px + 5vh);left:20px;font-size:9px;letter-spacing:.14em}.hero-logo-wrap{width:90vw}.hero-bottom{left:20px;right:20px;bottom:5vh}.hero-bottom p{font-size:14px}.scroll-cue{font-size:9px;gap:9px;letter-spacing:.05em}.hero-number{display:none}.flying-mascot{width:110px}.menu-section{padding-left:18px;padding-right:18px}.menu-intro{min-height:78vh}.menu-intro h1{font-size:clamp(76px,18vw,145px)}.menu-intro>p:not(.eyebrow){font-size:14px}.marquee{margin-left:-18px;margin-right:-18px;margin-bottom:80px}.section-heading{display:block}.section-heading h2{font-size:clamp(50px,13vw,82px)}.section-heading>p{margin:18px 0 0}.featured-grid,.snack-grid{grid-template-columns:1fr}.product-photo{height:440px}.product-info{padding:22px}.product-info h3{font-size:34px}.more-burgers{margin-bottom:110px}.more-burgers>div{grid-template-columns:1fr auto;gap:5px}.more-burgers>div span{grid-column:1/-1;grid-row:2}.more-burgers b{grid-column:2;grid-row:1}.snack-grid{margin-bottom:110px}.snack-card{min-height:250px}.snack-card>div:last-child{padding:18px}.snack-card p{font-size:12px}.snack-card h3{font-size:27px}.drink-banner{grid-template-columns:1fr}.drink-banner>img{height:320px}.drink-banner>div{padding:40px 28px 55px}.studio-section{grid-template-columns:1fr;padding:85px 20px}.studio-image img{height:420px}footer{grid-template-columns:1fr;gap:25px}footer div{justify-self:start}footer>span{grid-column:1}}
+@media(max-width:420px){.hero-bottom{align-items:end}.scroll-cue{max-width:110px;text-align:right}.menu-intro h1{font-size:20vw}.product-photo{height:360px}.snack-card{grid-template-columns:42% 58%}.snack-card h3{font-size:23px}.snack-card strong{margin-top:12px}}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}.scroll-cue span,.marquee div{animation:none}.reveal{opacity:1;transform:none;transition:none}.product-photo img,.snack-photo img{transition:none}}
+
+/* The red checked tablecloth and the persistent mascot are the menu's stage. */
+.menu-section{background-color:#bf0632;background-image:conic-gradient(from 90deg,#bd0632 25%,#cc0c3b 0 50%,#bd0632 0 75%,#cc0c3b 0);background-size:112px 112px}
+.menu-section:before{display:none}
+.menu-intro{min-height:75vh}
+.section-heading,.featured-grid,.more-burgers,.snack-grid,.drink-banner{margin-left:32%}
+.featured-grid,.snack-grid{grid-template-columns:1fr}
+.product-photo{height:clamp(350px,39vw,540px)}
+.product-card,.snack-card,.drink-banner{box-shadow:0 16px 0 rgba(123,0,34,.1)}
+.product-card.mascot-active,.snack-card.mascot-active,.drink-banner.mascot-active{outline:3px solid #ffd750;outline-offset:5px}
+.more-burgers.mascot-active{border-top-color:#ffd750}
+.hero-speech{position:absolute;z-index:5;top:20vh;left:13%;display:flex;align-items:center;gap:12px;color:var(--red);font-family:Outfit,sans-serif;font-weight:900;font-size:clamp(18px,2vw,29px);transform:rotate(-7deg);animation:speech-pop .65s cubic-bezier(.2,1.6,.3,1) both .55s;pointer-events:none}
+.hero-speech span:last-child{background:var(--cream);border:3px solid var(--red);border-radius:25px;padding:10px 17px;box-shadow:6px 6px 0 var(--red);white-space:nowrap}
+.hero-exclamation{font-size:clamp(60px,7vw,102px);letter-spacing:-.23em;color:#ffd747;-webkit-text-stroke:3px var(--red);text-shadow:5px 5px 0 var(--red);line-height:.8;transform:rotate(-13deg)}
+@keyframes speech-pop{from{opacity:0;transform:translateY(24px) rotate(-13deg) scale(.7)}to{opacity:1;transform:translateY(0) rotate(-7deg) scale(1)}}
+.flying-mascot{width:clamp(165px,20vw,290px);height:auto;aspect-ratio:1/1.08;transition:opacity .18s ease}
+.mascot-pose{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;opacity:0;transform:scale(.88) rotate(-8deg);transition:opacity .22s ease,transform .28s cubic-bezier(.2,1.4,.3,1);filter:drop-shadow(2px 5px 0 rgba(103,0,22,.12))}
+.mascot-pose.active{opacity:1;transform:scale(1) rotate(0)}
+.mascot-status{position:absolute;left:42%;top:89%;z-index:2;display:block;white-space:nowrap;background:#ffd747;color:#9d0624;border:2px solid #9d0624;border-radius:8px;padding:7px 10px;font-family:Outfit,sans-serif;font-size:clamp(11px,1vw,16px);font-weight:900;letter-spacing:.02em;transform:rotate(8deg) scale(.8);opacity:0;transition:opacity .2s ease,transform .24s ease;box-shadow:3px 3px 0 #9d0624}
+.flying-mascot.in-menu .mascot-status{opacity:1;transform:rotate(8deg) scale(1)}
+
+@media(max-width:760px){
+  .menu-section{background-size:72px 72px}
+  .section-heading,.featured-grid,.more-burgers,.snack-grid,.drink-banner{margin-left:31%}
+  .section-heading h2{font-size:clamp(39px,9.7vw,69px)}
+  .section-heading>p{font-size:12px}
+  .product-photo{height:clamp(230px,62vw,380px)}
+  .product-info{padding:18px;align-items:start}
+  .product-info h3{font-size:clamp(25px,6vw,34px)}
+  .product-info p{font-size:12px}
+  .price{font-size:25px}
+  .snack-card{min-height:0;grid-template-columns:1fr}
+  .snack-photo{height:240px}
+  .drink-banner>img{height:260px}
+  .drink-banner>div{padding:30px 20px 40px}
+  .drink-banner h2{font-size:clamp(38px,8vw,58px)}
+  .flying-mascot{width:clamp(108px,26vw,175px)}
+  .hero-speech{top:21vh;left:8%;font-size:18px;gap:5px}
+  .hero-exclamation{font-size:60px}
+  .hero-speech span:last-child{padding:8px 12px;border-width:2px;box-shadow:4px 4px 0 var(--red)}
+  .mascot-status{font-size:10px;padding:5px 7px;left:24%}
+  .menu-intro .menu-nav{width:62%;margin-left:auto;justify-content:flex-end}
+  .menu-intro .menu-nav a{flex:1 1 auto;text-align:center;padding:10px 12px;font-size:10px}
+  .menu-intro .menu-nav a span{padding-left:4px}
+}
+@media(max-width:420px){
+  .section-heading,.featured-grid,.more-burgers,.snack-grid,.drink-banner{margin-left:30%}
+  .product-info{flex-direction:column;gap:9px}
+  .product-info h3{font-size:24px}
+  .product-photo{height:235px}
+  .snack-photo{height:175px}
+  .snack-card>div:last-child{padding:16px}
+  .more-burgers strong{font-size:20px}
+  .more-burgers>div span:not(.more-title){font-size:11px}
+  .hero-speech{top:20vh;left:5%;font-size:15px}
+  .hero-exclamation{font-size:48px}
+}
+@media(prefers-reduced-motion:reduce){.hero-speech{animation:none}.mascot-pose,.mascot-status{transition:none}}
+
+/* Keep the supplied drawing intact; only the small gesture overlays change. */
+.hero-scroll{height:125vh}
+.menu-section{background:#b71037 url('./assets/mantel.svg') repeat;background-size:80px 80px}
+.menu-section:before{display:block;content:'';position:absolute;top:0;left:0;right:0;width:auto;height:13px;border:0;border-radius:0;background:repeating-linear-gradient(90deg,#9e0e31 0 5px,#d63958 5px 9px,#ad0f35 9px 13px);opacity:.75}
+.menu-intro{min-height:0;margin-left:32%;padding:46px 0 18px;align-items:flex-start;text-align:left}
+.menu-intro h1{font-size:clamp(70px,9vw,140px)}
+.menu-intro>p:not(.eyebrow){margin:16px 0 18px}
+.menu-intro .menu-nav{justify-content:flex-start}
+.marquee{margin-bottom:35px}
+.flying-mascot{width:clamp(145px,18vw,245px);aspect-ratio:222/235;transition:opacity .18s ease,width .4s ease}
+.flying-mascot:not(.in-menu){width:clamp(100px,12vw,150px)}
+.mascot-original{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;filter:drop-shadow(2px 4px 0 rgba(103,0,22,.1))}
+.mascot-speech{position:absolute;z-index:3;top:20%;right:94%;display:flex;align-items:center;gap:6px;color:var(--red);font-family:Outfit,sans-serif;font-size:clamp(16px,1.55vw,24px);font-weight:900;white-space:nowrap;transform:rotate(-7deg);animation:speech-bounce .6s cubic-bezier(.2,1.5,.3,1) both .45s;pointer-events:none}
+.mascot-speech span:last-child{background:var(--cream);border:3px solid var(--red);border-radius:25px;padding:9px 14px;box-shadow:5px 5px 0 var(--red)}
+.mascot-speech .hero-exclamation{font-size:clamp(53px,5vw,78px);letter-spacing:0;color:#ffd747;-webkit-text-stroke:2.5px var(--red);text-shadow:4px 4px 0 var(--red);line-height:.8}
+@keyframes speech-bounce{from{transform:translateY(18px) rotate(-12deg) scale(.7)}to{transform:translateY(0) rotate(-7deg) scale(1)}}
+.mascot-point-rays{position:absolute;inset:0;width:100%;height:100%;overflow:visible;fill:none;stroke:#fff8e9;stroke-width:5;stroke-linecap:round;opacity:0;transform-origin:82% 42%;transition:opacity .18s ease}
+.flying-mascot.is-pointing .mascot-point-rays{opacity:1;animation:point-pulse .6s ease-in-out infinite alternate}
+@keyframes point-pulse{to{transform:scale(1.08) rotate(4deg)}}
+.mascot-burger{position:absolute;width:24%;height:auto;left:36%;top:43%;overflow:visible;fill:none;stroke:var(--red);stroke-width:3.5;stroke-linecap:round;stroke-linejoin:round;opacity:0;filter:drop-shadow(1px 1px 0 #fff8e9);transition:opacity .18s ease}
+.flying-mascot.is-eating .mascot-burger{opacity:1;animation:little-bite .48s ease-in-out infinite alternate}
+@keyframes little-bite{to{transform:translateY(-7%) rotate(-8deg) scale(.88)}}
+@media(max-width:760px){
+  .hero-scroll{height:125vh}
+  .menu-section{background-size:72px 72px}
+  .menu-intro{min-height:0;margin-left:31%;padding:32px 0 10px}
+  .menu-intro h1{font-size:clamp(46px,11vw,73px)}
+  .menu-intro>p:not(.eyebrow){font-size:12px;line-height:1.35;margin:12px 0}
+  .marquee{margin-bottom:25px}
+  .menu-intro .menu-nav{width:100%;margin-left:0;justify-content:flex-start;gap:5px}
+  .menu-intro .menu-nav a{flex:0 1 auto;padding:7px 9px;font-size:9px}
+  .menu-intro .menu-nav a span{display:none}
+  .flying-mascot{width:clamp(108px,26vw,150px)}
+  .flying-mascot:not(.in-menu){width:clamp(94px,20vw,110px)}
+  .mascot-speech{top:20%;right:94%;font-size:clamp(13px,3.2vw,17px)}
+  .mascot-speech span:last-child{border-width:2px;padding:6px 9px;box-shadow:3px 3px 0 var(--red)}
+  .mascot-speech .hero-exclamation{font-size:42px;-webkit-text-stroke:2px var(--red);text-shadow:3px 3px 0 var(--red)}
+}
+@media(max-width:420px){.menu-intro h1{font-size:11vw}.mascot-speech{right:94%;top:20%;font-size:12px}}
+@media(prefers-reduced-motion:reduce){.mascot-speech,.flying-mascot.is-pointing .mascot-point-rays,.flying-mascot.is-eating .mascot-burger{animation:none}}
+
+/* The mascot is now a traced vector with articulated SVG parts. */
+.hero-scroll{height:135vh}
+.mascot-art{position:absolute;inset:0;width:100%;height:100%;overflow:visible;transform-origin:50% 50%;transform-style:preserve-3d;transition:transform .62s cubic-bezier(.2,.7,.2,1);filter:drop-shadow(2px 4px 0 rgba(103,0,22,.13))}
+.flying-mascot.in-menu .mascot-art{transform:perspective(460px) rotateY(-43deg) rotate(-3deg)}
+.mascot-art .mascot-point-rays{position:static;width:auto;height:auto;opacity:0;transition:opacity .2s ease}
+.flying-mascot.is-pointing .mascot-art .mascot-point-rays{opacity:1;animation:point-pulse .6s ease-in-out infinite alternate}
+.hide-order-hand{opacity:0;transition:opacity .15s ease}
+.flying-mascot.is-eating .hide-order-hand{opacity:1}
+.mascot-gaze{opacity:0;transition:opacity .35s ease}
+.flying-mascot.in-menu .mascot-gaze{opacity:1}
+.mascot-gaze .eye-cover{fill:#fff8e9}
+.mascot-feeding-arm,.mascot-mouth,.mascot-crumbs{opacity:0}
+.mascot-feeding-arm{transform-origin:170px 151px}
+.flying-mascot.is-eating .mascot-feeding-arm{opacity:1;animation:feed-bite 1.45s ease-in-out infinite}
+.flying-mascot.is-eating .mascot-mouth{opacity:1;transform-origin:94px 107px;animation:chew-mouth 1.45s ease-in-out infinite}
+.flying-mascot.is-eating .mascot-crumbs{opacity:1;animation:crumb-pop 1.45s ease-in-out infinite}
+@keyframes feed-bite{0%,22%,100%{transform:rotate(-30deg)}48%,73%{transform:rotate(0deg)}}
+@keyframes chew-mouth{0%,25%,100%{transform:scaleY(.25)}47%,58%,72%{transform:scaleY(1.25)}}
+@keyframes crumb-pop{0%,37%,100%{transform:translateY(5px);opacity:0}55%,72%{transform:translateY(-4px);opacity:1}}
+@media(max-width:760px){.hero-scroll{height:135vh}.flying-mascot.in-menu{width:clamp(128px,34vw,160px)}}
+@media(prefers-reduced-motion:reduce){.flying-mascot.is-eating .mascot-feeding-arm,.flying-mascot.is-eating .mascot-mouth,.flying-mascot.is-eating .mascot-crumbs{animation:none}}
+
+/* Preserve the mascot's 222:235 proportions in every pose. */
+.mascot-art{transform:none;transform-style:flat}
+.flying-mascot.in-menu .mascot-art{transform:rotate(-3deg)}
+.mascot-order-pose,.mascot-eat-pose{transition:opacity .18s ease}
+.mascot-order-pose{opacity:1}
+.mascot-eat-pose{opacity:0}
+.flying-mascot.is-eating .mascot-order-pose{opacity:0}
+.flying-mascot.is-eating .mascot-eat-pose{opacity:1}
+@media(max-width:760px){
+  .flying-mascot.in-menu{width:clamp(112px,30vw,140px)}
+  .section-heading,.featured-grid,.more-burgers,.snack-grid,.drink-banner{margin-left:34%;margin-right:2%}
+  .product-photo{height:clamp(218px,56vw,350px)}
+}
+@media(max-width:420px){.product-photo{height:218px}}
+
+/* Hand-drawn monochrome snacks follow the card currently beside the mascot. */
+.food-prop{display:none;transform-origin:126px 132px;transform:scale(1.18)}
+.flying-mascot[data-food="burger"] .food-burger,
+.flying-mascot[data-food="salchipapas"] .food-salchipapas,
+.flying-mascot[data-food="papas"] .food-papas,
+.flying-mascot[data-food="drink"] .food-drink{display:block}
+.flying-mascot.is-eating .mascot-eat-pose{animation:mascot-munch .95s cubic-bezier(.28,.06,.28,1) infinite}
+.flying-mascot.is-eating .food-prop{animation:snack-bounce .95s cubic-bezier(.25,.1,.3,1.2) infinite}
+.flying-mascot.is-eating .mascot-holding-arms{transform-origin:111px 145px;animation:hands-bounce .95s ease-in-out infinite}
+.flying-mascot.is-eating .mascot-eat-rays{transform-origin:188px 105px;animation:ray-pop .95s ease-in-out infinite}
+.flying-mascot.is-eating .food-bite{transform-origin:99px 113px;animation:little-fork .95s cubic-bezier(.2,.8,.3,1) infinite}
+.flying-mascot[data-food="drink"] .mascot-crumbs{display:none}
+.flying-mascot[data-food="drink"] .food-drink{transform-origin:124px 147px;animation:drink-sip 1.3s cubic-bezier(.23,.85,.24,1) infinite}
+.flying-mascot[data-food="drink"] .mascot-mouth{animation:sip-mouth 1.3s ease-in-out infinite}
+@keyframes mascot-munch{0%,100%{transform:translateY(0) rotate(0)}22%{transform:translateY(-3px) rotate(-2deg)}46%{transform:translateY(2px) rotate(1.5deg)}67%{transform:translateY(-2px) rotate(-1deg)}}
+@keyframes snack-bounce{0%,100%{transform:translate(0,1px) rotate(2deg) scale(1.18)}25%{transform:translate(-4px,-5px) rotate(-7deg) scale(1.23)}42%{transform:translate(-6px,-8px) rotate(-9deg) scale(1.13)}65%{transform:translate(-2px,-1px) rotate(4deg) scale(1.21)}}
+@keyframes hands-bounce{0%,100%{transform:translateY(0)}35%{transform:translateY(-3px)}63%{transform:translateY(1px)}}
+@keyframes ray-pop{0%,100%{opacity:.45;transform:scale(.92)}25%,50%{opacity:1;transform:scale(1.08)}}
+@keyframes little-fork{0%,100%{transform:translate(0,2px) rotate(8deg)}34%,52%{transform:translate(-5px,-5px) rotate(-12deg)}}
+@keyframes drink-sip{0%,100%{transform:rotate(2deg) scale(1.18)}28%,68%{transform:rotate(-24deg) scale(1.18)}}
+@keyframes sip-mouth{0%,100%{transform:scale(.6,.65)}35%,65%{transform:scale(.75,1)}}
+@media(prefers-reduced-motion:reduce){.flying-mascot.is-eating .mascot-eat-pose,.flying-mascot.is-eating .food-prop,.flying-mascot.is-eating .mascot-holding-arms,.flying-mascot.is-eating .mascot-eat-rays,.flying-mascot.is-eating .food-bite,.flying-mascot[data-food="drink"] .food-drink,.flying-mascot[data-food="drink"] .mascot-mouth{animation:none}}
+
+/* The mascot turns its eyes and tilts toward the food without changing width. */
+.flying-mascot.in-menu .mascot-art{transform:translateX(2px) rotate(5deg)}
+
+/* The wordmark drips are bound to scroll progress in script.js. */
+.hero-logo-wrap{position:relative}
+.hero-logo{display:block}
+.logo-melt{position:absolute;inset:0;width:100%;height:100%;overflow:visible;fill:var(--red);pointer-events:none}
+.logo-drip{transform-box:fill-box;transform-origin:50% 0}
+.drip-one{transform:scaleY(var(--melt-1,0))}
+.drip-two{transform:scaleY(var(--melt-2,0))}
+.drip-three{transform:scaleY(var(--melt-3,0))}
+.drip-four{transform:scaleY(var(--melt-4,0))}
+.drip-five{transform:scaleY(var(--melt-5,0))}
+.logo-drop{opacity:var(--melt-drops,0);transform:scale(var(--melt-drops,0));transform-box:fill-box;transform-origin:center}
+
+/* The order stays on this page until the visitor chooses pickup or delivery. */
+button{font:inherit;cursor:pointer}
+.header-order{border:0;font-family:'DM Sans',sans-serif;font-weight:800;position:relative}
+.order-count{position:absolute;top:-7px;right:-7px;display:grid;place-items:center;min-width:20px;height:20px;border-radius:50%;background:#ffd747;color:#9d0624;font-size:10px;border:2px solid #fff8e9}
+.order-count[hidden]{display:none}
+.card-add{margin-top:18px;padding:9px 13px;border:1.5px solid var(--red);border-radius:99px;background:transparent;color:var(--red);font-size:11px;font-weight:800;letter-spacing:.02em}
+.price-action{display:flex;flex-direction:column;align-items:flex-end;gap:10px;flex:none}.price-action .card-add{margin-top:0}
+.card-add:hover,.card-add:focus-visible{background:var(--red);color:var(--cream)}
+.drink-add{display:inline-block;margin-top:25px;border:0;border-radius:99px;background:var(--red);color:var(--cream);padding:14px 21px;font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.1em}
+.drink-add span{margin-left:12px}
+.snack-card .card-add{margin-top:10px}
+.more-burgers b{display:flex;align-items:center;justify-content:flex-end;gap:7px}
+.more-add{width:26px;height:26px;flex:none;display:grid;place-items:center;border:1.5px solid #fff8e9;border-radius:50%;background:transparent;color:#fff8e9;font-size:17px;line-height:1}
+.more-add:hover,.more-add:focus-visible{background:#fff8e9;color:var(--red)}
+@media(min-width:761px){.more-burgers>div{grid-template-columns:1fr 1.6fr 95px}}
+footer button{padding:0;border:0;background:none;color:inherit;text-decoration:underline;text-underline-offset:5px;font-weight:700}
+footer div p:last-child{font-size:13px;opacity:.8;margin-bottom:0}
+body.order-open{overflow:hidden}
+.order-overlay[hidden],.fulfillment-detail[hidden],.order-error[hidden]{display:none}
+.order-overlay{position:fixed;inset:0;z-index:100;display:flex;justify-content:flex-end;background:rgba(41,10,15,.58);backdrop-filter:blur(4px)}
+.order-panel{width:min(500px,100%);height:100%;height:100dvh;display:grid;grid-template-rows:auto minmax(0,1fr) auto;background:var(--cream);color:var(--ink);box-shadow:-20px 0 60px rgba(41,10,15,.25)}
+.order-panel-header{display:flex;justify-content:space-between;align-items:start;gap:20px;padding:26px 28px 20px;border-bottom:1px solid rgba(157,22,38,.15)}
+.order-step{font-size:10px;font-weight:900;letter-spacing:.19em;color:var(--red);margin:0 0 12px}
+.order-panel-header h2{font-family:Outfit,sans-serif;color:var(--red);font-size:39px;letter-spacing:-.07em;line-height:1;margin:0}
+.order-close{width:38px;height:38px;display:grid;place-items:center;border:1px solid rgba(157,22,38,.25);border-radius:50%;background:transparent;color:var(--red);font-size:29px;line-height:1}
+.order-panel-content{overflow-y:auto;padding:24px 28px 32px;overscroll-behavior:contain}
+.order-menu-group{margin:0 0 24px}
+.order-menu-group h3{font-family:Outfit,sans-serif;font-size:21px;color:var(--red);margin:0 0 7px}
+.order-menu-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:11px 0;border-bottom:1px solid rgba(157,22,38,.15)}
+.order-menu-row strong{display:block;font-size:14px}.order-menu-row small{display:block;color:#775d57;font-size:11px;margin-top:3px}
+.order-quantity{display:flex;align-items:center;gap:7px;flex:none}.order-quantity span{min-width:18px;text-align:center;font-size:13px;font-weight:800}
+.order-quantity button{width:29px;height:29px;border:1.5px solid var(--red);border-radius:50%;background:transparent;color:var(--red);font-size:18px;line-height:1}
+.order-quantity button:hover,.order-quantity button:focus-visible{background:var(--red);color:var(--cream)}
+.order-quantity button:disabled{opacity:.3;cursor:default}
+.order-second-step{margin-top:34px}
+.fulfillment-options{border:0;padding:0;margin:0;display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.fulfillment-options label{display:flex;gap:8px;align-items:start;min-height:77px;padding:13px 10px;border:1.5px solid rgba(157,22,38,.25);border-radius:10px;font-size:12px;font-weight:800;cursor:pointer}
+.fulfillment-options label:has(input:checked){border-color:var(--red);background:#fff1df}
+.fulfillment-options input{accent-color:var(--red);margin:2px 0 0}.fulfillment-options small{display:block;font-size:10px;line-height:1.3;font-weight:500;margin-top:5px}
+.fulfillment-detail{margin:12px 0 22px;padding:13px;border-radius:10px;background:#fff1df;font-size:12px;line-height:1.4}
+.fulfillment-detail p{margin:4px 0 0}.fulfillment-detail label{display:block;font-weight:800;color:var(--red);margin-bottom:7px}
+.order-field{display:block;font-size:12px;font-weight:800;margin-top:15px}.order-field span{color:#806863;font-weight:500}
+.order-field input,.order-field textarea,.fulfillment-detail input{display:block;width:100%;border:1px solid rgba(157,22,38,.25);border-radius:8px;background:white;color:var(--ink);padding:11px 12px;font:inherit;font-weight:500;font-size:13px;margin-top:7px;resize:vertical}
+.order-field input:focus,.order-field textarea:focus,.fulfillment-detail input:focus{outline:2px solid var(--red);outline-offset:2px}
+.order-panel-footer{padding:18px 28px 22px;border-top:1px solid rgba(157,22,38,.15);background:var(--cream)}
+.order-total{font-family:Outfit,sans-serif;font-size:21px;font-weight:800;color:var(--red)}
+.order-panel-footer p{font-size:11px;line-height:1.35;margin:5px 0 12px}.order-error{color:#9d0624;font-weight:800}
+.order-send{width:100%;padding:15px;border:0;border-radius:99px;background:var(--red);color:var(--cream);font-size:13px;font-weight:900}
+.order-send:hover,.order-send:focus-visible{background:#a8002b}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+@media(max-width:760px){.price-action{align-items:flex-start}.product-info .card-add{font-size:10px;padding:8px 10px}.snack-card .card-add{font-size:10px}.order-panel-header{padding:20px 20px 17px}.order-panel-content{padding:20px}.order-panel-footer{padding:16px 20px 20px}}
+@media(max-width:420px){.fulfillment-options{gap:7px}.fulfillment-options label{font-size:11px;padding:10px 7px}.fulfillment-options small{font-size:9px}}
+
+/* Product photos open a light gallery; its video is loaded only after selection. */
+.product-photo,.snack-photo,.drink-photo{position:relative}
+.photo-open{position:absolute;inset:0;z-index:2;width:100%;border:0;padding:0;background:transparent;cursor:zoom-in;display:flex;align-items:flex-end;justify-content:flex-end;text-align:right}
+.photo-open span{display:inline-block;margin:0 15px 15px;padding:10px 13px;border-radius:99px;background:#fff8e9;color:#c00032;font-size:10px;font-weight:900;letter-spacing:.1em;box-shadow:0 4px 16px rgba(41,10,15,.14)}
+.photo-open:hover span,.photo-open:focus-visible span{background:#ffd747}
+.photo-open:focus-visible,.more-preview:focus-visible,.more-gallery:focus-visible{outline:3px solid #ffd747;outline-offset:-4px}
+.more-burgers>div{grid-template-columns:64px minmax(0,.8fr) minmax(0,1.6fr) 95px}
+.more-preview{width:56px;height:56px;position:relative;border:2px solid rgba(255,248,233,.72);border-radius:8px;overflow:hidden;background:#fff8e9;padding:0;cursor:zoom-in}
+.more-preview img{width:100%;height:100%;object-fit:cover}
+.more-preview span{position:absolute;right:0;bottom:0;padding:0 4px;color:#c00032;background:#fff8e9;font-size:14px;font-weight:900}
+.more-gallery{display:block;margin-top:4px;padding:0;border:0;background:none;color:#ffd747;font:inherit;font-size:11px;font-weight:800;text-align:left;text-decoration:underline;text-underline-offset:3px;cursor:pointer}
+.drink-banner>.drink-photo{padding:0;display:block;overflow:hidden;min-height:600px}
+.drink-banner>.drink-photo img{width:100%;height:100%;object-fit:cover}
+body.media-open{overflow:hidden}
+.media-overlay[hidden]{display:none}
+.media-overlay{position:fixed;inset:0;z-index:120;display:grid;place-items:center;padding:22px;background:rgba(45,8,18,.72);backdrop-filter:blur(7px)}
+.media-dialog{width:min(850px,100%);max-height:calc(100dvh - 44px);overflow:auto;background:#fff8e9;color:#251b1b;border-radius:16px;box-shadow:0 28px 80px rgba(25,0,9,.35)}
+.media-header{display:flex;align-items:center;justify-content:space-between;gap:20px;padding:20px 25px 16px}
+.media-kicker{font-size:10px;letter-spacing:.18em;color:#c00032;font-weight:900}
+.media-header h2{font:900 clamp(25px,4vw,42px)/1 Outfit,sans-serif;color:#c00032;letter-spacing:-.06em;margin:6px 0 0}
+.media-close{width:40px;height:40px;flex:none;border:1px solid rgba(192,0,50,.25);border-radius:50%;background:transparent;color:#c00032;font-size:28px;line-height:1;cursor:pointer}
+.media-content{padding:0 25px 23px}
+.media-stage{height:min(56vh,520px);min-height:240px;position:relative;overflow:hidden;border-radius:11px;background:#eedfce}
+.media-stage img,.media-stage video{display:block;position:absolute;inset:0;width:100%;height:100%;object-fit:contain}
+.media-stage video{background:#1d1212}
+.media-thumbs{display:flex;gap:9px;justify-content:center;margin-top:13px}
+.media-thumb{width:68px;height:68px;position:relative;overflow:hidden;border:2px solid transparent;border-radius:8px;padding:0;background:#e6c9b7;cursor:pointer}
+.media-thumb.active{border-color:#c00032}
+.media-thumb img{width:100%;height:100%;object-fit:cover}
+.media-play{position:absolute;inset:0;display:grid;place-items:center;color:#fff8e9;background:rgba(45,8,18,.3);font-size:22px;text-shadow:0 1px 5px #1d1212}
+.media-note{font-size:12px;line-height:1.45;color:#665250;margin:12px 0 0;text-align:center}
+.media-source{display:block;width:max-content;margin:6px auto 0;color:#c00032;font-size:11px;font-weight:800;text-decoration:underline;text-underline-offset:3px}
+.media-source[hidden]{display:none}
+@media(max-width:760px){.more-burgers>div{grid-template-columns:54px minmax(0,1fr) auto;gap:4px 10px;align-items:center}.more-burgers>div>.more-preview{grid-column:1;grid-row:1/3;width:50px;height:50px}.more-burgers>div>strong{grid-column:2;grid-row:1;font-size:22px}.more-burgers>div>span{grid-column:2/4;grid-row:2}.more-burgers>div>b{grid-column:3;grid-row:1;font-size:14px}.drink-banner>.drink-photo{height:320px;min-height:0}.media-overlay{padding:9px}.media-dialog{max-height:calc(100dvh - 18px)}.media-header{padding:16px 17px 13px}.media-content{padding:0 14px 18px}.media-stage{height:min(51vh,450px);min-height:200px}.media-thumb{width:60px;height:60px}.photo-open span{font-size:9px;padding:8px 10px}}

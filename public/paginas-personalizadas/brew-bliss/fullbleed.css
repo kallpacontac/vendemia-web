@@ -1,0 +1,603 @@
+:root{
+  --coffee:#503124;
+  --deep:#332219;
+  --cream:#f7f0e7;
+  --paper:#fffaf3;
+  --ink:#4c3024;
+  --line:#cbb5a0;
+  --accent:#c98e66;
+}
+html,body{width:100%;margin:0;overflow-x:hidden}
+body{background:var(--cream)}
+.site-tools{
+  position:fixed;z-index:30;top:0;left:0;right:0;
+  width:100%;max-width:none;height:76px;margin:0;
+  padding:15px clamp(18px,3vw,48px);
+  display:flex;justify-content:flex-end;align-items:center;
+  pointer-events:none;background:none;
+}
+.site-wordmark{display:none}
+.language-toggle{
+  pointer-events:auto;background:rgba(255,250,243,.94);
+  border:1px solid rgba(110,72,52,.25);box-shadow:0 4px 20px rgba(51,34,25,.08);
+  padding:10px 15px;font-size:12px;
+}
+.stage{
+  display:grid;grid-template-columns:45% 55%;gap:0;
+  width:100%;min-height:100svh;margin:0;padding:0;
+  align-items:stretch;overflow:hidden;
+}
+.phone,.phone-menu{
+  position:relative;align-self:stretch;transform:none;zoom:1;
+  width:100%;height:auto;min-height:max(100svh,760px);
+  flex:none;padding:0;border:0;border-radius:0;
+  background:none;box-shadow:none;overflow:hidden;
+}
+.phone:before,.phone:after,.status-bar,.home-indicator{display:none!important}
+.phone-screen{width:100%;height:100%;min-height:inherit;border-radius:0;overflow:hidden}
+.splash-screen{background:var(--coffee);color:#fff9ef}
+.menu-screen{background:#f3eee8;color:var(--ink)}
+.welcome-content{
+  position:absolute;z-index:3;
+  top:clamp(76px,9vh,130px);
+  left:clamp(25px,4vw,72px);right:clamp(25px,4vw,72px);
+  margin:0;text-align:right;
+}
+.welcome-content h1{
+  margin:0;font-size:clamp(52px,5.3vw,88px);
+  line-height:.95;letter-spacing:-.06em;font-weight:500;
+}
+.welcome-content h1 em{
+  font-family:'Caveat',cursive;
+  font-size:1.35em;line-height:.82;font-weight:600;
+}
+.address{
+  margin:18px 0 0;color:#ead8c8;
+  font-size:clamp(12px,1vw,16px);line-height:1.4;
+}
+.welcome-art{
+  position:absolute;z-index:1;
+  left:-3%;right:-9%;bottom:4%;
+  width:auto;height:min(70vh,650px);
+  color:#fff9ef;transform:none;
+}
+.welcome-art svg{width:100%;height:100%;filter:none}
+.splash-assembly{transform-origin:55% 65%}
+.splash-water .water-line{fill:none}
+.splash-water .water-drop{fill:currentColor;stroke:none}
+.opening-hours{
+  position:absolute;z-index:3;
+  left:clamp(22px,4vw,65px);bottom:20%;
+  margin:0;color:#f7e9db;
+  font-size:clamp(11px,1.05vw,16px);line-height:1.45;
+}
+.splash-arrow{
+  position:absolute;z-index:5;
+  left:clamp(22px,4vw,65px);bottom:5%;
+  width:51px;height:51px;border-radius:50%;
+  background:var(--paper);
+}
+.splash-arrow svg{width:24px;height:24px}
+.loader{
+  position:absolute;z-index:4;top:50%;left:50%;
+  width:min(88%,650px);height:auto;aspect-ratio:560/360;
+  transform:translate(-50%,-50%);opacity:0;pointer-events:none;
+}
+.pour-illustration{
+  position:absolute;inset:0;width:100%;height:100%;
+  color:#fff9ef;stroke:currentColor;stroke-linecap:round;stroke-linejoin:round;
+}
+.loader span{
+  position:absolute;left:10%;right:auto;bottom:-5%;
+  width:46%;font-family:'Caveat',cursive;
+  font-size:clamp(24px,2.4vw,40px);text-align:center;
+  color:#fff9ef;
+}
+.water-stream{stroke-dasharray:100;stroke-dashoffset:100}
+.water-swirl{opacity:.2}
+.pour-drop{opacity:0}
+.phase-exit .welcome-content{animation:hero-title-out .5s ease-in both}
+.phase-exit .welcome-art{animation:hero-art-out .65s ease-in both}
+.phase-exit .opening-hours,.phase-exit .splash-arrow{animation:fade-out .25s ease both}
+.phase-loading .welcome-content,.phase-loading .welcome-art,
+.phase-loading .opening-hours,.phase-loading .splash-arrow{opacity:0;pointer-events:none}
+.phase-loading .loader{opacity:1;animation:loader-in .35s ease-out both}
+.phase-loading .pour-illustration{animation:none}
+.phase-loading .pour-action{transform-origin:284px 139px;animation:hand-and-cup 2.1s ease-in-out infinite}
+.phase-loading .receiving-cup{transform-origin:188px 195px;animation:receiving-sway 2.1s ease-in-out infinite}
+.phase-loading .pour-drop{animation:water-drop .8s ease-in infinite}
+.phase-loading .drop-two{animation-delay:.32s}
+.phase-reveal .loader{animation:fade-out .25s ease both}
+.phase-reveal .welcome-content{animation:hero-title-in .75s cubic-bezier(.15,.7,.25,1) both}
+.phase-reveal .welcome-art{animation:hero-art-in 1s cubic-bezier(.15,.7,.25,1) both}
+.phase-reveal .opening-hours,.phase-reveal .splash-arrow{animation:fade-in .45s ease .6s both}
+.phase-reveal .splash-water .water-line{
+  stroke-dasharray:900;stroke-dashoffset:900;
+  animation:splash-draw 1s ease-out .32s forwards;
+}
+.phase-reveal .splash-water .water-two{animation-delay:.42s}
+.phase-reveal .splash-water .water-three{animation-delay:.52s}
+.phase-reveal .splash-water .water-four{animation-delay:.62s}
+.phase-reveal .splash-water .water-drop{animation:drop-pop .6s cubic-bezier(.2,.7,.2,1) .7s both}
+.phase-reveal .splash-water .water-drop:nth-of-type(2){animation-delay:.8s}
+.phase-reveal .splash-water .water-drop:nth-of-type(3){animation-delay:.9s}
+@keyframes hero-title-out{to{opacity:0;transform:translateX(-120%)}}
+@keyframes hero-art-out{to{opacity:0;transform:translate(-110%,35%) rotate(-14deg)}}
+@keyframes hero-title-in{from{opacity:0;transform:translate(12px,8px)}to{opacity:1;transform:translate(0,0)}}
+@keyframes hero-art-in{from{opacity:0;transform:translate(75%,90%) rotate(12deg)}to{opacity:1;transform:translate(0,0) rotate(0)}}
+@keyframes hand-and-cup{
+  0%,100%{transform:translate(25px,-17px) rotate(7deg)}
+  45%,65%{transform:translate(-11px,12px) rotate(-9deg)}
+}
+@keyframes receiving-sway{0%,100%{transform:rotate(-2deg)}50%{transform:rotate(3deg)}}
+@keyframes water-drop{
+  0%{opacity:0;transform:translate(0,-8px)}
+  30%{opacity:1}
+  100%{opacity:0;transform:translate(-12px,25px)}
+}
+@keyframes splash-draw{to{stroke-dashoffset:0}}
+@keyframes drop-pop{
+  from{opacity:0;transform:translateY(22px) scale(.25)}
+  to{opacity:1;transform:translateY(0) scale(1)}
+}
+.menu-screen{
+  display:flex;flex-direction:column;
+  padding:clamp(30px,5vh,58px) 0 0;
+}
+.menu-header{
+  position:relative;top:auto;left:auto;right:auto;
+  flex:0 0 auto;height:auto;
+  margin:0 clamp(24px,4vw,70px);
+  display:flex;gap:12px;align-items:center;
+}
+.avatar{width:44px;height:44px;flex:0 0 44px;font-size:33px}
+.avatar span{font-size:7px;right:6px;top:5px}
+.person strong{font-size:15px}
+.person small{font-size:11px;margin-top:2px}
+.bell-button{margin-left:auto}
+.bell-button svg{width:24px;height:24px}
+.menu-intro{
+  position:relative;top:auto;left:auto;right:auto;height:auto;
+  flex:0 0 auto;
+  margin:clamp(60px,10vh,105px) clamp(24px,4vw,70px) 0;
+}
+.menu-headline{
+  font-size:clamp(39px,4vw,71px);
+  line-height:.91;letter-spacing:-.052em;
+}
+.menu-headline em{
+  font-size:1.32em;line-height:.78;
+  margin:6px 0 0 25%;white-space:nowrap;
+  border-bottom:3px solid var(--coffee);
+}
+.show-all{top:8px;right:0;font-size:clamp(11px,.95vw,15px)}
+.collection{
+  position:relative;top:auto;left:auto;right:auto;
+  flex:0 0 auto;margin:0 0 0 41%;width:59%;
+}
+.collection>span{height:15px;line-height:15px;padding-left:8px;font-size:11px}
+.collection small{font-size:11px;line-height:1.25;padding:5px 0 0 8px}
+.cards-viewport{
+  position:relative;top:auto;left:auto;right:auto;
+  flex:1;min-height:295px;height:auto;
+  width:100%;margin-top:clamp(18px,3vh,32px);
+  overflow:hidden;touch-action:pan-y;
+}
+.cards-viewport[hidden]{display:none}
+.cards-track{top:0;left:0;height:100%;gap:clamp(12px,1.6vw,24px)}
+.drink-card{
+  width:clamp(230px,21vw,325px);height:calc(100% - 8px);
+  min-height:285px;flex:0 0 clamp(230px,21vw,325px);
+  padding:18px 16px 12px;border-radius:16px;
+}
+.drink-title{font-size:clamp(20px,1.7vw,28px);max-width:85%}
+.drink-script{font-size:clamp(36px,3vw,49px);margin:4px 0 0 22px}
+.drink-art{
+  top:26%;left:14%;width:72%;height:60%;
+  stroke-width:2.5;
+}
+.favorite-card{top:16px;right:13px}
+.favorite-card svg{width:20px;height:20px}
+.drink-price{right:18px;bottom:47px;font-size:34px;padding:3px 8px}
+.order-card{left:16px;right:16px;bottom:13px;font-size:12px;padding-top:9px}
+.order-card svg{width:18px;height:18px}
+.phone-nav{
+  position:relative;z-index:5;bottom:auto;left:auto;right:auto;
+  flex:0 0 auto;width:min(440px,88%);
+  height:52px;margin:16px auto 22px;
+  border-radius:12px;padding:5px;
+}
+.phone-nav button{height:40px}
+.phone-nav button svg{width:22px;height:22px}
+.phone-nav button span:not(.bag-count){font-size:11px}
+.empty-favorites{top:60%;left:10%;right:10%;font-size:15px}
+.bag-sheet{
+  position:absolute;z-index:8;top:0;bottom:0;left:0;right:0;
+  padding:clamp(25px,4vw,70px);
+}
+.bag-header h2{font-size:46px}
+.bag-item strong{font-size:15px}
+.bag-item small,.qty,.bag-footer>div{font-size:13px}
+.bag-footer p{font-size:12px}
+.bag-empty{font-size:16px}
+.phone-toast{bottom:90px;font-size:12px;padding:12px 18px}
+.page-footer{display:none}
+@media(max-width:900px){
+  .stage{display:block}
+  .phone,.phone-menu{width:100%;min-height:0}
+  .phone-splash{height:100svh;min-height:690px}
+  .phone-menu{height:auto;min-height:860px}
+  .phone-screen{height:100%;min-height:inherit}
+  .welcome-content{top:clamp(80px,10vh,125px);left:24px;right:24px}
+  .welcome-content h1{font-size:clamp(48px,9vw,82px)}
+  .address{font-size:13px}
+  .welcome-art{height:min(72svh,650px);left:-2%;right:-6%;bottom:2%}
+  .opening-hours{left:24px;bottom:21%;font-size:12px}
+  .splash-arrow{left:24px;bottom:5%;width:50px;height:50px}
+  .loader{width:min(95%,560px)}
+  .menu-screen{min-height:860px;padding-top:38px}
+  .menu-header{margin:0 24px}
+  .menu-intro{margin:100px 24px 0}
+  .menu-headline{font-size:clamp(42px,8vw,67px)}
+  .show-all{font-size:12px}
+  .collection{margin-left:35%;width:65%}
+  .cards-viewport{min-height:340px;margin-top:25px}
+  .drink-card{width:min(69vw,310px);flex-basis:min(69vw,310px);min-height:330px}
+}
+@media(max-width:480px){
+  .welcome-content h1{font-size:clamp(48px,10vw,65px)}
+  .welcome-art{height:67svh;left:-6%;right:-2%;bottom:2%}
+  .opening-hours{bottom:18%;font-size:11px}
+  .menu-intro{margin-top:96px}
+  .menu-headline{font-size:clamp(41px,10vw,52px)}
+  .menu-headline em{margin-left:25%}
+  .collection{margin-left:31%;width:69%}
+  .drink-card{width:min(75vw,285px);flex-basis:min(75vw,285px)}
+}
+@media(prefers-reduced-motion:reduce){
+  .phase-loading .loader{opacity:0}
+  .phase-reveal .splash-water .water-line{stroke-dasharray:none;stroke-dashoffset:0}
+}
+
+/* The opening illustration occupies its own viewport; the menu follows below. */
+body.intro-active{height:100svh;overflow:hidden}
+.stage{display:block;min-height:0;overflow:visible}
+.phone,.phone-menu{display:block;width:100%;height:auto;min-height:0;transform:none!important;zoom:1!important;margin:0!important}
+.phone-splash{height:100svh;min-height:0}
+.phone-splash .phone-screen{height:100%;min-height:0}
+.phone-menu,.menu-screen{min-height:100svh}
+.phone-menu .phone-screen{height:auto}
+.site-tools{height:clamp(56px,8svh,78px)}
+.welcome-content{top:clamp(78px,10svh,112px);left:clamp(24px,5vw,80px);right:clamp(24px,5vw,80px);text-align:right}
+.welcome-content h1{font-size:clamp(42px,6.7vw,92px);line-height:.93;text-wrap:balance}
+.welcome-content h1 em{display:inline-block;font-size:1.28em;line-height:.82}
+.address{font-size:clamp(13px,1.2vw,17px);margin-top:18px}
+.welcome-art{left:auto;right:clamp(4px,3vw,48px);bottom:clamp(6px,3svh,32px);width:min(42vw,520px);height:auto;aspect-ratio:520/560}
+.welcome-art svg{width:100%;height:100%}
+.opening-hours{left:clamp(24px,5vw,80px);bottom:20%;font-size:clamp(12px,1.05vw,17px)}
+.splash-arrow{left:clamp(24px,5vw,80px);bottom:clamp(25px,5svh,52px)}
+.loader{left:59%;width:min(88vw,760px);max-height:78svh}
+.loader span{bottom:-5%;font-size:clamp(25px,3vw,40px)}
+.phase-loading .loader{opacity:1;animation:loader-in .65s cubic-bezier(.2,.7,.2,1) both}
+.phase-loading .pour-action{animation:hand-and-cup 2.4s cubic-bezier(.45,0,.55,1) infinite}
+.phase-loading .receiving-cup{animation:receiving-sway 2.4s ease-in-out infinite}
+.phase-loading .water-swirl{transform-origin:188px 195px;animation:coffee-swirl 1.25s linear infinite}
+.water-flow{opacity:0;stroke-dasharray:11 12;stroke-dashoffset:0}
+.phase-loading .water-flow{animation:pour-flow .68s linear infinite}
+.phase-reveal .welcome-content{animation:hero-title-in .85s cubic-bezier(.2,.7,.2,1) both}
+.phase-reveal .welcome-art{animation:hero-art-in 1.15s cubic-bezier(.2,.7,.2,1) both}
+.phase-reveal .opening-hours,.phase-reveal .splash-arrow{animation:fade-in .6s ease .55s both}
+@keyframes coffee-swirl{to{transform:rotate(360deg)}}
+@keyframes pour-flow{to{stroke-dashoffset:-23}}
+.menu-screen{padding-top:clamp(20px,3svh,42px)}
+.menu-intro{margin-top:clamp(30px,5svh,64px)}
+.menu-headline{font-size:clamp(39px,5vw,72px)}
+.menu-headline em{margin-left:clamp(36px,19vw,300px)}
+.cards-viewport{flex:1 1 280px;min-height:280px;margin-top:clamp(12px,2svh,24px)}
+.cards-track{transition-duration:.8s}
+.drink-card{height:calc(100% - 8px);min-height:270px}
+.phone-nav{margin:8px auto 10px}
+.bell-button{display:none}
+@media(max-width:900px){
+  .phone-splash{height:100svh;min-height:0}
+  .phone-menu,.menu-screen{height:auto;min-height:100svh}
+  .welcome-content{top:clamp(82px,11svh,112px);left:24px;right:24px}
+  .welcome-content h1{font-size:clamp(43px,8.4vw,72px)}
+  .welcome-art{left:auto;right:0;bottom:2svh;width:min(65vw,500px);height:auto}
+  .opening-hours{left:24px;bottom:20%}
+  .splash-arrow{left:24px;bottom:5svh}
+  .menu-intro{margin:clamp(62px,9svh,98px) 24px 0}
+  .menu-headline{font-size:clamp(39px,6.3vw,58px)}
+  .cards-viewport{min-height:340px}
+}
+@media(max-width:600px){
+  .welcome-content{top:clamp(115px,17svh,145px);left:22px;right:22px}
+  .welcome-content h1{font-size:clamp(39px,10.2vw,56px);letter-spacing:-.055em}
+  .welcome-content h1 em{font-size:1.26em}
+  .address{font-size:13px;margin-top:12px}
+  .welcome-art{width:112vw;right:0;bottom:0}
+  .welcome-art svg{transform:scaleY(1.5);transform-origin:center bottom}
+  .opening-hours{left:22px;bottom:15%;font-size:12px}
+  .splash-arrow{left:22px;bottom:5svh}
+  .loader{left:65%;width:min(98vw,560px)}
+  .menu-screen{padding-top:28px}
+  .menu-header{margin:0 22px}
+  .menu-intro{margin:clamp(62px,10svh,90px) 22px 0;padding-top:25px}
+  .menu-headline{font-size:clamp(36px,9vw,52px)}
+  .menu-headline em{margin-left:clamp(42px,23vw,150px)}
+  .show-all{top:0;right:0}
+  .collection{margin:4px 0 0 36%;width:64%}
+  .cards-viewport{margin-top:20px;min-height:330px}
+  .drink-card{width:min(74vw,290px);flex-basis:min(74vw,290px);min-height:320px}
+}
+@media(max-width:370px){
+  .welcome-content h1{font-size:clamp(34px,10vw,39px)}
+  .welcome-art{width:112vw;right:0;bottom:0}
+  .opening-hours{top:30%;bottom:auto}
+  .menu-headline{font-size:34px}
+  .drink-card{width:79vw;flex-basis:79vw}
+}
+@media(prefers-reduced-motion:reduce){
+  .phase-loading .loader{opacity:0}
+  .phase-reveal .welcome-content,.phase-reveal .welcome-art,.phase-reveal .opening-hours,.phase-reveal .splash-arrow{opacity:1;animation:none}
+}
+
+/* Web-native vector sequence: the spoon and coffee stroke share one angle. */
+.vector-motion .loader{left:67%;width:min(85vw,1000px);max-height:none;aspect-ratio:220/170}
+.vector-motion .loader .pour-illustration{display:none}
+.vector-loader{position:absolute;inset:0;width:100%;height:100%;overflow:visible;color:#fff8ee;stroke:currentColor}
+.vector-motion .loader span{left:0;right:auto;bottom:7%;width:50%;font-size:clamp(25px,3vw,40px)}
+.phase-loading .vector-coffee{opacity:.25}
+.vector-motion .welcome-content{left:5vw;right:auto;max-width:60%;text-align:left}
+.vector-motion .welcome-art{left:auto;right:1vw;bottom:0;width:min(35vw,420px);height:auto;aspect-ratio:217/325}
+.vector-motion .welcome-art >svg:not(.vector-splash){display:none}
+.vector-motion .welcome-art .vector-splash{width:100%;height:100%;overflow:visible;transform:none;filter:none}
+.vector-motion .phase-reveal .welcome-art{opacity:1;animation:none}
+.vector-splash-art{will-change:transform}
+@media(min-width:1100px){
+  .vector-motion .welcome-content{top:clamp(78px,9svh,135px);max-width:58%}
+  .vector-motion .welcome-content h1{font-size:clamp(72px,6.4vw,122px);line-height:.92}
+  .vector-motion .welcome-art{right:14vw;width:min(40vw,66svh)}
+}
+@media(min-width:1700px){
+  .vector-motion .welcome-content h1{font-size:min(7.1vw,136px)}
+  .vector-motion .welcome-art{right:22vw}
+}
+@media(min-width:601px) and (max-width:900px){
+  .vector-motion .welcome-content{left:4vw;right:auto;max-width:55%;text-align:left}
+  .vector-motion .welcome-art{right:0;width:min(38vw,360px)}
+}
+@media(max-width:600px){
+  .vector-motion .loader{left:68%;width:100vw;aspect-ratio:220/170}
+  .vector-motion .welcome-content{left:22px;right:22px;max-width:none;text-align:right;top:clamp(76px,11svh,98px)}
+  .vector-motion .welcome-art{left:auto;right:0;bottom:0;width:92vw;aspect-ratio:217/325}
+}
+@media(max-width:600px) and (min-aspect-ratio:1/2){
+  .vector-motion .welcome-art{right:2vw;width:min(60vw,45svh)}
+  .vector-motion .opening-hours{top:auto;bottom:20%;left:18px;font-size:10px}
+  .vector-motion .splash-arrow{left:18px;bottom:4svh;width:40px;height:40px}
+}
+@media(max-width:600px) and (max-height:500px){
+  .vector-motion .welcome-content{top:54px;left:18px;right:18px}
+  .vector-motion .welcome-content h1{font-size:clamp(24px,7vw,30px);line-height:.9}
+  .vector-motion .welcome-content h1 em{font-size:1.2em}
+  .vector-motion .address{font-size:10px;margin-top:8px}
+}
+
+/* One viewport per panel. The menu moves sideways and never pushes the nav away. */
+html,body{height:100%;overflow:hidden;overscroll-behavior:none}
+.stage{display:flex!important;flex-direction:row!important;width:200vw;height:100svh;min-height:0;overflow:visible;align-items:stretch;gap:0;padding:0;transform:translate3d(0,0,0);transition:transform .75s cubic-bezier(.22,.72,.2,1);touch-action:pan-x}
+body.menu-active .stage{transform:translate3d(-100vw,0,0)}
+.stage>.phone{display:block!important;flex:0 0 100vw;width:100vw!important;height:100svh!important;min-height:0!important;margin:0!important;overflow:hidden;transform:none!important}
+.stage>.phone>.phone-screen{height:100%;min-height:0;overflow:hidden}
+.menu-screen{display:flex;flex-direction:column;padding:clamp(18px,3svh,38px) 0 10px}
+.menu-header{margin:0 clamp(18px,4vw,70px);min-height:44px;gap:10px}
+.menu-intro{margin:clamp(25px,5svh,58px) clamp(18px,4vw,70px) 0;padding:0}
+.collection{margin-top:5px}
+.cards-viewport{flex:1 1 auto;min-height:0!important;margin-top:clamp(10px,2svh,20px);overflow:hidden;touch-action:pan-x}
+.cards-track{height:100%}
+.drink-card{height:calc(100% - 5px);min-height:0!important}
+.phone-nav{position:relative;flex:0 0 auto;bottom:auto;left:auto;right:auto;width:min(440px,calc(100% - 32px));height:52px;margin:9px auto 3px;padding:5px}
+.empty-favorites{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;max-width:340px;margin:auto;padding:24px;text-align:center;top:0;left:0;right:0;transform:none;font-size:clamp(16px,2vw,22px);line-height:1.35}
+.empty-favorites[hidden]{display:none}
+.empty-favorites svg{width:58px;height:58px;fill:none;stroke:var(--coffee);stroke-width:1.2}
+.empty-favorites strong{font-family:'Caveat',cursive;color:var(--coffee);font-size:clamp(30px,5vw,44px);line-height:.9}
+.empty-favorites p{margin:0;color:#806c60;font-size:clamp(13px,1.6vw,17px)}
+.empty-favorites button{border:1px solid var(--coffee);border-radius:24px;padding:9px 16px;background:transparent;color:var(--coffee);font-size:13px}
+.waiter-button{margin-left:auto;flex:0 0 auto;display:flex;align-items:center;gap:7px;background:var(--coffee);border:0;border-radius:30px;color:#fff8ef;padding:9px 13px;font-size:clamp(10px,1vw,13px);white-space:nowrap}
+.service-row{display:flex;justify-content:flex-end;flex:0 0 auto;margin:5px clamp(18px,4vw,70px) 0}
+.waiter-button svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:1.6}
+.bag-sheet,.loyalty-sheet{position:absolute;z-index:8;inset:0;display:flex;flex-direction:column;background:#f7f2eb;padding:clamp(24px,4vw,70px);transform:translateX(105%);transition:transform .42s cubic-bezier(.22,.72,.2,1);overflow:hidden}
+.bag-sheet.open,.loyalty-sheet.open{transform:translateX(0)}
+.loyalty-sheet .sheet-header{display:flex;justify-content:space-between;align-items:start;gap:15px;border-bottom:1px solid #d8c6b9;padding-bottom:18px}
+.bag-header button,.sheet-header button{position:absolute;top:76px;right:clamp(24px,4vw,70px);z-index:10}
+.loyalty-sheet h2{margin:0;font-family:'Caveat',cursive;font-size:clamp(36px,5vw,54px);line-height:.9;color:var(--ink)}
+.sheet-header button{border:0;background:none;color:var(--ink);padding:4px}
+.sheet-header svg{width:22px;height:22px;stroke:currentColor;stroke-width:1.6;fill:none}
+.loyalty-card{width:min(100%,520px);margin:auto auto 0;background:var(--coffee);color:#fff8ef;border-radius:24px;padding:clamp(24px,5vw,42px);box-shadow:0 20px 36px rgba(51,34,25,.16);aspect-ratio:1.65;display:flex;flex-direction:column;justify-content:space-between}
+.loyalty-mark{font-family:'Caveat',cursive;font-size:45px;line-height:.7}
+.loyalty-mark span{font-family:Arial,sans-serif;color:#d8a87e;font-size:11px;vertical-align:top}
+.loyalty-card-title{font-size:clamp(17px,3vw,27px);font-weight:700;letter-spacing:.14em}
+.loyalty-card-title small{font-size:.45em;letter-spacing:.23em}
+.loyalty-card p{margin:0;font-size:clamp(10px,1.7vw,13px)}
+.loyalty-stamps{display:flex;justify-content:space-between;gap:5px;font-size:clamp(18px,3vw,27px)}
+.loyalty-stamps span{display:grid;place-items:center;width:12%;aspect-ratio:1;border:1px solid rgba(255,248,239,.7);border-radius:50%}
+.loyalty-note{margin:18px auto auto;max-width:520px;text-align:center;font-size:12px;color:#826c5e}
+.bag-items{min-height:0;overscroll-behavior:contain}
+.bag-footer[hidden]{display:none}
+.confirm-order,.order-complete button{display:block;width:100%;margin-top:18px;padding:13px 18px;border:0;border-radius:13px;background:var(--coffee);color:#fff8ef;font-weight:700}
+.confirm-order:disabled{opacity:.45;cursor:not-allowed}
+.order-complete{min-height:100%;display:flex;align-items:center;justify-content:center;flex-direction:column;text-align:center;max-width:390px;margin:auto;gap:14px;color:var(--ink)}
+.order-complete h3{font-family:'Caveat',cursive;font-size:clamp(36px,5vw,55px);margin:0}
+.order-complete strong{font-size:28px}
+.order-complete p{font-size:14px;line-height:1.5}
+.order-check{display:grid;place-items:center;width:58px;height:58px;background:#e7d6c4;border-radius:50%;font-size:30px}
+.phone-toast{z-index:12;max-width:calc(100% - 36px);white-space:normal;text-align:center;line-height:1.3}
+@media(max-width:600px){
+  .menu-screen{padding:18px 0 9px}
+  .menu-header{margin:0 18px}
+  .person strong{font-size:13px}.person small{font-size:10px}
+  .waiter-button{padding:8px 9px;font-size:10px;gap:4px}
+  .service-row{margin:3px 18px 0}
+  .waiter-button svg{width:15px;height:15px}
+  .menu-intro{margin:clamp(23px,4svh,36px) 18px 0}
+  .menu-headline{font-size:clamp(35px,9vw,48px)}
+  .menu-headline em{margin-left:21vw}
+  .collection{margin:7px 0 0 35%;width:65%}
+  .drink-card{width:min(75vw,290px);flex-basis:min(75vw,290px)}
+  .drink-title{font-size:clamp(17px,5vw,24px)}
+  .drink-script{font-size:clamp(30px,8vw,42px)}
+  .drink-price{font-size:clamp(25px,7vw,33px);bottom:40px}
+  .loyalty-card{aspect-ratio:1.25}
+}
+@media(max-height:650px){
+  .menu-screen{padding-top:10px}
+  .menu-intro{margin-top:12px}
+  .menu-headline{font-size:clamp(30px,6svh,46px)}
+  .collection{margin-top:3px}
+  .cards-viewport{margin-top:7px}
+  .phone-nav{margin-top:5px}
+  .drink-art{top:28%;height:52%}
+}
+@media(prefers-reduced-motion:reduce){.stage,.bag-sheet,.loyalty-sheet{transition:none}}
+
+/* The language switch belongs to the main menu, outside the sliding sheets. */
+body:not(.menu-active) .language-toggle,
+body:has(.bag-sheet.open, .loyalty-sheet.open, .media-sheet.open, .qr-sheet.open) .language-toggle{display:none}
+
+.service-row{gap:8px}
+.qr-button{display:flex;align-items:center;gap:6px;border:1px solid #bba797;border-radius:30px;padding:8px 12px;background:#fffaf5;color:var(--coffee);font-size:clamp(10px,1vw,13px);white-space:nowrap}
+.qr-button svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.5}
+.qr-button:hover,.drink-preview:hover{transform:translateY(-2px)}
+
+/* Keep the hand-drawn cup, with a real-photo preview alongside it. */
+.drink-art{left:5%;top:31%;width:55%;height:48%}
+.drink-preview{position:absolute;z-index:2;top:29%;right:6%;width:40%;height:22%;display:block;overflow:hidden;border:2px solid #fffaf5;border-radius:11px;padding:0;background:#eee1d4;color:#fff;box-shadow:0 9px 18px rgba(53,34,25,.18);transform:rotate(3deg);transition:transform .2s ease,box-shadow .2s ease;cursor:pointer}
+.drink-preview:hover{transform:rotate(0) translateY(-2px);box-shadow:0 12px 22px rgba(53,34,25,.23)}
+.drink-preview img{display:block;width:100%;height:100%;object-fit:cover}
+.drink-preview::after{content:"";position:absolute;inset:45% 0 0;background:linear-gradient(transparent,rgba(24,15,12,.8))}
+.drink-preview span,.drink-preview small{position:absolute;z-index:1;left:8px}
+.drink-preview span{top:7px;left:auto;right:7px;display:grid;place-items:center;width:24px;height:24px;border-radius:50%;background:#fffaf5;color:var(--coffee);font-size:10px}
+.drink-preview small{bottom:7px;right:6px;font-size:clamp(9px,1vw,11px);font-weight:700;line-height:1.15;text-align:left}
+
+/* Media and QR use the same lateral navigation as the other menu panels. */
+.media-sheet,.qr-sheet{position:absolute;z-index:9;inset:0;display:flex;flex-direction:column;background:#f7f2eb;padding:clamp(20px,3.2vw,52px);transform:translateX(105%);transition:transform .42s cubic-bezier(.22,.72,.2,1);overflow:hidden;color:var(--ink)}
+.media-sheet.open,.qr-sheet.open{transform:translateX(0)}
+.media-sheet .sheet-header,.qr-sheet .sheet-header{display:flex;align-items:center;min-height:48px;gap:12px;border-bottom:1px solid #d8c6b9;padding-right:38px;padding-bottom:10px}
+.media-sheet .sheet-header button,.qr-sheet .sheet-header button{position:absolute;top:clamp(25px,3.2vw,57px);right:clamp(20px,3.2vw,52px)}
+.media-sheet h2,.qr-sheet h2{margin:0;font-family:'Caveat',cursive;font-size:clamp(30px,4vw,48px);line-height:1;color:var(--coffee)}
+.media-note{margin:10px 0 14px;font-size:clamp(12px,1.5vw,16px);line-height:1.35;color:#745b4c}
+.media-body{display:grid;grid-template-columns:1fr 1fr;gap:14px;flex:1;min-height:0}
+.media-photo,.media-video-wrap{position:relative;display:flex;flex-direction:column;min-height:0;margin:0}
+.media-photo img,.media-video-wrap video{display:block;flex:1;min-height:0;width:100%;height:100%;border-radius:14px;object-fit:cover;background:#e0d0c2}
+.media-photo figcaption,.media-video-wrap p{margin:7px 0 0;font-size:11px;font-weight:700;color:#7c6454}
+.media-footer{flex:0 0 auto;padding-top:10px}
+.media-footer>p{margin:0;font-size:11px;color:#7c6454}
+.media-footer .confirm-order{margin-top:10px;padding:11px 15px}
+.media-credits{display:flex;gap:16px;margin-top:10px;font-size:11px}
+.media-credits a{color:#765647;text-underline-offset:2px}
+.qr-content{flex:1;min-height:0;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:18px;text-align:center}
+.qr-content p{font-size:clamp(13px,1.8vw,18px);margin:0}
+.qr-content>a:first-of-type{display:block;width:min(44vh,280px);height:min(44vh,280px);padding:12px;border:1px solid #d8c6b9;border-radius:18px;background:#fff}
+.qr-content img{display:block;width:100%;height:100%;object-fit:contain}
+.qr-link{display:inline-flex;justify-content:center;align-items:center;border-radius:24px;padding:10px 17px;background:var(--coffee);color:#fff8ef;text-decoration:none;font-weight:700;font-size:13px}
+
+@media(max-width:600px){
+  .qr-button{padding:7px 9px;font-size:10px;gap:4px}
+  .qr-button svg{width:14px;height:14px}
+  .drink-art{top:33%;left:3%;width:58%;height:43%}
+  .drink-preview{top:31%;right:6%;width:40%;height:22%}
+  .media-sheet,.qr-sheet{padding:18px}
+  .media-sheet .sheet-header button,.qr-sheet .sheet-header button{top:20px;right:18px}
+  .media-body{grid-template-columns:1fr;grid-template-rows:1fr 1fr;gap:10px}
+  .media-note{margin:7px 0 9px}
+  .media-photo img,.media-video-wrap video{border-radius:11px}
+  .media-photo figcaption,.media-video-wrap p{margin-top:4px;font-size:10px}
+  .qr-content>a:first-of-type{width:min(58vw,240px,39svh);height:min(58vw,240px,39svh)}
+}
+@media(max-width:600px) and (min-height:740px){.drink-preview{top:34%;height:34%}}
+@media(max-height:650px){
+  .drink-preview{top:30%;height:21%}
+  .media-sheet,.qr-sheet{padding-top:12px;padding-bottom:12px}
+  .media-sheet .sheet-header button,.qr-sheet .sheet-header button{top:14px}
+  .media-sheet .sheet-header,.qr-sheet .sheet-header{min-height:42px;padding-bottom:5px}
+  .media-sheet h2,.qr-sheet h2{font-size:clamp(28px,5svh,38px)}
+  .media-note{margin:5px 0 7px}
+  .media-footer{padding-top:6px}
+  .media-footer .confirm-order{margin-top:6px;padding:8px}
+  .media-credits{margin-top:5px}
+}
+@media(prefers-reduced-motion:reduce){.media-sheet,.qr-sheet,.drink-preview{transition:none}}
+
+/* All panels keep the bottom navigation visible and share aligned headers. */
+.phone-nav{z-index:11;gap:4px}
+.phone-nav button,.phone-nav button.active{width:auto;min-width:0;flex:1 1 0}
+.phone-nav button.active{flex-grow:1.45}
+.phone-nav button span:not(.bag-count){white-space:nowrap}
+.bag-sheet,.loyalty-sheet,.media-sheet,.qr-sheet{padding-bottom:calc(82px + env(safe-area-inset-bottom))}
+.bag-header,.loyalty-sheet .sheet-header,.media-sheet .sheet-header,.qr-sheet .sheet-header{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:52px;padding:0 0 11px;border-bottom:1px solid #d8c6b9}
+.bag-header h2,.loyalty-sheet h2,.media-sheet h2,.qr-sheet h2{flex:1;min-width:0;margin:0;line-height:1}
+.bag-header button,.sheet-header button,.media-sheet .sheet-header button,.qr-sheet .sheet-header button{position:static;flex:0 0 32px;display:grid;place-items:center;width:32px;height:32px;margin:0;padding:4px;border:0;background:none;color:var(--ink)}
+.bag-header button svg,.sheet-header button svg{width:22px;height:22px}
+.bag-header button:hover,.sheet-header button:hover{background:#eadfd5;border-radius:50%}
+
+/* QR is part of the example loyalty card, rather than an unrelated panel. */
+.loyalty-card{position:relative}
+.loyalty-qr{position:absolute;right:clamp(19px,4vw,34px);top:clamp(18px,3vw,28px);display:flex;flex-direction:column;align-items:center;gap:3px;width:clamp(64px,15vw,95px);padding:5px 5px 4px;border-radius:9px;background:#fffaf3;color:var(--coffee);text-decoration:none;box-shadow:0 6px 14px rgba(26,14,9,.18)}
+.loyalty-qr img{display:block;width:100%;height:auto;aspect-ratio:1;image-rendering:pixelated}
+.loyalty-qr span{font-size:clamp(8px,1.2vw,10px);font-weight:700;white-space:nowrap}
+.loyalty-card-title{max-width:calc(100% - 76px);line-height:1.1}
+.loyalty-stamps span{color:rgba(255,248,239,.58)}
+.loyalty-stamps span.earned{color:#fff8ef;background:rgba(255,248,239,.15);border-color:#fff8ef}
+.loyalty-stamps span svg{width:64%;height:64%;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.loyalty-note{line-height:1.35}
+
+/* The payment number is explicitly a demo and can be copied with feedback. */
+.bag-item{gap:12px;padding:13px 0}
+.bag-item svg{flex:0 0 48px}
+.bag-item-info{min-width:0}
+.bag-item strong{line-height:1.25}
+.bag-item>strong:last-child{white-space:nowrap;margin-left:auto}
+.qty{gap:10px;margin-top:8px}
+.qty button{width:28px;height:28px;flex:0 0 28px}
+.qty button svg{width:13px;height:13px}
+.qty>span{min-width:12px;text-align:center}
+.bag-footer .bag-total{display:flex;align-items:center;justify-content:space-between;font-size:14px}
+.payment-demo{display:flex;flex-direction:column;gap:7px;margin-top:13px;padding:11px 12px;border:1px solid #d8c6b9;border-radius:13px;background:#fffaf5}
+.payment-meta{display:flex;flex-direction:column;gap:2px}
+.payment-meta strong{font-size:13px}
+.payment-meta small{font-size:10px;color:#846b5c}
+.payment-copy{position:relative;display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;min-height:38px;padding:6px 9px;border:1px solid #bda898;border-radius:9px;background:#f7f2eb;color:var(--coffee);overflow:hidden}
+.payment-copy>span:first-child{font-size:16px;font-weight:700;letter-spacing:.08em;font-variant-numeric:tabular-nums}
+.payment-copy-action{display:flex;align-items:center;gap:4px;font-size:11px;font-weight:700;white-space:nowrap}
+.payment-copy-action svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.payment-copy-action .check-icon{display:none}
+.payment-copy.copied{border-color:#7b956e;background:#ecf3e8;animation:copy-pop .48s cubic-bezier(.2,.7,.2,1)}
+.payment-copy.copied::after{content:"";position:absolute;right:38px;top:50%;width:20px;height:20px;border:2px solid #7b956e;border-radius:50%;transform:translateY(-50%) scale(.2);animation:copy-ring .55s ease-out forwards;pointer-events:none}
+.payment-copy.copied .copy-icon{display:none}
+.payment-copy.copied .check-icon{display:block}
+@keyframes copy-pop{0%{transform:scale(1)}35%{transform:scale(1.045)}70%{transform:scale(.985)}100%{transform:scale(1)}}
+@keyframes copy-ring{to{opacity:0;transform:translateY(-50%) scale(2.5)}}
+.bag-footer .confirm-order{margin-top:10px}
+
+@media(max-width:600px){
+  .bag-sheet,.loyalty-sheet,.media-sheet,.qr-sheet{padding-left:18px;padding-right:18px}
+  .loyalty-sheet h2{font-size:clamp(25px,7.8vw,37px)}
+  .bag-header h2{font-size:40px}
+  .loyalty-qr{width:72px;right:20px;top:20px}
+  .loyalty-card-title{max-width:calc(100% - 76px);font-size:clamp(14px,4.5vw,20px)}
+  .loyalty-card-title small{font-size:.5em}
+  .bag-item strong{font-size:13px}
+  .bag-item small{font-size:11px}
+}
+@media(max-height:650px){
+  .bag-sheet,.loyalty-sheet,.media-sheet,.qr-sheet{padding-top:12px;padding-bottom:calc(69px + env(safe-area-inset-bottom))}
+  .bag-header,.loyalty-sheet .sheet-header,.media-sheet .sheet-header,.qr-sheet .sheet-header{min-height:44px;padding-bottom:6px}
+  .loyalty-card{padding:22px}
+  .loyalty-qr{top:19px;right:19px;width:64px}
+  .payment-demo{margin-top:8px;padding:8px 9px}
+  .payment-copy{min-height:32px}
+  .bag-footer .confirm-order{margin-top:7px}
+  .bag-footer p{margin:7px 0 0}
+}
+@media(prefers-reduced-motion:reduce){.payment-copy.copied,.payment-copy.copied::after{animation:none}}

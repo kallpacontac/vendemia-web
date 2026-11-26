@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#513326">
+  <meta name="description" content="Brew Bliss Café: una experiencia animada para amantes del café.">
+  <title>Brew Bliss Café · Tu oasis de café</title>
+  <link rel="preload" href="fonts/dm-sans-subset.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="fonts/caveat-ui.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="fullbleed.css?v=43">
+</head>
+<body>
+  <svg class="defs" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
+    <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M5 12h14m-6-6 6 6-6 6"/></symbol>
+    <symbol id="i-pin" viewBox="0 0 24 24"><path d="M12 21s7-6.5 7-12A7 7 0 1 0 5 9c0 5.5 7 12 7 12Z"/><circle cx="12" cy="9" r="2.5"/></symbol>
+    <symbol id="i-card" viewBox="0 0 24 24"><rect x="2.5" y="5" width="19" height="14" rx="2.5"/><path d="M2.5 10h19M6 15h5"/></symbol>
+    <symbol id="i-qr" viewBox="0 0 24 24"><path d="M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h3v3h-3zM19 14h2v2h-2zM19 19h2v2h-2zM14 19h2v2h-2z"/></symbol>
+    <symbol id="i-heart" viewBox="0 0 24 24"><path d="M20.5 8.7c0 4.4-8.5 9.8-8.5 9.8S3.5 13.1 3.5 8.7a4.3 4.3 0 0 1 8.5-.2 4.3 4.3 0 0 1 8.5.2Z"/></symbol>
+    <symbol id="i-home" viewBox="0 0 24 24"><path d="m3 10 9-7 9 7v10H3V10Zm6 10v-7h6v7"/></symbol>
+    <symbol id="i-bag" viewBox="0 0 24 24"><path d="M5 8h14l1 12H4L5 8Zm3.5.2V6a3.5 3.5 0 0 1 7 0v2.2"/></symbol>
+    <symbol id="i-bell" viewBox="0 0 24 24"><path d="M5 17h14l-1.5-2V10a5.5 5.5 0 0 0-11 0v5L5 17Zm5 2a2 2 0 0 0 4 0"/></symbol>
+    <symbol id="i-close" viewBox="0 0 24 24"><path d="M5 5 19 19M19 5 5 19"/></symbol>
+    <symbol id="i-minus" viewBox="0 0 24 24"><path d="M5 12h14"/></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M5 12h14M12 5v14"/></symbol>
+    <symbol id="i-copy" viewBox="0 0 24 24"><rect x="8" y="8" width="11" height="12" rx="2"/><path d="M5 16H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="m4 12 5 5L20 6"/></symbol>
+    <symbol id="i-stamp-coffee" viewBox="0 0 24 24"><path d="M4 9h13v6a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5V9Zm13 1h2a2.5 2.5 0 0 1 0 5h-2M7 5c-1 1-1 2 0 3m5-3c-1 1-1 2 0 3"/></symbol>
+    <symbol id="cup-latte" viewBox="0 0 180 200"><path d="M42 51c24-11 75-13 102-2 16 7 6 16-24 19-28 3-62 1-81-5-14-5-11-9 3-12Z"/><path d="M41 61c4 37 8 91 22 112 10 11 69 14 80 1 13-21 18-75 20-113M151 69c24-5 35 4 33 20-2 17-12 26-31 27m2-36c14-4 21 1 20 10-1 10-7 15-19 16M61 178c24 8 60 8 83 1"/><path d="M68 83c-7 18-4 59 2 75m15-70c-2 24 0 48 6 67M54 43c30-9 68-8 87 0"/><path d="M62 22c8-8 16-8 23-1m-7 17c10-9 21-9 30-1m9-16c8-6 16-6 22 0"/></symbol>
+    <symbol id="cup-espresso" viewBox="0 0 180 200"><path d="M34 74c31-13 86-14 114-2 13 6 7 13-19 18-29 5-65 4-89-2-21-6-22-9-6-14Z"/><path d="M37 88c5 44 13 72 26 87 17 12 67 12 84 0 13-17 21-45 25-87m-5 10c20-4 29 4 26 17-2 12-11 18-28 20m-99 45c28 8 61 8 83 0M48 102c33 9 82 11 112 0"/><path d="M75 51c-13-11 7-18-2-30m31 30c-13-11 7-18-2-30m30 30c-13-11 7-18-2-30"/></symbol>
+    <symbol id="cup-cloud" viewBox="0 0 180 200"><path d="M45 56c25-12 76-11 99-1 14 6 5 13-21 17-27 3-54 3-78-1-19-3-19-9 0-15Z"/><path d="M42 69c4 44 11 85 24 104 13 11 67 12 79 0 14-20 20-60 23-104m-13 7c23-5 32 7 28 21-3 14-12 23-27 24M67 179c22 7 55 7 78 0"/><path d="M61 49c3-13 13-18 24-12 8-15 26-16 35-3 13-6 25 0 27 15M67 89c13 9 22 11 34 3 15-10 30-7 44 1M78 112c8 7 15 9 22 4 9-7 17-4 25 2 8 5 15 5 22-1"/><path d="M91 138c-13-12-23 5-6 18 7 6 12 10 12 10s22-15 18-25c-4-11-17-10-24-3Z"/></symbol>
+    <symbol id="cup-berry" viewBox="0 0 180 200"><path d="M39 68c29-13 83-14 111-1 13 6 5 13-20 17-29 5-63 4-85-2-19-5-20-9-6-14Z"/><path d="M42 84c4 42 13 76 24 91 15 12 65 12 81 0 12-16 19-49 24-91m-3 9c20-4 29 4 26 18-2 13-13 21-29 23M67 180c22 7 57 8 80 0"/><path d="M56 104c17 7 27 8 40 1 15-7 28-4 43 3 7 3 16 4 27-1M75 128c23 8 53 9 76 0M88 153c-10-10-16 2-8 12 6 7 12 10 12 10s17-11 14-19c-3-9-13-10-18-3Z"/><circle cx="72" cy="39" r="8"/><circle cx="90" cy="34" r="9"/><circle cx="107" cy="41" r="8"/></symbol>
+  </svg>
+
+  <header class="site-tools">
+    <div class="site-wordmark">brew bliss<span>●</span><small>CAFÉ</small></div>
+    <button type="button" id="languageToggle" class="language-toggle" aria-label="Switch to English"><b class="current-lang">ES</b><span>/</span><span class="other-lang">EN</span></button>
+  </header>
+
+  <main class="stage" aria-label="Brew Bliss Café">
+    <section class="phone phone-splash phase-loading" id="splashPhone" aria-label="Bienvenida animada">
+      <div class="phone-screen splash-screen">
+        <div class="welcome-content"><h1 data-i18n-html="welcomeTitle">Bienvenido a<br>nuestro café<br><em>refugio!</em></h1><p class="address" data-i18n="heroTagline">Tu pausa favorita empieza aquí.</p></div>
+        <div class="welcome-art" aria-hidden="true">
+          <svg class="vector-splash" viewBox="0 0 217 325" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <defs>
+              <mask id="splash-cup-mask" maskUnits="userSpaceOnUse" x="-30" y="-30" width="290" height="680" style="mask-type:alpha">
+                <g class="splash-mask-art">
+                  <rect x="-30" y="142" width="290" height="265" fill="#fff"/>
+                </g>
+              </mask>
+            </defs>
+            <g mask="url(#splash-cup-mask)"><use class="vector-splash-art" href="doodle-art.svg#hero-base"/></g>
+            <g class="water-motion" fill="none" stroke="#fff8ee" stroke-linecap="round" stroke-linejoin="round">
+              <path class="water-jet" stroke-width="4.6"/>
+              <path class="water-jet" stroke-width="4.2"/>
+              <path class="water-jet" stroke-width="4"/>
+              <path class="water-jet" stroke-width="3.4"/>
+            </g>
+            <g class="vector-splash-final" visibility="hidden"><use href="doodle-art.svg#hero-base"/></g>
+            <g class="vector-splash-drops">
+              <use href="doodle-art.svg#hero-drop-1"/><use href="doodle-art.svg#hero-drop-2"/>
+              <use href="doodle-art.svg#hero-drop-3"/><use href="doodle-art.svg#hero-drop-4"/>
+              <use href="doodle-art.svg#hero-drop-5"/><use href="doodle-art.svg#hero-drop-6"/>
+              <use href="doodle-art.svg#hero-drop-7"/><use href="doodle-art.svg#hero-drop-8"/>
+            </g>
+          </svg>
+          <svg viewBox="0 0 520 560" xmlns="http://www.w3.org/2000/svg" fill="none">
+            <g class="splash-assembly">
+              <g class="splash-water" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                <path class="water-line water-one" d="M203 340c-35-35-58-77-57-125 0-25 10-35 20-22 13 17 2 44 21 62 12 12 25 5 29 27 3 16 13 29 28 39" stroke-width="12"/>
+                <path class="water-line water-two" d="M222 341c-57-20-89-52-102-91-5-14 3-22 14-16 18 12 20 33 40 38 15 4 16-12 28-2 12 10 7 29 27 40" stroke-width="10"/>
+                <path class="water-line water-three" d="M257 342c-16-18-25-43-25-71 0-20 9-25 17-11 9 17 3 32 15 43 10 9 16 4 23 20" stroke-width="11"/>
+                <path class="water-line water-four" d="M192 329c-24-5-39-17-52-33m122 28c15-9 25-11 37-5m-88-20c-9-17-13-34-11-52" stroke-width="6"/>
+                <ellipse class="water-drop" cx="205" cy="184" rx="10" ry="17" transform="rotate(18 205 184)"/>
+                <ellipse class="water-drop" cx="252" cy="215" rx="9" ry="15" transform="rotate(-13 252 215)"/>
+                <ellipse class="water-drop" cx="303" cy="245" rx="7" ry="12" transform="rotate(16 303 245)"/>
+                <ellipse class="water-drop" cx="129" cy="200" rx="8" ry="12" transform="rotate(-18 129 200)"/>
+                <ellipse class="water-drop" cx="314" cy="300" rx="6" ry="10"/>
+              </g>
+              <g class="splash-cup" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M222 332c58-30 207-44 261-18 20 10 18 24-4 35-57 27-185 42-251 29-28-6-31-29-6-46Z" stroke-width="11"/>
+                <path d="M224 350c63-25 185-37 251-20M232 367c72 12 190-7 240-31" stroke-width="5"/>
+                <path d="M224 374c29 64 69 143 98 165 38 17 133-4 153-32 12-24 17-106 12-166M320 542c47 12 114-4 155-33" stroke-width="10"/>
+                <path d="m247 393 38 9-20 12 42 11-21 13 40 10-20 15 34 8-15 16 37 7-15 18 26 4" stroke-width="7"/>
+                <path d="M461 377c4 35 3 74-3 106m-41 28 30-10m-52 27 25-7" stroke-width="5"/>
+                <path d="M232 344c70-33 191-42 244-23m-254 50c66 22 178-2 251-26" stroke-width="3"/>
+              </g>
+            </g>
+          </svg>
+        </div>
+        <p class="opening-hours" data-i18n-html="openingHours">7 am—8 pm<br>Café<br>Batidos<br>Postres</p>
+        <button type="button" class="splash-arrow" id="splashArrow" aria-label="Explorar el menú"><svg><use href="#i-arrow"/></svg></button>
+        <div class="loader" aria-hidden="true">
+          <svg class="vector-loader" viewBox="0 0 220 170" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <g class="vector-cup" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="58" cy="82" r="32" stroke="#b38468" stroke-width="4" transform="translate(2 3)" opacity=".65"/>
+              <path d="M57 49c-18 0-32 12-33 30-2 20 13 36 32 37 20 1 35-15 36-34 1-19-15-33-35-33Z" stroke="currentColor" stroke-width="4.5"/>
+              <path d="M89 76h17c8 0 11 4 11 9-1 6-5 9-12 9H89" stroke="currentColor" stroke-width="4.5"/>
+            </g>
+            <path class="vector-coffee" d="M51 68c-11 9-12 24-3 31 8 8 20 7 27-2m-24-13c-2 7 0 12 5 15" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/>
+            <g class="vector-hand" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M92 44c-4-14 4-27 17-29 14-2 25 8 26 22 1 13-8 28-21 31-13 3-25-4-28-16-1-5 0-9 6-8Z" stroke-width="4.2"/>
+              <path d="M100 46c2-8 11-13 18-8 7 5 6 14 0 19-5 4-13 2-16-3" stroke-width="3.3"/>
+              <path d="M94 22c-9-4-13-11-8-15 5-5 17-2 25 4 7 5 9 10 9 16M102 18c-4-10-2-16 3-17 9-2 22 9 23 24" stroke-width="3"/>
+              <path d="M128 26c37 18 71 48 113 92M128 60c39 27 74 65 113 111" stroke-width="3.2"/>
+              <path class="vector-spoon" d="M108 56c-12 8-24 19-34 32-5 7-8 16-15 18-4 1-7-2-6-6" stroke-width="4.5"/>
+            </g>
+          </svg>
+          <svg class="pour-illustration" viewBox="0 0 560 360" fill="none">
+            <g class="receiving-cup" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="188" cy="195" r="67" stroke-width="8"/><path d="M255 182h31c22 1 23 26 0 28h-31" stroke-width="8"/>
+              <path class="water-swirl" d="M171 174c-21 16-25 44-7 58 17 15 46 8 54-13m-47-16c3 13 16 20 29 16" stroke-width="4"/>
+            </g>
+            <g class="pour-action" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M249 125c18-31 53-39 76-18 21 20 16 54-8 70-27 17-59 2-66-24-3-10-3-20-2-28Z" stroke-width="7"/>
+              <circle cx="284" cy="139" r="22" stroke-width="6"/>
+              <path d="M276 105c-14-19-3-27 12-24 13 2 21 10 25 20m-27-15c-17-24 2-28 21-14 9 6 13 16 14 29" stroke-width="6"/>
+              <path d="M308 111c60 28 132 79 229 169M322 150c68 49 143 113 215 181" stroke-width="6"/>
+            </g>
+            <path class="water-stream" d="M274 166c-19 18-32 33-46 56-10 17-24 27-37 30" pathLength="100" stroke="currentColor" stroke-width="9" stroke-linecap="round" stroke-dasharray="100" stroke-dashoffset="100"/>
+            <path class="water-flow" d="M274 166c-19 18-32 33-46 56-10 17-24 27-37 30" pathLength="100" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-dasharray="11 12"/>
+            <circle class="pour-drop drop-one" cx="227" cy="224" r="6" fill="currentColor"/><circle class="pour-drop drop-two" cx="213" cy="239" r="4" fill="currentColor"/>
+          </svg>
+          <span id="progressText">0%</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="phone phone-menu" id="menuPhone" aria-label="Carta de bebidas">
+      <div class="phone-screen menu-screen">
+        <div class="menu-header"><div class="avatar">B<span>●</span></div><div class="person"><strong>Brew Bliss Café</strong><small data-i18n="menuHeaderSub">Hecho para tu pausa</small></div></div>
+        <div class="menu-intro"><div class="menu-headline"><span data-i18n="oasis">Oasis de café</span><br><span data-i18n="escape">tu escape hacia</span><br><em>Brew Bliss</em></div><button class="show-all" id="showAll" type="button" data-i18n="showAll">ver todo</button></div>
+        <div class="collection"><span data-i18n="newCollection">nueva colección</span><small data-i18n-html="collectionDetails">temporada 2026<br>ofertas especiales</small></div>
+        <div class="service-row"><button type="button" class="qr-button" id="qrButton" aria-label="QR de la demo"><svg><use href="#i-qr"/></svg><span data-i18n="demoQR">QR de la demo</span></button><button type="button" class="waiter-button" id="bellButton" aria-label="Llamar al mesero"><svg><use href="#i-bell"/></svg><span data-i18n="callWaiter">Llamar al mesero</span></button></div>
+        <div class="cards-viewport" id="cardsViewport" aria-label="Bebidas destacadas"><div class="cards-track" id="cardsTrack"></div><div class="empty-favorites" id="emptyFavorites" hidden><svg><use href="#i-heart"/></svg><strong data-i18n="emptyFavoritesTitle">Tu rincón favorito</strong><p data-i18n="emptyFavorites">Toca un corazón para guardar tus favoritos.</p><button type="button" id="exploreFromFavorites" data-i18n="exploreDrinks">Explorar bebidas</button></div></div>
+        <nav class="phone-nav" aria-label="Navegación de la carta"><button type="button" id="loyaltyNav" aria-label="Tu tarjeta de fidelización"><svg><use href="#i-card"/></svg></button><button type="button" id="favoritesNav" aria-label="Favoritos"><svg><use href="#i-heart"/></svg></button><button type="button" id="homeNav" class="active" aria-label="Para ti"><svg><use href="#i-home"/></svg><span data-i18n="forYou">para ti</span></button><button type="button" id="bagNav" aria-label="Bolsa"><svg><use href="#i-bag"/></svg><span class="bag-count" id="bagCount" hidden>0</span></button></nav>
+        <div class="loyalty-sheet" id="loyaltySheet" aria-hidden="true"><div class="sheet-header"><h2 data-i18n="loyaltyTitle">Tu tarjeta de fidelización</h2><button type="button" id="closeLoyalty" aria-label="Cerrar tarjeta"><svg><use href="#i-close"/></svg></button></div><div class="loyalty-card"><a class="loyalty-qr" href="https://vendemias.com/" target="_blank" rel="noopener noreferrer" aria-label="QR de la demo: abrir vendemias.com"><img src="assets/vendemias-qr.png" alt="" width="600" height="600"><span data-i18n="demoQR">QR de la demo</span></a><div class="loyalty-mark">B<span>●</span></div><div class="loyalty-card-title">BREW BLISS <small>CAFÉ</small></div><p data-i18n="loyaltyName">Tarjeta de ejemplo · Cliente invitado</p><div class="loyalty-stamps" aria-label="4 de 8 sellos"><span class="earned"><svg aria-hidden="true"><use href="#i-stamp-coffee"/></svg></span><span class="earned"><svg aria-hidden="true"><use href="#i-stamp-coffee"/></svg></span><span class="earned"><svg aria-hidden="true"><use href="#i-stamp-coffee"/></svg></span><span class="earned"><svg aria-hidden="true"><use href="#i-stamp-coffee"/></svg></span><span><svg aria-hidden="true"><use href="#i-stamp-coffee"/></svg></span><span><svg aria-hidden="true"><use href="#i-stamp-coffee"/></svg></span><span><svg aria-hidden="true"><use href="#i-stamp-coffee"/></svg></span><span><svg aria-hidden="true"><use href="#i-stamp-coffee"/></svg></span></div><p data-i18n="loyaltyProgress">4 de 8 cafés. ¡Te faltan 4 para uno de cortesía!</p></div><p class="loyalty-note" data-i18n="loyaltyDemo">Ejemplo visual. Los sellos aún no se acumulan con los pedidos.</p></div>
+        <div class="bag-sheet" id="bagSheet" aria-hidden="true"><div class="bag-header"><h2 data-i18n="bag">Tu bolsa</h2><button type="button" id="closeBag" aria-label="Cerrar bolsa"><svg><use href="#i-close"/></svg></button></div><div class="bag-items" id="bagItems"></div><div class="bag-footer" id="bagFooter"><div class="bag-total"><span data-i18n="subtotal">Subtotal</span><strong id="bagTotal">$0.00</strong></div><div class="payment-demo"><div class="payment-meta"><strong data-i18n="payWith">Paga con Yape / Plin</strong><small data-i18n="sampleNumber">Número de ejemplo · no recibe pagos</small></div><button type="button" id="copyPayment" class="payment-copy" aria-label="Copiar número de ejemplo"><span id="paymentNumber">000 000 000</span><span class="payment-copy-action"><svg class="copy-icon"><use href="#i-copy"/></svg><svg class="check-icon"><use href="#i-check"/></svg><span id="copyLabel" data-i18n="copyNumber">Copiar</span></span></button></div><button type="button" class="confirm-order" id="confirmOrder" data-i18n="confirmOrder">Confirmar pedido de muestra</button><p data-i18n="demoNote">Pedido de demostración: no se envía al local.</p></div></div>
+        <div class="media-sheet" id="mediaSheet" aria-hidden="true"><div class="sheet-header media-header"><h2 id="mediaTitle"></h2><button type="button" id="closeMedia" aria-label="Cerrar fotos y video"><svg><use href="#i-close"/></svg></button></div><p class="media-note" id="mediaNote"></p><div class="media-body"><figure class="media-photo"><img id="mediaPhoto" alt="" decoding="async"><figcaption data-i18n="samplePhoto">Foto ilustrativa</figcaption></figure><div class="media-video-wrap"><video id="mediaVideo" controls playsinline preload="none" muted></video><p data-i18n="sampleVideo">Video de preparación ilustrativo</p></div></div><div class="media-footer"><p data-i18n="mediaDisclaimer">Material de referencia. La bebida servida puede variar.</p><button type="button" class="confirm-order" id="addFromMedia" data-i18n="order">Añadir a la bolsa</button><div class="media-credits"><a id="photoCredit" target="_blank" rel="noopener noreferrer" data-i18n="photoCredit">Foto · Pexels</a><a id="videoCredit" target="_blank" rel="noopener noreferrer" data-i18n="videoCredit">Video · Pexels</a></div></div></div>
+        <div class="qr-sheet" id="qrSheet" aria-hidden="true"><div class="sheet-header"><h2 data-i18n="demoQRTitle">Demo en tu móvil</h2><button type="button" id="closeQR" aria-label="Cerrar QR"><svg><use href="#i-close"/></svg></button></div><div class="qr-content"><p data-i18n="demoQRHelp">Escanea el código para abrir vendemias.com.</p><a href="https://vendemias.com/" target="_blank" rel="noopener noreferrer" aria-label="Abrir vendemias.com"><img src="assets/vendemias-qr.png" alt="Código QR para https://vendemias.com/" width="600" height="600"></a><a class="qr-link" href="https://vendemias.com/" target="_blank" rel="noopener noreferrer" data-i18n="openVendemias">Abrir vendemias.com ↗</a></div></div>
+        <div class="phone-toast" id="phoneToast" role="status" aria-live="polite"></div>
+      </div>
+    </section>
+  </main>
+  <script src="app.js?v=39" defer></script>
+</body>
+</html>

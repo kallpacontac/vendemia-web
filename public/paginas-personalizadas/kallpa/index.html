@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f7f8f8">
+  <meta name="description" content="Kallpa: una experiencia editorial de moda contemporánea. Descubre la colección y explora cada prenda.">
+  <title>Kallpa — Colección editorial</title>
+  <link rel="preload" as="image" href="assets/hero.webp">
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="logo-morph.css">
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#main">Ir al contenido</a>
+
+  <header class="site-header is-over-hero" id="site-header">
+    <nav class="header-left" aria-label="Navegación principal">
+      <a href="#home" data-route="home">HOME</a>
+      <a href="#catalog" data-route="catalog">CATALOG</a>
+      <a href="#footer" data-route="footer">CONTACT</a>
+    </nav>
+    <a class="header-brand" href="#home" data-route="home" aria-label="Kallpa, ir al inicio">KALLPA</a>
+    <button class="cart-trigger" id="cart-trigger" type="button" aria-haspopup="dialog" aria-controls="cart-drawer">
+      CART <span id="cart-count">0</span>
+    </button>
+  </header>
+  <div class="morph-wordmark" id="morph-wordmark" aria-hidden="true" hidden><span>KALLPA</span></div>
+
+  <main id="main">
+    <div id="home-view">
+      <section class="hero" id="home" aria-label="Campaña Kallpa">
+        <img class="hero-image" src="assets/hero.webp" alt="Modelo con prendas oscuras en un paisaje desértico bajo un cielo azul" fetchpriority="high">
+        <div class="hero-shade"></div>
+        <h1 class="hero-wordmark">KALLPA</h1>
+        <div class="hero-bottom">
+          <p>COLLECTION 01 — OUT NOW</p>
+          <a class="outline-button" href="#catalog" data-route="catalog">SHOP NOW <span aria-hidden="true">⟶</span></a>
+        </div>
+        <span class="hero-index">01 / 01</span>
+      </section>
+
+      <section class="catalog" id="catalog" aria-labelledby="catalog-heading">
+        <div class="section-heading">
+          <h2 id="catalog-heading">NEW ARRIVALS<span class="section-dot">.</span></h2>
+          <p>A limited study in shape, movement and everyday uniform.</p>
+        </div>
+        <div class="product-grid" id="product-grid"></div>
+      </section>
+    </div>
+
+    <section class="product-view" id="product-view" aria-label="Detalle de producto" hidden>
+      <div class="product-detail-shell">
+        <div class="product-info">
+          <p class="eyebrow">KALLPA / COLLECTION 01</p>
+          <h1 id="detail-name"></h1>
+          <p class="detail-price" id="detail-price"></p>
+          <div class="accordions">
+            <div class="accordion"><button type="button" aria-expanded="false">Product details <span aria-hidden="true">+</span></button><div class="accordion-content" hidden id="detail-description"></div></div>
+            <div class="accordion"><button type="button" aria-expanded="false">Size chart <span aria-hidden="true">+</span></button><div class="accordion-content" hidden>Selecciona tu talla habitual. Esta colección es una propuesta visual; las medidas finales se definirán con el producto.</div></div>
+            <div class="accordion"><button type="button" aria-expanded="false">Shipping &amp; returns <span aria-hidden="true">+</span></button><div class="accordion-content" hidden>Los detalles de envío y devoluciones se publicarán al habilitar las ventas.</div></div>
+          </div>
+        </div>
+
+        <div class="gallery" aria-label="Galería de producto">
+          <button class="gallery-arrow gallery-prev" id="gallery-prev" type="button" aria-label="Imagen anterior">←</button>
+          <div class="gallery-image-wrap"><img id="gallery-image" alt=""></div>
+          <button class="gallery-arrow gallery-next" id="gallery-next" type="button" aria-label="Imagen siguiente">→</button>
+          <span class="gallery-counter" id="gallery-counter">01 / 03</span>
+        </div>
+
+        <div class="purchase-panel">
+          <p class="eyebrow">SELECT SIZE</p>
+          <div class="size-options" id="size-options" role="group" aria-label="Seleccionar talla"></div>
+          <button class="solid-button" id="add-to-cart" type="button">ADD TO CART <span aria-hidden="true">⟶</span></button>
+          <p class="size-message" id="size-message" role="status"></p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer" id="footer">
+    <div class="newsletter">
+      <p class="eyebrow">STAY IN THE LOOP</p>
+      <h2>EVERYBODY CAN'T HAVE<br>LIMITED ITEMS<span class="section-dot">.</span></h2>
+      <p>Join the list for future drops and stories from Kallpa.</p>
+      <form id="newsletter-form" novalidate>
+        <label class="sr-only" for="newsletter-email">Tu correo electrónico</label>
+        <input id="newsletter-email" name="email" type="email" placeholder="Your email" autocomplete="email" required>
+        <button type="submit">SUBSCRIBE</button>
+      </form>
+      <p class="newsletter-message" id="newsletter-message" role="status"></p>
+    </div>
+    <div class="footer-meta">
+      <div class="footer-links" aria-label="Información"><span>TERMS</span><span>SHIPPING</span><span>REFUNDS</span><span>LEGAL</span></div>
+      <p>© KALLPA 2026 · CONCEPT STORE</p>
+      <div class="footer-social" aria-label="Redes sociales"><span>IG</span><span>YT</span><span>TT</span></div>
+    </div>
+    <div class="footer-wordmark" aria-hidden="true">KALLPA</div>
+    <p class="footer-disclaimer">Visualización de diseño. Productos, precios y carrito de muestra; compras y suscripciones aún no habilitadas.</p>
+  </footer>
+
+  <div class="cart-backdrop" id="cart-backdrop" hidden></div>
+  <aside class="cart-drawer" id="cart-drawer" role="dialog" aria-modal="true" aria-labelledby="cart-title" hidden>
+    <div class="cart-head"><h2 id="cart-title">YOUR CART <span id="cart-count-drawer">(0)</span></h2><button id="cart-close" type="button" aria-label="Cerrar carrito">×</button></div>
+    <div class="cart-items" id="cart-items"></div>
+    <div class="cart-foot"><div class="cart-total"><span>SUBTOTAL</span><strong id="cart-total">$0.00</strong></div><p>Vista de concepto. El pago se conectará más adelante.</p><button type="button" disabled>CHECKOUT COMING SOON</button></div>
+  </aside>
+</body>
+</html>

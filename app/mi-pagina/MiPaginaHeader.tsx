@@ -22,8 +22,8 @@ export default function MiPaginaHeader({ planes = false }: { planes?: boolean })
         <a href="/contacto" onClick={cerrar}><span><Monitor size={19} /></span><span><b>Páginas web a medida</b><small>Un sitio diseñado para tu negocio</small></span></a>
       </div></details>
       <a href="/mi-pagina/planes" className={planes ? 'mp-nav__activo' : undefined} onClick={cerrar}>Planes</a>
-      <a href={ancla('personalizadas')} onClick={cerrar}>Personalizadas</a>
       <a href={ancla('ejemplos')} onClick={cerrar}>Ejemplos</a>
+      <a href={ancla('personalizadas')} onClick={cerrar}>Personalizadas</a>
       <a href={ancla('como-funciona')} onClick={cerrar}>Cómo funciona</a>
       <a href={ancla('preguntas')} onClick={cerrar}>Preguntas</a>
       <a href="/contacto" onClick={cerrar}>Contacto</a>

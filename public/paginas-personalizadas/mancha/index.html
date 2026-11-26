@@ -1,0 +1,213 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f8f2e7">
+  <link rel="icon" type="image/png" href="./favicon.png">
+  <meta name="description" content="Mancha Burger Studio: burgers, salchipapas y antojos en Jesús María. Explora la carta y haz tu pedido.">
+  <title>Mancha® — Burger Studio</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Outfit:wght@500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./styles.css?v=15">
+  <script src="./script.js?v=15" defer></script>
+  <script src="./order.js" defer></script>
+  <script src="./media.js" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#carta">Ir a la carta</a>
+  <header class="site-header" id="site-header">
+    <a class="header-brand" href="#inicio" aria-label="Mancha Burger Studio, inicio"><img src="./assets/mancha-logo.png" alt="Mancha Burger Studio"></a>
+    <nav aria-label="Navegación principal">
+      <a href="#carta">La carta</a>
+      <a href="#estudio">El estudio</a>
+    </nav>
+    <button class="header-order" type="button" data-open-order>Pide aquí <span aria-hidden="true">↗</span><span class="order-count" id="order-count" hidden>0</span></button>
+  </header>
+
+  <main>
+    <section class="hero-scroll" id="inicio" aria-label="Presentación de Mancha">
+      <div class="hero-sticky">
+        <div class="hero-kicker"><span class="kicker-dot"></span> BURGER STUDIO · JESÚS MARÍA</div>
+        <div class="hero-logo-wrap">
+          <img class="hero-logo" src="./assets/mancha-logo.png" alt="Mancha Burger Studio">
+          <svg class="logo-melt" viewBox="0 0 835 390" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <path class="logo-drip drip-one" d="M39 207q15 5 30 0l-7 36q-2 14-10 14t-10-14z"/>
+            <path class="logo-drip drip-two" d="M174 229q16 5 30-2l-5 46q-1 17-12 17q-11 0-12-15z"/>
+            <path class="logo-drip drip-three" d="M317 194q8 4 17 0l-4 63q-1 19-10 19q-9 0-10-17z"/>
+            <path class="logo-drip drip-four" d="M381 197q9 4 17 0l-1 75q0 17-9 17q-10 0-10-18z"/>
+            <path class="logo-drip drip-five" d="M689 197q12 4 24 0l-4 49q-1 16-10 16q-10 0-11-16z"/>
+            <circle class="logo-drop drop-one" cx="52" cy="290" r="7"/>
+            <circle class="logo-drop drop-two" cx="324" cy="312" r="5"/>
+            <circle class="logo-drop drop-three" cx="391" cy="329" r="7"/>
+          </svg>
+        </div>
+        <div class="hero-bottom">
+          <p>Una buena mancha<br>siempre empieza con hambre.</p>
+          <a href="#carta" class="scroll-cue">Desliza para descubrir <span aria-hidden="true">↓</span></a>
+          <span class="hero-number">01 / 03</span>
+        </div>
+      </div>
+    </section>
+
+    <div class="flying-mascot" id="flying-mascot" role="img" aria-label="Mascota de Mancha acompañando la carta">
+      <div class="mascot-speech" aria-hidden="true"><span class="hero-exclamation">!</span><span>¿Qué te sirvo?</span></div>
+      <svg class="mascot-art" viewBox="0 0 222 235" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <defs>
+          <clipPath id="mascot-original-head"><rect x="0" y="0" width="222" height="88"/></clipPath>
+          <clipPath id="mascot-original-face"><rect x="68" y="75" width="49" height="26"/></clipPath>
+          <clipPath id="mascot-original-ear"><rect x="182" y="140" width="28" height="34"/></clipPath>
+        </defs>
+        <g class="mascot-order-pose">
+          <use href="./assets/mascota-vector.svg#mancha-silhouette"/>
+          <use href="./assets/mascota-vector.svg#mancha-ink"/>
+          <g class="mascot-gaze" fill="#e50025"><circle class="eye-cover" cx="73" cy="81" r="5"/><circle class="eye-cover" cx="110" cy="84" r="5"/><circle class="new-eye" cx="81" cy="81" r="3"/><circle class="new-eye" cx="118" cy="84" r="3"/></g>
+          <g class="mascot-point-rays" fill="none" stroke="#fff8e9" stroke-width="4" stroke-linecap="round"><path d="M181 91l12-12M193 105l15-4M175 77l5-15"/></g>
+        </g>
+        <g class="mascot-eat-pose">
+          <path d="M54 74C46 84 44 98 44 112C36 119 31 129 34 139C40 151 40 158 35 170C30 181 37 189 31 199C24 210 30 223 41 218C52 214 58 197 68 198C79 199 79 211 90 211C101 211 103 198 111 199C124 199 123 219 134 220C145 221 146 204 154 200C164 196 171 204 181 199C191 194 186 181 181 171C175 160 181 152 189 145C198 135 194 121 185 115C176 109 173 100 177 89C173 76 165 68 152 62Z" fill="#fff8e9"/>
+          <path d="M54 74C46 84 44 98 44 112C36 119 31 129 34 139C40 151 40 158 35 170C30 181 37 189 31 199C24 210 30 223 41 218C52 214 58 197 68 198C79 199 79 211 90 211C101 211 103 198 111 199C124 199 123 219 134 220C145 221 146 204 154 200C164 196 171 204 181 199C191 194 186 181 181 171C175 160 181 152 189 145C198 135 194 121 185 115C176 109 173 100 177 89" fill="none" stroke="#e50025" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/>
+          <g clip-path="url(#mascot-original-head)"><use href="./assets/mascota-vector.svg#mancha-silhouette"/><use href="./assets/mascota-vector.svg#mancha-ink"/></g>
+          <g clip-path="url(#mascot-original-face)"><use href="./assets/mascota-vector.svg#mancha-ink"/></g>
+          <g clip-path="url(#mascot-original-ear)"><use href="./assets/mascota-vector.svg#mancha-silhouette"/><use href="./assets/mascota-vector.svg#mancha-ink"/></g>
+          <g class="mascot-eat-rays" fill="none" stroke="#fff8e9" stroke-width="4" stroke-linecap="round"><path d="M179 89l10-14M191 103l16-8M193 119l12 2"/></g>
+          <path d="M85 104q5 4 12 0q-6 8-12 0" fill="#fff8e9" stroke="#e50025" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+          <g class="mascot-holding-arms" fill="#fff8e9" stroke="#e50025" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M56 127q-13-3-18 8q-5 12 4 20q11 8 21-1q12-11 4-21q-3-5-11-6z"/>
+            <path d="M174 116q-5 15-16 20q-10 4-17-4q-7-6-13 1q-8 10 2 20q10 9 25 7q15-1 23-13"/>
+            <path d="M49 135q4-4 10-2m80 8q8 5 15 3" fill="none" stroke-width="2.2"/>
+          </g>
+          <g class="mascot-food-position" transform="translate(0 18)">
+          <g class="food-prop food-burger" fill="#fff8e9" stroke="#e50025" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M105 113q2-18 21-18t21 18z"/>
+            <path d="M105 117h43M108 122q7-4 12 0t13 0q7-4 13 0M108 128q18 5 37 0l-2 8q-16 6-33 0z"/>
+            <path d="M107 120q6 4 12 0q6 4 13 0q7 4 14-1m-38 6q6-3 11 1q8-3 15 0q6-3 11 0" fill="none" stroke-width="1.7"/>
+            <path d="M113 104l2 2m6-5l2 2m8-2l2 2m7 2l2 2m-23 4l2 1m8-4l1 2" fill="none" stroke-width="1.7"/>
+            <path d="M110 135q16 3 34 0l4 13q-19 6-41 0z" fill="none" stroke-width="2"/>
+            <path d="M112 139l4 5m9-5l1 7m11-7l-3 6m-25 2q19 3 37 0" fill="none" stroke-width="1.5"/>
+          </g>
+          <g class="food-prop food-salchipapas" fill="#fff8e9" stroke="#e50025" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M105 120q19 7 43 0l-5 23q-17 8-32 0z"/>
+            <path d="M112 118l-1-19 6-1 2 20m3 0l2-24 6 1-1 24m5 0l6-20 5 2-4 19"/>
+            <ellipse cx="119" cy="125" rx="6" ry="3"/><ellipse cx="136" cy="127" rx="6" ry="3"/>
+            <path d="M114 105l3 1m9-5l3 1m9 3l3 2m-20 27l-2 5m11-5v7m9-7l2 5m-25 5q14 4 26 0" fill="none" stroke-width="1.5"/>
+            <path d="M117 116q4-4 10-2q5 3 3 7q-5 4-11 1q-4-2-2-6z" fill="#fff8e9" stroke-width="1.8"/><circle cx="124" cy="118" r="2.5" fill="none" stroke-width="1.5"/>
+            <path d="M115 126l3 2m16 0l4-2" fill="none" stroke-width="1.3"/>
+            <g class="food-bite"><path d="M99 116l-3-19m-4 2l8-1m-8-4l8-1" fill="none"/><path d="M94 94q5-5 9 0l1 5q-7 5-11 0z"/></g>
+          </g>
+          <g class="food-prop food-papas" fill="#fff8e9" stroke="#e50025" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M105 127q19 7 43 0l-5 19q-17 7-33 0z"/>
+            <path d="M108 119l7-5 8 5-3 9-10 1zm17 0l7-6 9 5-2 10-10 1zm-10-15l8-5 7 5-2 9-10 2z"/>
+            <path d="M111 137q15 4 31 0m-29-15l4 3m15-4l4 3m-16-17l3 2m-8 32l3 3m9-4l2 4m8-4l-2 4" fill="none" stroke-width="1.5"/>
+            <path d="M111 129l5 4m14-4l6 4m-20-22l5 2" fill="none" stroke-width="1.4"/>
+            <g class="food-bite"><path d="M95 111l-3-17m-4 2l8-1" fill="none"/><path d="M92 91l7-3 5 5-3 7-8 1z"/></g>
+          </g>
+          <g class="food-prop food-drink" fill="#fff8e9" stroke="#e50025" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M116 107v-9h19v9l8 10v29q-17 8-35 0v-29z"/>
+            <path d="M116 98h19m-17-5h15m-26 35q18 5 37 0v12q-18 5-37 0z" fill="none"/>
+            <path d="M119 132q6-4 12 0q-6 5-12 0" fill="none" stroke-width="2.5"/>
+            <path d="M109 120l5 3m25-4l3-3m-26 28q12 3 25-1m-31-9q17 5 33 0m-21-39v-4m4 4v-4m4 4v-4" fill="none" stroke-width="1.5"/>
+            <path d="M116 136l3 2m15-3l3 2m-12-7l2 3" fill="none" stroke-width="1.2"/>
+            <path d="M119 91h14" fill="none" stroke-width="4"/>
+          </g>
+          </g>
+          <g class="mascot-mouth" fill="#e50025"><ellipse cx="94" cy="107" rx="7" ry="6"/></g>
+          <g class="mascot-crumbs" fill="#e50025"><circle cx="109" cy="91" r="2.5"/><circle cx="101" cy="88" r="1.8"/><circle cx="118" cy="88" r="1.6"/></g>
+        </g>
+      </svg>
+      <span class="mascot-status" aria-hidden="true">MIRA ESTO ↗</span>
+    </div>
+
+    <section class="menu-section" id="carta">
+      <div class="menu-intro reveal">
+        <p class="eyebrow cream">BUENAS DECISIONES EMPIEZAN AQUÍ</p>
+        <h1>La carta<span class="stroke-star" aria-hidden="true">✳</span></h1>
+        <p>Lo de siempre, lo inesperado y eso que vas a querer repetir.</p>
+        <div class="menu-nav" aria-label="Categorías de la carta">
+          <a href="#burgers">Burgers <span>↗</span></a>
+          <a href="#antojos">Antojos <span>↗</span></a>
+          <a href="#bebidas">Bebidas <span>↗</span></a>
+        </div>
+      </div>
+
+      <div class="marquee" aria-hidden="true"><div>HECHO PARA MANCHARSE ✳ HECHO PARA MANCHARSE ✳ HECHO PARA MANCHARSE ✳ HECHO PARA MANCHARSE ✳</div></div>
+
+      <div class="section-heading reveal" id="burgers">
+        <div><p class="eyebrow cream">01 / LO QUE NOS MUEVE</p><h2>Nuestras <em>burgers</em></h2></div>
+        <p>Pan brioche tostado, lechuga, tomate y salsa de la casa. El resto es antojo.</p>
+      </div>
+
+      <div class="featured-grid">
+        <article class="product-card tall reveal" data-mascot-target data-food="burger">
+          <div class="product-photo"><img src="./assets/burger-clasica.webp" alt="Hamburguesa de carne con queso y vegetales" loading="lazy"><span class="photo-stamp">LA FAVORITA</span><button class="photo-open" type="button" data-gallery-open="clasica" aria-label="Ver fotos y video de La de siempre"><span>VER FOTOS + VIDEO ↗</span></button></div>
+          <div class="product-info"><div><span class="item-index">01 / BURGERS</span><h3>La de siempre</h3><p>Carne, queso cheddar y cebolla caramelizada.</p></div><div class="price-action"><span class="price">S/ 15</span><button class="card-add" type="button" data-add-item="clasica">Añadir al pedido +</button></div></div>
+        </article>
+        <article class="product-card tall reveal" data-mascot-target data-food="burger">
+          <div class="product-photo"><img src="./assets/burger-chicken.webp" alt="Hamburguesa de pollo crocante con queso y coleslaw" loading="lazy"><span class="photo-stamp">CRUNCH TIME</span><button class="photo-open" type="button" data-gallery-open="chicken" aria-label="Ver fotos y video de Chick’n Crunch"><span>VER FOTOS + VIDEO ↗</span></button></div>
+          <div class="product-info"><div><span class="item-index">02 / BURGERS</span><h3>Chick’n Crunch</h3><p>Muslo broaster jugoso, queso gouda y coleslaw.</p></div><div class="price-action"><span class="price">S/ 22</span><button class="card-add" type="button" data-add-item="chicken">Añadir al pedido +</button></div></div>
+        </article>
+      </div>
+
+      <div class="more-burgers reveal" data-mascot-target data-food="burger">
+        <span class="more-title">También en la mancha</span>
+        <div><button class="more-preview" type="button" data-gallery-open="gringa" aria-label="Ver fotos y video de Gringa"><img src="./assets/burger-gringa.webp" alt="" loading="lazy"><span aria-hidden="true">↗</span></button><strong>Gringa</strong><span>Doble carne, cheddar, cebolla blanca y pickles. <button class="more-gallery" type="button" data-gallery-open="gringa">Ver fotos y video ↗</button></span><b>S/ 22 <button class="more-add" type="button" data-add-item="gringa" aria-label="Agregar Gringa al pedido">+</button></b></div>
+        <div><button class="more-preview" type="button" data-gallery-open="mahalo" aria-label="Ver fotos y video de Mahalo"><img src="./assets/burger-mahalo.webp" alt="" loading="lazy"><span aria-hidden="true">↗</span></button><strong>Mahalo</strong><span>Doble carne, gouda, tocino y piña caramelizada. <button class="more-gallery" type="button" data-gallery-open="mahalo">Ver fotos y video ↗</button></span><b>S/ 25 <button class="more-add" type="button" data-add-item="mahalo" aria-label="Agregar Mahalo al pedido">+</button></b></div>
+        <div><button class="more-preview" type="button" data-gallery-open="baconjam" aria-label="Ver fotos y video de Bacon Jam"><img src="./assets/burger-baconjam.webp" alt="" loading="lazy"><span aria-hidden="true">↗</span></button><strong>Bacon Jam</strong><span>Doble carne, cheddar y mermelada de tocino ahumado. <button class="more-gallery" type="button" data-gallery-open="baconjam">Ver fotos y video ↗</button></span><b>S/ 25 <button class="more-add" type="button" data-add-item="baconjam" aria-label="Agregar Bacon Jam al pedido">+</button></b></div>
+      </div>
+
+      <div class="section-heading reveal" id="antojos"><div><p class="eyebrow cream">02 / PARA COMPARTIR... O NO</p><h2>Más <em>antojos</em></h2></div><p>Porque siempre queda espacio para algo más.</p></div>
+      <div class="snack-grid">
+        <article class="snack-card reveal" data-mascot-target data-food="salchipapas"><div class="snack-photo"><img src="./assets/salchipapas.webp" alt="Salchipapas con huevo, papas y salchicha" loading="lazy"><button class="photo-open" type="button" data-gallery-open="power" aria-label="Ver fotos y video de La Power"><span>VER FOTOS + VIDEO ↗</span></button></div><div><span class="item-index">SALCHIPAPAS</span><h3>La Power</h3><p>Frankfurter, chorizo, huevo y papas fritas crocantes.</p><strong>S/ 21</strong><button class="card-add" type="button" data-add-item="power">Añadir al pedido +</button></div></article>
+        <article class="snack-card reveal" data-mascot-target data-food="papas"><div class="snack-photo"><img src="./assets/papas.webp" alt="Papas Huamantanga doradas" loading="lazy"><button class="photo-open" type="button" data-gallery-open="papas" aria-label="Ver fotos y video de Papas Huamantanga"><span>VER FOTOS + VIDEO ↗</span></button></div><div><span class="item-index">PAPAS</span><h3>Papas Huamantanga</h3><p>En cubos doradas y crocantes al punto.</p><strong>S/ 10</strong><button class="card-add" type="button" data-add-item="papas">Añadir al pedido +</button></div></article>
+      </div>
+
+      <div class="drink-banner reveal" id="bebidas" data-mascot-target data-food="drink"><div class="drink-photo"><img src="./assets/chicha.webp" alt="Chicha morada embotellada de Mancha" loading="lazy"><button class="photo-open" type="button" data-gallery-open="chicha" aria-label="Ver fotos y video de la chicha morada"><span>VER FOTOS + VIDEO ↗</span></button></div><div><p class="eyebrow">03 / ALGO PARA TOMAR</p><h2>Un sorbo<br>y seguimos.</h2><p>Chicha morada, limonada de chancaca, emoliente y más.</p><button class="drink-add" type="button" data-add-item="chicha">Agregar chicha al pedido <span aria-hidden="true">↗</span></button></div></div>
+    </section>
+
+    <section class="studio-section" id="estudio">
+      <div class="studio-copy reveal"><p class="eyebrow">NOS VEMOS EN EL ESTUDIO</p><h2>Ven con hambre.<br><em>Sal con mancha.</em></h2><p>Jr. Diego de Almagro 501, Jesús María.</p><a href="https://maps.google.com/?q=Jr.+Diego+de+Almagro+501,+Jes%C3%BAs+Mar%C3%ADa,+Lima" target="_blank" rel="noopener noreferrer">Cómo llegar <span aria-hidden="true">↗</span></a></div>
+      <div class="studio-image reveal"><img src="./assets/local.webp" alt="Fachada de Mancha Burger Studio en Jesús María" loading="lazy"><span>ENCUÉNTRANOS AQUÍ ✳</span></div>
+    </section>
+  </main>
+
+  <footer><img src="./assets/mancha-logo.png" alt="Mancha Burger Studio"><div><p>Hechos para compartir.</p><button type="button" data-open-order>Arma tu pedido ↗</button><p>961 818 343</p></div><span>© Mancha Burger Studio</span></footer>
+
+  <div class="media-overlay" id="media-overlay" hidden>
+    <section class="media-dialog" role="dialog" aria-modal="true" aria-labelledby="media-title">
+      <div class="media-header"><div><span class="media-kicker">UNA MIRADA MÁS CERCA ✳</span><h2 id="media-title"></h2></div><button class="media-close" id="media-close" type="button" aria-label="Cerrar fotos y video">×</button></div>
+      <div class="media-content"><div class="media-stage" id="media-stage"></div><div class="media-thumbs" id="media-thumbs" aria-label="Fotos y video del producto"></div><p class="media-note" id="media-note"></p><a class="media-source" id="media-source" target="_blank" rel="noopener noreferrer" hidden>Ver video original en Pexels ↗</a></div>
+    </section>
+  </div>
+
+  <div class="order-overlay" id="order-overlay" hidden>
+    <aside class="order-panel" role="dialog" aria-modal="true" aria-labelledby="order-title">
+      <div class="order-panel-header">
+        <div><span class="order-step">TU PEDIDO / MANCHA</span><h2 id="order-title">¿Qué te sirvo?</h2></div>
+        <button class="order-close" id="order-close" type="button" aria-label="Cerrar pedido">×</button>
+      </div>
+      <div class="order-panel-content">
+        <p class="order-step">01 / ELIGE TUS ANTOJOS</p>
+        <div class="order-menu" id="order-menu"></div>
+        <p class="order-step order-second-step">02 / ¿CÓMO LO RECIBES?</p>
+        <fieldset class="fulfillment-options">
+          <legend class="sr-only">Forma de entrega</legend>
+          <label><input type="radio" name="fulfillment" value="pickup" checked><span>Recojo en tienda<small>Jr. Diego de Almagro 501, Jesús María</small></span></label>
+          <label><input type="radio" name="fulfillment" value="delivery"><span>Delivery<small>Cobertura y envío por confirmar</small></span></label>
+        </fieldset>
+        <div class="fulfillment-detail" id="pickup-detail"><strong>Te esperamos en Mancha.</strong><p>Te confirmamos por WhatsApp cuándo estará listo tu pedido.</p></div>
+        <div class="fulfillment-detail" id="delivery-detail" hidden><label for="delivery-address">Dirección de entrega <span aria-hidden="true">*</span></label><input id="delivery-address" type="text" autocomplete="street-address" placeholder="Calle, número, distrito y referencia"><p>Confirmaremos cobertura y costo de envío antes de preparar el pedido.</p></div>
+        <label class="order-field" for="order-name">Tu nombre <span>(opcional)</span><input id="order-name" type="text" autocomplete="name" placeholder="¿A nombre de quién?"></label>
+        <label class="order-field" for="order-when">¿Para cuándo? <span>(opcional)</span><input id="order-when" type="text" placeholder="Por ejemplo: hoy a las 7 p. m."></label>
+        <label class="order-field" for="order-notes">Notas del pedido <span>(opcional)</span><textarea id="order-notes" rows="2" placeholder="Sin cebolla, punto de cocción, etc."></textarea></label>
+      </div>
+      <div class="order-panel-footer">
+        <div class="order-total" id="order-total" aria-live="polite">Elige algo de la carta</div>
+        <p id="order-price-note">El precio de bebidas y delivery se confirma por WhatsApp.</p>
+        <p class="order-error" id="order-error" role="alert" hidden></p>
+        <button class="order-send" id="order-send" type="button">Continuar en WhatsApp ↗</button>
+      </div>
+    </aside>
+  </div>
+</body>
+</html>

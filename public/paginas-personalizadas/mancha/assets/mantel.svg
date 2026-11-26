@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80" width="80" height="80">
+  <defs>
+    <pattern id="thread" width="4" height="4" patternUnits="userSpaceOnUse">
+      <path d="M0 .5H4M.5 0V4" stroke="#ffe2d9" stroke-width=".45" opacity=".13"/>
+    </pattern>
+    <pattern id="cross" width="40" height="40" patternUnits="userSpaceOnUse">
+      <path d="M0 0H40M0 0V40" stroke="#ffb4aa" stroke-width="1.2" opacity=".16"/>
+      <path d="M2 2H38M2 2V38" stroke="#700d28" stroke-width=".8" opacity=".15"/>
+    </pattern>
+  </defs>
+  <rect width="80" height="80" fill="#b71037"/>
+  <rect width="40" height="40" fill="#c91b42"/>
+  <rect x="40" y="40" width="40" height="40" fill="#c91b42"/>
+  <rect width="80" height="80" fill="url(#thread)"/>
+  <rect width="80" height="80" fill="url(#cross)"/>
+</svg>

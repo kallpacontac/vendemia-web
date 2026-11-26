@@ -30,9 +30,9 @@ const ejemplos = [
 ] as const;
 
 const paginasPersonalizadas = [
-  { nombre: 'Mancha Burger Studio', rubro: 'Hamburguesería', imagen: '/portafolio/vendemia/mancha-burger-studio.jpg', href: 'https://mancha-burger-studio-motion.tejuegobonito.chatgpt.site/' },
-  { nombre: 'Brew Bliss Café', rubro: 'Cafetería', imagen: '/portafolio/vendemia/brew-bliss-cafe.jpg', href: 'https://brew-bliss-cafe-20261027.bloomy-ray-5046.chatgpt.site/' },
-  { nombre: 'Kallpa', rubro: 'Moda y catálogo', imagen: '/portafolio/vendemia/kallpa-editorial.jpg', href: 'https://kallpa-editorial-2026.bloomy-ray-5046.chatgpt.site/#catalog' },
+  { nombre: 'Mancha Burger Studio', rubro: 'Hamburguesería', imagen: '/portafolio/vendemia/mancha-burger-studio.jpg', href: '/ejemplos/mancha' },
+  { nombre: 'Brew Bliss Café', rubro: 'Cafetería', imagen: '/portafolio/vendemia/brew-bliss-cafe.jpg', href: '/ejemplos/brew-bliss' },
+  { nombre: 'Kallpa', rubro: 'Moda y catálogo', imagen: '/portafolio/vendemia/kallpa-editorial.jpg', href: '/ejemplos/kallpa#catalog' },
 ] as const;
 
 const pasos = [
@@ -129,7 +129,7 @@ export default function MiPaginaLanding() {
           <span className="mp-etiqueta"><span /> Tu negocio en un enlace, sin instalar apps</span>
           <h1 id="mp-titulo" aria-label="Tu página digital para recibir pedidos y reservas">Tu <span className="mp-escritura" aria-hidden="true"><span>{tecleado}</span><i /></span> digital<br /><span className="mp-hero__resto">para recibir pedidos<br />y reservas.</span></h1>
           <p>Tus clientes ven lo que ofreces, eligen sus productos o un horario y te contactan desde la misma página. Tú cambias fotos, precios y disponibilidad cuando quieras.</p>
-          <div className="mp-hero__acciones"><a className="mp-boton" href="/panel/tu-pagina">Crear mi página <ArrowRight size={19} /></a><a className="mp-boton mp-boton--borde" href="#personalizadas">Ver páginas</a></div>
+          <div className="mp-hero__acciones"><a className="mp-boton" href="/panel/tu-pagina">Crear mi página <ArrowRight size={19} /></a><a className="mp-boton mp-boton--borde" href="#ejemplos">Explorar ejemplos</a></div>
           <div className="mp-hero__nota"><Check size={16} /> Tus clientes la abren desde el celular, sin instalar nada.</div>
         </div>
         <div className="mp-hero__visual" aria-label="Vista interactiva de una página de ejemplo">
@@ -159,19 +159,6 @@ export default function MiPaginaLanding() {
 
       <div className="mp-cinta" aria-label="Tipos de negocio"><span>UNA PÁGINA PARA TU FORMA DE TRABAJAR</span><div className="mp-cinta__rubros"><span>Catálogo</span><i /> <span>Reservas</span><i /> <span>Pedidos</span><i /> <span>Canchas</span></div></div>
 
-      <section className="mp-personalizadas" id="personalizadas" aria-labelledby="mp-personalizadas-titulo">
-        <div className="mp-personalizadas__intro mp-reveal">
-          <span className="mp-sobre">SITIOS A MEDIDA</span>
-          <h2 id="mp-personalizadas-titulo">Páginas personalizadas</h2>
-          <p>Cada marca tiene su propia forma de contar su historia. Explora estos sitios completos.</p>
-        </div>
-        <div className="mp-personalizadas__grid">
-          {paginasPersonalizadas.map((pagina) => <a className="mp-personalizada mp-reveal" key={pagina.nombre} href={pagina.href} target="_blank" rel="noopener noreferrer" aria-label={`Abrir ${pagina.nombre} en una nueva pestaña`}>
-            <span className="mp-personalizada__imagen"><Image src={pagina.imagen} alt={`Vista previa de ${pagina.nombre}`} width={800} height={1000} unoptimized /></span>
-            <span className="mp-personalizada__pie"><span><small>{pagina.rubro}</small><b>{pagina.nombre}</b></span><span className="mp-personalizada__abrir" aria-hidden="true"><ArrowRight size={21} /></span></span>
-          </a>)}
-        </div>
-      </section>
 
       <section className="mp-ejemplos" id="ejemplos"><div className="mp-ejemplos__intro mp-reveal"><div><span className="mp-sobre">HECHOS CON VENDEMIA</span><h2>Páginas de ejemplo<br />en acción</h2><p>Desliza para explorar. En computadora, pasa el cursor por un celular para recorrer la página. Ábrela para probar el flujo completo; nombres y precios son ilustrativos.</p></div><div className="mp-ejemplos__controles"><button type="button" aria-label="Ver ejemplos anteriores" onClick={() => carrusel.current?.scrollBy({ left: -360, behavior: 'smooth' })}><ArrowLeft size={21} /></button><button type="button" aria-label="Ver más ejemplos" onClick={() => carrusel.current?.scrollBy({ left: 360, behavior: 'smooth' })}><ArrowRight size={21} /></button></div></div><div className="mp-ejemplos__grid" ref={carrusel}>{ejemplos.map((ejemplo) => <a key={ejemplo.nombre} href={ejemplo.href} className={`mp-ejemplo mp-ejemplo--${ejemplo.tono} mp-reveal`}><div className="mp-ejemplo__marco"><div className="mp-ejemplo__telefono"><span className="mp-ejemplo__surco" aria-hidden="true" /><div className="mp-ejemplo__pantalla"><Image src={ejemplo.imagen} alt={`Vista previa de ${ejemplo.nombre}`} width={390} height={ejemplo.alto} unoptimized /></div></div></div><div className="mp-ejemplo__pie"><span><b>{ejemplo.nombre}</b><small>{ejemplo.rubro}</small></span><span className="mp-ejemplo__flecha" aria-hidden="true"><ArrowRight size={20} /></span></div></a>)}</div></section>
 
@@ -189,6 +176,20 @@ export default function MiPaginaLanding() {
       <section className="mp-pasos" id="como-funciona"><div className="mp-pasos__layout"><div className="mp-pasos__intro mp-reveal"><h2>Lista en tres pasos</h2><p>Sin instalar programas ni contratar a un programador.</p><a href="/panel/tu-pagina">Crear mi página <ArrowRight size={18} /></a></div><ol className="mp-pasos__lista">{pasos.map((paso) => <li className="mp-reveal" key={paso.numero}><span className="mp-pasos__numero">{Number(paso.numero)}</span><div><h3>{paso.titulo}</h3><p>{paso.texto}</p></div></li>)}</ol></div></section>
 
       <section className="mp-seccion mp-funciones" aria-labelledby="mp-funciones-titulo"><div className="mp-funciones__intro mp-reveal"><span className="mp-sobre">LO IMPORTANTE, A MANO</span><h2 id="mp-funciones-titulo">Todo lo que tu página<br />puede hacer</h2><p>Una experiencia clara para tus clientes y contenido que puedes gestionar desde tu panel.</p></div><div className="mp-funciones__grid">{funciones.map(({ icono: Icono, titulo, texto }) => <div className="mp-funcion mp-reveal" key={titulo}><span className="mp-funcion__icono"><Icono size={24} /></span><div><h3>{titulo}</h3><p>{texto}</p></div></div>)}</div></section>
+
+      <section className="mp-personalizadas" id="personalizadas" aria-labelledby="mp-personalizadas-titulo">
+        <div className="mp-personalizadas__intro mp-reveal">
+          <span className="mp-sobre">SITIOS A MEDIDA</span>
+          <h2 id="mp-personalizadas-titulo">Páginas personalizadas</h2>
+          <p>Cada marca tiene su propia forma de contar su historia. Explora estos sitios completos.</p>
+        </div>
+        <div className="mp-personalizadas__grid">
+          {paginasPersonalizadas.map((pagina) => <a className="mp-personalizada mp-reveal" key={pagina.nombre} href={pagina.href} aria-label={`Abrir ${pagina.nombre}`}>
+            <span className="mp-personalizada__imagen"><Image src={pagina.imagen} alt={`Vista previa de ${pagina.nombre}`} width={800} height={1000} unoptimized /></span>
+            <span className="mp-personalizada__pie"><span><small>{pagina.rubro}</small><b>{pagina.nombre}</b></span><span className="mp-personalizada__abrir" aria-hidden="true"><ArrowRight size={21} /></span></span>
+          </a>)}
+        </div>
+      </section>
 
 
       <section className="mp-preguntas" id="preguntas"><div><span className="mp-sobre">PREGUNTAS FRECUENTES</span><h2>Lo que necesitas saber.</h2><p>Explora las demos antes de crear tu propia página.</p></div><div className="mp-preguntas__lista">{preguntas.map(({ pregunta, respuesta }) => <details key={pregunta}><summary>{pregunta}<ChevronDown size={20} /></summary><p>{respuesta}</p></details>)}</div></section>
