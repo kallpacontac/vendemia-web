@@ -17,7 +17,7 @@
  *   · `PendientesCaja`: lo anotado en este celular, en la Caja, aparte del
  *     resumen (que es lo que tiene el servidor).
  */
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { CloudOff, RefreshCw, Trash2, UploadCloud, X } from 'lucide-react';
 import { useSesion } from '@/components/panel/Sesion';
 import { useAvisar } from '@/components/panel/Avisos';
@@ -84,13 +84,18 @@ export function ProveedorSinConexion({ children }: { children: React.ReactNode }
   const ops = useMemo(() => todas.filter((o) => !companyId || o.company === companyId), [todas, companyId]);
   const pendientes = todas.filter((o) => o.estado === 'pendiente').length;
 
+  /** «Falta instalar…» una vez por sesión: la subida se reintenta cada 30 s. */
+  const faltaAvisado = useRef(false);
   const subirAhora = useCallback(() => {
     if (!usuario) return;
     void subirPendientes(usuario).then((r) => {
       if (r.subidas) avisar(`✓ Se subi${r.subidas === 1 ? 'ó 1 operación anotada' : `eron ${r.subidas} operaciones anotadas`} sin conexión.`, 'ok');
       r.notas.forEach((n) => avisar(n, 'espera'));
       if (r.rechazadas) avisar(`${r.rechazadas === 1 ? '1 operación no se pudo subir' : `${r.rechazadas} operaciones no se pudieron subir`}: míralas arriba.`, 'error');
-      if (r.faltaInstalar) avisar('Lo anotado sin conexión espera: falta instalar la 0025 en la base.', 'error');
+      if (r.faltaInstalar && !faltaAvisado.current) {
+        faltaAvisado.current = true;
+        avisar('Parte de lo anotado sin conexión espera: falta instalar en la base la 0025 o la 0036 (pagos).', 'error');
+      }
     });
   }, [usuario, avisar]);
 

@@ -15,7 +15,8 @@
  * usuario: si entra otra persona, no sube lo de la anterior a su nombre.
  */
 
-export type TipoOperacion = 'ticket' | 'cobro' | 'gasto' | 'ingreso';
+/** `pago` = «Registrar pago», la seña o lo que faltaba (datos 0036). */
+export type TipoOperacion = 'ticket' | 'cobro' | 'gasto' | 'ingreso' | 'pago';
 
 export interface Operacion {
   id: string;

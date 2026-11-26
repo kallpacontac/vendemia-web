@@ -11,6 +11,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { Check, Plus, Trash2, X } from 'lucide-react';
 import { useAvisar } from './Avisos';
+import { useSesion } from './Sesion';
+import { aplicarOAnotar } from '@/lib/panel/sinConexion/subir';
 import { supabase } from '@/lib/supabase/client';
 import { diaMes, soles } from '@/lib/panel/format';
 import { guiarA } from '@/lib/panel/guiar';
@@ -69,6 +71,7 @@ export default function IngresosCaja({
   incrustado?: boolean;
 }) {
   const avisar = useAvisar();
+  const { session, rol } = useSesion();
   const [abierto, setAbierto] = useState(false);
   const [importe, setImporte] = useState('');
   const [concepto, setConcepto] = useState('');
@@ -110,12 +113,31 @@ export default function IngresosCaja({
   async function guardar() {
     if (falta || guardando) return;
     setGuardando(true);
-    const { error } = await supabase().rpc('caja_ingreso_guardar', {
-      p_company: companyId,
-      // employee_id solo si se eligió: así sigue funcionando sin la 0026 (lo ignoraría igual).
-      // Con barbero, suma a su comisión salvo que el dueño lo apague (datos 0031).
-      p_datos: { dia, concepto: concepto.trim(), importe: monto, metodo, sede: pideSede ? sede : '', ...(barbero ? { employee_id: barbero, suma_comision: suma } : {}) },
-    });
+    // employee_id solo si se eligió: así sigue funcionando sin la 0026 (lo ignoraría igual).
+    // Con barbero, suma a su comisión salvo que el dueño lo apague (datos 0031).
+    const datos = { dia, concepto: concepto.trim(), importe: monto, metodo, sede: pideSede ? sede : '', ...(barbero ? { employee_id: barbero, suma_comision: suma } : {}) };
+    // Dueño o administrador: con id propio (no se apunta dos veces) y sin conexión al celular (datos 0025).
+    const via = await aplicarOAnotar(
+      {
+        company: companyId,
+        usuario: session?.user?.id ?? '',
+        tipo: 'ingreso',
+        datos,
+        resumen: { texto: `Ingreso · ${concepto.trim()}`, importe: monto, metodo },
+      },
+      rol,
+    );
+    if (via.como === 'anotada' || via.como === 'error') {
+      setGuardando(false);
+      if (via.como === 'error') return avisar(via.mensaje, 'error');
+      avisar(`Sin conexión: el ingreso de ${soles(monto)} quedó guardado en este celular y se sube solo al volver la conexión.`, 'espera');
+      limpiar();
+      setAbierto(false);
+      return;
+    }
+    const { error } = via.como === 'aplicada'
+      ? { error: null }
+      : await supabase().rpc('caja_ingreso_guardar', { p_company: companyId, p_datos: datos });
     setGuardando(false);
     if (error) {
       avisar(/caja_ingreso_guardar/.test(error.message) ? 'Falta instalar los ingresos de caja (modules/datos/sql/0023_ingresos_de_caja.sql).' : error.message, 'error');

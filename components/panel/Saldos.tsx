@@ -25,6 +25,7 @@ import { ChevronDown, Wallet } from 'lucide-react';
 import Paginacion, { usePaginacion } from './Paginacion';
 import { useSesion } from './Sesion';
 import { useAvisar, useComando } from './Avisos';
+import { aplicarOAnotar } from '@/lib/panel/sinConexion/subir';
 import { useCargar } from './useCargar';
 import FotoDelPago from './FotoDelPago';
 import { exigeFoto, fotoParaCobro, fotoParaMetodo, type FotoPago } from '@/lib/panel/fotoPago';
@@ -139,7 +140,7 @@ export function RegistrarPago({
 }) {
   const comando = useComando();
   const avisar = useAvisar();
-  const { companyId, cobroFoto } = useSesion();
+  const { companyId, cobroFoto, session, rol } = useSesion();
   const [monto, setMonto] = useState(sugerido > 0 ? String(sugerido) : '');
   const [metodo, setMetodo] = useState<MetodoPago>('cash');
   const [enviando, setEnviando] = useState(false);
@@ -165,22 +166,46 @@ export function RegistrarPago({
       return;
     }
     setEnviando(true);
-    const r = await comando(
-      'registrar_pago',
+    const importe = Math.round(valor * 100) / 100;
+    const fotoCobro = conFoto ? fotoParaCobro(foto) : undefined;
+    const datos = {
+      lead_id: leadId,
+      monto: importe,
+      metodo_pago: metodo,
+      ...(appointmentId ? { appointment_id: appointmentId } : {}),
+      // Postgres vuelve a comprobarla (datos 0010): repetida o de fuera, no entra.
+      ...(fotoCobro ? { foto: fotoCobro } : {}),
+    };
+    const exito = `Pago de ${soles(valor)} registrado${conFoto && foto ? ' con su foto' : ''}.`;
+    // Dueño o administrador: con id propio, y sin conexión al celular (datos 0036, SinConexion.tsx).
+    const via = await aplicarOAnotar(
       {
-        lead_id: leadId,
-        monto: Math.round(valor * 100) / 100,
-        metodo_pago: metodo,
-        ...(appointmentId ? { appointment_id: appointmentId } : {}),
-        // Postgres vuelve a comprobarla (datos 0010): repetida o de fuera, no entra.
-        ...(conFoto && foto ? { foto: fotoParaCobro(foto) } : {}),
+        company: companyId ?? '',
+        usuario: session?.user?.id ?? '',
+        tipo: 'pago',
+        datos,
+        foto: conFoto ? foto?.local ?? null : null,
+        resumen: { texto: 'Pago a cuenta', importe, metodo },
       },
-      `Pago de ${soles(valor)} registrado${conFoto && foto ? ' con su foto' : ''}.`,
-      alGuardar,
+      rol,
     );
+    let r: unknown;
+    if (via.como === 'aplicada') {
+      avisar(exito, 'ok');
+      alGuardar();
+      r = via.r;
+    } else if (via.como === 'anotada') {
+      avisar(`Sin conexión: el pago de ${soles(valor)} quedó guardado en este celular y se sube solo al volver la conexión.`, 'espera');
+      r = true;
+    } else if (via.como === 'error') {
+      avisar(via.mensaje, 'error');
+    } else {
+      r = await comando('registrar_pago', datos, exito, alGuardar);
+    }
     setEnviando(false);
     if (r !== undefined) {
-      alPagado?.(Math.round(valor * 100) / 100);
+      // Guardado en el celular: aún no existe en el servidor, así que sin nota de venta ni boleta todavía.
+      if (via.como !== 'anotada') alPagado?.(importe);
       alCerrar();
     }
   }

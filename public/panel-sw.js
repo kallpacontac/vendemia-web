@@ -38,7 +38,7 @@ const ESPERA_PAGINA_MS = 6000;
 const EDAD_MAXIMA_MS = 4 * 24 * 3600 * 1000;
 
 /**
- * Las funciones de Supabase que SOLO LEEN. Comprobado el 19-nov-2026 en su definición: `stable`, o
+ * Las funciones de Supabase que SOLO LEEN. Comprobado el 19-nov-2026 (y el 26-nov las nuevas) en su definición: `stable`, o
  * sin insert/update/delete. Añadir aquí solo después de mirarla.
  */
 const LECTURAS = new Set([
@@ -50,6 +50,9 @@ const LECTURAS = new Set([
   'gcal_panel', 'loyalty_avisos_guardados_leer', 'loyalty_birthday_get', 'loyalty_role', 'menu_orden',
   'mesa_panel_historial', 'mesa_panel_mesas', 'mesa_panel_usa', 'mesa_panel_vivo', 'mi_agenda_sin_cita_datos',
   'mi_negocio', 'mi_por_cobrar', 'mis_clientes',
+  // 26-nov-2026: las que la Caja, la Agenda y Mi agenda usan desde el 20-nov (todas `stable`, sin escrituras).
+  'caja_latido', 'crm_etapas_a_mano', 'ingresos_con_comision', 'lector_esperando', 'lector_estado', 'lector_nuevos',
+  'lector_por_asignar', 'loyalty_member_nota_get', 'mi_adelantos', 'mi_pagos', 'wa_avisos_panel',
 ]);
 
 self.addEventListener('install', () => self.skipWaiting());

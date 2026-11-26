@@ -38,10 +38,12 @@ export const puedeSinConexion = (rol: RolNegocio | null | undefined): boolean =>
 type ErrorPg = { code?: string; message?: string } | null;
 
 const faltaFuncion = (e: ErrorPg) =>
-  e?.code === 'PGRST202' || /sin_conexion_aplicar/.test(e?.message ?? '');
+  e?.code === 'PGRST202' || /sin_conexion_aplicar/.test(e?.message ?? '')
+  // Una base sin la migración de ESE tipo (p. ej. `pago` sin la 0036): es lo mismo, falta instalar.
+  || /no se puede anotar sin conexión/.test(e?.message ?? '');
 
-/** Sin la 0025: no se vuelve a preguntar en 5 minutos. */
-let sinFuncionHasta = 0;
+/** Sin la migración de un tipo (0025, o la 0036 para `pago`): ese tipo no se vuelve a probar en 5 minutos. */
+const sinFuncionHasta = new Map<string, number>();
 
 export type Resultado<T> =
   | { como: 'aplicada'; r: T }
@@ -79,7 +81,7 @@ export async function aplicarOAnotar<T = Record<string, unknown>>(nueva: NuevaOp
   const op = { ...nueva, id: nueva.id ?? nuevoId(), ocurrioEn: nueva.ocurrioEn ?? new Date().toISOString() };
   // Con foto tomada sin red, o sin red ya sabida: directo a la bandeja (la foto se sube antes).
   if (op.foto || sinRed()) return anotar(op);
-  if (Date.now() < sinFuncionHasta) return { como: 'antigua' };
+  if (Date.now() < (sinFuncionHasta.get(op.tipo) ?? 0)) return { como: 'antigua' };
   try {
     const { data, error } = await llamar(op);
     if (!error) {
@@ -91,7 +93,7 @@ export async function aplicarOAnotar<T = Record<string, unknown>>(nueva: NuevaOp
       return anotar(op);
     }
     if (faltaFuncion(error)) {
-      sinFuncionHasta = Date.now() + 5 * 60_000;
+      sinFuncionHasta.set(op.tipo, Date.now() + 5 * 60_000);
       return { como: 'antigua' };
     }
     if (error.code === '55000') return { como: 'antigua' };
@@ -185,13 +187,16 @@ async function subirTodas(usuario: string): Promise<Subida> {
       return res;
     }
     if (error && faltaFuncion(error)) {
+      // Esta queda esperando (no se rechaza) y las demás siguen: puede faltar solo la de su tipo.
       res.faltaInstalar = true;
-      return res;
+      continue;
     }
-    if (error?.code === '55000' && (op.tipo === 'cobro' || op.tipo === 'gasto')) {
-      // La agenda la lleva el bot: por su cola, donde marcar_pagado y upsert_gasto con id son idempotentes.
+    if (error?.code === '55000' && (op.tipo === 'cobro' || op.tipo === 'gasto' || op.tipo === 'pago')) {
+      // La agenda la lleva el bot: por su cola, donde marcar_pagado, upsert_gasto con id y registrar_pago
+      // (por el id del comando) no cuentan dos veces.
       try {
         if (op.tipo === 'cobro') await encolarSinEsperar(op.company, 'marcar_pagado', { tipo: 'appointment', ...datos });
+        else if (op.tipo === 'pago') await encolarSinEsperar(op.company, 'registrar_pago', datos);
         else await encolarSinEsperar(op.company, 'upsert_gasto', { gasto: datos.gasto });
         await quitarOperacion(op.id);
         res.subidas++;
