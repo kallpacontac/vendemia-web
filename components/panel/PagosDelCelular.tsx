@@ -38,6 +38,11 @@ export interface PagoLeido {
   asignado?: string | null;
   motivo?: string | null;
   por_asignar?: boolean;
+  /** lector 0003: el barbero que lo eligió al cobrar, lo que sobró y cómo quedó la foto. */
+  quien?: string | null;
+  sobra?: number | null;
+  foto_ok?: string | null;
+  foto_url?: string | null;
 }
 export interface Opcion { cita_id: string; cliente: string; servicio: string; slot: string; falta: number; exacto: boolean }
 /** Un cobro con evidencia (foto del barbero o captura de la página) que todavía no tiene su Yape. */
@@ -56,7 +61,20 @@ const MOTIVO: Record<string, string> = {
   orden: 'por orden: compruébalo',
   partes: 'pago en partes, por el nombre',
   elegido: 'lo elegiste tú',
+  barbero: 'lo eligió el barbero al cobrar',
 };
+/** Lo que hay que mirar de un Yape que eligió el barbero (lector 0003). '' = nada. */
+export function ojoDelBarbero(a: PagoLeido): string {
+  if (a.motivo !== 'barbero') return '';
+  const partes: string[] = [];
+  if (a.foto_ok === 'sin_foto') partes.push('sin foto');
+  else if (a.foto_ok === 'sin_leer') partes.push('la foto no se pudo leer');
+  else if (a.foto_ok === 'revisar') partes.push('la foto parece editada');
+  if (Number(a.sobra ?? 0) > 0) partes.push(`${soles(Number(a.sobra))} de más`);
+  return partes.length ? `${partes.join(' · ')}: compruébalo` : '';
+}
+const porQue = (a: PagoLeido) =>
+  a.motivo === 'barbero' && a.quien ? `lo eligió ${a.quien} al cobrar` : MOTIVO[a.motivo ?? ''] ?? '';
 // «7:49 pm», como el resto del panel (el «p. m.» del navegador se parte en dos líneas en el celular).
 const horaLima = (iso: string) =>
   hora12(new Date(iso).toLocaleTimeString('en-GB', { timeZone: 'America/Lima', hour: '2-digit', minute: '2-digit', hour12: false }));
@@ -127,7 +145,7 @@ export function textoCuadre(dia: string, pagos: PagoLeido[]): string {
     horaLima(a.cuando), a.origen, bonito(a.nombre) || 'Sin nombre', ((a.centimos ?? 0) / 100).toFixed(2),
     a.cita_id ? a.cliente || 'cita' : a.por_asignar ? 'POR ASIGNAR' : 'sin cita',
     a.cita_id ? RESULTADO[a.resultado ?? ''] ?? 'asignado' : '',
-    a.cita_id ? MOTIVO[a.motivo ?? ''] ?? '' : '',
+    a.cita_id ? [porQue(a), ojoDelBarbero(a)].filter(Boolean).join(' · ') : '',
   ].join('\t'));
   return [`Pagos del celular de cobros · ${dia}`, ['Hora', 'App', 'Pagó', 'Monto', 'Cita', 'Quedó', 'Por qué'].join('\t'), ...filas].join('\n');
 }
@@ -143,6 +161,7 @@ export function PagosDelCelularVista({ dia, pagos, sinLeer = 0, dudas, esperando
   const solos = pagos.filter((a) => a.cita_id && a.asignado === 'auto').length;
   const sinCita = pagos.filter((a) => !a.cita_id && !a.por_asignar).length;
   const porOrden = pagos.filter((a) => a.cita_id && a.motivo === 'orden').length;
+  const delBarbero = pagos.filter((a) => a.cita_id && ojoDelBarbero(a)).length;
   // El cuadre por app: lo que hay que ver igual en los movimientos de Yape, Plin, Sip o el banco.
   const porApp = Object.entries(pagos.reduce<Record<string, { n: number; total: number }>>((m, a) => {
     const k = a.origen || 'Otro';
@@ -161,6 +180,7 @@ export function PagosDelCelularVista({ dia, pagos, sinLeer = 0, dudas, esperando
               : 'Ninguno este día'}
           </small>
           {porOrden > 0 && <small className="ldp-ambar">{porOrden === 1 ? '1 asignado por orden: compruébalo' : `${porOrden} asignados por orden: compruébalos`}</small>}
+          {delBarbero > 0 && <small className="ldp-ambar">{delBarbero === 1 ? '1 Yape elegido por el barbero: compruébalo' : `${delBarbero} Yapes elegidos por el barbero: compruébalos`}</small>}
           {esperando.length > 0 && <small className="ldp-ambar">{esperando.length === 1 ? '1 cobro esperando su Yape' : `${esperando.length} cobros esperando su Yape`}</small>}
         </span>
         <ChevronDown size={18} aria-hidden="true" style={{ transform: abierta ? 'rotate(180deg)' : undefined, flex: 'none' }} />
@@ -235,6 +255,7 @@ export function PagosDelCelularVista({ dia, pagos, sinLeer = 0, dudas, esperando
               ? `${a.cliente || 'Una cita'} · ${RESULTADO[a.resultado ?? ''] ?? 'asignado'}`
               : a.por_asignar ? 'Elige su cita arriba' : 'Sin cita · venta suelta';
             const ordenado = !!a.cita_id && a.motivo === 'orden';
+            const ojo = a.cita_id ? ojoDelBarbero(a) : '';
             return (
               <li key={a.id}>
                 <button type="button" className="ldp-fila" disabled={!a.cita_id} aria-expanded={a.cita_id ? detalle === a.id : undefined}
@@ -244,13 +265,17 @@ export function PagosDelCelularVista({ dia, pagos, sinLeer = 0, dudas, esperando
                     <b>{bonito(a.nombre) || 'Sin nombre'}</b>
                     <small>{a.cita_id && <Check size={12} aria-hidden="true" />} {a.origen} · {destino}</small>
                     {ordenado && <small className="ldp-ambar">Por orden: compruébalo</small>}
+                    {a.cita_id && a.motivo === 'barbero' && (
+                      <small className={ojo ? 'ldp-ambar' : undefined}>Lo eligió {a.quien || 'el barbero'}{ojo ? ` · ${ojo}` : ''}</small>
+                    )}
                   </span>
                   <span className="ldp-monto">{soles((a.centimos ?? 0) / 100)}</span>
                 </button>
                 {detalle === a.id && a.cita_id && (
                   <div className="ldp-detalle">
                     <span>
-                      {a.servicio}{a.slot ? ` · ${hora12(a.slot.slice(11, 16))}` : ''} · {MOTIVO[a.motivo ?? ''] ?? (a.asignado === 'auto' ? 'asignado solo' : 'lo asignaste tú')}
+                      {a.servicio}{a.slot ? ` · ${hora12(a.slot.slice(11, 16))}` : ''} · {porQue(a) || (a.asignado === 'auto' ? 'asignado solo' : 'lo asignaste tú')}
+                      {a.foto_url && <> · <a href={a.foto_url} target="_blank" rel="noopener">ver foto</a></>}
                     </span>
                     <button type="button" className="ldp-quitar" onClick={() => alQuitar(a)}>No era de esta cita</button>
                   </div>

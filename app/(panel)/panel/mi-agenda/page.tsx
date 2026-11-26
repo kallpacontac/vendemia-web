@@ -54,6 +54,7 @@ import QrDelClub from '@/components/panel/QrDelClub';
 import { useSesion } from '@/components/panel/Sesion';
 import { useAvisar, useComando } from '@/components/panel/Avisos';
 import FotoDelPago from '@/components/panel/FotoDelPago';
+import YapesQueLlegaron, { type LectorCobro, type YapeLlegado } from '@/components/panel/YapesQueLlegaron';
 import { supabase } from '@/lib/supabase/client';
 import { achicarImagen } from '@/lib/achicarImagen';
 import { guiarA } from '@/lib/panel/guiar';
@@ -709,6 +710,12 @@ function CobrarSaldo({ companyId, cita, falta, alCerrar, alListo }: {
   const [foto, setFoto] = useState<FotoPago | null>(null);
   const [leyendo, setLeyendo] = useState(false);
   const [enviando, setEnviando] = useState(false);
+  // Con celular de cobros (lector 0003): el barbero elige el Yape de su cliente. null = sin lector.
+  const [lector, setLector] = useState<LectorCobro | null>(null);
+  const [yape, setYape] = useState<YapeLlegado | null>(null);
+  const [sinYape, setSinYape] = useState(false);
+  const digital = metodo === 'yape' || metodo === 'plin';
+  const conLector = digital && !!lector && !sinYape;
 
   function alFoto(f: FotoPago | null) {
     setFoto(f);
@@ -716,7 +723,27 @@ function CobrarSaldo({ companyId, cita, falta, alCerrar, alListo }: {
     if (f && (f.metodo === 'yape' || f.metodo === 'plin')) setMetodo(f.metodo);
   }
 
+  async function cobrarConYape() {
+    if (!yape) return;
+    setEnviando(true);
+    const { data, error } = await supabase().rpc('lector_cobrar_con', {
+      p_company: companyId,
+      p_cita: cita.id,
+      p_aviso: yape.id,
+      p_foto: fotoParaCobro(foto) ?? null,
+    });
+    setEnviando(false);
+    if (error) {
+      avisar(error.message, 'error');
+      return;
+    }
+    const r = data as { cobrado: number; sobra: number };
+    avisar(`Cobro anotado: ${soles(Number(r.cobrado))}${Number(r.sobra) > 0 ? ` · ${soles(Number(r.sobra))} de más quedan para la caja` : ''}`, 'ok');
+    alListo();
+  }
+
   async function cobrar() {
+    if (conLector) return cobrarConYape();
     if (!foto) return;
     setEnviando(true);
     const { error } = await supabase().rpc('empleado_cobrar_saldo', {
@@ -734,7 +761,14 @@ function CobrarSaldo({ companyId, cita, falta, alCerrar, alListo }: {
     alListo();
   }
 
-  const otroMonto = foto?.monto != null && Math.abs(foto.monto - falta) >= 0.01;
+  // Con un Yape elegido, la foto se compara con ESE Yape; si no, con lo que falta.
+  const esperado = conLector && yape ? yape.centimos / 100 : falta;
+  const otroMonto = foto?.monto != null && Math.abs(foto.monto - esperado) >= 0.01;
+  const pideFoto = !conLector || lector?.foto === 'obligatoria';
+  const listo = conLector ? !!yape && (!pideFoto || !!foto) : !!foto;
+  const texto = conLector && yape
+    ? yape.centimos / 100 < falta ? `Cobré ${soles(yape.centimos / 100)} a cuenta` : `Cobré ${soles(falta)}`
+    : `Cobré ${soles(falta)}`;
   return (
     <div className="mag-cobro">
       <b>Cobrar {soles(falta)}</b>
@@ -753,17 +787,31 @@ function CobrarSaldo({ companyId, cita, falta, alCerrar, alListo }: {
           </button>
         ))}
       </div>
-      <FotoDelPago companyId={companyId} foto={foto} obligatoria alFoto={alFoto} alLeyendo={setLeyendo} />
+      {digital && !sinYape && (
+        <YapesQueLlegaron companyId={companyId} citaId={cita.id} elegido={yape} alElegir={setYape} alInfo={setLector} />
+      )}
+      {conLector && yape && yape.centimos / 100 > falta && (
+        <small className="mag-cobro__ojo">Ese Yape es de {soles(yape.centimos / 100)}: se cobran {soles(falta)} y lo demás lo ve la caja.</small>
+      )}
+      {(!conLector || yape) && (
+        <FotoDelPago companyId={companyId} foto={foto} obligatoria={pideFoto} alFoto={alFoto} alLeyendo={setLeyendo} />
+      )}
+      {conLector && yape && pideFoto && !foto && <small>Toma la foto del Yape en el celular de tu cliente.</small>}
       {metodo === 'cash' && !foto && <small>En efectivo, fotografía el dinero o el recibo.</small>}
       {otroMonto && (
         <small className="mag-cobro__ojo">
-          La foto dice {soles(foto?.monto ?? 0)}, pero se anotan {soles(falta)}. Si no cuadra, no cobres y avisa a la caja.
+          La foto dice {soles(foto?.monto ?? 0)}, pero {conLector && yape ? `el Yape es de ${soles(esperado)}` : `se anotan ${soles(falta)}`}. Si no cuadra, no cobres y avisa a la caja.
         </small>
       )}
       <div className="mia-acciones" style={{ justifyContent: 'flex-start' }}>
-        <button type="button" className="btn btn-primary btn-sm" disabled={!foto || leyendo || enviando} onClick={() => void cobrar()}>
-          <Check size={14} /> {enviando ? 'Anotando…' : `Cobré ${soles(falta)}`}
+        <button type="button" className="btn btn-primary btn-sm" disabled={!listo || leyendo || enviando} onClick={() => void cobrar()}>
+          <Check size={14} /> {enviando ? 'Anotando…' : texto}
         </button>
+        {conLector && !yape && (
+          <button type="button" className="btn btn-ghost btn-sm" disabled={enviando} onClick={() => setSinYape(true)}>
+            No aparece: cobrar con la foto
+          </button>
+        )}
         <button type="button" className="btn btn-ghost btn-sm" disabled={enviando} onClick={alCerrar}>
           Cancelar
         </button>

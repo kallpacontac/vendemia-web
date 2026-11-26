@@ -52,3 +52,10 @@
 .ldp-esperando .ldp-lista { padding: 0; }
 .ldp-esperando .ldp-fila { cursor: default; }
 .ldp-esperando a { color: inherit; text-decoration: underline; }
+
+/* «Cuando el barbero cobra con Yape» (LectorAlCobrar.tsx, lector 0003). */
+.ldp-cobrar { display: grid; gap: 10px; margin-top: 14px; padding: 14px; border-radius: 12px; background: var(--bg-input); }
+.ldp-cobrar label { display: grid; gap: 4px; font-size: 13px; }
+.ldp-cobrar label > span:first-child { color: var(--ink-soft); }
+.ldp-cobrar select { min-height: 44px; max-width: 100%; padding: 0 10px; border: 1px solid var(--line-2); border-radius: 10px; background: var(--white); font: inherit; }
+.ldp-cobrar__fila { display: flex; gap: 8px; flex-wrap: wrap; }

@@ -23,6 +23,7 @@ import { createClient } from '@supabase/supabase-js';
 import { MENSAJES, evaluarLectura, tipoDeImagen } from '@/modules/tu-pagina/dominio/comprobante';
 import { log } from '@/modules/tu-pagina/servidor/supabase';
 import { guardarComprobante, leerComprobante, puedeLeer } from '@/modules/tu-pagina/servidor/comprobanteExterno';
+import { rpc, servidor } from '@/modules/fideliza/servidor/supabase';
 
 const MB = 1024 * 1024;
 const MAX_BYTES = 4 * MB;
@@ -92,6 +93,23 @@ export async function POST(req: Request) {
     ]);
     if (!url) return fallo('No pudimos guardar la foto. Inténtalo otra vez en unos segundos.', 503);
     const { decision, motivo } = evaluarLectura(lectura, numeros);
+    // Vendemia Caja (lector 0003): lo leído se guarda del lado del servidor, por la huella de la foto,
+    // para comprobar que el Yape que elige el barbero es el de la foto. El navegador no lo puede escribir.
+    // Sin celular de cobros la base no guarda nada; sin la 0003 falla y no pasa nada.
+    if (lectura) {
+      try {
+        await rpc(servidor(), 'lector_srv_lectura', {
+          p_company: companyId,
+          p_hash: hash,
+          p_monto: lectura.monto,
+          p_fecha: lectura.fechaHora ?? '',
+          p_codigo: lectura.codigoSeguridad ?? '',
+          p_decision: decision,
+        });
+      } catch {
+        // La foto sigue sirviendo para cobrar como siempre.
+      }
+    }
 
     return responder({
       status: 'ok',

@@ -16,6 +16,7 @@ import { supabase } from '@/lib/supabase/client';
 import { useCargar } from '@/components/panel/useCargar';
 import { useSondeo } from '@/components/panel/useSondeo';
 import { soles } from '@/lib/panel/format';
+import LectorAlCobrar from '@/components/panel/LectorAlCobrar';
 import './lector-de-pagos.css';
 
 interface Dispositivo {
@@ -26,6 +27,8 @@ interface Dispositivo {
   ultimo_aviso: string | null;
   por_enviar: number;
   sin_leer: number;
+  /** lector 0003: '' = de todas las sedes. */
+  sede?: string;
 }
 export interface Aviso {
   id: number;
@@ -214,6 +217,8 @@ export default function LectorDePagos({ companyId }: { companyId: string }) {
           </a>
         </div>
       )}
+
+      {conectados > 0 && <LectorAlCobrar companyId={companyId} dispositivos={datos.dispositivos} alCambiar={releer} />}
 
       {conectados > 0 && (
         <p className="muted ldp-nota">
