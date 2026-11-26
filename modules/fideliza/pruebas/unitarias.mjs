@@ -203,7 +203,18 @@ test('4e · el objeto de Wallet recibe su arte y los sellos reales solo en el te
   assert.match(o.textModulesData[0].body, /●{3}○{5} · 3\/8/);
   assert.match(o.heroImage.sourceUri.uri, /wallet-arte/);
   assert.ok(!o.heroImage.sourceUri.uri.includes('Ana'));
-  assert.equal(o.linksModuleData.uris[0].description, 'Volver a la página de enlaces');
+  assert.equal(o.linksModuleData.uris[0].description, `Ver la página de ${marca.display_name}`);
+  // 26-nov-2026: apagado en Mi club, el pase va sin enlace (lista vacía para que el PATCH lo quite).
+  const sinEnlace = payload.cuerpoObjeto(
+    {
+      member: { public_code: 'VDM-A7K9P2', alias: 'Ana', status: 'active', balance: 3, rewards_available: 0, qr_token: 'vq' + 'x'.repeat(24) },
+      program: { name: 'Club', status: 'active', rule_type: 'stamps', threshold: 8, reward: 'Un café' },
+      brand: { ...marca, style: { ...(marca.style ?? {}), wallet_enlace: false } },
+    },
+    '3388000000023213846.vf_x',
+    { urlNegocio: 'https://fideliza.vendemias.com/n/barberia-centro' },
+  );
+  assert.deepEqual(sinEnlace.linksModuleData.uris, []);
 });
 
 test('5 · importes en céntimos, sin decimales flotantes', () => {

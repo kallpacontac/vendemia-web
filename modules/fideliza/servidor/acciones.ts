@@ -299,6 +299,7 @@ export const ACCIONES = {
           // 25-nov-2026 · dominio/tarjetaOpciones.ts: lo que el dueño prende o apaga de la tarjeta.
           visitas: z.enum(IDS_NOMBRE_VISITA).optional(),
           wallet: z.boolean().optional(),
+          wallet_enlace: z.boolean().optional(),
           avisos: z.boolean().optional(),
           caja_solo_qr: z.boolean().optional(),
           // Trabajos con foto (dominio/portafolio.ts). El tope de tamaño lo pone sql/0020.

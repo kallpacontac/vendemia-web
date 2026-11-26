@@ -57,13 +57,15 @@ interface Club {
   espera: number;
   visitas: NombreVisita;
   wallet: boolean;
+  /** 26-nov-2026: el enlace a la página del negocio dentro del pase de Google Wallet. */
+  walletEnlace: boolean;
   avisos: boolean;
 }
 
 export default function CrearClub() {
   const { companyId, ajustes, puede, recargar: recargarCtx } = useFideliza();
   const avisar = useAvisar();
-  const [c, setC] = useState<Club>({ negocio: '', nombre: '', logo: '', color: '#FF4900', tarjeta: 'viva', sello: 'check', sellos: 8, premio: '', espera: 0, visitas: 'visitas', wallet: true, avisos: true });
+  const [c, setC] = useState<Club>({ negocio: '', nombre: '', logo: '', color: '#FF4900', tarjeta: 'viva', sello: 'check', sellos: 8, premio: '', espera: 0, visitas: 'visitas', wallet: true, walletEnlace: true, avisos: true });
   const [rubroVisto, setRubroVisto] = useState<Rubro | null>(null);
   const [porEncuadrar, setPorEncuadrar] = useState<File | null>(null);
   const [vista, setVista] = useState<'web' | 'wallet'>('web');
@@ -105,6 +107,7 @@ export default function CrearClub() {
       espera: regla.cooldown_hours ? ESPERAS.reduce((a, b) => (Math.abs(b * 24 - regla.cooldown_hours!) < Math.abs(a * 24 - regla.cooldown_hours!) ? b : a), 1) : 0,
       visitas: nombreVisita(estilo?.visitas, negocio, SELLOS.find((x) => x.id === estilo?.sello)?.rubro).id,
       wallet: estilo?.wallet !== false,
+      walletEnlace: estilo?.wallet_enlace !== false,
       avisos: estilo?.avisos !== false,
     });
     // «Pruébalo con tu celular» desde Primeros pasos: solo si el club ya está publicado.
@@ -191,6 +194,7 @@ export default function CrearClub() {
           tarjeta: c.tarjeta,
           visitas: c.visitas,
           wallet: c.wallet,
+          wallet_enlace: c.walletEnlace,
           avisos: c.avisos,
         },
       });
@@ -400,6 +404,7 @@ export default function CrearClub() {
           <small className="fz-def">En su tarjeta sale «{NOMBRES_VISITA.find((n) => n.id === c.visitas)!.titulo}».</small>
           <ul className="fz-club__opciones">
             <Opcion nombre="Botón «Agregar a Google Wallet»" ayuda="Apagado, la tarjeta no lo ofrece. Quien ya la guardó la sigue teniendo." on={c.wallet} editable={editable} alternar={() => setC({ ...c, wallet: !c.wallet })} />
+            <Opcion nombre="Enlace a tu página dentro de Google Wallet" ayuda={`En el pase sale «Ver la página de ${c.negocio || 'tu negocio'}». Apagado, el pase no lleva ningún enlace; los ya guardados lo pierden en su siguiente sello.`} on={c.walletEnlace} editable={editable} alternar={() => setC({ ...c, walletEnlace: !c.walletEnlace })} />
             <Opcion nombre="Casilla «Quiero que me avise»" ayuda="La de la tarjeta para prender o quitar los avisos. El aviso flotante de instalar y activar sigue igual." on={c.avisos} editable={editable} alternar={() => setC({ ...c, avisos: !c.avisos })} />
           </ul>
         </section>

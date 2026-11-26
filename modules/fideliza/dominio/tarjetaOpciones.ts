@@ -30,6 +30,11 @@ export interface OpcionesTarjeta {
   visitas?: NombreVisita;
   /** false = la tarjeta no ofrece «Agregar a Google Wallet». */
   wallet?: boolean;
+  /**
+   * false = el pase de Google Wallet no lleva el enlace a la página del negocio
+   * (ni en «Enlaces» del pase ni como página principal). 26-nov-2026, The 24/7.
+   */
+  wallet_enlace?: boolean;
   /** false = sin la caja «Quiero que … me avise» / «Dejar de recibir avisos». */
   avisos?: boolean;
   /** true = el equipo con rol de caja (barberos) solo suma escaneando el QR del cliente. */
@@ -63,6 +68,7 @@ export function nombreVisita(id: string | null | undefined, negocio?: string | n
 
 /** Wallet y avisos salen salvo que el dueño los apague (false explícito). */
 export const conWalletEnTarjeta = (o: OpcionesTarjeta | null | undefined) => o?.wallet !== false;
+export const conEnlaceEnWallet = (o: OpcionesTarjeta | null | undefined) => o?.wallet_enlace !== false;
 export const conAvisosEnTarjeta = (o: OpcionesTarjeta | null | undefined) => o?.avisos !== false;
 
 /** El token que lleva el QR de la tarjeta (sql/0003: 'vq' + 24 caracteres). Ni el código impreso ni un nombre. */

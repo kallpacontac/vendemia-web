@@ -18,6 +18,7 @@ import { createHash } from 'crypto';
 import { UNIDAD, type TipoRegla } from './formato';
 import { colorValido, resolverEstilo, type Estilo } from './estilo';
 import { esCartilla } from './wallet-arte';
+import { conEnlaceEnWallet } from './tarjetaOpciones';
 
 export interface Marca {
   slug: string;
@@ -79,7 +80,8 @@ export function cuerpoClase(
     countryCode: 'PE',
     accountIdLabel: 'Código',
     accountNameLabel: 'Cliente',
-    homepageUri: { uri: opciones.urlNegocio, description: 'Página principal de enlaces' },
+    // null (no omitido): el PATCH a Google lo quita si el dueño apagó el enlace.
+    homepageUri: conEnlaceEnWallet(d.brand.style) ? { uri: opciones.urlNegocio, description: `Página de ${nombreEmisor}`.slice(0, 60) } : null,
     multipleDevicesAndHoldersAllowedStatus: 'ONE_USER_ALL_DEVICES',
   };
 }
@@ -157,7 +159,8 @@ export function cuerpoObjeto(d: DatosObjeto, classId: string, opciones: { urlNeg
     ],
     linksModuleData: {
       uris: [
-        { id: 'negocio', uri: opciones.urlNegocio, description: 'Volver a la página de enlaces' },
+        // Apagable desde Mi club (wallet_enlace). Lista vacía = el PATCH lo quita de los pases ya guardados.
+        ...(conEnlaceEnWallet(d.brand.style) ? [{ id: 'negocio', uri: opciones.urlNegocio, description: `Ver la página de ${d.brand.display_name}`.slice(0, 60) }] : []),
         ...(d.brand.support_url ? [{ id: 'soporte', uri: d.brand.support_url, description: 'Ayuda' }] : []),
       ],
     },
