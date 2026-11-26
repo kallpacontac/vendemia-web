@@ -8,5 +8,5 @@ export const metadata: Metadata = {
 };
 
 export default function Page() {
-  return <PaginaPersonalizada nombre="Kallpa" slug="kallpa" hashInicial="#catalog" />;
+  return <PaginaPersonalizada nombre="Kallpa" slug="kallpa" />;
 }

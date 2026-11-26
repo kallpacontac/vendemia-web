@@ -32,7 +32,7 @@ const ejemplos = [
 const paginasPersonalizadas = [
   { nombre: 'Mancha Burger Studio', rubro: 'Hamburguesería', imagen: '/portafolio/vendemia/mancha-burger-studio.jpg', href: '/ejemplos/mancha' },
   { nombre: 'Brew Bliss Café', rubro: 'Cafetería', imagen: '/portafolio/vendemia/brew-bliss-cafe.jpg', href: '/ejemplos/brew-bliss' },
-  { nombre: 'Kallpa', rubro: 'Moda y catálogo', imagen: '/portafolio/vendemia/kallpa-editorial.jpg', href: '/ejemplos/kallpa#catalog' },
+  { nombre: 'Kallpa', rubro: 'Moda y catálogo', imagen: '/portafolio/vendemia/kallpa-editorial.jpg', href: '/ejemplos/kallpa' },
 ] as const;
 
 const pasos = [
