@@ -9,7 +9,7 @@ import { avisarPremio, avisarSello } from './avisos';
 import { drenar } from './worker';
 import { urlAyuda, urlSuelta } from '../dominio/botones';
 import { IDS_SELLO } from '../dominio/sellos';
-import { IDS_NOMBRE_VISITA, esTokenQr } from '../dominio/tarjetaOpciones';
+import { IDS_ELECCION_VISITA, MAX_VISITA, esTokenQr } from '../dominio/tarjetaOpciones';
 import { MAX_POSICION, MAX_TRABAJOS } from '../dominio/portafolio';
 
 /**
@@ -297,7 +297,9 @@ export const ACCIONES = {
           historia: z.enum(['instagram', 'tiktok', '']).optional(),
           sello: z.enum(IDS_SELLO).optional(),
           // 25-nov-2026 · dominio/tarjetaOpciones.ts: lo que el dueño prende o apaga de la tarjeta.
-          visitas: z.enum(IDS_NOMBRE_VISITA).optional(),
+          visitas: z.enum(IDS_ELECCION_VISITA).optional(),
+          visita_una: textoCorto(MAX_VISITA).optional(),
+          visita_varias: textoCorto(MAX_VISITA + 4).optional(),
           wallet: z.boolean().optional(),
           wallet_enlace: z.boolean().optional(),
           avisos: z.boolean().optional(),

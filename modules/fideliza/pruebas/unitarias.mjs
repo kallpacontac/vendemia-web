@@ -749,3 +749,24 @@ test('página pública: sin ningún botón destacado, el primero sale con el col
   const marcado = tres.map((b, i) => ({ ...b, destacado: i === 2 }));
   assert.deepEqual(clases(pagina.htmlPagina({ ...base, botones: marcado })), [false, false, true], 'si el dueño marca uno, manda su marca');
 });
+
+test('cada visita se llama: «Otro…», plural, género y la sugerencia por tipo de negocio', () => {
+  const t = jiti('../dominio/tarjetaOpciones.ts');
+  assert.equal(t.pluralDe('Lavado'), 'Lavados');
+  assert.equal(t.pluralDe('Sesión'), 'Sesiones');
+  assert.equal(t.pluralDe('Luz'), 'Luces');
+  assert.equal(t.pluralDe('Masaje'), 'Masajes');
+  assert.equal(t.articuloDe('Sesión'), 'una');
+  assert.equal(t.articuloDe('Lavado'), 'un');
+  assert.equal(t.articuloDe('Día'), 'un');
+  const propio = t.nombreVisita('otro', 'Spa Luna', null, { visita_una: 'sesión', visita_varias: '' });
+  assert.deepEqual(propio, { id: 'otro', art: 'una', una: 'Sesión', titulo: 'Tus últimas sesiones' });
+  assert.equal(t.nombreVisita('otro', 'Autos Lima', null, { visita_una: 'Lavado', visita_varias: 'lavados' }).titulo, 'Tus últimos lavados');
+  // «Otro…» sin palabra: vuelve a la sugerencia, nunca un título vacío.
+  assert.equal(t.nombreVisita('otro', 'Barbería Centro', null, { visita_una: '  ' }).id, 'cortes');
+  // Sin pista en el nombre: el tipo de negocio del panel decide.
+  assert.equal(t.sugerirNombreVisita('Kallpa', null, 'recurring_appointment'), 'clases');
+  assert.equal(t.sugerirNombreVisita('Piel Futbolera', null, 'ecommerce'), 'compras');
+  assert.equal(t.sugerirNombreVisita('Barbería Kallpa', null, 'recurring_appointment'), 'cortes', 'el nombre manda');
+  assert.equal(t.sugerirNombreVisita('Mara', null, 'appointment'), 'visitas');
+});

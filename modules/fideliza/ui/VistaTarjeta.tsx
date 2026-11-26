@@ -8,6 +8,7 @@
  * sin tener que explicarlo con palabras. Los números son de ejemplo (3 de N)
  * y lo dice.
  */
+import { useEffect, useRef } from 'react';
 import { fotoEnCirculo } from '@/modules/fideliza/dominio/encuadre';
 import { UNIDAD, fraseRegla, soles, type TipoRegla } from '@/modules/fideliza/dominio/formato';
 import { colorValido, resolverEstilo, tintaSobre, type Estilo } from '@/modules/fideliza/dominio/estilo';
@@ -30,6 +31,13 @@ export interface DatosVista {
   minimoCentimos?: number;
   diasPremio?: number | null;
   ayuda: string;
+  /**
+   * 26-nov-2026: lo que se prende o apaga en Mi club, para verlo al momento. Sin ellos la vista
+   * es la de siempre (botón de Wallet a la vista, sin casilla de avisos ni lista de visitas).
+   */
+  wallet?: boolean;
+  avisos?: boolean;
+  visita?: { art: 'un' | 'una'; una: string; titulo: string };
 }
 
 export default function VistaTarjeta({ d, foco }: { d: DatosVista; foco: string | null }) {
@@ -42,9 +50,17 @@ export default function VistaTarjeta({ d, foco }: { d: DatosVista; foco: string 
   const estilo = resolverEstilo(d.estilo);
   const sello = selloValido(d.estilo?.sello);
   const conFoto = Boolean(estilo.fondo);
+  // Lo que se acaba de tocar puede quedar abajo del móvil: se trae a la vista.
+  const raiz = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!foco) return;
+    raiz.current?.querySelector('.fz-zona--foco')?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  }, [foco]);
+  const apagado = (zona: string, texto: string) =>
+    foco === zona ? <p className={`fz-movil__apagado ${z(zona)}`}>{texto}</p> : null;
 
   return (
-    <div>
+    <div ref={raiz}>
       <div className="fz-movil">
         <div className={`fz-movil__cab ${z('color')}`} style={{ background: '#F9F9F6', color: '#171716' }}>
           <span className={z('logo')}>
@@ -104,9 +120,29 @@ export default function VistaTarjeta({ d, foco }: { d: DatosVista; foco: string 
             <span />
             <small>VDM-A7K9P2</small>
           </div>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img className="fz-movil__wallet" src="/wallet/es419_add_to_google_wallet_wallet-button.svg" alt="" />
-          <small className="fz-movil__nota">El botón desaparece cuando se guarda en Wallet.</small>
+          {d.wallet !== false ? (
+            <div className={`fz-movil__wallet-caja ${z('wallet')}`}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img className="fz-movil__wallet" src="/wallet/es419_add_to_google_wallet_wallet-button.svg" alt="" />
+              <small className="fz-movil__nota">El botón desaparece cuando se guarda en Wallet.</small>
+            </div>
+          ) : apagado('wallet', 'Sin botón de Google Wallet')}
+          {d.avisos === true ? (
+            <label className={`fz-movil__avisos ${z('avisos')}`}>
+              <input type="checkbox" readOnly checked={false} tabIndex={-1} />
+              <span>Quiero que {d.negocio || 'tu negocio'} me avise de mis premios y promociones.</span>
+            </label>
+          ) : d.avisos === false ? apagado('avisos', 'Sin la casilla de avisos') : null}
+          {d.visita && (
+            <div className={`fz-movil__visitas ${z('visitas')}`}>
+              <b>{d.visita.titulo}</b>
+              <small className="fz-movil__nota">Toca {d.visita.art} {d.visita.una.toLowerCase()} para ver la fecha y quién te atendió.</small>
+              <ul>
+                <li><span>{d.visita.una}<small>Hoy, 10:30 · Carlos</small></span><b>+1</b></li>
+                <li><span>{d.visita.una}<small>12 nov, 18:15 · Carlos</small></span><b>+1</b></li>
+              </ul>
+            </div>
+          )}
           {d.ayuda && <p className={`fz-movil__nota ${z('ayuda')}`}>Ayuda: {d.ayuda.replace(/^https?:\/\//, '').slice(0, 32)}</p>}
         </div>
       </div>

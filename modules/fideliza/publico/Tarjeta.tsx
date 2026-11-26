@@ -354,7 +354,7 @@ export default function Tarjeta(props: {
   const respaldoInstalar = plataforma !== 'ios' && !enApp && instalar !== null && !avisoVisible;
   const notaFavoritos = plataforma === 'otra' && !walletOn && !enApp;
   // «Tus últimos cortes / cafés / visitas»: lo elige el dueño en Mi club o se sugiere por el rubro.
-  const visitaDe = nombreVisita(d.brand.style?.visitas, d.brand.display_name, SELLOS.find((x) => x.id === d.brand.style?.sello)?.rubro);
+  const visitaDe = nombreVisita(d.brand.style?.visitas, d.brand.display_name, SELLOS.find((x) => x.id === d.brand.style?.sello)?.rubro, d.brand.style);
 
   const marca = colorValido(d.brand.bg_color);
   const plantilla = resolverEstilo(d.brand.style);

@@ -39,7 +39,8 @@ import { AVISOS_AUTO, avisoDeFabrica, type PlantillaAuto } from '@/modules/fidel
 import { COLORES, PLANTILLAS_TARJETA, colorValido, tarjetaValida, type Estilo, type PlantillaTarjeta } from '@/modules/fideliza/dominio/estilo';
 import { RUBROS, SELLOS, sellosDe, selloValido, sugerirRubro, type Rubro, type Sello } from '@/modules/fideliza/dominio/sellos';
 import { datosArteWallet, svgArteWallet } from '@/modules/fideliza/dominio/wallet-arte';
-import { NOMBRES_VISITA, nombreVisita, type NombreVisita } from '@/modules/fideliza/dominio/tarjetaOpciones';
+import { MAX_VISITA, NOMBRES_VISITA, nombreVisita, pluralDe, type EleccionVisita } from '@/modules/fideliza/dominio/tarjetaOpciones';
+import { useSesion } from '@/components/panel/Sesion';
 
 /** Espera entre un sello y el siguiente a la misma persona (cooldown_hours, sql/0015: máx. 7 días). */
 const ESPERAS = [0, 1, 2, 3, 5, 7];
@@ -55,7 +56,10 @@ interface Club {
   premio: string;
   /** 25-nov-2026 (The 24/7): días de espera entre sellos (0 = sin espera). */
   espera: number;
-  visitas: NombreVisita;
+  visitas: EleccionVisita;
+  /** Con «Otro…»: la palabra propia en singular y plural (26-nov-2026). */
+  visitaUna: string;
+  visitaVarias: string;
   wallet: boolean;
   /** 26-nov-2026: el enlace a la página del negocio dentro del pase de Google Wallet. */
   walletEnlace: boolean;
@@ -65,7 +69,10 @@ interface Club {
 export default function CrearClub() {
   const { companyId, ajustes, puede, recargar: recargarCtx } = useFideliza();
   const avisar = useAvisar();
-  const [c, setC] = useState<Club>({ negocio: '', nombre: '', logo: '', color: '#FF4900', tarjeta: 'viva', sello: 'check', sellos: 8, premio: '', espera: 0, visitas: 'visitas', wallet: true, walletEnlace: true, avisos: true });
+  const [c, setC] = useState<Club>({ negocio: '', nombre: '', logo: '', color: '#FF4900', tarjeta: 'viva', sello: 'check', sellos: 8, premio: '', espera: 0, visitas: 'visitas', visitaUna: '', visitaVarias: '', wallet: true, walletEnlace: true, avisos: true });
+  const modo = useSesion().compania?.business_mode ?? null;
+  /** Lo último que se tocó de «Lo que ve tu cliente»: se resalta en la vista previa. */
+  const [foco, setFoco] = useState<string | null>(null);
   const [rubroVisto, setRubroVisto] = useState<Rubro | null>(null);
   const [porEncuadrar, setPorEncuadrar] = useState<File | null>(null);
   const [vista, setVista] = useState<'web' | 'wallet'>('web');
@@ -105,7 +112,9 @@ export default function CrearClub() {
       premio: regla.reward_description ?? '',
       // Horas guardadas → el día más cercano de la lista (12 h, del asistente, se ve como 1 día).
       espera: regla.cooldown_hours ? ESPERAS.reduce((a, b) => (Math.abs(b * 24 - regla.cooldown_hours!) < Math.abs(a * 24 - regla.cooldown_hours!) ? b : a), 1) : 0,
-      visitas: nombreVisita(estilo?.visitas, negocio, SELLOS.find((x) => x.id === estilo?.sello)?.rubro).id,
+      visitas: nombreVisita(estilo?.visitas, negocio, SELLOS.find((x) => x.id === estilo?.sello)?.rubro, estilo, modo).id,
+      visitaUna: estilo?.visita_una ?? '',
+      visitaVarias: estilo?.visita_varias ?? '',
       wallet: estilo?.wallet !== false,
       walletEnlace: estilo?.wallet_enlace !== false,
       avisos: estilo?.avisos !== false,
@@ -141,6 +150,13 @@ export default function CrearClub() {
   }
 
   const estilo = { ...((ajustes?.page_style ?? {}) as Partial<Estilo>), sello: c.sello, tarjeta: c.tarjeta };
+  // Cómo se llamará cada visita con lo elegido ahora (incluido «Otro…» a medio escribir).
+  const visitaDe = nombreVisita(c.visitas, c.negocio, SELLOS.find((x) => x.id === c.sello)?.rubro, { visita_una: c.visitaUna, visita_varias: c.visitaVarias }, modo);
+  /** Al tocar una opción de la tarjeta, la vista previa salta a donde se nota (y lo resalta). */
+  const tocar = (zona: string) => {
+    setFoco(zona);
+    setVista(zona === 'wallet-enlace' ? 'wallet' : 'web');
+  };
   const rubroSugerido = sugerirRubro(c.negocio || ajustes?.display_name, ajustes?.tagline, (ajustes?.page_style as Partial<Estilo> | null)?.categoria);
   const rubroActivo: Rubro = rubroVisto ?? (c.sello !== 'check' ? SELLOS.find((x) => x.id === c.sello)!.rubro : rubroSugerido ?? 'general');
   const arte = (t: PlantillaTarjeta, llenos = Math.min(3, c.sellos - 1)) =>
@@ -196,7 +212,10 @@ export default function CrearClub() {
           ...fresco,
           sello: c.sello,
           tarjeta: c.tarjeta,
-          visitas: c.visitas,
+          // «Otro…» sin palabra escrita: se guarda la sugerida, no un nombre vacío.
+          ...(c.visitas === 'otro' && c.visitaUna.trim()
+            ? { visitas: 'otro' as const, visita_una: c.visitaUna.trim(), visita_varias: (c.visitaVarias.trim() || pluralDe(c.visitaUna)).toLowerCase() }
+            : { visitas: c.visitas === 'otro' ? visitaDe.id : c.visitas }),
           wallet: c.wallet,
           wallet_enlace: c.walletEnlace,
           avisos: c.avisos,
@@ -403,16 +422,32 @@ export default function CrearClub() {
           <div className="fz-fila" role="radiogroup" aria-label="Cómo se llama cada visita" style={{ gap: 6, flexWrap: 'wrap' }}>
             {NOMBRES_VISITA.map((n) => (
               <button key={n.id} type="button" role="radio" aria-checked={c.visitas === n.id} disabled={!editable}
-                className={`btn btn-sm ${c.visitas === n.id ? 'btn-primary' : 'btn-ghost'}`} onClick={() => setC({ ...c, visitas: n.id })}>
+                className={`btn btn-sm ${c.visitas === n.id ? 'btn-primary' : 'btn-ghost'}`} onClick={() => { setC({ ...c, visitas: n.id }); tocar('visitas'); }}>
                 {n.una}
               </button>
             ))}
+            <button type="button" role="radio" aria-checked={c.visitas === 'otro'} disabled={!editable}
+              className={`btn btn-sm ${c.visitas === 'otro' ? 'btn-primary' : 'btn-ghost'}`} onClick={() => { setC({ ...c, visitas: 'otro' }); tocar('visitas'); }}>
+              Otro…
+            </button>
           </div>
-          <small className="fz-def">En su tarjeta sale «{NOMBRES_VISITA.find((n) => n.id === c.visitas)!.titulo}».</small>
+          {c.visitas === 'otro' && (
+            <div className="fz-fila fz-club__visita-propia" style={{ gap: 8, marginTop: 8 }}>
+              <label className="field-label" style={{ flex: 1 }}>Una
+                <input className="input" value={c.visitaUna} maxLength={MAX_VISITA} placeholder="Lavado, Sesión, Uñas…" disabled={!editable}
+                  onChange={(e) => { setC({ ...c, visitaUna: e.target.value }); tocar('visitas'); }} />
+              </label>
+              <label className="field-label" style={{ flex: 1 }}>Varias
+                <input className="input" value={c.visitaVarias} maxLength={MAX_VISITA + 4} placeholder={pluralDe(c.visitaUna).toLowerCase() || 'lavados, sesiones…'} disabled={!editable}
+                  onChange={(e) => { setC({ ...c, visitaVarias: e.target.value }); tocar('visitas'); }} />
+              </label>
+            </div>
+          )}
+          <small className="fz-def">En su tarjeta sale «{visitaDe.titulo}».</small>
           <ul className="fz-club__opciones">
-            <Opcion nombre="Botón «Agregar a Google Wallet»" ayuda="Apagado, la tarjeta no lo ofrece. Quien ya la guardó la sigue teniendo." on={c.wallet} editable={editable} alternar={() => setC({ ...c, wallet: !c.wallet })} />
-            <Opcion nombre="Enlace a tu página dentro de Google Wallet" ayuda={`En el pase sale «Ver la página de ${c.negocio || 'tu negocio'}». Apagado, el pase no lleva ningún enlace; los ya guardados lo pierden en su siguiente sello.`} on={c.walletEnlace} editable={editable} alternar={() => setC({ ...c, walletEnlace: !c.walletEnlace })} />
-            <Opcion nombre="Casilla «Quiero que me avise»" ayuda="La de la tarjeta para prender o quitar los avisos. El aviso flotante de instalar y activar sigue igual." on={c.avisos} editable={editable} alternar={() => setC({ ...c, avisos: !c.avisos })} />
+            <Opcion nombre="Botón «Agregar a Google Wallet»" ayuda="Apagado, la tarjeta no lo ofrece. Quien ya la guardó la sigue teniendo." on={c.wallet} editable={editable} alternar={() => { setC({ ...c, wallet: !c.wallet }); tocar('wallet'); }} />
+            <Opcion nombre="Enlace a tu página dentro de Google Wallet" ayuda={`En el pase sale «Ver la página de ${c.negocio || 'tu negocio'}». Apagado, el pase no lleva ningún enlace; los ya guardados lo pierden en su siguiente sello.`} on={c.walletEnlace} editable={editable} alternar={() => { setC({ ...c, walletEnlace: !c.walletEnlace }); tocar('wallet-enlace'); }} />
+            <Opcion nombre="Casilla «Quiero que me avise»" ayuda="La de la tarjeta para prender o quitar los avisos. El aviso flotante de instalar y activar sigue igual." on={c.avisos} editable={editable} alternar={() => { setC({ ...c, avisos: !c.avisos }); tocar('avisos'); }} />
           </ul>
         </section>
 
@@ -434,7 +469,7 @@ export default function CrearClub() {
         </div>
         {vista === 'web' ? (
           <VistaTarjeta
-            foco={null}
+            foco={foco}
             d={{
               negocio: ajustes?.display_name || c.negocio,
               frase: ajustes?.tagline ?? '',
@@ -448,6 +483,9 @@ export default function CrearClub() {
               premio: c.premio,
               sellosPorCompra: 1,
               ayuda: ajustes?.support_url ?? '',
+              wallet: c.wallet,
+              avisos: c.avisos,
+              visita: visitaDe,
             }}
           />
         ) : (
@@ -462,6 +500,9 @@ export default function CrearClub() {
             <h3>{c.nombre || 'Tu club'}</h3>
             <div className="fz-club__wallet-datos"><span><small>SELLOS</small><b>3</b></span><span><small>PREMIOS</small><b>0</b></span></div>
             <div className="fz-club__wallet-qr" aria-hidden="true" />
+            {c.walletEnlace
+              ? <div className={`fz-club__wallet-enlace${foco === 'wallet-enlace' ? ' fz-zona--foco' : ''}`}><small>ENLACES</small><span>Ver la página de {ajustes?.display_name || c.negocio || 'tu negocio'}</span></div>
+              : foco === 'wallet-enlace' && <div className="fz-club__wallet-enlace fz-club__wallet-enlace--sin fz-zona--foco">Sin enlace a tu página</div>}
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img className="fz-club__wallet-arte" alt="" src={arte(c.tarjeta)} />
           </div>
