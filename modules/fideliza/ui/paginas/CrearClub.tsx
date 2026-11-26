@@ -78,7 +78,7 @@ export default function CrearClub() {
   const archivo = useRef<HTMLInputElement>(null);
   const listo = useRef(false);
 
-  const { datos, cargando, error } = useCargar(async () => {
+  const { datos, cargando, error, recargar } = useCargar(async () => {
     if (!companyId) return null;
     const programas = await lecturas.programas(companyId);
     const programa = programas.find((p) => p.status !== 'draft') ?? programas[0] ?? null;
@@ -175,6 +175,10 @@ export default function CrearClub() {
 
   async function publicar() {
     if (!v.comprobar()) return avisar('Faltan datos: revisa lo marcado en rojo.', 'error');
+    // 26-nov-2026 (Alvaro: «al guardar mi club parece como que se borró todo»): la pantalla
+    // «¡Tu club está publicado! Pruébalo con tu celular» tapaba el formulario en CADA guardado.
+    // Solo sale la primera vez; después, un aviso y el formulario sigue ahí.
+    const primeraVez = !programa?.current_version_id;
     setOcupado(true);
     try {
       // 1 · El negocio y su marca.
@@ -225,8 +229,11 @@ export default function CrearClub() {
       // 5 · La primera vez, los avisos automáticos quedan prendidos con su texto de fábrica.
       if (!programa) setPrendidos(await prenderAvisos());
       recargarCtx();
-      setPublicado(true);
-      avisar(r.logo && !r.logo.ok ? `Club publicado. El logo no sirve para Google Wallet: ${r.logo.errores.join(' ')}` : '¡Tu club está publicado!', r.logo && !r.logo.ok ? 'espera' : 'ok');
+      // Relee el programa: sin esto, guardar otra vez tras crearlo usaba programId null y creaba otro.
+      recargar();
+      if (primeraVez) setPublicado(true);
+      const hecho = primeraVez ? '¡Tu club está publicado!' : 'Cambios guardados. Tus clientes ya los ven.';
+      avisar(r.logo && !r.logo.ok ? `${hecho} El logo no sirve para Google Wallet: ${r.logo.errores.join(' ')}` : hecho, r.logo && !r.logo.ok ? 'espera' : 'ok');
     } catch (e) {
       if (e instanceof ErrorFideliza && e.codigo === 'slug_taken') {
         setSlugOcupado(slugDe(c.negocio));
