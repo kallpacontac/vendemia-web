@@ -108,6 +108,8 @@ interface Hecho {
   indicaciones?: string[];
   /** «−20 % por reservar aquí» (sql/0038): aplicado, o ya usado antes por ese celular. */
   descuento?: { pct: number; precio: number; antes: number } | { usado: true };
+  /** 26-nov-2026: lo que pidió y cuánto cuesta, a la vista en la pantalla final (no solo en el mensaje). */
+  pidio?: { servicio: string; precio: number | null };
 }
 
 const DIAS_A_LA_VISTA = 14;
@@ -223,6 +225,14 @@ export default function Escaparate({ esc: todo, slug, whatsapp, puedePedir, pued
         <h2 className="tp-h1">{hecho.titulo}</h2>
         <p className="tp-lead">Tu código es</p>
         <div className="tp-codigo">{hecho.codigo}</div>
+        {hecho.pidio && (
+          <div className="tp-hecho__pidio">
+            <span>{hecho.pidio.servicio}</span>
+            <b>{hecho.descuento && 'precio' in hecho.descuento
+              ? <><s className="tp-precio-antes">{soles(hecho.descuento.antes)}</s> {soles(hecho.descuento.precio)}</>
+              : soles(hecho.pidio.precio)}</b>
+          </div>
+        )}
         {hecho.descuento && ('precio' in hecho.descuento
           ? <p className="tp-descuento-hecho" role="status">¡Se aplicó tu −{hecho.descuento.pct} % por reservar aquí! Pagas {soles(hecho.descuento.precio)} en vez de {soles(hecho.descuento.antes)}.</p>
           : <p className="tp-descuento-hecho tp-descuento-hecho--usado" role="status">Tu descuento por reservar aquí ya lo usaste antes: esta cita va a precio normal.</p>)}
@@ -307,7 +317,7 @@ export default function Escaparate({ esc: todo, slug, whatsapp, puedePedir, pued
         <span><Clock size={17} aria-hidden="true" /> {servicioInline.duracion} minutos</span>
         <label htmlFor="tp-servicio-inline">Servicio</label>
         <select id="tp-servicio-inline" value={servicioInline.id} onChange={(e) => setServicioInlineId(e.target.value)}>
-          {esc.items.filter((i) => i.tipo === 'cita').map((servicio) => <option key={servicio.id} value={servicio.id}>{servicio.nombre}</option>)}
+          {esc.items.filter((i) => i.tipo === 'cita').map((servicio) => <option key={servicio.id} value={servicio.id}>{servicio.nombre}{servicio.precio ? ` · ${soles(servicio.precio)}` : ''}</option>)}
         </select>
       </aside>
       <Reservar key={servicioInline.id} item={servicioInline} esc={esc} slug={slug} alTerminar={terminar} presentacion="agenda" esBarberia={esBarberia} />
@@ -318,7 +328,7 @@ export default function Escaparate({ esc: todo, slug, whatsapp, puedePedir, pued
         <label htmlFor="tp-servicio-inline">Tu servicio</label>
         <select id="tp-servicio-inline" value={servicioInline.id} onChange={(e) => setServicioInlineId(e.target.value)}>
           {/* Solo lo que se reserva: los productos no van en «Tu servicio». */}
-          {esc.items.filter((i) => i.tipo === 'cita').map((servicio) => <option key={servicio.id} value={servicio.id}>{servicio.nombre}</option>)}
+          {esc.items.filter((i) => i.tipo === 'cita').map((servicio) => <option key={servicio.id} value={servicio.id}>{servicio.nombre}{servicio.precio ? ` · ${soles(servicio.precio)}` : ''}</option>)}
         </select>
       </div>
       <div className="tp-luxury-reserva-real__panel">
@@ -994,6 +1004,7 @@ function Reservar({ item, esc, slug, alTerminar, presentacion, esBarberia = fals
         titulo: apartada ? 'Tu cita está apartada: falta el adelanto' : '¡Tu cita está separada!',
         apartada,
         descuento: desc,
+        pidio: { servicio: item.nombre, precio: precioFinal },
         indicaciones: esc.indicacionesCitas,
         codigo: j.codigo,
         mensaje: mensajeReserva(j.codigo, {
@@ -1119,6 +1130,7 @@ function Inscribir({ item, slug, persona, alTerminar }: { item: Item; slug: stri
       alTerminar({
         titulo: '¡Tu cupo está separado!',
         codigo: j.codigo,
+        pidio: { servicio: item.nombre, precio: item.precio },
         mensaje: mensajeReserva(j.codigo, {
           servicio: item.nombre,
           precio: item.precio,
