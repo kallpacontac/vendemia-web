@@ -14,6 +14,7 @@ do $$ begin
 end $$;
 drop function if exists public.lector_tg_foto();
 drop function if exists public.lector_foto_ticket(text);
+drop function if exists public.lector_mismo_codigo(text, text);
 drop function if exists public.lector_nuevos(text, bigint);
 drop function if exists public.lector_srv_ya_pague(text, text, text);
 drop function if exists public.lector_srv_tras_captura(text, text, text);

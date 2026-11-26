@@ -170,6 +170,16 @@ begin
 end $$;
 revoke execute on function public.lector_foto_ticket(text) from public, anon, authenticated;
 
+-- El único dato que sale IGUAL en la captura del que paga y en el aviso del que recibe: el «código
+-- de seguridad» de Yape (3 dígitos). Los nombres no sirven para cruzar: la captura dice A QUIÉN se
+-- yapeó (el negocio) y el aviso DE QUIÉN llegó (el cliente). Si falta en cualquiera de los dos
+-- (Plin, Sip, banco o la IA no lo leyó) no decide; si están los dos y no coinciden, no es ese pago.
+create or replace function public.lector_mismo_codigo(p_captura text, p_aviso text)
+returns boolean language sql immutable set search_path = public as $$
+    select coalesce(nullif(p_captura, ''), '') = '' or coalesce(nullif(p_aviso, ''), '') = '' or p_captura = p_aviso
+$$;
+revoke execute on function public.lector_mismo_codigo(text, text) from public, anon, authenticated;
+
 -- ── 3 · Candidatos de un aviso ──────────────────────────────────────────────
 -- Una fila por cita posible. `exacto`: el monto cuadra; `nombre`: 0..1 (1 si es un familiar aprendido).
 create or replace function public.lector_candidatos(p_aviso public.lector_avisos)
@@ -208,6 +218,7 @@ begin
           from public.comprobantes_web c join base b on b.id = c.appointment_id
          where c.company_id = p_aviso.company_id and c.estado = 'aprobado' and c.revisado_por = 'automatico' and c.cotejo = ''
            and c.monto is not null
+           and public.lector_mismo_codigo(c.codigo_seguridad, p_aviso.codigo)
            and case when public.lector_hora_captura(c.fecha_pago) is not null
                     then p_aviso.cuando between public.lector_hora_captura(c.fecha_pago) - interval '3 minutes'
                                             and public.lector_hora_captura(c.fecha_pago) + interval '3 minutes'
@@ -218,6 +229,7 @@ begin
                c.monto, c.id, null, 1.0, b.lead_id, b.lead_nombre, coalesce(b.beneficiario, ''), b.service, b.slot_start
           from public.comprobantes_web c join base b on b.id = c.appointment_id
          where c.company_id = p_aviso.company_id and c.estado = 'revisar'
+           and public.lector_mismo_codigo(c.codigo_seguridad, p_aviso.codigo)
            and case when public.lector_hora_captura(c.fecha_pago) is not null
                     then p_aviso.cuando between public.lector_hora_captura(c.fecha_pago) - interval '3 minutes'
                                             and public.lector_hora_captura(c.fecha_pago) + interval '3 minutes'

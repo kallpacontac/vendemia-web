@@ -47,7 +47,7 @@ create table pending_payments (id text primary key, lead_id text, company_id tex
 create table comprobantes_web (id uuid primary key default gen_random_uuid(), company_id text, appointment_id text, lead_id text,
   url text default '', image_hash text default '', estado text, revisado_por text default '', revisado_at timestamptz, monto numeric,
   motivo text default '', cotejo text default '', cotejado_at timestamptz, creado_at timestamptz default now(),
-  fecha_pago text not null default '');
+  fecha_pago text not null default '', codigo_seguridad text not null default '');
 create table tu_pagina (company_id text, slug text, publicada boolean);
 create table ticket_fotos (appointment_id text primary key, company_id text, url text default '', hash text default '',
   subida_por text default '', created_at timestamptz default now());
@@ -208,6 +208,20 @@ ok('la hora de la captura decide entre dos iguales', (await est('m2')).status ==
 ok('y la captura queda aprobada por el lector', (await uno(`select revisado_por from comprobantes_web where appointment_id = 'm2'`)).revisado_por === 'lector');
 await yape(500, 'X', 0);
 ok('otro Yape igual fuera de los ±3 min de la otra captura no la toma', (await est('m1')).status === 'pending_payment');
+
+// 6c · Dos capturas de S/ 7 al mismo minuto: el código de seguridad de Yape decide (el nombre no
+// puede: la captura dice a quién se yapeó y el aviso de quién llegó).
+await cita('g1', 'lg1', 'Raúl Chávez', 14, 400, 430, 'pending_payment');
+await cita('g2', 'lg2', 'Hugo Tello', 14, 440, 470, 'pending_payment');
+await q(`insert into comprobantes_web (company_id, appointment_id, lead_id, estado, monto, fecha_pago, creado_at, codigo_seguridad) values
+         ('neg', 'g1', 'lg1', 'revisar', 7, $1, now(), '111'), ('neg', 'g2', 'lg2', 'revisar', 7, $1, now(), '222')`, [hace(0)]);
+await q(`select lector_srv_recibir($1, 'aviso', $2)`, [D, { huella: 'h-codigo-222', centimos: 700, nombre: 'ALVARO FRANCO', codigo: '222', origen: 'Yape', cuando: Date.now() }]);
+ok('el código de seguridad decide entre dos capturas iguales', (await est('g2')).status === 'confirmed' && (await est('g1')).status === 'pending_payment',
+   JSON.stringify([await est('g1'), await est('g2')]));
+await q(`select lector_srv_recibir($1, 'aviso', $2)`, [D, { huella: 'h-codigo-999', centimos: 700, nombre: 'ALVARO FRANCO', codigo: '999', origen: 'Yape', cuando: Date.now() }]);
+ok('un Yape con otro código no toma la captura', (await est('g1')).status === 'pending_payment');
+await q(`select lector_srv_recibir($1, 'aviso', $2)`, [D, { huella: 'h-codigo-111', centimos: 700, nombre: 'X', codigo: '111', origen: 'Yape', cuando: Date.now() }]);
+ok('y el de su código sí', (await est('g1')).status === 'confirmed');
 
 // 7 · «No era de esta cita».
 const a1 = await uno(`select id from lector_avisos where cita_id = 'c1'`);
