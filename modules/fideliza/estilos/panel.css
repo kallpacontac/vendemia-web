@@ -524,6 +524,7 @@
 .fz-valor{margin-bottom:16px}
 .fz-valor--solo{grid-template-columns:minmax(0,1fr)}
 .fz-plata .negocio-importe{margin:10px 0 6px}
+.fz-plata__unidad{font-size:18px;font-weight:600;letter-spacing:0;color:var(--ink-soft)}
 .fz-plata__que{margin:10px 0 0}
 .fz-plata__barras{display:flex;align-items:flex-end;gap:10px;height:92px;margin:14px 0 4px}
 .fz-plata__semana{flex:1;height:100%;display:flex;flex-direction:column;justify-content:flex-end;align-items:stretch;gap:6px;min-width:0}

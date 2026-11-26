@@ -122,11 +122,14 @@ export default function ValorDelClub({ companyId, negocio, club, premio, verCont
     <div className={`fz-numeros__fila fz-valor${verContactos ? '' : ' fz-valor--solo'}`}>
       <article className="fz-numeros__card fz-plata">
         <div className="negocio-card-head">
-          <h2>Plata que volvió</h2>
+          {/* 26-nov-2026: sin importes anotados es un conteo de visitas, no plata: que lo diga. */}
+          <h2>{conImporte ? 'Plata que volvió' : 'Visitas que volvieron'}</h2>
           <span className="negocio-currency">{plata.mes}</span>
         </div>
         <strong className="negocio-importe">
-          {conImporte ? <ContadorAnimado valor={Math.round(plata.plata / 100)} moneda /> : <ContadorAnimado valor={plata.visitas} />}
+          {conImporte
+            ? <ContadorAnimado valor={Math.round(plata.plata / 100)} moneda />
+            : <><ContadorAnimado valor={plata.visitas} /> <small className="fz-plata__unidad">{plata.visitas === 1 ? 'visita' : 'visitas'}</small></>}
         </strong>
         <div className="negocio-comparacion">
           <span className={`resumen-cambio ${d.clase}`}>{d.texto}</span>
@@ -135,7 +138,7 @@ export default function ValorDelClub({ companyId, negocio, club, premio, verCont
         <p className="fz-numeros__sub fz-plata__que">
           {conImporte
             ? `${plata.visitas} ${plata.visitas === 1 ? 'visita' : 'visitas'} de ${plata.clientes} ${plata.clientes === 1 ? 'cliente que volvió' : 'clientes que volvieron'}.`
-            : `Visitas de ${plata.clientes} ${plata.clientes === 1 ? 'cliente que volvió' : 'clientes que volvieron'}. Anota el importe al dar el sello y aquí lo verás en soles.`}
+            : `De ${plata.clientes} ${plata.clientes === 1 ? 'cliente que volvió' : 'clientes que volvieron'}. Anota el importe al dar el sello y aquí verás la plata en soles (S/).`}
         </p>
         <div className="fz-plata__barras" aria-hidden="true">
           {plata.semanas.map((v, i) => (
@@ -162,7 +165,7 @@ export default function ValorDelClub({ companyId, negocio, club, premio, verCont
             <h2>Escríbeles hoy</h2>
             {lista && lista.length > 0 && <span className="negocio-currency">{escritos.size} de {lista.length}</span>}
           </div>
-          <p className="fz-numeros__sub">Les escribes tú, uno por uno, desde tu WhatsApp. Si vuelven, cuentan en la plata que volvió.</p>
+          <p className="fz-numeros__sub">Les escribes tú, uno por uno, desde tu WhatsApp. Si vuelven, cuentan en «{conImporte ? 'Plata que volvió' : 'Visitas que volvieron'}».</p>
           {lista === null ? (
             <p className="fz-numeros__nota">Buscando a quién escribirle…</p>
           ) : lista.length === 0 ? (
