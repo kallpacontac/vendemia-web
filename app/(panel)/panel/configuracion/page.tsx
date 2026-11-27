@@ -1598,11 +1598,11 @@ function Configuracion() {
             )}
             {/* La foto del efectivo cuando cobra el empleado (lector 0004, Alvaro 26-nov: configurable). */}
             {cobroFoto?.empleadoCobra && companyId && <EfectivoDelEquipo companyId={companyId} puede={gestiona} />}
+            {/* La foto en «Generar ticket» de Mi agenda (tu-pagina 0039): sin foto, opcional u obligatoria. */}
+            {companyId && <FotoDelTicket companyId={companyId} puede={gestiona} />}
 
             {/*
               Las citas apartadas en Mi agenda (datos 0029, Alvaro 23-nov-2026): al barbero lo
-            {/* La foto en «Generar ticket» de Mi agenda (tu-pagina 0039): sin foto, opcional u obligatoria. */}
-            {companyId && <FotoDelTicket companyId={companyId} puede={gestiona} />}
               confunden, así que de serie solo ve las confirmadas. 24-nov (datos 0030): una postura
               en medio, «con captura»: las que ya mandaron la captura del adelanto, sin aprobar.
             */}
