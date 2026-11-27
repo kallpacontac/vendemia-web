@@ -91,6 +91,8 @@ export default function FichaCliente() {
   /** 0029: «Borrar tarjeta» pide confirmar aquí mismo (window.prompt no abre en la app del celular). */
   const [confirmarBorrado, setConfirmarBorrado] = useState(false);
   const [borrando, setBorrando] = useState(false);
+  /** Suspender/Reactivar: el motivo se escribe aquí (null = cerrado). */
+  const [estado, setEstado] = useState<string | null>(null);
   const router = useRouter();
 
   const { datos: f, cargando, error, releer } = useCargar(
@@ -136,10 +138,14 @@ export default function FichaCliente() {
     }
   }
 
-  async function borrar() {
-    const motivo = window.prompt('Se borran nombre, contactos y avisos; el historial de puntos queda sin datos personales. Motivo:');
-    if (!motivo || motivo.trim().length < 3) return;
-    await hacer('miembro.borrar', { reason: motivo.trim() }, 'Datos personales borrados');
+  async function cambiarEstado() {
+    const suspender = f!.status === 'active';
+    const r = await hacer(
+      'miembro.estado',
+      { status: suspender ? 'suspended' : 'active', reason: estado?.trim() || (suspender ? 'Suspendida desde el panel' : 'Reactivada desde el panel') },
+      suspender ? 'Tarjeta suspendida' : 'Tarjeta reactivada',
+    );
+    if (r) setEstado(null);
   }
 
   async function eliminar() {
@@ -296,29 +302,40 @@ export default function FichaCliente() {
             <summary>Más opciones</summary>
             <div className="fz-fila">
             {puede('members.manage') && f.status !== 'deleted' && (
-              <>
-                <button
-                  className="btn btn-ghost btn-sm"
-                  onClick={() => {
-                    const motivo = window.prompt(f.status === 'active' ? 'Motivo de la suspensión:' : 'Motivo de la reactivación:') ?? '';
-                    if (motivo.trim()) void hacer('miembro.estado', { status: f.status === 'active' ? 'suspended' : 'active', reason: motivo.trim() }, f.status === 'active' ? 'Tarjeta suspendida' : 'Tarjeta reactivada');
-                  }}
-                >
-                  {f.status === 'active' ? 'Suspender' : 'Reactivar'}
-                </button>
-              </>
+              <button className="btn btn-ghost btn-sm" onClick={() => setEstado(estado === null ? '' : null)}>
+                {f.status === 'active' ? 'Suspender' : 'Reactivar'}
+              </button>
             )}
             {puede('members.export') && (
               <button className="btn btn-ghost btn-sm" onClick={() => void exportar()}>
                 Exportar datos (JSON)
               </button>
             )}
-            {puede('members.delete') && f.status !== 'deleted' && (
-              <button className="btn btn-ghost btn-sm" onClick={() => void borrar()}>
-                Borrar datos personales
-              </button>
-            )}
             </div>
+            {estado !== null && puede('members.manage') && f.status !== 'deleted' && (
+              <div style={{ marginTop: 10 }}>
+                <p className="fz-def" style={{ marginTop: 0 }}>
+                  {f.status === 'active'
+                    ? 'Mientras esté suspendida no suma sellos, no canjea premios y no recibe avisos. Se puede reactivar cuando quieras.'
+                    : 'Vuelve a sumar sellos y a canjear premios, con todo lo que tenía.'}
+                </p>
+                <input
+                  className="input"
+                  placeholder="Motivo (opcional)"
+                  value={estado}
+                  maxLength={200}
+                  onChange={(e) => setEstado(e.target.value)}
+                />
+                <div className="fz-fila" style={{ marginTop: 8 }}>
+                  <button className="btn btn-sm" onClick={() => void cambiarEstado()}>
+                    {f.status === 'active' ? 'Sí, suspender' : 'Sí, reactivar'}
+                  </button>
+                  <button className="btn btn-ghost btn-sm" onClick={() => setEstado(null)}>
+                    Cancelar
+                  </button>
+                </div>
+              </div>
+            )}
           </details>
 
           {puede('members.delete') && (
