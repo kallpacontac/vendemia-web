@@ -40,6 +40,7 @@ import GoogleCalendar from '@/components/panel/GoogleCalendar';
 import LectorDePagos from '@/components/panel/LectorDePagos';
 import EfectivoDelEquipo from '@/components/panel/EfectivoDelEquipo';
 import ComoAtiendeMia from '@/components/panel/ComoAtiendeMia';
+import FotoDelTicket from '@/components/panel/FotoDelTicket';
 import {
   hibridoRoto,
   leerCanalCierre,
@@ -1600,6 +1601,8 @@ function Configuracion() {
 
             {/*
               Las citas apartadas en Mi agenda (datos 0029, Alvaro 23-nov-2026): al barbero lo
+            {/* La foto en «Generar ticket» de Mi agenda (tu-pagina 0039): sin foto, opcional u obligatoria. */}
+            {companyId && <FotoDelTicket companyId={companyId} puede={gestiona} />}
               confunden, así que de serie solo ve las confirmadas. 24-nov (datos 0030): una postura
               en medio, «con captura»: las que ya mandaron la captura del adelanto, sin aprobar.
             */}

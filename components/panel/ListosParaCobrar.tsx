@@ -94,15 +94,21 @@ export default function ListosParaCobrar({
 
   // La foto del voucher o del ticket que el barbero adjuntó al generarlo (tu-pagina 0037). Sin la
   // migración, o si falla, no sale y ya: es una ayuda para comparar, no parte del cobro.
-  const [fotos, setFotos] = useState<Map<string, string>>(new Map());
+  // 26-nov-2026 (0039): hasta dos por ticket (url_2). Sin la 0039, la consulta con url_2 falla y se
+  // pide solo la primera, como antes.
+  const [fotos, setFotos] = useState<Map<string, string[]>>(new Map());
   useEffect(() => {
     if (!ids) return;
     let vivo = true;
-    void supabase().from('ticket_fotos').select('appointment_id, url').in('appointment_id', ids.split(','))
-      .then(({ data, error }) => {
-        if (!vivo || error) return;
-        setFotos(new Map((data as { appointment_id: string; url: string }[]).map((f) => [f.appointment_id, f.url])));
-      });
+    const lista = ids.split(',');
+    void (async () => {
+      type Fila = { appointment_id: string; url: string; url_2?: string | null };
+      const dos = await supabase().from('ticket_fotos').select('appointment_id, url, url_2').in('appointment_id', lista);
+      const r = dos.error ? await supabase().from('ticket_fotos').select('appointment_id, url').in('appointment_id', lista) : dos;
+      if (!vivo || r.error) return;
+      setFotos(new Map((r.data as Fila[])
+        .map((f) => [f.appointment_id, [f.url, f.url_2].filter((u): u is string => Boolean(u))])));
+    })();
     return () => { vivo = false; };
   }, [ids]);
 
@@ -138,11 +144,11 @@ export default function ListosParaCobrar({
                   {cita.sede && conSede ? ` · ${sedeCorta(cita.sede)}` : ''}
                   {pagos ? ` · pagó ${soles(pagos.pagado)} · falta ${soles(pagos.saldo)}` : ''}
                 </small>
-                {fotos.get(cita.id) && (
-                  <a className="listo-foto" href={fotos.get(cita.id)} target="_blank" rel="noopener noreferrer">
-                    <Camera size={13} /> Ver foto del ticket
+                {(fotos.get(cita.id) ?? []).map((u, i, todas) => (
+                  <a key={u} className="listo-foto" href={u} target="_blank" rel="noopener noreferrer">
+                    <Camera size={13} /> {todas.length > 1 ? `Ver foto ${i + 1} del ticket` : 'Ver foto del ticket'}
                   </a>
-                )}
+                ))}
               </div>
               <b className="listo-monto">{soles(pagos ? pagos.saldo : importe)}</b>
               <div className="listo-acciones">

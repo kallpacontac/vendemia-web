@@ -57,6 +57,7 @@ import CobroDelBarbero from '@/components/panel/CobroDelBarbero';
 import { supabase } from '@/lib/supabase/client';
 import { achicarImagen } from '@/lib/achicarImagen';
 import { guiarA } from '@/lib/panel/guiar';
+import { MAX_FOTOS_TICKET, type ModoFotoTicket } from '@/lib/panel/fotoTicket';
 import { useCargar } from '@/components/panel/useCargar';
 import { useSondeo } from '@/components/panel/useSondeo';
 import { esRecurrente } from '@/lib/panel/modo';
@@ -751,11 +752,22 @@ function LlegoSinCita({ companyId, precios, sedeReciente, alCerrar, alListo }: {
   const [hace, setHace] = useState<number | null>(0);
   const [otraHora, setOtraHora] = useState(() => hhmm(new Date()));
   const [enviando, setEnviando] = useState(false);
-  const [foto, setFoto] = useState<File | null>(null);
-  const vistaFoto = useMemo(() => (foto ? URL.createObjectURL(foto) : ''), [foto]);
-  useEffect(() => () => { if (vistaFoto) URL.revokeObjectURL(vistaFoto); }, [vistaFoto]);
+  // 26-nov-2026 (tu-pagina 0039): hasta 2 fotos con un solo botón, y el negocio decide si van
+  // (sin foto / opcional / obligatoria). Sin la 0039, opcional y una sola, como antes.
+  const [fotos, setFotos] = useState<File[]>([]);
+  const vistas = useMemo(() => fotos.map((f) => URL.createObjectURL(f)), [fotos]);
+  useEffect(() => () => { vistas.forEach((u) => URL.revokeObjectURL(u)); }, [vistas]);
+  const { datos: ajusteFoto } = useCargar(async (): Promise<{ modo: ModoFotoTicket; max: number }> => {
+    const { data, error: e } = await supabase().rpc('ticket_foto_modo', { p_company: companyId });
+    if (e) return { modo: 'opcional', max: 1 };
+    return { modo: data === 'apagada' || data === 'obligatoria' ? data : 'opcional', max: MAX_FOTOS_TICKET };
+  }, [companyId]);
+  const modoFoto = ajusteFoto?.modo ?? 'opcional';
+  const maxFotos = ajusteFoto?.max ?? 1;
+  const conFoto = modoFoto !== 'apagada';
   const refSede = useRef<HTMLDivElement>(null);
   const refCuando = useRef<HTMLDivElement>(null);
+  const refFoto = useRef<HTMLDivElement>(null);
   const refOpcional = useRef<HTMLDivElement>(null);
 
   // Mientras está abierta, la página de atrás no se mueve: se desliza la ventana.
@@ -765,9 +777,8 @@ function LlegoSinCita({ companyId, precios, sedeReciente, alCerrar, alListo }: {
     return () => { document.body.style.overflow = antes; };
   }, []);
 
-  /** La foto, pegada al ticket recién creado. Devuelve el error para decirlo, o null. */
-  async function subirFoto(citaId: string): Promise<string | null> {
-    if (!foto) return null;
+  /** Una foto, pegada al ticket recién creado (orden 1 o 2). Devuelve el error para decirlo, o null. */
+  async function subirFoto(citaId: string, foto: File, orden: number): Promise<string | null> {
     try {
       const { data } = await supabase().auth.getSession();
       const token = data.session?.access_token;
@@ -775,6 +786,7 @@ function LlegoSinCita({ companyId, precios, sedeReciente, alCerrar, alListo }: {
       const form = new FormData();
       form.append('companyId', companyId);
       form.append('cita', citaId);
+      form.append('orden', String(orden));
       form.append('archivo', await achicarImagen(foto), 'ticket.jpg');
       const r = await fetch('/api/agenda/foto-ticket', { method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: form });
       const j = (await r.json().catch(() => ({}))) as { status?: string; mensaje?: string };
@@ -821,6 +833,7 @@ function LlegoSinCita({ companyId, precios, sedeReciente, alCerrar, alListo }: {
     const digitos = tel.replace(/\D/g, '');
     if (!servicio) { avisar('Elige el servicio.', 'error'); return; }
     if (!sedeValida) { avisar('Elige en qué sede estás.', 'error'); guiarA(refSede.current); return; }
+    if (modoFoto === 'obligatoria' && fotos.length === 0) { avisar('Adjunta la foto del voucher o del ticket.', 'error'); guiarA(refFoto.current); return; }
     if (digitos && digitos.length < 9) { avisar('Ese celular no está completo: escribe los 9 dígitos o déjalo vacío.', 'error'); guiarA(refOpcional.current); return; }
     setEnviando(true);
     const { data, error: e2 } = await supabase().rpc('mi_agenda_sin_cita', {
@@ -841,11 +854,13 @@ function LlegoSinCita({ companyId, precios, sedeReciente, alCerrar, alListo }: {
       /* sin almacenamiento: la próxima vez la vuelve a elegir */
     }
     const r = data as { id?: string; servicio?: string; slot_start?: string; aviso?: string | null };
-    if (foto && r.id) {
+    if (conFoto && fotos.length && r.id) {
       setEnviando(true);
-      const malFoto = await subirFoto(r.id);
+      for (const [i, f] of fotos.entries()) {
+        const mal = await subirFoto(r.id, f, i + 1);
+        if (mal) avisar(`Ticket hecho, pero ${fotos.length > 1 ? `la foto ${i + 1}` : 'la foto'} no se subió: ${mal}`, 'error');
+      }
       setEnviando(false);
-      if (malFoto) avisar(`Ticket hecho, pero la foto no se subió: ${malFoto}`, 'error');
     }
     if (!yaAtendido) avisar(`Anotado: ${r.servicio ?? 'la cita'} a las ${(r.slot_start ?? '').slice(11, 16)}.`, 'ok');
     if (r.aviso) avisar(r.aviso, 'error');
@@ -899,7 +914,7 @@ function LlegoSinCita({ companyId, precios, sedeReciente, alCerrar, alListo }: {
                 <div className="gt__chips" role="radiogroup" aria-label="Cuándo empezó">
                   {CUANDO.map((x) => (
                     <button key={x.texto} type="button" role="radio" aria-checked={hace === x.min} className={`gt__chip${hace === x.min ? ' on' : ''}`}
-                      onClick={() => { setHace(x.min); if (x.min !== null) guiarA(refOpcional.current); }}>
+                      onClick={() => { setHace(x.min); if (x.min !== null) guiarA((conFoto ? refFoto : refOpcional).current); }}>
                       {x.texto}
                       {x.min !== null && <small>{hhmm(new Date(Date.now() - x.min * 60_000))}</small>}
                     </button>
@@ -909,6 +924,36 @@ function LlegoSinCita({ companyId, precios, sedeReciente, alCerrar, alListo }: {
                   <input className="input gt__hora" type="time" value={otraHora} onChange={(e) => setOtraHora(e.target.value)} aria-label="Hora de inicio" />
                 )}
               </div>
+
+              {conFoto && (
+                <div className="gt__paso" ref={refFoto}>
+                  <span className="gt__titulo">
+                    {pideSede ? '4' : '3'} · Foto del voucher o del ticket{' '}
+                    <small>{modoFoto === 'obligatoria' ? 'obligatoria' : 'opcional'}{maxFotos > 1 ? ` · hasta ${maxFotos}` : ''} · la ve la caja al cobrar</small>
+                  </span>
+                  {fotos.map((f, i) => (
+                    <div key={`${f.name}-${f.size}-${i}`} className="gt__foto-lista">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={vistas[i]} alt={`Foto ${i + 1}`} />
+                      <span>Foto {i + 1} lista</span>
+                      <button type="button" className="btn btn-ghost btn-sm" onClick={() => setFotos((l) => l.filter((_, j) => j !== i))} disabled={enviando}><X size={14} /> Quitar</button>
+                    </div>
+                  ))}
+                  {fotos.length < maxFotos && (
+                    <label className="gt__foto">
+                      <Camera size={18} /> {fotos.length ? 'Agregar otra foto' : maxFotos > 1 ? `Adjuntar fotos (hasta ${maxFotos})` : 'Adjuntar foto'}
+                      <input type="file" accept="image/*" multiple={maxFotos - fotos.length > 1} hidden
+                        onChange={(e) => {
+                          const nuevas = Array.from(e.target.files ?? []);
+                          e.target.value = '';
+                          if (!nuevas.length) return;
+                          setFotos((l) => [...l, ...nuevas].slice(0, maxFotos));
+                          if (fotos.length + nuevas.length > maxFotos) avisar(`Son ${maxFotos} fotos como mucho: se quedaron las primeras.`, 'espera');
+                        }} />
+                    </label>
+                  )}
+                </div>
+              )}
 
               <div className="gt__paso gt__opcional" ref={refOpcional}>
                 <span className="gt__titulo">Opcional <small>para su tarjeta y sus avisos</small></span>
@@ -920,22 +965,6 @@ function LlegoSinCita({ companyId, precios, sedeReciente, alCerrar, alListo }: {
                   <span>Celular <small>con él le llegan sus avisos y su tarjeta</small></span>
                   <input className="input" inputMode="tel" placeholder="9…" value={tel} onChange={(e) => setTel(e.target.value)} autoComplete="off" />
                 </label>
-                <div className="gt__campo">
-                  <span>Foto del voucher o del ticket <small>la ve la caja al cobrar</small></span>
-                  {foto ? (
-                    <div className="gt__foto-lista">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={vistaFoto} alt="Foto adjunta" />
-                      <span>Foto lista</span>
-                      <button type="button" className="btn btn-ghost btn-sm" onClick={() => setFoto(null)} disabled={enviando}><X size={14} /> Quitar</button>
-                    </div>
-                  ) : (
-                    <label className="gt__foto">
-                      <Camera size={18} /> Adjuntar foto
-                      <input type="file" accept="image/*" hidden onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ''; if (f) setFoto(f); }} />
-                    </label>
-                  )}
-                </div>
               </div>
 
               <label className="gc-suma">
@@ -950,7 +979,7 @@ function LlegoSinCita({ companyId, precios, sedeReciente, alCerrar, alListo }: {
         </div>
         <div className="modal__pie gt__pie">
           <button type="button" className="btn btn-ghost" onClick={alCerrar} disabled={enviando}>Cancelar</button>
-          <button type="submit" className="btn btn-primary" disabled={!datos || enviando || !servicio}>{enviando ? (foto ? 'Subiendo la foto…' : 'Generando…') : 'Generar ticket'}</button>
+          <button type="submit" className="btn btn-primary" disabled={!datos || enviando || !servicio}>{enviando ? (fotos.length ? (fotos.length > 1 ? 'Subiendo las fotos…' : 'Subiendo la foto…') : 'Generando…') : 'Generar ticket'}</button>
         </div>
       </form>
     </div>
