@@ -11,6 +11,7 @@ import { cuerpo, desdeError, fallo, huellaIp, limitar, ok } from '@/modules/fide
 import { rpc, servidor } from '@/modules/fideliza/servidor/supabase';
 import { enlaceParaTarjeta, tarjetaGuardadaEnWallet } from '@/modules/fideliza/servidor/wallet/sincronizar';
 import { FIDELIZA_URL } from '@/modules/fideliza/dominio/config';
+import { configGoogleTarjeta } from '@/modules/fideliza/servidor/google';
 
 
 const token = z.string().regex(/^[A-Za-z0-9_-]{30,64}$/);
@@ -18,6 +19,8 @@ const esquema = z.discriminatedUnion('accion', [
   z.object({ accion: z.literal('ver'), token }),
   z.object({ accion: z.literal('wallet'), token }),
   z.object({ accion: z.literal('wallet_estado'), token }),
+  // 0028: «Trae a un amigo» y si está guardada con Google.
+  z.object({ accion: z.literal('extras'), token }),
   z.object({ accion: z.literal('alias'), token, alias: z.string().trim().max(40) }),
   z.object({
     accion: z.literal('contacto'),
@@ -58,6 +61,15 @@ export async function POST(req: Request) {
     }
     if (d.accion === 'wallet_estado') {
       return ok({ guardada: await tarjetaGuardadaEnWallet(d.token) });
+    }
+    if (d.accion === 'extras') {
+      const google = configGoogleTarjeta().listo;
+      try {
+        return ok({ ...(await rpc<Record<string, unknown>>(sb, 'loyalty_srv_tarjeta_extras', { p_card_token: d.token })), google_disponible: google });
+      } catch {
+        // Sin sql/0028 la tarjeta sigue igual: sin amigos ni Google.
+        return ok({ status: 'ok', google: false, amigos: null, google_disponible: false });
+      }
     }
     const [accion, args] = (() => {
       switch (d.accion) {

@@ -33,6 +33,7 @@ import { useCargar } from '@/components/panel/useCargar';
 import { accion, ErrorFideliza, lecturas, mensaje, sincronizarEnSegundoPlano, type Version } from '@/modules/fideliza/cliente/api';
 import { subirImagenMarca } from '@/modules/fideliza/cliente/imagenMarca';
 import EncuadrarFoto from '@/modules/fideliza/ui/EncuadrarFoto';
+import TraeUnAmigo from '@/modules/fideliza/ui/TraeUnAmigo';
 import { slugDe } from '@/modules/fideliza/dominio/botones';
 import { urlUnirse } from '@/modules/fideliza/dominio/config';
 import { AVISOS_AUTO, avisoDeFabrica, type PlantillaAuto } from '@/modules/fideliza/dominio/avisos';
@@ -298,6 +299,9 @@ export default function CrearClub() {
           </div>
           <Link className="btn btn-ghost btn-sm" href="/panel/fideliza/programa"><Settings2 size={15} /> Opciones avanzadas</Link>
         </div>
+
+        {/* 0028: arriba y plegada, para no bajar hasta el final. Solo con el club ya publicado. */}
+        {programa?.current_version_id && companyId && <TraeUnAmigo companyId={companyId} editable={editable} />}
 
         {!ajustes && (
           <section className="card fz-club__sec">

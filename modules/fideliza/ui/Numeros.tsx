@@ -53,6 +53,8 @@ export interface ExtraNumeros {
   premiosCanjeados: number;
   premiosPorCanjear: number;
   recuperados: number;
+  /** 0028: «Trae a un amigo» en el periodo. null sin la 0028. */
+  amigos?: { activo: boolean; traidos: number; invitados: number; premios: number } | null;
 }
 
 export default function Numeros({ companyId }: { companyId: string }) {
@@ -70,6 +72,17 @@ export default function Numeros({ companyId }: { companyId: string }) {
       return null;
     }
   }, [companyId, dias]);
+  const { datos: amigos } = useCargar(async () => {
+    try {
+      return await accion<NonNullable<ExtraNumeros['amigos']>>('amigos.resumen', {
+        companyId,
+        desde: new Date(Date.now() - dias * 86_400_000).toISOString(),
+        hasta: new Date(Date.now() + 60_000).toISOString(),
+      });
+    } catch {
+      return null; // sin la 0028
+    }
+  }, [companyId, dias]);
   const n = useMemo(() => (datos ? calcularNumeros(datos.visitas, datos.altas, dias) : null), [datos, dias]);
   const extra: ExtraNumeros | null = m
     ? {
@@ -78,6 +91,7 @@ export default function Numeros({ companyId }: { companyId: string }) {
         premiosCanjeados: m.rewards.redeemed,
         premiosPorCanjear: m.rewards.available_now,
         recuperados: m.recovered ?? 0,
+        amigos,
       }
     : null;
 
@@ -308,6 +322,13 @@ export function VistaNumeros({ n, dias, setDias, extra = null }: { n: NumerosCal
               </li>
             ))}
           </ol>
+          {extra?.amigos && (extra.amigos.activo || extra.amigos.traidos > 0) && (
+            <p className="fz-numeros__nota">
+              <b>{extra.amigos.traidos}</b> {extra.amigos.traidos === 1 ? 'cliente llegó invitado' : 'clientes llegaron invitados'} por tus clientes
+              {extra.amigos.invitados > 0 ? ` · ${extra.amigos.invitados} ${extra.amigos.invitados === 1 ? 'sacó' : 'sacaron'} su tarjeta con una invitación` : ''}
+              {extra.amigos.premios > 0 ? ` · ${extra.amigos.premios} ${extra.amigos.premios === 1 ? 'premio ganado' : 'premios ganados'}` : ''}.
+            </p>
+          )}
         </article>
 
         <article className="fz-numeros__card">

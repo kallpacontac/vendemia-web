@@ -5,7 +5,7 @@ import { estadoConfiguracion } from './entorno';
 import { rpc, servidor } from './supabase';
 import { comprobarLogo } from './logo';
 import { buscarLugares } from './lugares';
-import { avisarPremio, avisarSello } from './avisos';
+import { avisarAmigos, avisarPremio, avisarSello } from './avisos';
 import { drenar } from './worker';
 import { urlAyuda, urlSuelta } from '../dominio/botones';
 import { IDS_SELLO } from '../dominio/sellos';
@@ -542,7 +542,8 @@ export const ACCIONES = {
         p_idempotency_key: d.idempotencyKey,
         p_source: 'caja',
       });
-      await avisarOperacion(d.companyId, d.memberId, r);
+      // 0028: el primer sello de un amigo invitado avisa a quien lo invitó.
+      await Promise.all([avisarOperacion(d.companyId, d.memberId, r), avisarAmigos(d.companyId, d.memberId)]);
       return r;
     },
   }),
@@ -556,7 +557,7 @@ export const ACCIONES = {
         p_member: await miembroDeLinea(sb, d.companyId, d.memberId, d.programId),
         p_idempotency_key: d.idempotencyKey,
       });
-      await avisarOperacion(d.companyId, d.memberId, r, true);
+      await Promise.all([avisarOperacion(d.companyId, d.memberId, r, true), avisarAmigos(d.companyId, d.memberId)]);
       return r;
     },
   }),
@@ -761,6 +762,28 @@ export const ACCIONES = {
       }),
     }),
     ejecutar: (d, { sb }) => rpc(sb, 'loyalty_resena_guardar', { p_company: d.companyId, p_datos: d.datos }),
+  }),
+  /** «Trae a un amigo» (sql/0028): cada N amigos que vienen, un premio para quien invitó. */
+  'amigos.leer': accion({
+    esquema: z.object({ companyId: compania }),
+    ejecutar: (d, { sb }) => rpc(sb, 'loyalty_amigos_leer', { p_company: d.companyId }),
+  }),
+  'amigos.guardar': accion({
+    esquema: z.object({
+      companyId: compania,
+      datos: z.object({
+        activo: z.boolean(),
+        cada: z.number().int().min(1).max(5),
+        premio: z.string().trim().max(80),
+        catalogo_id: z.string().trim().max(64).nullable(),
+        regalo: z.boolean(),
+      }),
+    }),
+    ejecutar: (d, { sb }) => rpc(sb, 'loyalty_amigos_guardar', { p_company: d.companyId, p_datos: d.datos }),
+  }),
+  'amigos.resumen': accion({
+    esquema: z.object({ companyId: compania, desde: z.string().datetime(), hasta: z.string().datetime() }),
+    ejecutar: (d, { sb }) => rpc(sb, 'loyalty_amigos_resumen', { p_company: d.companyId, p_from: d.desde, p_to: d.hasta }),
   }),
   /** El regalo de cumpleaños del negocio (sql/0025). '' lo apaga. */
   'cumple.regalo': accion({

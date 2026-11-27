@@ -10,6 +10,7 @@ import { urlNegocio } from '@/modules/fideliza/dominio/config';
 import { SELLOS, selloValido, trazoSello } from '@/modules/fideliza/dominio/sellos';
 import { conAvisosEnTarjeta, conWalletEnTarjeta, nombreVisita } from '@/modules/fideliza/dominio/tarjetaOpciones';
 import AvisoActivar from './AvisoActivar';
+import ExtrasTarjeta from './ExtrasTarjeta';
 import AvisoInstalar, { type EventoInstalar } from './AvisoInstalar';
 import { instalarGuardado, soltarInstalarGuardado } from '@/components/panel/Instalable';
 
@@ -568,6 +569,9 @@ export default function Tarjeta(props: {
           </a>
         </section>
       )}
+
+      {/* 0028 (26-nov-2026): «Invita a un amigo» y «Guardar con Google». */}
+      <ExtrasTarjeta token={token} negocio={d.brand.display_name} activa={d.member.status === 'active'} />
 
       {pushPosible && d.member.status === 'active' && conAvisosEnTarjeta(d.brand.style) && (
         <section className="fz-caja fz-caja--flujo" aria-label="Avisos">

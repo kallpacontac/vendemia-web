@@ -639,3 +639,26 @@
 .fz-avisos__msg span{overflow:hidden;text-overflow:ellipsis;min-width:0}
 .fz-filtros{display:flex;max-width:100%;overflow-x:auto;scrollbar-width:none;margin:0 0 12px}
 .fz-filtros button{white-space:nowrap;min-height:36px}
+/* 0028 · «Trae a un amigo» en Tu tarjeta (ui/TraeUnAmigo.tsx): plegada arriba, con su interruptor */
+.fz-amigo{padding:0;overflow:hidden}
+.fz-amigo--abierto{box-shadow:0 0 0 1.5px color-mix(in srgb,var(--brand) 40%,transparent),var(--sh-card)}
+.fz-amigo__cab{display:flex;align-items:center;gap:12px;padding:14px 18px}
+.fz-amigo__abrir{flex:1;min-width:0;display:flex;align-items:center;gap:10px;background:none;border:0;padding:0;text-align:left;cursor:pointer;color:var(--ink);font:inherit}
+.fz-amigo__abrir>span{flex:1;min-width:0;display:flex;flex-direction:column}
+.fz-amigo__abrir b{font-size:15px;font-weight:800}
+.fz-amigo__abrir small{font-size:13px;color:var(--ink-soft);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fz-amigo__abrir svg{flex:none;color:var(--ink-mute);transition:transform .2s}
+.fz-amigo--abierto .fz-amigo__abrir svg{transform:rotate(180deg)}
+.fz-amigo__cuerpo{display:grid;gap:14px;padding:0 18px 18px}
+.fz-amigo__frase{display:flex;align-items:center;flex-wrap:wrap;gap:8px;font-weight:600}
+.fz-amigo__opciones{display:grid;gap:8px}
+.fz-amigo__op{display:grid;grid-template-columns:auto minmax(0,1fr);gap:10px;align-items:start;padding:12px;border:1.5px solid var(--line);border-radius:14px;cursor:pointer}
+.fz-amigo__op:has(> span:only-child){grid-template-columns:minmax(0,1fr)}
+.fz-amigo__op--si{border-color:var(--brand);background:var(--brand-soft)}
+.fz-amigo__op input[type=radio]{margin:3px 0 0;width:18px;height:18px;accent-color:var(--brand)}
+.fz-amigo__op b{display:block;font-size:14px;margin-bottom:6px}
+.fz-amigo__op .input{width:100%;background:#fff}
+.fz-amigo__resumen{margin:0;padding:11px 13px;border-radius:12px;background:var(--bg-soft);font-size:14px}
+.fz-amigo__resumen b{color:var(--brand-txt)}
+.fz-amigo__reglas{margin:8px 0 0;padding-left:18px;font-size:13px;color:var(--ink-soft)}
+.fz-amigo__reglas li{margin:3px 0}

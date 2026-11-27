@@ -70,6 +70,8 @@ export const MENSAJES: Record<string, string> = {
   wallet_class_missing: 'El programa todavía no tiene tarjeta de Google Wallet. Publícalo primero.',
   wallet_not_configured: 'Google Wallet no está configurado en este servidor.',
   rate_limited: 'Demasiados intentos seguidos. Espera un momento.',
+  google_off: 'Guardar con Google no está disponible ahora.',
+  unavailable: 'No se pudo completar ahora. Inténtalo en un momento.',
   places_error: 'Google no respondió a la búsqueda. Inténtalo de nuevo o pega tu enlace a mano.',
   places_not_configured: 'La búsqueda en Google no está activada todavía: pega tu enlace a mano.',
   invalid_input: 'Faltan datos o alguno no es válido.',

@@ -78,6 +78,44 @@ export async function avisarSello(companyId: string, memberId: string, titulo: s
   }
 }
 
+/**
+ * 26-nov-2026 (sql/0028, «Trae a un amigo»): tras un sello en la caja, a quien invitó a esa
+ * persona. «Carla vino» (solo push) o «¡Tus amigos vinieron! Ganaste…» (push y Wallet). La base
+ * marca cada aviso como dado: un reintento no lo repite. Sin la 0028, no hace nada.
+ */
+interface AvisoAmigo {
+  invitador_id: string;
+  aviso: 'vino' | 'premio';
+  invitado: string;
+  premio: string | null;
+  premio_siguiente: string;
+  faltan: number;
+}
+export async function avisarAmigos(companyId: string, memberId: string) {
+  let lista: AvisoAmigo[];
+  try {
+    lista = await rpc<AvisoAmigo[]>(servidor(), 'loyalty_srv_amigo_avisos', { p_company: companyId, p_member: memberId });
+  } catch {
+    return;
+  }
+  if (!lista?.length) return;
+  const envios = lista.map((a) =>
+    a.aviso === 'premio'
+      ? enviarTexto(companyId, a.invitador_id, 'amigos', (negocio) => ({ titulo: '¡Tus amigos vinieron!', cuerpo: `Ganaste ${a.premio ?? 'tu premio'}. Enséñalo en ${negocio} para canjearlo.` }), true)
+      : enviarTexto(companyId, a.invitador_id, 'amigos', (negocio) => ({
+          titulo: `${a.invitado} vino a ${negocio}`,
+          cuerpo: a.faltan > 0
+            ? `Gracias por invitarle. Te ${a.faltan === 1 ? 'falta 1 amigo' : `faltan ${a.faltan} amigos`} para ganar ${a.premio_siguiente}.`
+            : 'Gracias por invitarle.',
+        }), false),
+  );
+  try {
+    await Promise.race([Promise.allSettled(envios), new Promise((listo) => setTimeout(listo, 3500))]);
+  } catch (e) {
+    log('aviso_amigos_omitido', { mensaje: e instanceof Error ? e.message.slice(0, 160) : 'x' });
+  }
+}
+
 export async function avisarPremio(companyId: string, memberId: string, tipo: TipoAviso, premio: string | null | undefined) {
   try {
     await Promise.race([

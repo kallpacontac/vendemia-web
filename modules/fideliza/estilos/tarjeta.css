@@ -211,3 +211,12 @@
 .fz-mov-visita__reservar svg{width:19px;height:19px;flex:0 0 19px}
 @media(prefers-reduced-motion:reduce){.fz-mov-visita__flecha{transition:none}}
 .fz-resena-btn{gap:8px;text-decoration:none}
+/* 0028 · «Invita a un amigo» y «Guardar con Google» (publico/ExtrasTarjeta.tsx) */
+.fz-amigos__titulo{display:flex;align-items:center;gap:8px;margin:0 0 4px;font-size:16px;font-weight:800;color:var(--tinta)}
+.fz-amigos__cupos{display:flex;gap:6px;margin:12px 0 0}
+.fz-amigos__cupos span{flex:1;min-width:0;height:34px;border-radius:10px;display:grid;place-items:center;font-size:12px;font-weight:750;background:var(--fondo);color:var(--suave);border:1px solid var(--borde)}
+.fz-amigos__cupos .vino{background:var(--marca);border-color:var(--marca);color:var(--sobre-marca,#fff)}
+.fz-amigos__cupos .espera{border-style:dashed;color:var(--tinta)}
+.fz-amigos__wa{gap:8px;text-decoration:none;background:#25D366;border-color:#25D366;color:#06210F}
+.fz-amigos .fz-link,.fz-google-lista{display:inline-flex;align-items:center;gap:4px}
+.fz-google-lista{margin:0 var(--fz-gutter,16px) 12px;color:var(--suave)}

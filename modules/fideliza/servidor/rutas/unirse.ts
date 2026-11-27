@@ -29,6 +29,7 @@ import { esc, noDisponible, pagina, type Negocio } from '@/modules/fideliza/serv
 import { huellaIp, limitar, log, NO_CACHE } from '@/modules/fideliza/servidor/http';
 import { rpc, servidor } from '@/modules/fideliza/servidor/supabase';
 import { entorno } from '@/modules/fideliza/servidor/entorno';
+import { configGoogleTarjeta } from '@/modules/fideliza/servidor/google';
 
 
 const SLUG = /^[a-z0-9][a-z0-9-]{1,38}[a-z0-9]$/;
@@ -46,13 +47,49 @@ export function celularValido(v: string): boolean {
   return (d.length === 9 && d.startsWith('9')) || (d.length >= 10 && d.length <= 15);
 }
 
-function formulario(n: Negocio, slug: string, placa: string | null, aviso?: string, nombre = '', telefono = '', correo = '') {
+/*
+ * 26-nov-2026 (sql/0028):
+ *   · ?de=<código>: «Diego te invitó». Al crear la tarjeta se anota la invitación; cuenta cuando
+ *     el amigo recibe su primer sello. Si Diego abre su propia invitación, el script de abajo lo
+ *     lleva a SU tarjeta (este teléfono ya la recuerda).
+ *   · Antes de crear, si ese celular ya tiene tarjeta aquí: «Ya hay una tarjeta con este celular».
+ *     Si es suya, que la recupere (con Google o en el local); si es de otra persona (la mamá que
+ *     saca la del hijo con su número), «Es de otra persona» la crea igual (otra=1).
+ *   · «¿Cambiaste de celular? Recupérala con Google», si Google está configurado.
+ */
+interface Extra {
+  /** ?de= válido: quién invita. */
+  invita?: { codigo: string; nombre: string; regalo: boolean } | null;
+  /** Ese celular ya tiene tarjeta aquí (y si la guardó con Google). */
+  enUso?: { google: boolean } | null;
+  /** Vuelta de «Recuperar con Google». */
+  google?: string | null;
+}
+
+const CODIGO = /^[A-HJKMNP-Z2-9]{6}$/;
+
+function formulario(n: Negocio, slug: string, placa: string | null, aviso?: string, nombre = '', telefono = '', correo = '', x: Extra = {}) {
   const conAvisos = Boolean(entorno.vapidPublica());
+  const conGoogle = configGoogleTarjeta().listo;
+  const recuperar = `/api/fideliza/publico/google?ir=recuperar&amp;slug=${esc(slug)}`;
   const p = n.program!;
+  const vueltaGoogle =
+    x.google === 'sin'
+      ? 'Esa cuenta de Google no tiene una tarjeta guardada aquí. Si ya tenías una, pídela en el local.'
+      : x.google === 'cancelado' || x.google === 'error'
+        ? 'No se pudo con Google. Inténtalo otra vez.'
+        : '';
   return pagina({
     titulo: `${p.name} · ${n.brand.display_name}`,
     marca: n.brand,
     cuerpo: `
+${x.invita ? `<section class="caja"><p class="premio">${esc(x.invita.nombre)} te invitó</p><p class="nota">${x.invita.regalo ? 'Crea tu tarjeta y empiezas con 1 sello de regalo.' : 'Crea tu tarjeta y junta sellos desde tu primera visita.'}</p></section>` : ''}
+${vueltaGoogle ? `<p class="caja nota" role="alert"><b>${esc(vueltaGoogle)}</b></p>` : ''}
+${x.enUso ? `<section class="caja" role="alert"><p class="premio">Ya hay una tarjeta con este celular</p><p class="nota">Si es tuya, no crees otra: tus sellos están en esa.</p>${
+      x.enUso.google && conGoogle
+        ? `<p class="fz-google"><a class="btn prim" href="${recuperar}">Recuperarla con Google</a></p>`
+        : '<p class="nota">Pídela en el local: con tu celular te la devuelven en un momento.</p>'
+    }</section>` : ''}
 <section class="caja">
   <p class="nota">${esc(p.name)}</p>
   <p class="premio">${esc(fraseRegla(p))}</p>
@@ -63,16 +100,21 @@ function formulario(n: Negocio, slug: string, placa: string | null, aviso?: stri
   ${aviso ? `<p class="nota" role="alert"><b>${esc(aviso)}</b></p>` : ''}
   <input type="hidden" name="k" value="${randomBytes(16).toString('base64url')}">
   ${placa ? `<input type="hidden" name="d" value="${esc(placa)}">` : ''}
+  ${x.invita ? `<input type="hidden" name="de" value="${esc(x.invita.codigo)}">` : ''}
+  ${x.enUso ? '<input type="hidden" name="otra" value="1">' : ''}
   <label for="alias">Tu nombre</label>
   <input type="text" id="alias" name="alias" maxlength="40" minlength="2" required autocomplete="name"${nombre ? ` value="${esc(nombre)}"` : ''}>
   <label for="tel">Tu celular</label>
   <input type="tel" id="tel" name="tel" maxlength="20" required inputmode="tel" autocomplete="tel" placeholder="987 654 321" pattern="[+0-9 ()-]{8,20}"${telefono ? ` value="${esc(telefono)}"` : ''}>
   <label for="correo">Tu correo <span class="opcional">(opcional)</span></label>
   <input type="email" id="correo" name="correo" maxlength="120" inputmode="email" autocomplete="email" placeholder="para avisarte de tus premios"${correo ? ` value="${esc(correo)}"` : ''}>
-  <button class="btn prim" type="submit" id="b">Crear mi tarjeta</button>
+  <button class="btn${x.enUso ? '' : ' prim'}" type="submit" id="b">${x.enUso ? 'Es de otra persona: crear mi tarjeta' : 'Crear mi tarjeta'}</button>
   <p class="nota">Sin contraseña. Con tu celular te encuentran en caja.${conAvisos ? ' Te pediremos permiso para avisarte cuando ganes un premio.' : ''} Tu tarjeta queda en este teléfono y puedes guardarla en Google Wallet o en tu pantalla de inicio.</p>
 </form>
+${conGoogle && !x.enUso ? `<p class="caja nota fz-google"><a href="${recuperar}">¿Ya tenías tarjeta y cambiaste de celular? Recupérala con Google</a></p>` : ''}
 <script>
+/* Google no deja iniciar sesión dentro de Instagram o Facebook: ahí se pide abrir el navegador. */
+try{if(/Instagram|FBAN|FBAV|FB_IAB|Line\\//.test(navigator.userAgent)){var gs=document.querySelectorAll('.fz-google');for(var i=0;i<gs.length;i++){gs[i].innerHTML='<span class="nota">Para usar Google, abre esta página en Chrome o Safari (menú ··· › Abrir en el navegador).</span>';}}}catch(e){}
 try{var kc='fz:card:${esc(slug)}',t=localStorage.getItem(kc);if(t&&/^[A-Za-z0-9_-]{30,64}$/.test(t)){fetch('/api/fideliza/publico/tarjeta',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({accion:'ver',token:t})}).then(function(r){return r.ok?r.json():null}).then(function(d){if(!d)return;if(d.status==='ok'){if(!/[?&]nueva=1(&|$)/.test(location.search)){location.replace('/m/'+t);return;}document.getElementById('ya').hidden=false;document.getElementById('ya-a').href='/m/'+t;}else{localStorage.removeItem(kc);}}).catch(function(){});}}catch(e){}
 (function(){var f=document.getElementById('f'),b=document.getElementById('b'),pide=${conAvisos ? 'true' : 'false'},ya=false;
 function enviar(){if(ya)return;ya=true;b.disabled=true;b.textContent='Creando…';f.submit();}
@@ -85,6 +127,27 @@ f.addEventListener('submit',function(e){
 });})();
 </script>`,
   });
+}
+
+/** «Diego te invitó» (sql/0028). Sin la 0028, con el código inválido o apagado: nada. */
+async function invitacion(slug: string, codigo: string): Promise<Extra['invita']> {
+  if (!CODIGO.test(codigo)) return null;
+  try {
+    const r = await rpc<{ status: string; invita?: string; regalo?: boolean }>(servidor(), 'loyalty_srv_amigos_invita', { p_slug: slug, p_codigo: codigo });
+    return r.status === 'ok' && r.invita ? { codigo, nombre: r.invita, regalo: Boolean(r.regalo) } : null;
+  } catch {
+    return null;
+  }
+}
+
+/** ¿Ese celular ya tiene tarjeta aquí? Sin la 0028, se crea como siempre. */
+async function celularEnUso(slug: string, tel: string): Promise<Extra['enUso']> {
+  try {
+    const r = await rpc<{ existe: boolean; google?: boolean }>(servidor(), 'loyalty_srv_celular_en_uso', { p_slug: slug, p_phone: tel });
+    return r.existe ? { google: Boolean(r.google) } : null;
+  } catch {
+    return null;
+  }
 }
 
 async function negocio(slug: string, evento: string | null) {
@@ -104,7 +167,10 @@ export async function GET(req: Request, { params }: { params: { slug: string } }
     const n = await negocio(slug, 'join_view');
     if (n.status !== 'ok') return noDisponible(null, 404);
     if (!n.program) return noDisponible(n.brand);
-    return formulario(n, slug, placa && /^[A-Za-z0-9_-]{22,64}$/.test(placa) ? placa : null, undefined, nombre);
+    return formulario(n, slug, placa && /^[A-Za-z0-9_-]{22,64}$/.test(placa) ? placa : null, undefined, nombre, '', '', {
+      invita: await invitacion(slug, (consulta.get('de') ?? '').toUpperCase()),
+      google: consulta.get('google'),
+    });
   } catch (e) {
     log('join_view_error', { mensaje: e instanceof Error ? e.message.slice(0, 120) : 'x' });
     return noDisponible(null, 503);
@@ -128,6 +194,8 @@ export async function POST(req: Request, { params }: { params: { slug: string } 
     const alias = String(f.get('alias') ?? '').replace(/[\u0000-\u001f\u007f<>]/g, '').trim().slice(0, 40);
     const tel = String(f.get('tel') ?? '').trim().slice(0, 20);
     const correo = String(f.get('correo') ?? '').trim().toLowerCase().slice(0, 120);
+    const de = String(f.get('de') ?? '').toUpperCase();
+    const otra = f.get('otra') === '1';
     if (!/^[A-Za-z0-9_-]{16,40}$/.test(k)) return noDisponible(null, 400);
     // Obligatorios (el navegador ya lo exige; esto cubre al que no lo hace).
     if (alias.length < 2 || !celularValido(tel) || !correoValido(correo)) {
@@ -143,6 +211,18 @@ export async function POST(req: Request, { params }: { params: { slug: string } 
         correo,
       );
     }
+    // Ese celular ya tiene tarjeta aquí: se pregunta antes de crear otra (salvo «Es de otra persona»).
+    if (!otra) {
+      const enUso = await celularEnUso(slug, tel);
+      if (enUso) {
+        n = await negocio(slug, null);
+        if (n.status !== 'ok' || !n.program) return noDisponible(null, 404);
+        return formulario(n, slug, /^[A-Za-z0-9_-]{22,64}$/.test(d) ? d : null, undefined, alias, tel, correo, {
+          invita: await invitacion(slug, de),
+          enUso,
+        });
+      }
+    }
     const r = await rpc<{ card_token: string; public_code: string }>(servidor(), 'loyalty_srv_join', {
       p_slug: slug,
       p_alias: alias,
@@ -155,6 +235,11 @@ export async function POST(req: Request, { params }: { params: { slug: string } 
       p_action: 'contact',
       p_args: { phone: tel, ...(correo ? { email: correo } : {}) },
     }).catch((e) => log('join_phone_error', { mensaje: e instanceof Error ? e.message.slice(0, 120) : 'x' }));
+    // Quién la invitó (después del celular: la base mira que no sea el mismo número).
+    if (CODIGO.test(de)) {
+      await rpc(servidor(), 'loyalty_srv_amigo_anotar', { p_card_token: r.card_token, p_codigo: de })
+        .catch((e) => log('join_amigo_error', { mensaje: e instanceof Error ? e.message.slice(0, 120) : 'x' }));
+    }
     return new Response(null, {
       status: 303,
       headers: { Location: `/m/${r.card_token}?nueva=1`, ...NO_CACHE, 'Referrer-Policy': 'no-referrer' },
