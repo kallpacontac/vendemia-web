@@ -113,6 +113,10 @@ async function cabeceras() {
   ];
 }
 
+/** Tesseract y lo que su hilo pide por nombre (comprobado copiando solo esto a una carpeta limpia). */
+const ARCHIVOS_TESSERACT = ['tesseract.js', 'tesseract.js-core', 'zlibjs', 'wasm-feature-detect', 'regenerator-runtime', 'is-url', 'idb-keyval', 'bmp-js']
+  .map((p) => `./node_modules/${p}/**/*`);
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
@@ -131,6 +135,18 @@ const nextConfig = {
      * de components/Mark.tsx sobre por qué.
      */
     unoptimized: exportando,
+  },
+  /**
+   * Tesseract (leer la foto del Yape sin IA, modules/lector/servidor/ocr.ts) corre en un hilo aparte y
+   * carga su .wasm del disco: Next no lo puede empaquetar, y el rastreo de Vercel no ve esos archivos
+   * porque se piden por nombre en tiempo de ejecución. Por eso va fuera del paquete y con sus archivos.
+   */
+  experimental: {
+    serverComponentsExternalPackages: ['tesseract.js', 'tesseract.js-core'],
+    outputFileTracingIncludes: {
+      '/api/cobros/foto': ARCHIVOS_TESSERACT,
+      '/api/canchas/evidencia': ARCHIVOS_TESSERACT,
+    },
   },
   ...(exportando
     ? {

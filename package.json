@@ -13,7 +13,8 @@
     "test:fideliza": "node --test modules/fideliza/pruebas/unitarias.mjs modules/fideliza/pruebas/valor.mjs",
     "aviso-instalar": "node scripts/fideliza-aviso-instalar.mjs",
     "yape-prueba": "node scripts/yape-notificacion-prueba.mjs",
-    "test:facturacion": "node --test modules/facturacion/pruebas/unitarias.mjs"
+    "test:facturacion": "node --test modules/facturacion/pruebas/unitarias.mjs",
+    "test:lector": "node --test modules/lector/pruebas/leerVoucher.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^1.5.0",
@@ -31,6 +32,7 @@
     "react-dom": "^18.3.1",
     "server-only": "^0.0.1",
     "simple-icons": "^16.34.0",
+    "tesseract.js": "7.0.0",
     "vercel": "^66.0.0",
     "web-push": "^3.6.7",
     "zod": "^3.25.76"

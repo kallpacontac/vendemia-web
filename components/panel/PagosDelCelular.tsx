@@ -48,6 +48,11 @@ export interface Opcion { cita_id: string; cliente: string; servicio: string; sl
 /** Un cobro con evidencia (foto del barbero o captura de la página) que todavía no tiene su Yape. */
 export interface Esperando { tipo: 'ticket' | 'captura'; cita_id: string; cliente: string; servicio: string; slot: string; monto: number | null; hora: string; url: string }
 export interface PorAsignar { id: number; centimos: number; nombre: string; origen: string; cuando: string; opciones: Opcion[] }
+/** lector 0004: un Yape de más que eligió el barbero, esperando que lo apruebe el dueño o el admin. */
+export interface Propuesta {
+  id: number; centimos: number; nombre: string; origen: string; cuando: string; cita_id: string; sobra: number;
+  foto_ok: string; foto_url: string | null; cliente: string; servicio: string; slot: string; quien: string;
+}
 
 const RESULTADO: Record<string, string> = {
   cobrada: 'cobrada', confirmada: 'reserva confirmada', a_cuenta: 'a cuenta', parcial: 'a cuenta', cotejado: 'comprobante cotejado',
@@ -86,10 +91,12 @@ export default function PagosDelCelular({ companyId, dia, recarga }: { companyId
   const [ocupado, setOcupado] = useState(0);
   const { datos, releer } = useCargar(async () => {
     const desde = new Date(`${dia}T00:00:00-05:00`).toISOString();
-    const [estado, dudas, esperando] = await Promise.all([
+    const [estado, dudas, esperando, propuestas] = await Promise.all([
       supabase().rpc('lector_estado', { p_company: companyId, p_desde: desde }),
       supabase().rpc('lector_por_asignar', { p_company: companyId }),
       supabase().rpc('lector_esperando', { p_company: companyId, p_dia: dia }),
+      // Sin la 0004 falla y no sale nada.
+      supabase().rpc('lector_propuestas', { p_company: companyId }),
     ]);
     if (estado.error) return null;
     const e = estado.data as { dispositivos: unknown[]; avisos: PagoLeido[] };
@@ -100,6 +107,9 @@ export default function PagosDelCelular({ companyId, dia, recarga }: { companyId
       sinLeer: delDia.filter((a) => a.centimos === null).length,
       dudas: ((dudas.data ?? []) as PorAsignar[]).filter((d) => diaLima(d.cuando) === dia),
       esperando: (esperando.data ?? []) as Esperando[],
+      propuestas: (propuestas.error ? [] : propuestas.data ?? []) as Propuesta[],
+      // «Aprobar cobro» en «Esperando su Yape» solo con la 0004.
+      aprueba: !propuestas.error,
     };
   }, [companyId, dia, recarga]);
   // Sin celular conectado no se vuelve a preguntar (The 24/7 y todo negocio sin lector: ni una consulta de más).
@@ -124,6 +134,24 @@ export default function PagosDelCelular({ companyId, dia, recarga }: { companyId
     releer();
   }
 
+  async function decidir(p: Propuesta, si: boolean) {
+    if (!si && !window.confirm(`¿No es de la cita de ${p.cliente || 'ese cliente'}? El Yape vuelve a quedar libre.`)) return;
+    setOcupado(p.id);
+    const { error } = await supabase().rpc('lector_aprobar_propuesta', { p_company: companyId, p_aviso: p.id, p_si: si });
+    setOcupado(0);
+    if (error) return avisar(error.message, 'error');
+    avisar(si ? `Aprobado: cobrado y ${soles(Number(p.sobra))} de más anotados.` : 'Listo: el Yape vuelve a quedar libre.', 'ok');
+    releer();
+  }
+
+  async function aprobarSinYape(x: Esperando) {
+    if (!window.confirm(`¿Dar por cobrada la cita de ${x.cliente || 'ese cliente'} con esa foto, aunque el Yape no llegó al celular de cobros?`)) return;
+    const { error } = await supabase().rpc('lector_aprobar_sin_yape', { p_company: companyId, p_cita: x.cita_id, p_metodo: 'yape' });
+    if (error) return avisar(error.message, 'error');
+    avisar('Aprobado: la cita queda cobrada.', 'ok');
+    releer();
+  }
+
   async function copiar(texto: string) {
     try {
       await navigator.clipboard.writeText(texto);
@@ -135,6 +163,7 @@ export default function PagosDelCelular({ companyId, dia, recarga }: { companyId
 
   return (
     <PagosDelCelularVista dia={dia} pagos={datos.pagos} sinLeer={datos.sinLeer} dudas={datos.dudas} esperando={datos.esperando} ocupado={ocupado}
+      propuestas={datos.propuestas} alDecidir={decidir} alAprobarSinYape={datos.aprueba ? aprobarSinYape : undefined}
       alAsignar={asignar} alQuitar={quitar} alCopiar={copiar} />
   );
 }
@@ -151,9 +180,10 @@ export function textoCuadre(dia: string, pagos: PagoLeido[]): string {
 }
 
 /** La sección sin la base (también la usa la vista previa de /dev). */
-export function PagosDelCelularVista({ dia, pagos, sinLeer = 0, dudas, esperando = [], ocupado = 0, alAsignar, alQuitar, alCopiar }: {
-  dia: string; pagos: PagoLeido[]; sinLeer?: number; dudas: PorAsignar[]; esperando?: Esperando[]; ocupado?: number;
+export function PagosDelCelularVista({ dia, pagos, sinLeer = 0, dudas, esperando = [], propuestas = [], ocupado = 0, alAsignar, alQuitar, alCopiar, alDecidir, alAprobarSinYape }: {
+  dia: string; pagos: PagoLeido[]; sinLeer?: number; dudas: PorAsignar[]; esperando?: Esperando[]; propuestas?: Propuesta[]; ocupado?: number;
   alAsignar: (p: PorAsignar, o: Opcion) => void; alQuitar: (a: PagoLeido) => void; alCopiar: (texto: string) => void;
+  alDecidir?: (p: Propuesta, si: boolean) => void; alAprobarSinYape?: (x: Esperando) => void;
 }) {
   const [abierta, setAbierta] = useState(false);
   const [detalle, setDetalle] = useState<number | null>(null);
@@ -185,6 +215,28 @@ export function PagosDelCelularVista({ dia, pagos, sinLeer = 0, dudas, esperando
         </span>
         <ChevronDown size={18} aria-hidden="true" style={{ transform: abierta ? 'rotate(180deg)' : undefined, flex: 'none' }} />
       </button>
+
+      {/* Yapes de más que eligió el barbero: no se cobran hasta que el dueño o el admin lo aprueban (lector 0004). */}
+      {alDecidir && propuestas.map((p) => (
+        <article key={p.id} className="ypa ypa--en-caja">
+          <p className="ypa__pago">
+            <b>Por aprobar:</b> {p.quien} dice que el Yape de {soles(p.centimos / 100)} de {bonito(p.nombre) || 'alguien sin nombre'} ({horaLima(p.cuando)})
+            {' '}es de {p.cliente || 'su cliente'} · {p.servicio}. Pagó <b>{soles(Number(p.sobra))} de más</b>.
+            {p.foto_ok !== 'si' && <> <span className="ldp-ambar">{p.foto_ok === 'sin_foto' ? 'Sin foto.' : 'La foto no se pudo comprobar.'}</span></>}
+            {p.foto_url && <> <a href={p.foto_url} target="_blank" rel="noopener">Ver foto</a></>}
+          </p>
+          <div className="ypa__opciones">
+            <button type="button" className="ypa__opcion" disabled={ocupado === p.id} onClick={() => alDecidir(p, true)}>
+              <b>Aprobar</b>
+              <span>Se cobra la cita y los {soles(Number(p.sobra))} quedan anotados</span>
+            </button>
+            <button type="button" className="ypa__opcion" disabled={ocupado === p.id} onClick={() => alDecidir(p, false)}>
+              <b>No es de esa cita</b>
+              <span>El Yape vuelve a quedar libre</span>
+            </button>
+          </div>
+        </article>
+      ))}
 
       {/* Lo único que pide una decisión: siempre a la vista, aunque la sección esté plegada. */}
       {dudas.map((p) => (
@@ -242,6 +294,12 @@ export function PagosDelCelularVista({ dia, pagos, sinLeer = 0, dudas, esperando
                   </span>
                   <span className="ldp-monto">{x.monto !== null ? soles(Number(x.monto)) : '—'}</span>
                 </div>
+                {x.tipo === 'ticket' && alAprobarSinYape && (
+                  <div className="ldp-detalle">
+                    <span>Si el Yape no va a llegar al celular de cobros, apruébalo con la foto.</span>
+                    <button type="button" className="ldp-quitar" onClick={() => alAprobarSinYape(x)}>Aprobar cobro</button>
+                  </div>
+                )}
               </li>
             ))}
           </ul>
@@ -253,6 +311,7 @@ export function PagosDelCelularVista({ dia, pagos, sinLeer = 0, dudas, esperando
           {pagos.map((a) => {
             const destino = a.cita_id
               ? `${a.cliente || 'Una cita'} · ${RESULTADO[a.resultado ?? ''] ?? 'asignado'}`
+              : a.asignado === 'propuesto' ? 'Por aprobar arriba'
               : a.por_asignar ? 'Elige su cita arriba' : 'Sin cita · venta suelta';
             const ordenado = !!a.cita_id && a.motivo === 'orden';
             const ojo = a.cita_id ? ojoDelBarbero(a) : '';

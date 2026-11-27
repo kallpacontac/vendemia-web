@@ -38,6 +38,7 @@ import { useSearchParams } from 'next/navigation';
 import AvisosCelular from '@/components/panel/AvisosCelular';
 import GoogleCalendar from '@/components/panel/GoogleCalendar';
 import LectorDePagos from '@/components/panel/LectorDePagos';
+import EfectivoDelEquipo from '@/components/panel/EfectivoDelEquipo';
 import ComoAtiendeMia from '@/components/panel/ComoAtiendeMia';
 import {
   hibridoRoto,
@@ -1594,6 +1595,8 @@ function Configuracion() {
                 )}
               </div>
             )}
+            {/* La foto del efectivo cuando cobra el empleado (lector 0004, Alvaro 26-nov: configurable). */}
+            {cobroFoto?.empleadoCobra && companyId && <EfectivoDelEquipo companyId={companyId} puede={gestiona} />}
 
             {/*
               Las citas apartadas en Mi agenda (datos 0029, Alvaro 23-nov-2026): al barbero lo

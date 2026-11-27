@@ -24,6 +24,25 @@ import { MENSAJES, evaluarLectura, tipoDeImagen } from '@/modules/tu-pagina/domi
 import { log } from '@/modules/tu-pagina/servidor/supabase';
 import { guardarComprobante, leerComprobante, puedeLeer } from '@/modules/tu-pagina/servidor/comprobanteExterno';
 import { rpc, servidor } from '@/modules/fideliza/servidor/supabase';
+import { leerSinIA } from '@/modules/lector/servidor/ocr';
+import { decisionSinIA } from '@/modules/lector/dominio/leerVoucher';
+
+/** Lo que ve quien subió la foto, leída sin IA: lo que manda es el Yape que llegó al celular de cobros. */
+function motivoSinIA(decision: 'aprobar' | 'revisar' | 'rechazar') {
+  const motivo = decision === 'aprobar' ? 'Se compara con el Yape que llegó al celular de cobros.'
+    : decision === 'rechazar' ? 'El pago no figura como completado.'
+    : 'No se leyó bien: la caja la revisa.';
+  return { decision, motivo };
+}
+
+/** ¿Tiene este negocio el celular de cobros conectado? Ante cualquier duda (sin la 0004, sin clave): no. */
+async function conCelularDeCobros(companyId: string): Promise<boolean> {
+  try {
+    return (await rpc<boolean>(servidor(), 'lector_srv_conectado', { p_company: companyId })) === true;
+  } catch {
+    return false;
+  }
+}
 
 const MB = 1024 * 1024;
 const MAX_BYTES = 4 * MB;
@@ -87,12 +106,16 @@ export async function POST(req: Request) {
     const empresa = await sb.from('companies').select('payment_methods').eq('id', companyId).maybeSingle();
     const numeros = numerosDe((empresa.data as { payment_methods?: unknown } | null)?.payment_methods);
 
+    // Con el celular de cobros conectado (lector 0004, Alvaro 26-nov: «si podemos no usar IA, para que
+    // salga gratis»): la foto se lee SIN IA (Tesseract, aquí mismo). Lo que decide es que cuadre con el
+    // Yape que llegó al celular, no la foto sola. Sin celular (The 24/7), como siempre.
+    const sinIA = await conCelularDeCobros(companyId);
     const [lectura, url] = await Promise.all([
-      puedeLeer() ? leerComprobante(imagen, tipo) : Promise.resolve(null),
+      sinIA ? leerSinIA(imagen) : puedeLeer() ? leerComprobante(imagen, tipo) : Promise.resolve(null),
       guardarComprobante(imagen, tipo, companyId),
     ]);
     if (!url) return fallo('No pudimos guardar la foto. Inténtalo otra vez en unos segundos.', 503);
-    const { decision, motivo } = evaluarLectura(lectura, numeros);
+    const { decision, motivo } = sinIA ? motivoSinIA(decisionSinIA(lectura)) : evaluarLectura(lectura, numeros);
     // Vendemia Caja (lector 0003): lo leído se guarda del lado del servidor, por la huella de la foto,
     // para comprobar que el Yape que elige el barbero es el de la foto. El navegador no lo puede escribir.
     // Sin celular de cobros la base no guarda nada; sin la 0003 falla y no pasa nada.
