@@ -24,6 +24,17 @@ export interface ConfigCitas {
   plazo?: number;
   /** Locales del negocio. Con 2 o más, el cliente elige en cuál al reservar (sql/0023). */
   sedes?: Sede[];
+  /**
+   * El WhatsApp de «Comunícate con nosotros» al terminar de reservar (Alvaro, 26-nov-2026). Solo
+   * cifras, con el 51. Vacío = el WhatsApp de la página.
+   */
+  whatsapp?: string;
+}
+
+/** El WhatsApp para dudas sobre la cita, o '' si no hay uno propio (entonces, el de la página). */
+export function whatsappCitasDe(cfg: unknown): string {
+  const n = String((cfg as ConfigCitas | null | undefined)?.whatsapp ?? '').replace(/\D/g, '');
+  return /^\d{8,15}$/.test(n) ? n : '';
 }
 
 export interface Sede {

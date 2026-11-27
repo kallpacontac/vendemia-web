@@ -287,8 +287,14 @@ export default function Escaparate({ esc: todo, slug, whatsapp, puedePedir, pued
             <ul>{hecho.indicaciones!.map((t) => <li key={t}>{t}</li>)}</ul>
           </section>
         )}
+        {/* 26-nov-2026: a la vista, no un enlace perdido en la nota. Con el número de citas si lo hay. */}
+        {!hecho.demo && hecho.apartada && (
+          <a className="tp-boton tp-boton--wsp" href={urlWhatsApp(esc.whatsappCitas || whatsapp, `Hola, tengo una consulta sobre mi cita ${hecho.codigo}.`)} target="_blank" rel="noopener">
+            <MessageCircle size={20} aria-hidden="true" /> Comunícate con nosotros en WhatsApp
+          </a>
+        )}
         <p className="tp-resumen">{hecho.mensaje.split(/(\*[^*\n]+\*)/g).map((parte, indice) => parte.startsWith('*') && parte.endsWith('*') ? <strong key={indice}>{parte.slice(1, -1)}</strong> : <span key={indice}>{parte}</span>)}</p>
-        {!hecho.demo && hecho.apartada && <p className="tp-nota">{hecho.apartada.plazo ? `Tu hora queda apartada hasta las ${hecho.apartada.plazo.vence}.` : 'Tu hora queda apartada mientras pagas.'} Si no llega la captura, se libera para otra persona. ¿Dudas? <a href={urlWhatsApp(whatsapp, hecho.mensaje)} rel="noopener">Escríbenos por WhatsApp</a>.</p>}
+        {!hecho.demo && hecho.apartada && <p className="tp-nota">{hecho.apartada.plazo ? `Tu hora queda apartada hasta las ${hecho.apartada.plazo.vence}.` : 'Tu hora queda apartada mientras pagas.'} Si no llega la captura, se libera para otra persona.</p>}
         {!hecho.demo && !hecho.apartada && <><a className="tp-boton tp-boton--wsp" href={urlWhatsApp(whatsapp, hecho.mensaje)} rel="noopener">
           <MessageCircle size={20} aria-hidden="true" /> {hecho.pago ? 'Enviar pedido por WhatsApp' : 'Avisar por WhatsApp'}
         </a><p className="tp-nota">{hecho.pago ? 'Tu pedido ya quedó guardado. Lo preparamos cuando llegue el pago.' : 'Avísanos para confirmarte. Ya quedó guardado aunque no lo envíes.'}</p></>}

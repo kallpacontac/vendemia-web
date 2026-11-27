@@ -230,6 +230,8 @@ function MiPagina({ companyId, nombre, pagina, agendaNube, alGuardar }: {
   const [popup, setPopup] = useState<PopupPagina>(pagina?.secciones?.popup ?? { activo: false });
   // «Antes de tu cita» (secciones.citas.indicaciones): una por línea, lo leen al terminar de reservar.
   const [indicaciones, setIndicaciones] = useState((citasCfg?.indicaciones ?? []).join('\n'));
+  // «Comunícate con nosotros» tras reservar (secciones.citas.whatsapp). Vacío = el WhatsApp de la página.
+  const [whatsappCitas, setWhatsappCitas] = useState(citasCfg?.whatsapp ?? '');
   const [validacionCitas, setValidacionCitas] = useState<'manual' | 'automatica'>(citasCfg?.validacion === 'automatica' ? 'automatica' : 'manual');
   const [funcionesAbiertas, setFuncionesAbiertas] = useState(Boolean(pagina?.secciones?.envios || pagina?.secciones?.reclamos || pagina?.secciones?.canchas?.activo || pagina?.secciones?.fideliza?.activo || pagina?.secciones?.descuentoWeb?.activo || pagina?.secciones?.popup?.activo));
   const [proveedor, setProveedor] = useState<Proveedor>({
@@ -309,8 +311,17 @@ function MiPagina({ companyId, nombre, pagina, agendaNube, alGuardar }: {
     if (!esUrlPublica(logo) || !esUrlPublica(portada) || !esUrlPublica(apariencia.portadaLuxurySecundaria ?? '') || !esUrlPublica(apariencia.fotoDetalleUnas ?? '') || !esUrlPublica(apariencia.promocionImagenUnas ?? '')) { avisar('Las fotos deben tener un enlace público https.', 'error'); return; }
     if (!/^\d{8,15}$/.test(telefonoNormal(whatsapp))) { avisar('Revisa el número de WhatsApp antes de publicar.', 'error'); return; }
     if (reclamos && !proveedorCompleto(proveedor)) { avisar('Para el Libro de Reclamaciones faltan tu razón social, un RUC válido (11 cifras) y la dirección.', 'error'); return; }
-    const aparienciaPublicada = { ...apariencia, plantillaActiva: !pagina?.publicada || plantillaManual || apariencia.plantillaActiva === true };
+    const aparienciaPublicada: AparienciaPagina = { ...apariencia, plantillaActiva: !pagina?.publicada || plantillaManual || apariencia.plantillaActiva === true };
+    // La portada del celular y las alternas (Luxury) se pusieron a mano para la portada de antes
+    // (scripts/the247-portada.sql). Si el dueño cambia la suya, ganan la suya: si no, en el
+    // celular seguiría saliendo la vieja y en la compu, la alterna una de cada dos veces.
+    if (portada.trim() !== (pagina?.portada_url ?? '').trim()) {
+      delete aparienciaPublicada.portadaLuxuryMovil;
+      delete aparienciaPublicada.portadasLuxuryAlternas;
+    }
     const listaIndicaciones = indicacionesDe({ indicaciones: indicaciones.split('\n') });
+    const numeroCitas = whatsappCitas.trim() ? telefonoNormal(whatsappCitas) : '';
+    if (numeroCitas && !/^\d{8,15}$/.test(numeroCitas)) { avisar('Revisa el WhatsApp para dudas de las citas.', 'error'); return; }
     setGuardando(true);
     try {
       const { error } = await supabase().rpc('tu_pagina_guardar', {
@@ -334,7 +345,7 @@ function MiPagina({ companyId, nombre, pagina, agendaNube, alGuardar }: {
             // Con lo demás que traiga (la foto de la invitación): guardar reemplaza la clave entera.
             fideliza: { ...tarjeta, activo: Boolean(tarjeta.activo && tarjeta.slug), slug: tarjeta.slug ?? '' },
             // Guardar reemplaza la clave entera: se mandan sus sedes, indicaciones y plazo tal cual.
-            ...(citasCfg || listaIndicaciones.length ? { citas: { ...citasCfg, validacion: validacionCitas, indicaciones: listaIndicaciones } } : {}),
+            ...(citasCfg || listaIndicaciones.length || numeroCitas ? { citas: { ...citasCfg, validacion: validacionCitas, indicaciones: listaIndicaciones, whatsapp: numeroCitas } } : {}),
             descuentoWeb: { activo: Boolean(reservar && descuentoWeb.activo), pct: descuentoWeb.pct ?? 20 },
             popup: { ...popup, activo: Boolean(popup.activo && (popup.titulo?.trim() || popup.texto?.trim())), titulo: popup.titulo?.trim() ?? '', texto: popup.texto?.trim() ?? '' },
           },
@@ -627,6 +638,13 @@ function MiPagina({ companyId, nombre, pagina, agendaNube, alGuardar }: {
                 <span>Antes de tu cita <small className="muted">(opcional)</small></span>
                 <textarea className="input" rows={5} value={indicaciones} placeholder={'Tolerancia máxima de 10 minutos: pasado ese tiempo, la cita se reprograma.\nSi no puedes venir, avísanos por WhatsApp con tiempo.'} onChange={(e) => setIndicaciones(e.target.value)} />
                 <small className="muted">Lo lee tu cliente al terminar de reservar. Una indicación por línea (hasta 6, de 200 letras cada una). Vacío = no sale.</small>
+              </label>
+            )}
+            {reservar && !(canchas.activo || plantilla === 'canchas') && conAdelantoCitas && (
+              <label className="tp-panel-campo">
+                <span>WhatsApp para dudas de la cita <small className="muted">(opcional)</small></span>
+                <input className="input" type="tel" inputMode="tel" value={whatsappCitas} placeholder={whatsapp || '51 999 999 999'} onChange={(e) => setWhatsappCitas(e.target.value)} />
+                <small className="muted">Sale en el botón «Comunícate con nosotros en WhatsApp» mientras el cliente sube su comprobante. Vacío = el WhatsApp de tu página.</small>
               </label>
             )}
             {reservar && (

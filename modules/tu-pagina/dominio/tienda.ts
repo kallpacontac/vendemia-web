@@ -25,7 +25,7 @@ import { ocupa } from '@/lib/panel/inscripciones';
 import { sumarMin, type DatosAgenda } from '@/modules/tu-pagina/dominio/agenda';
 import { fechaCorta, telefonoBonito, telefonoNormal } from '@/modules/tu-pagina/dominio/envio';
 import { normalizarCobro, type CobroPedidos } from '@/modules/tu-pagina/dominio/cobroPedidos';
-import { indicacionesDe, porcentajeAdelanto, sedesDe, type Sede } from '@/modules/tu-pagina/dominio/adelantoCitas';
+import { indicacionesDe, porcentajeAdelanto, sedesDe, whatsappCitasDe, type Sede } from '@/modules/tu-pagina/dominio/adelantoCitas';
 import { pctDescuentoWeb } from '@/modules/tu-pagina/dominio/promos';
 
 /* ── Lo que llega de la base ─────────────────────────────────────────────── */
@@ -186,6 +186,8 @@ export interface Escaparate {
   descuentoWeb?: number;
   /** «Antes de tu cita»: tolerancia, sede… (secciones.citas.indicaciones). */
   indicacionesCitas?: string[];
+  /** «Comunícate con nosotros» tras reservar (secciones.citas.whatsapp). Sin él, el de la página. */
+  whatsappCitas?: string;
   /** Los locales (secciones.citas.sedes). Con 2 o más, se elige sede al reservar. */
   sedes?: Sede[];
 }
@@ -323,6 +325,7 @@ export function armarEscaparate(c: DatosCrudos, como?: ComoSeOfrece | null): Esc
     adelantoCitas: porcentajeAdelanto(como?.citas),
     descuentoWeb: pctDescuentoWeb(como?.descuentoWeb),
     indicacionesCitas: indicacionesDe(como?.citas),
+    whatsappCitas: whatsappCitasDe(como?.citas) || undefined,
     sedes: sedesDe(como?.citas),
   };
 }
