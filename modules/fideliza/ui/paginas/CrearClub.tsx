@@ -78,6 +78,8 @@ export default function CrearClub() {
   const [ocupado, setOcupado] = useState(false);
   const [subiendo, setSubiendo] = useState(false);
   const [publicado, setPublicado] = useState(false);
+  /** Lo último publicado (o lo que había al abrir): contra esto se miden los cambios sin publicar. */
+  const [base, setBase] = useState<Club | null>(null);
   /** Los avisos que se prendieron solos al publicar el club por primera vez. */
   const [prendidos, setPrendidos] = useState<string[]>([]);
   const [slugOcupado, setSlugOcupado] = useState<string | null>(null);
@@ -100,7 +102,7 @@ export default function CrearClub() {
     const p = datos.programa;
     const regla = { ...(datos.version ?? {}), ...(p?.draft ?? {}) } as Partial<Version>;
     const negocio = ajustes?.display_name ?? '';
-    setC({
+    const inicial: Club = {
       negocio,
       nombre: p?.name ?? (negocio ? `Club ${negocio}`.slice(0, 40) : ''),
       logo: ajustes?.logo_url ?? '',
@@ -117,7 +119,9 @@ export default function CrearClub() {
       wallet: estilo?.wallet !== false,
       walletEnlace: estilo?.wallet_enlace !== false,
       avisos: estilo?.avisos !== false,
-    });
+    };
+    setC(inicial);
+    setBase(inicial);
     // «Pruébalo con tu celular» desde Primeros pasos: solo si el club ya está publicado.
     if (p && p.status !== 'draft' && new URLSearchParams(window.location.search).get('probar')) setPublicado(true);
   }, [datos, cargando, ajustes]);
@@ -132,6 +136,24 @@ export default function CrearClub() {
   if (!c.premio.trim()) errores.premio = 'Escribe la recompensa (ej. «Una concha gratis»).';
   if (slugOcupado && slugDe(c.negocio) === slugOcupado) errores.negocio = 'Ya hay un negocio con ese nombre. Añade tu distrito (ej. «Panadería Sol Miraflores»).';
   const v = useValidacion(errores);
+
+  // 27-nov-2026 (Alvaro): el botón quedaba al final de todo. Barra fija abajo, como en Configuración,
+  // solo cuando hay algo sin publicar (o el club aún no existe). Nada de guardar solo: publicar lo ve
+  // el cliente al momento y actualiza los pases de Wallet; a medio escribir no se publica.
+  const yaPublicado = Boolean(datos?.programa?.current_version_id);
+  const sinPublicar = Boolean(base) && JSON.stringify(c) !== JSON.stringify(base);
+  const conBarra = puede('program.edit') && (!yaPublicado || sinPublicar);
+  useEffect(() => {
+    if (!sinPublicar) return;
+    const avisarSalida = (e: BeforeUnloadEvent) => e.preventDefault();
+    window.addEventListener('beforeunload', avisarSalida);
+    return () => window.removeEventListener('beforeunload', avisarSalida);
+  }, [sinPublicar]);
+  function descartar() {
+    if (!base) return;
+    setC(base);
+    setFoco(null);
+  }
 
   if (!puede('program.read')) return <SinPermiso que="el programa" />;
   if (cargando && !datos) return <Cargando texto="Preparando tu club…" />;
@@ -249,6 +271,7 @@ export default function CrearClub() {
       recargarCtx();
       // Relee el programa: sin esto, guardar otra vez tras crearlo usaba programId null y creaba otro.
       recargar();
+      setBase(c);
       if (primeraVez) setPublicado(true);
       const hecho = primeraVez ? '¡Tu club está publicado!' : 'Cambios guardados. Tus clientes ya los ven.';
       avisar(r.logo && !r.logo.ok ? `${hecho} El logo no sirve para Google Wallet: ${r.logo.errores.join(' ')}` : hecho, r.logo && !r.logo.ok ? 'espera' : 'ok');
@@ -288,7 +311,7 @@ export default function CrearClub() {
   }
 
   return (
-    <div className="fz-editor fz-club">
+    <div className={`fz-editor fz-club${conBarra ? ' cfg-wrap--barra' : ''}`}>
       <div className="fz-club__form">
         <div className="fz-club__cab">
           <div>
@@ -453,10 +476,20 @@ export default function CrearClub() {
         {editable && (
           <div className="fz-club__acciones">
             {v.resumen('Antes de publicar, revisa:')}
-            <button className="btn btn-primary fz-club__publicar" disabled={ocupado} onClick={() => void publicar()}>
-              {ocupado ? 'Publicando…' : programa?.current_version_id ? 'Guardar y publicar cambios' : 'Guardar y publicar'}
-            </button>
             <small className="fz-def">Al publicar, tus clientes ya pueden unirse. Cambiar la meta después solo afecta a lo que se sume desde entonces.</small>
+          </div>
+        )}
+        {conBarra && (
+          <div className="guardar-barra" role="status">
+            <div className="guardar-barra__in">
+              <span className="guardar-barra__txt">{yaPublicado ? 'Tienes cambios sin publicar' : 'Tu club aún no está publicado'}</span>
+              {yaPublicado && (
+                <button className="btn btn-ghost btn-sm" onClick={descartar} disabled={ocupado}>Descartar</button>
+              )}
+              <button className="btn btn-primary" disabled={ocupado} onClick={() => void publicar()}>
+                {ocupado ? 'Publicando…' : 'Guardar y publicar'}
+              </button>
+            </div>
           </div>
         )}
       </div>
