@@ -43,6 +43,7 @@ import NuevaCita from '@/components/panel/NuevaCita';
 import { esDeSede, sedeCorta, useSedeElegida, useSedes } from '@/components/panel/SelectorSede';
 import TableroCanchas from '@/components/panel/TableroCanchas';
 import ComprobantesPorRevisar from '@/components/panel/ComprobantesPorRevisar';
+import PagosWebEnCaja from '@/components/panel/PagosWebEnCaja';
 import AdelantosPorReprogramar from '@/components/panel/AdelantosPorReprogramar';
 import Consumos from '@/components/panel/Consumos';
 import TurnosFijos from '@/components/panel/TurnosFijos';
@@ -463,8 +464,9 @@ export default function Agenda() {
           /></div>
         )}
 
-        {/* Citas con adelanto (sql/0021): la captura que subió el cliente, arriba de todo para que no se pierda. */}
-        {!canchas && companyId && <ComprobantesPorRevisar companyId={companyId} recarga={datos?.citas} alCambiar={recargar} enDonde="en el local" />}
+        {/* Citas con adelanto (sql/0021): la captura que subió el cliente se valida en la Caja (27-nov-2026,
+            «la Agenda no maneja dinero»). Aquí solo el aviso de cuántas hay, con el enlace. */}
+        {!canchas && companyId && <PagosWebEnCaja companyId={companyId} recarga={datos?.citas} />}
 
         {/* Quien no vino o canceló con adelanto pagado (sql/0027): su dinero sigue a su favor. */}
         {!canchas && companyId && <AdelantosPorReprogramar companyId={companyId} sedes={sedes} recarga={datos?.citas} alCambiar={recargar} />}

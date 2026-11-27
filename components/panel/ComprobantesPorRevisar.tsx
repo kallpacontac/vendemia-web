@@ -151,7 +151,7 @@ export function ComprobantesPorRevisarVista({ datos, adelanto, alRevisar, alAvis
   return (
     <section className="tc-revisar" aria-label="Comprobantes por revisar">
       <button type="button" className="tc-revisar__cab" aria-expanded={abierta} onClick={() => setAbierta((a) => !a)}>
-        <b className="tc-revisar__titulo">{datos.length === 1 ? '1 comprobante por revisar' : `${datos.length} comprobantes por revisar`}</b>
+        <b className="tc-revisar__titulo">{datos.length === 1 ? '1 pago web por validar' : `${datos.length} pagos web por validar`}</b>
         <span className="tc-revisar__plegar">
           {abierta ? 'Minimizar' : 'Ver'}
           <ChevronDown size={16} aria-hidden="true" style={{ transform: abierta ? 'rotate(180deg)' : undefined }} />
@@ -164,7 +164,7 @@ export function ComprobantesPorRevisarVista({ datos, adelanto, alRevisar, alAvis
             <img src={c.url} alt="" loading="lazy" /><ExternalLink size={14} aria-hidden="true" />
           </a>}
           <div className="tc-revisar__datos">
-            <b>{c.cliente}</b>
+            <b>{c.cliente} <span className="tag-web" title="Reservó y pagó en tu página web">Web</span></b>
             <small>{c.servicio} · {fechaCorta(c.slot)}</small>
             <small>{c.telefono}</small>
             <small>Total {soles(Number(c.total) || 0)} · ya pagó {soles(Number(c.pagado) || 0)}</small>

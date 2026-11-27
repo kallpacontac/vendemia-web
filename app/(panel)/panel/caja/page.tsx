@@ -86,6 +86,7 @@ import ComprobanteDelCobro from '@/modules/facturacion/ui/ComprobanteDelCobro';
 import { supabase } from '@/lib/supabase/client';
 import { guiarA } from '@/lib/panel/guiar';
 import { demoActivo } from '@/lib/panel/demo';
+import ComprobantesPorRevisar from '@/components/panel/ComprobantesPorRevisar';
 
 /*
  * Qué se consulta y cuándo (The 24/7, 18-nov: «las citas y los tickets son lo que se genera
@@ -134,7 +135,7 @@ export default function CajaPagina() {
 }
 
 function Caja() {
-  const { companyId, rol, session } = useSesion();
+  const { companyId, rol, session, canchas } = useSesion();
   // Cobros hechos sin conexión en este celular, aún sin subir (components/panel/SinConexion.tsx).
   const { ops: anotadas } = useSinConexion();
   const anotadasIds = useMemo(() => new Set(anotadas.map((o) => o.citaId).filter((x): x is string => !!x)), [anotadas]);
@@ -532,6 +533,10 @@ function Caja() {
               cliente={cobrada.cliente} atendio={cobrada.atendio} />
           </section>
         )}
+
+        {/* ── Pagos de reservas web por validar (adelanto o todo, sql/0021). 27-nov-2026, Alvaro: «la Agenda
+             no maneja dinero, la Caja cobra»; antes estaban arriba de la Agenda. Canchas: siguen en su tablero. ── */}
+        {!cierre && !canchas && companyId && <ComprobantesPorRevisar companyId={companyId} recarga={datos} alCambiar={releer} enDonde="en el local" />}
 
         {/* ── Listos para cobrar: lo que ya se atendió. Es la cola del mostrador. ── */}
         {!cierre && calculo && companyId && (
