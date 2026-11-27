@@ -603,7 +603,8 @@ export default function Tarjeta(props: {
       )}
 
       {d.movements.length > 0 && (
-        <section className="fz-caja" aria-label={visitaDe.titulo}>
+        // 26-nov-2026 (Alvaro: «¿dónde está el listado de cortes?»): justo debajo de la tarjeta (estilos/tarjeta.css).
+        <section className="fz-caja fz-movs-caja" aria-label={visitaDe.titulo}>
           <h2>{visitaDe.titulo}</h2>
           {d.movements.some((m) => m.visit) && <p className="fz-mini fz-movs__ayuda">Toca {visitaDe.art} {visitaDe.una.toLowerCase()} para ver la fecha, la hora y quién te atendió.</p>}
           <ul className="fz-movs">

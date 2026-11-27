@@ -220,3 +220,5 @@
 .fz-amigos__wa{gap:8px;text-decoration:none;background:#25D366;border-color:#25D366;color:#06210F}
 .fz-amigos .fz-link,.fz-google-lista{display:inline-flex;align-items:center;gap:4px}
 .fz-google-lista{margin:0 var(--fz-gutter,16px) 12px;color:var(--suave)}
+/* 26-nov-2026: «Tus cortes / Tus visitas» va justo después de la tarjeta (y de Wallet), antes que invitar, Google o avisos. */
+.fz>.fz-movs-caja{order:3}
