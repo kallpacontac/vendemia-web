@@ -13,6 +13,7 @@ import LuxuryPortada from '@/modules/tu-pagina/publico/LuxuryPortada';
 import AnimacionesPlantilla from '@/modules/tu-pagina/publico/AnimacionesPlantilla';
 import TarjetaPuntos from '@/modules/tu-pagina/publico/TarjetaPuntos';
 import PromoPopup from '@/modules/tu-pagina/publico/PromoPopup';
+import BotonWhatsApp from '@/modules/tu-pagina/publico/BotonWhatsApp';
 import { popupDe } from '@/modules/tu-pagina/dominio/promos';
 import { urlWhatsApp } from '@/modules/tu-pagina/dominio/envio';
 import type { TarjetaPublica } from '@/modules/tu-pagina/dominio/tarjeta';
@@ -74,6 +75,8 @@ export default function Marco({ pagina, children, vista, portada, tarjeta }: { p
       {children}
       {popup && <PromoPopup slug={pagina.slug} titulo={popup.titulo} texto={popup.texto} imagen={popup.imagen} accion={accionPopup} />}
       {tarjeta && <TarjetaPuntos tarjeta={tarjeta} negocio={pagina.titulo} />}
+      {/* WhatsApp flotante en toda pantalla (inicio, reservar, envío…). La portada de uñas lo pone ella. */}
+      {pagina.secciones.apariencia?.mostrarWhatsapp !== false && !(plantilla === 'unas' && portada) && <BotonWhatsApp negocio={pagina.titulo} numero={pagina.whatsapp} />}
       {/* El Libro de Reclamaciones va en el pie de TODA la página, también la de inicio (sql/0006). */}
       {pagina.secciones.reclamos && pagina.secciones.proveedor?.ruc && (
         <p className="tp-pie tp-no-imprimir">
@@ -105,6 +108,7 @@ export function Cabecera({ pagina, fotoDestacada, servicioDestacado, catalogoDis
       logo={fotoEnCirculo(pagina.logo_url) || undefined}
       portada={fotoPortada || undefined}
       portadaSecundaria={a.portadaLuxurySecundaria}
+      segundoBanner={a.segundoBannerLuxury !== false}
       portadaMovil={a.portadaLuxuryMovil && /^https:\/\/\S+$/.test(a.portadaLuxuryMovil) ? a.portadaLuxuryMovil : undefined}
       alternas={(Array.isArray(a.portadasLuxuryAlternas) ? a.portadasLuxuryAlternas : [])
         .filter((x) => x && typeof x.compu === 'string' && /^https:\/\/[^\s"()]+$/.test(x.compu))

@@ -6,7 +6,6 @@
 }
 .tp-whatsapp-flotante__onda { position: absolute; inset: 0; z-index: -1; border-radius: 50%; background: #25d366; opacity: 0; pointer-events: none; animation: tp-whatsapp-pulso 4s cubic-bezier(0,0,.2,1) infinite; }
 .tp-whatsapp-flotante__icono { position: relative; width: 29px; height: 29px; }
-.tp-whatsapp-flotante__aviso { position: absolute; top: -5px; right: -5px; width: 21px; height: 21px; display: grid; place-items: center; border: 2px solid #fff; border-radius: 50%; background: #ef4444; color: #fff; font: 800 10px/1 'Plus Jakarta Sans', system-ui, sans-serif; }
 .tp-whatsapp-flotante:hover, .tp-whatsapp-flotante:focus-visible { background: #1cbd57; animation-play-state: paused; }
 .tp-whatsapp-flotante:focus-visible { outline: 3px solid #102916; outline-offset: 4px; }
 .tp-whatsapp-flotante:active { animation: none; transform: scale(.9); }

@@ -33,6 +33,7 @@ export function conVista(p: PaginaPublica, q?: ParametrosVista): PaginaPublica {
         mostrarWhatsapp: q.mw === '0' ? false : q.mw === '1' ? true : anterior.mostrarWhatsapp,
         mostrarHorario: q.mh === '0' ? false : q.mh === '1' ? true : anterior.mostrarHorario,
         catalogoLuxuryDestacado: q.lcd === '0' ? false : q.lcd === '1' ? true : anterior.catalogoLuxuryDestacado,
+        segundoBannerLuxury: q.lsb === '0' ? false : q.lsb === '1' ? true : anterior.segundoBannerLuxury,
         vistaServiciosLuxury: q.vs === 'horizontal' ? 'horizontal' : q.vs === 'vertical' ? 'vertical' : anterior.vistaServiciosLuxury,
         mostrarMesero: q.lm === '0' ? false : q.lm === '1' ? true : anterior.mostrarMesero,
         mensajePedidoIntro: q.mpi === undefined ? anterior.mensajePedidoIntro : q.mpi.slice(0, 240),
@@ -51,7 +52,7 @@ export function conVista(p: PaginaPublica, q?: ParametrosVista): PaginaPublica {
 /** Conserva solo los parámetros necesarios al abrir la reserva de una vista previa. */
 export function consultaVista(q?: ParametrosVista): string {
   if (q?.vista !== '1') return '';
-  const claves = ['vista', 'tipo', 'plantilla', 'pa', 'color', 'ct', 'fa', 'ft', 'cb', 'mb', 'promo', 'upi', 'mw', 'mh', 'lcd', 'vs', 'lm', 'mpi', 'pmp', 'pnp', 'pup', 'fp', 'sp', 'ust', 'ustx', 'usf'];
+  const claves = ['vista', 'tipo', 'plantilla', 'pa', 'color', 'ct', 'fa', 'ft', 'cb', 'mb', 'promo', 'upi', 'mw', 'mh', 'lcd', 'lsb', 'vs', 'lm', 'mpi', 'pmp', 'pnp', 'pup', 'fp', 'sp', 'ust', 'ustx', 'usf'];
   const parametros = new URLSearchParams();
   for (const clave of claves) if (q[clave] !== undefined) parametros.set(clave, q[clave]);
   return `?${parametros.toString()}`;

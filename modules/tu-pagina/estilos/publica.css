@@ -956,6 +956,11 @@ html:has(.tp[data-plantilla='luxury']), body:has(.tp[data-plantilla='luxury']) {
   .tp[data-plantilla='luxury'] .tp-luxury-reserva-real__panel .tp-ficha__desc { display: none; }
   .tp[data-plantilla='luxury'] .tp-luxury-reserva-real__panel .tp-campo { margin-top: 15px; }
 }
+/* Sin segundo banner: una sola escena, sin carril lateral (va después de los @media para ganarles). */
+.tp-luxury-motion.tp-luxury-motion--una { height: auto; }
+.tp-luxury-motion--una .tp-luxury-motion__pista { width: 100%; transform: none !important; }
+.tp-luxury-motion--una .tp-luxury-hero { width: 100%; min-width: 100%; }
+.tp-luxury-motion--una .tp-luxury-motion__progreso { display: none; }
 @media (max-width: 560px) and (prefers-reduced-motion: reduce) {
   .tp-luxury-motion { height: auto; }
   .tp-luxury-motion__fijo { position: relative; height: auto; }

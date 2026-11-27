@@ -16,11 +16,10 @@ function ContenidoBoton() {
   return <>
     <span className="tp-whatsapp-flotante__onda" aria-hidden="true" />
     <IconoWhatsApp />
-    <span className="tp-whatsapp-flotante__aviso" aria-hidden="true">1</span>
   </>;
 }
 
-/** Botón flotante de demostración exclusivo del ejemplo Casa Brasa. */
+/** WhatsApp flotante de «Tu página» (Marco y uñas). Con `demo`, abre una explicación y no un chat. */
 export default function BotonWhatsApp({ negocio, numero, demo = false }: { negocio: string; numero?: string; demo?: boolean }) {
   const [abierto, setAbierto] = useState(false);
   const cerrarRef = useRef<HTMLButtonElement>(null);

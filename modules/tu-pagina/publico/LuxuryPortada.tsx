@@ -15,6 +15,8 @@ type Props = {
   logo?: string;
   portada?: string;
   portadaSecundaria?: string;
+  /** false: solo la primera escena, sin el banner del servicio destacado. */
+  segundoBanner?: boolean;
   /** La portada en el celular (vertical, cara arriba). Sin ella, la misma de la compu. */
   portadaMovil?: string;
   /** Otras portadas: en cada carga sale una al azar (la principal o una de estas). */
@@ -27,7 +29,7 @@ type Props = {
 };
 
 /** El desplazamiento vertical mueve lateralmente las dos escenas, también en móvil. */
-export default function LuxuryPortada({ titulo, frase, etiqueta, logo, portada, portadaSecundaria, portadaMovil, alternas = [], servicio, inicioHref, reservarHref, catalogoDisponible, catalogoProductosDisponible = false }: Props) {
+export default function LuxuryPortada({ titulo, frase, etiqueta, logo, portada, portadaSecundaria, segundoBanner = true, portadaMovil, alternas = [], servicio, inicioHref, reservarHref, catalogoDisponible, catalogoProductosDisponible = false }: Props) {
   const marco = useRef<HTMLDivElement>(null);
   const fijo = useRef<HTMLDivElement>(null);
   const pista = useRef<HTMLDivElement>(null);
@@ -40,6 +42,11 @@ export default function LuxuryPortada({ titulo, frase, etiqueta, logo, portada, 
     const carril = pista.current;
     const linea = progreso.current;
     if (!zona || !ventana || !carril || !linea) return;
+    if (!segundoBanner) {
+      carril.style.transform = '';
+      zona.style.removeProperty('--tp-luxury-salida');
+      return;
+    }
     const reducida = window.matchMedia('(prefers-reduced-motion: reduce)');
     let pendiente = false;
     const actualizar = () => {
@@ -78,7 +85,7 @@ export default function LuxuryPortada({ titulo, frase, etiqueta, logo, portada, 
       window.visualViewport?.removeEventListener('resize', solicitar);
       reducida.removeEventListener('change', solicitar);
     };
-  }, []);
+  }, [segundoBanner]);
 
   const irAEscena = (numero: 0 | 1) => {
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
@@ -104,7 +111,7 @@ export default function LuxuryPortada({ titulo, frase, etiqueta, logo, portada, 
     variables[`--tp-alterna-${i + 1}-movil`] = `url("${x.movil ?? x.compu}")`;
   });
 
-  return <div className="tp-luxury-motion" ref={marco} data-escena={escena}>
+  return <div className={`tp-luxury-motion${segundoBanner ? '' : ' tp-luxury-motion--una'}`} ref={marco} data-escena={escena}>
     <div className="tp-luxury-motion__fijo" ref={fijo}>
       <div className="tp-luxury-motion__pista" ref={pista}>
         <section suppressHydrationWarning className={`tp-luxury-hero${!portada || portada === PORTADA_LUXURY ? ' tp-luxury-hero--foto-ejemplo' : ''}${portadaMovil ? ' tp-luxury-hero--con-movil' : ''}`} aria-label={`Bienvenidos a ${titulo}`}
@@ -116,7 +123,7 @@ export default function LuxuryPortada({ titulo, frase, etiqueta, logo, portada, 
               {logo && <span className="tp-luxury-brand__logo" style={{ backgroundImage: `url("${logo}")` }} aria-hidden="true" />}
               <span>{titulo}</span>
             </a>
-            <span className="tp-luxury-nav__paso">01 / 02</span>
+            {segundoBanner && <span className="tp-luxury-nav__paso">01 / 02</span>}
             {catalogoDisponible && <a href="#catalogo">Servicios</a>}
             {catalogoProductosDisponible && <a href="#catalogo-productos">Catálogo</a>}
           </nav>
@@ -129,9 +136,11 @@ export default function LuxuryPortada({ titulo, frase, etiqueta, logo, portada, 
               {catalogoProductosDisponible && <a className="tp-luxury-hero__cta tp-luxury-hero__cta--secundario" href="#catalogo-productos">Ver catálogo <ArrowDown size={19} aria-hidden="true" /></a>}
             </div>
           </div>
-          <button type="button" className="tp-luxury-motion__siguiente" onClick={() => irAEscena(1)}>Explorar <ArrowRight size={18} aria-hidden="true" /></button>
+          {segundoBanner
+            ? <button type="button" className="tp-luxury-motion__siguiente" onClick={() => irAEscena(1)}>Explorar <ArrowRight size={18} aria-hidden="true" /></button>
+            : catalogoDisponible && <a className="tp-luxury-motion__siguiente" href="#catalogo">Ver servicios <ArrowDown size={18} aria-hidden="true" /></a>}
         </section>
-        <section className="tp-luxury-hero tp-luxury-hero--servicio" aria-label={servicio?.nombre || `Servicios de ${titulo}`} style={fondo(portadaSecundaria, FOTOS_SERVICIOS_LUXURY.corte)}>
+        {segundoBanner && <section className="tp-luxury-hero tp-luxury-hero--servicio" aria-label={servicio?.nombre || `Servicios de ${titulo}`} style={fondo(portadaSecundaria, FOTOS_SERVICIOS_LUXURY.corte)}>
           <div className="tp-luxury-hero__panel">
             <span className="tp-luxury-hero__etiqueta">02 / 02 · SERVICIO DESTACADO</span>
             <h2>{servicio?.nombre || titulo}</h2>
@@ -142,9 +151,9 @@ export default function LuxuryPortada({ titulo, frase, etiqueta, logo, portada, 
             </div>
           </div>
           {catalogoDisponible && <a className="tp-luxury-motion__siguiente" href="#catalogo">Ver servicios <ArrowDown size={18} aria-hidden="true" /></a>}
-        </section>
+        </section>}
       </div>
-      <span className="tp-luxury-motion__progreso" ref={progreso} aria-hidden="true" />
+      <span className="tp-luxury-motion__progreso" ref={progreso} aria-hidden="true" hidden={!segundoBanner} />
     </div>
   </div>;
 }

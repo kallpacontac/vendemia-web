@@ -61,6 +61,7 @@ const urlVista = (slug: string, valores: {
     mw: valores.apariencia.mostrarWhatsapp === false ? '0' : '1',
     mh: valores.apariencia.mostrarHorario === false ? '0' : '1',
     lcd: valores.apariencia.catalogoLuxuryDestacado === true ? '1' : '0',
+    lsb: valores.apariencia.segundoBannerLuxury === false ? '0' : '1',
     vs: valores.apariencia.vistaServiciosLuxury === 'horizontal' ? 'horizontal' : 'vertical',
     lm: valores.apariencia.mostrarMesero === true ? '1' : '0',
     mpi: valores.apariencia.mensajePedidoIntro ?? '',
@@ -79,7 +80,7 @@ import Avisame from '@/modules/tu-pagina/ui/Avisame';
 import TarjetaEnPagina from '@/modules/tu-pagina/ui/TarjetaEnPagina';
 import type { ConfigTarjeta } from '@/modules/tu-pagina/dominio/tarjeta';
 import { ConfigDeCanchas } from '@/modules/tu-pagina/ui/Canchas';
-import { porcentajeAdelanto, type ConfigCitas } from '@/modules/tu-pagina/dominio/adelantoCitas';
+import { indicacionesDe, porcentajeAdelanto, type ConfigCitas } from '@/modules/tu-pagina/dominio/adelantoCitas';
 import { normalizarCanchas, type ConfigCanchas } from '@/modules/tu-pagina/dominio/canchas';
 import { proveedorCompleto, rucValido, type Proveedor } from '@/modules/tu-pagina/dominio/reclamos';
 import { telefonoBonito, telefonoNormal } from '@/modules/tu-pagina/dominio/envio';
@@ -227,6 +228,8 @@ function MiPagina({ companyId, nombre, pagina, agendaNube, alGuardar }: {
   // Promos (25-nov-2026, dominio/promos.ts): descuento por reservar aquí y aviso al abrir.
   const [descuentoWeb, setDescuentoWeb] = useState<DescuentoWeb>(pagina?.secciones?.descuentoWeb ?? { activo: false, pct: 20 });
   const [popup, setPopup] = useState<PopupPagina>(pagina?.secciones?.popup ?? { activo: false });
+  // «Antes de tu cita» (secciones.citas.indicaciones): una por línea, lo leen al terminar de reservar.
+  const [indicaciones, setIndicaciones] = useState((citasCfg?.indicaciones ?? []).join('\n'));
   const [validacionCitas, setValidacionCitas] = useState<'manual' | 'automatica'>(citasCfg?.validacion === 'automatica' ? 'automatica' : 'manual');
   const [funcionesAbiertas, setFuncionesAbiertas] = useState(Boolean(pagina?.secciones?.envios || pagina?.secciones?.reclamos || pagina?.secciones?.canchas?.activo || pagina?.secciones?.fideliza?.activo || pagina?.secciones?.descuentoWeb?.activo || pagina?.secciones?.popup?.activo));
   const [proveedor, setProveedor] = useState<Proveedor>({
@@ -307,6 +310,7 @@ function MiPagina({ companyId, nombre, pagina, agendaNube, alGuardar }: {
     if (!/^\d{8,15}$/.test(telefonoNormal(whatsapp))) { avisar('Revisa el número de WhatsApp antes de publicar.', 'error'); return; }
     if (reclamos && !proveedorCompleto(proveedor)) { avisar('Para el Libro de Reclamaciones faltan tu razón social, un RUC válido (11 cifras) y la dirección.', 'error'); return; }
     const aparienciaPublicada = { ...apariencia, plantillaActiva: !pagina?.publicada || plantillaManual || apariencia.plantillaActiva === true };
+    const listaIndicaciones = indicacionesDe({ indicaciones: indicaciones.split('\n') });
     setGuardando(true);
     try {
       const { error } = await supabase().rpc('tu_pagina_guardar', {
@@ -330,7 +334,7 @@ function MiPagina({ companyId, nombre, pagina, agendaNube, alGuardar }: {
             // Con lo demás que traiga (la foto de la invitación): guardar reemplaza la clave entera.
             fideliza: { ...tarjeta, activo: Boolean(tarjeta.activo && tarjeta.slug), slug: tarjeta.slug ?? '' },
             // Guardar reemplaza la clave entera: se mandan sus sedes, indicaciones y plazo tal cual.
-            ...(citasCfg ? { citas: { ...citasCfg, validacion: validacionCitas } } : {}),
+            ...(citasCfg || listaIndicaciones.length ? { citas: { ...citasCfg, validacion: validacionCitas, indicaciones: listaIndicaciones } } : {}),
             descuentoWeb: { activo: Boolean(reservar && descuentoWeb.activo), pct: descuentoWeb.pct ?? 20 },
             popup: { ...popup, activo: Boolean(popup.activo && (popup.titulo?.trim() || popup.texto?.trim())), titulo: popup.titulo?.trim() ?? '', texto: popup.texto?.trim() ?? '' },
           },
@@ -522,15 +526,23 @@ function MiPagina({ companyId, nombre, pagina, agendaNube, alGuardar }: {
             </div>
             {plantilla === 'luxury' && es !== 'tienda' && <div className="tp-panel-campo">
               <span>Foto del segundo banner <small className="muted">(opcional)</small></span>
-              <small className="muted">Si no subes una foto, se muestra la del diseño Luxury.</small>
-              <div className="tp-panel-imagen-acciones">
-                <label className="tp-panel-subir">{subiendo === 'portadaLuxurySecundaria' ? 'Subiendo…' : apariencia.portadaLuxurySecundaria ? 'Cambiar foto' : 'Subir mi foto'}
-                  <input type="file" accept="image/*" disabled={subiendo !== null} onChange={(e) => { const file = e.target.files?.[0]; if (file) void subirImagen(file, 'portadaLuxurySecundaria'); e.target.value = ''; }} />
-                </label>
-                {apariencia.portadaLuxurySecundaria && <button type="button" className="btn btn-sm btn-ghost" disabled={subiendo !== null} onClick={() => setApariencia({ ...apariencia, portadaLuxurySecundaria: '' })}>Usar foto de la plantilla</button>}
-              </div>
-              <img className="tp-panel-imagen tp-panel-imagen--portada" src={esUrlPublica(apariencia.portadaLuxurySecundaria ?? '') && apariencia.portadaLuxurySecundaria || FOTOS_SERVICIOS_LUXURY.corte} alt="Vista previa del segundo banner" />
-              <label className="tp-panel-enlace-imagen">O pega un enlace HTTPS<input className="input" type="url" value={apariencia.portadaLuxurySecundaria ?? ''} placeholder="https://…/segundo-banner.jpg" onChange={(e) => setApariencia({ ...apariencia, portadaLuxurySecundaria: e.target.value })} /></label>
+              {apariencia.segundoBannerLuxury === false ? <>
+                <small className="muted">Sin segundo banner: tu portada queda en una sola escena y luego vienen tus servicios.</small>
+                <div className="tp-panel-imagen-acciones">
+                  <button type="button" className="btn btn-sm btn-ghost" onClick={() => setApariencia({ ...apariencia, segundoBannerLuxury: true })}>Volver a mostrarlo</button>
+                </div>
+              </> : <>
+                <small className="muted">Si no subes una foto, se muestra la del diseño Luxury.</small>
+                <div className="tp-panel-imagen-acciones">
+                  <label className="tp-panel-subir">{subiendo === 'portadaLuxurySecundaria' ? 'Subiendo…' : apariencia.portadaLuxurySecundaria ? 'Cambiar foto' : 'Subir mi foto'}
+                    <input type="file" accept="image/*" disabled={subiendo !== null} onChange={(e) => { const file = e.target.files?.[0]; if (file) void subirImagen(file, 'portadaLuxurySecundaria'); e.target.value = ''; }} />
+                  </label>
+                  {apariencia.portadaLuxurySecundaria && <button type="button" className="btn btn-sm btn-ghost" disabled={subiendo !== null} onClick={() => setApariencia({ ...apariencia, portadaLuxurySecundaria: '' })}>Usar foto de la plantilla</button>}
+                  <button type="button" className="btn btn-sm btn-ghost" disabled={subiendo !== null} onClick={() => setApariencia({ ...apariencia, segundoBannerLuxury: false })}>Quitar segundo banner</button>
+                </div>
+                <img className="tp-panel-imagen tp-panel-imagen--portada" src={esUrlPublica(apariencia.portadaLuxurySecundaria ?? '') && apariencia.portadaLuxurySecundaria || FOTOS_SERVICIOS_LUXURY.corte} alt="Vista previa del segundo banner" />
+                <label className="tp-panel-enlace-imagen">O pega un enlace HTTPS<input className="input" type="url" value={apariencia.portadaLuxurySecundaria ?? ''} placeholder="https://…/segundo-banner.jpg" onChange={(e) => setApariencia({ ...apariencia, portadaLuxurySecundaria: e.target.value })} /></label>
+              </>}
             </div>}
             {plantilla === 'unas' && <div className="tp-panel-campo">
               <span>Foto de la sección «Nosotros» <small className="muted">(opcional)</small></span>
@@ -561,7 +573,7 @@ function MiPagina({ companyId, nombre, pagina, agendaNube, alGuardar }: {
               {apariencia.promocionImagenUnas && esUrlPublica(apariencia.promocionImagenUnas) && /* eslint-disable-next-line @next/next/no-img-element */ <img className="tp-panel-imagen tp-panel-imagen--portada" src={apariencia.promocionImagenUnas} alt="Vista previa de la promoción" />}
               <label className="tp-panel-enlace-imagen">O pega un enlace HTTPS<input className="input" type="url" value={apariencia.promocionImagenUnas ?? ''} placeholder="https://…/promocion.jpg" onChange={(e) => setApariencia({ ...apariencia, promocionImagenUnas: e.target.value })} /></label>
             </div>}
-            <label className="tp-panel-check"><input type="checkbox" checked={apariencia.mostrarWhatsapp !== false} onChange={(e) => setApariencia({ ...apariencia, mostrarWhatsapp: e.target.checked })} /><span><b>Mostrar botón de WhatsApp</b><small className="muted">Los pedidos y reservas siguen enviando su aviso.</small></span></label>
+            <label className="tp-panel-check"><input type="checkbox" checked={apariencia.mostrarWhatsapp !== false} onChange={(e) => setApariencia({ ...apariencia, mostrarWhatsapp: e.target.checked })} /><span><b>Mostrar botón de WhatsApp</b><small className="muted">Un botón verde flotante en todas tus pantallas, también al reservar, para que te escriban directo. Los pedidos y reservas siguen enviando su aviso.</small></span></label>
             <label className="tp-panel-check"><input type="checkbox" checked={apariencia.mostrarHorario !== false} onChange={(e) => setApariencia({ ...apariencia, mostrarHorario: e.target.checked })} /><span><b>Mostrar si estás abierto</b><small className="muted">«Abierto ahora» o «Cerrado», según tu horario de atención. Solo informa: tus clientes pueden pedir igual.</small></span></label>
             {plantilla === 'luxury' && es === 'ambos' && <label className="tp-panel-check"><input type="checkbox" checked={apariencia.catalogoLuxuryDestacado === true} onChange={(e) => setApariencia({ ...apariencia, catalogoLuxuryDestacado: e.target.checked })} /><span><b>Mostrar botón «Ver catálogo» y carrusel de productos</b><small className="muted">Los servicios siguen primero. Si lo desactivas, tus productos conservan la vista actual.</small></span></label>}
             {es !== 'agenda' && <label className="tp-panel-check"><input type="checkbox" checked={apariencia.mostrarMesero === true} onChange={(e) => setApariencia({ ...apariencia, mostrarMesero: e.target.checked })} /><span><b>Mostrar «Llamar al mesero»</b><small className="muted">Para restaurantes y cafeterías. El cliente indica su mesa y abre WhatsApp con el aviso listo para enviar.</small></span></label>}
@@ -608,6 +620,13 @@ function MiPagina({ companyId, nombre, pagina, agendaNube, alGuardar }: {
                     ? 'Se comprueba que sea un pago completado, a tu número, de las últimas horas, con su n.º de operación y sin repetir. Lo dudoso (captura con señales de edición, pago de antes de reservar, cliente que ya falló) te llega para revisar. Igual coteja en tu Yape los validados: sale la lista en la Agenda.'
                     : 'Cada captura te llega a la Agenda y la cita sigue apartada hasta que la apruebes. Si tardas 15 minutos, te lo recordamos.'}
                 </small>
+              </label>
+            )}
+            {reservar && !(canchas.activo || plantilla === 'canchas') && (
+              <label className="tp-panel-campo">
+                <span>Antes de tu cita <small className="muted">(opcional)</small></span>
+                <textarea className="input" rows={5} value={indicaciones} placeholder={'Tolerancia máxima de 10 minutos: pasado ese tiempo, la cita se reprograma.\nSi no puedes venir, avísanos por WhatsApp con tiempo.'} onChange={(e) => setIndicaciones(e.target.value)} />
+                <small className="muted">Lo lee tu cliente al terminar de reservar. Una indicación por línea (hasta 6, de 200 letras cada una). Vacío = no sale.</small>
               </label>
             )}
             {reservar && (
