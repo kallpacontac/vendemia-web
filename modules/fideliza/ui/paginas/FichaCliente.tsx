@@ -8,7 +8,7 @@
  */
 import { useState } from 'react';
 import Link from 'next/link';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { ArrowLeft } from 'lucide-react';
 import { useFideliza } from '@/modules/fideliza/ui/Contexto';
 import DatosCliente from '@/modules/fideliza/ui/DatosCliente';
@@ -88,6 +88,10 @@ export default function FichaCliente() {
   const [ajuste, setAjuste] = useState<null | { units: string; motivo: string; clave: string; linea: string | null }>(null);
   /** 0018: qué línea se mira en el historial (null = todas). */
   const [verLinea, setVerLinea] = useState<string | null>(null);
+  /** 0029: «Borrar tarjeta» pide confirmar aquí mismo (window.prompt no abre en la app del celular). */
+  const [confirmarBorrado, setConfirmarBorrado] = useState(false);
+  const [borrando, setBorrando] = useState(false);
+  const router = useRouter();
 
   const { datos: f, cargando, error, releer } = useCargar(
     async () => (companyId ? accion<Ficha>('miembro.ficha', { companyId, memberId }) : null),
@@ -136,6 +140,18 @@ export default function FichaCliente() {
     const motivo = window.prompt('Se borran nombre, contactos y avisos; el historial de puntos queda sin datos personales. Motivo:');
     if (!motivo || motivo.trim().length < 3) return;
     await hacer('miembro.borrar', { reason: motivo.trim() }, 'Datos personales borrados');
+  }
+
+  async function eliminar() {
+    setBorrando(true);
+    try {
+      await accion('miembro.eliminar', { companyId, memberId });
+      avisar('Tarjeta borrada');
+      router.replace('/panel/fideliza/clientes');
+    } catch (e) {
+      avisar(mensaje(e), 'error');
+      setBorrando(false);
+    }
   }
 
   async function devolver() {
@@ -298,12 +314,42 @@ export default function FichaCliente() {
               </button>
             )}
             {puede('members.delete') && f.status !== 'deleted' && (
-              <button className="btn btn-ghost btn-sm" style={{ color: '#B4232A' }} onClick={() => void borrar()}>
+              <button className="btn btn-ghost btn-sm" onClick={() => void borrar()}>
                 Borrar datos personales
               </button>
             )}
             </div>
           </details>
+
+          {puede('members.delete') && (
+            <div style={{ marginTop: 12 }}>
+              {!confirmarBorrado ? (
+                <button className="btn btn-ghost btn-sm" style={{ color: '#B4232A' }} onClick={() => setConfirmarBorrado(true)}>
+                  Borrar tarjeta
+                </button>
+              ) : (
+                <div style={{ border: '1px solid #F1C0C3', background: '#FDF2F2', borderRadius: 10, padding: 12 }}>
+                  <p className="fz-def" style={{ marginTop: 0 }}>
+                    Se borra la tarjeta de <b>{f.alias || 'este cliente'}</b> con todo: sellos, visitas, premios y avisos.
+                    No se puede deshacer. Podrá volver a unirse con el mismo celular.
+                  </p>
+                  <div className="fz-fila">
+                    <button
+                      className="btn btn-sm"
+                      style={{ background: '#B4232A', color: '#fff' }}
+                      disabled={borrando}
+                      onClick={() => void eliminar()}
+                    >
+                      {borrando ? 'Borrando…' : 'Sí, borrar tarjeta'}
+                    </button>
+                    <button className="btn btn-ghost btn-sm" disabled={borrando} onClick={() => setConfirmarBorrado(false)}>
+                      Cancelar
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
 
           {enlace && (
             <div style={{ marginTop: 14 }}>

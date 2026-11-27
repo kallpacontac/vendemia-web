@@ -506,6 +506,11 @@ export const ACCIONES = {
     ejecutar: (d, { sb }) =>
       rpc(sb, 'loyalty_member_erase', { p_company: d.companyId, p_member: d.memberId, p_reason: d.reason }),
   }),
+  /** 0029: borra la tarjeta entera (persona, líneas e historial), para volver a probar. */
+  'miembro.eliminar': accion({
+    esquema: z.object({ companyId: compania, memberId: uuid }),
+    ejecutar: (d, { sb }) => rpc(sb, 'loyalty_member_purge', { p_company: d.companyId, p_member: d.memberId }),
+  }),
 
   // ── Caja ───────────────────────────────────────────────────────────────
   'caja.buscar': accion({
