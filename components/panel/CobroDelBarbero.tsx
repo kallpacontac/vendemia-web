@@ -25,10 +25,14 @@ import { fotoParaCobro, type FotoPago } from '@/lib/panel/fotoPago';
 import { soles } from '@/lib/panel/format';
 
 type Metodo = 'cash' | 'yape' | 'plin';
+/**
+ * 26-nov-2026 (Alvaro: «no solo son Yapes: Plin, transferencia… usemos un término que no confunda»).
+ * Un solo botón para lo que no es efectivo: con el celular de cobros, el método real sale del aviso que
+ * eligió (Yape, Plin o transferencia, lector 0003); sin él, de la foto (Yape o Plin).
+ */
 const METODOS: { id: Metodo; label: string }[] = [
   { id: 'cash', label: 'Efectivo' },
-  { id: 'yape', label: 'Yape' },
-  { id: 'plin', label: 'Plin' },
+  { id: 'yape', label: 'Yape, Plin o transferencia' },
 ];
 
 export default function CobroDelBarbero({ companyId, citaId, falta, alCerrar, alListo }: {
@@ -97,7 +101,7 @@ export default function CobroDelBarbero({ companyId, citaId, falta, alCerrar, al
     }
     const r = (data ?? {}) as { resultado?: string; cobrado?: number };
     if (r.resultado === 'por_aprobar') avisar(noLlego
-      ? 'Queda por aprobar: se cobra solo si llega el Yape, o lo aprueba la caja.'
+      ? 'Queda por aprobar: se cobra solo si llega el pago, o lo aprueba la caja.'
       : 'Pagó de más: queda por aprobar en la caja.', 'ok');
     else avisar(`Cobro anotado: ${soles(Number(r.cobrado ?? falta))}`, 'ok');
     alListo();
@@ -133,18 +137,18 @@ export default function CobroDelBarbero({ companyId, citaId, falta, alCerrar, al
       )}
       {conLector && deMas && yape && (
         <small className="mag-cobro__ojo">
-          Ese Yape es de {soles(yape.centimos / 100)}: {soles(yape.centimos / 100 - falta)} de más. No se cobra solo: lo aprueba la caja.
+          Ese pago es de {soles(yape.centimos / 100)}: {soles(yape.centimos / 100 - falta)} de más. No se cobra solo: lo aprueba la caja.
         </small>
       )}
       {conLector && noLlego && (
-        <small>Toma la foto del Yape en el celular de tu cliente. Se cobra solo si el Yape llega; si no, lo aprueba la caja.</small>
+        <small>Toma la foto del comprobante en el celular de tu cliente. Se cobra solo si el pago llega; si no, lo aprueba la caja.</small>
       )}
-      {conLector && yape && pideFoto && !foto && !noLlego && <small>Toma la foto del Yape en el celular de tu cliente.</small>}
+      {conLector && yape && pideFoto && !foto && !noLlego && <small>Toma la foto del comprobante en el celular de tu cliente.</small>}
       {muestraFoto && <FotoDelPago companyId={companyId} foto={foto} obligatoria={pideFoto} alFoto={alFoto} alLeyendo={setLeyendo} />}
       {metodo === 'cash' && pideFoto && !foto && <small>Fotografía el dinero o el recibo.</small>}
       {otroMonto && (
         <small className="mag-cobro__ojo">
-          La foto dice {soles(foto?.monto ?? 0)}, pero {conLector && yape ? `el Yape es de ${soles(yape.centimos / 100)}` : `se anotan ${soles(falta)}`}. Si no cuadra, no cobres y avisa a la caja.
+          La foto dice {soles(foto?.monto ?? 0)}, pero {conLector && yape ? `el pago es de ${soles(yape.centimos / 100)}` : `se anotan ${soles(falta)}`}. Si no cuadra, no cobres y avisa a la caja.
         </small>
       )}
 
@@ -155,12 +159,12 @@ export default function CobroDelBarbero({ companyId, citaId, falta, alCerrar, al
           </button>
           {conLector && !yape && !noLlego && (
             <button type="button" className="btn btn-ghost btn-sm" disabled={enviando} onClick={() => { setNoLlego(true); setFoto(null); }}>
-              No llegó el Yape
+              No llegó el pago
             </button>
           )}
           {conLector && noLlego && (
             <button type="button" className="btn btn-ghost btn-sm" disabled={enviando} onClick={() => { setNoLlego(false); setFoto(null); }}>
-              Ver los Yapes
+              Ver los pagos
             </button>
           )}
         </div>

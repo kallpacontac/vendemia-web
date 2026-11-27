@@ -87,9 +87,9 @@ export default function YapesQueLlegaron({ companyId, citaId, elegido, alElegir,
   const escuchando = ahora - abierto.current < info.despues * 60_000;
 
   return (
-    <div className="yql" role="group" aria-label="Yapes que llegaron">
+    <div className="yql" role="group" aria-label="Pagos que llegaron">
       <small className="yql__titulo">
-        {info.yapes.length ? '¿Cuál es el de tu cliente? Pregúntale su nombre.' : escuchando ? 'Esperando el Yape…' : 'No llegó ningún Yape.'}
+        {info.yapes.length ? '¿Cuál es el de tu cliente? Pregúntale su nombre.' : escuchando ? 'Esperando el pago…' : 'No llegó ningún pago.'}
         {escuchando && <span className="yql__vivo" aria-hidden="true" />}
       </small>
       {info.yapes.map((y) => {
@@ -107,7 +107,7 @@ export default function YapesQueLlegaron({ companyId, citaId, elegido, alElegir,
         );
       })}
       {!info.yapes.length && !escuchando && (
-        <small>Revisa que el cliente yapeó al número del negocio, o avisa a la caja.</small>
+        <small>Revisa que el cliente pagó al número o la cuenta del negocio, o avisa a la caja.</small>
       )}
     </div>
   );

@@ -135,17 +135,17 @@ export default function PagosDelCelular({ companyId, dia, recarga }: { companyId
   }
 
   async function decidir(p: Propuesta, si: boolean) {
-    if (!si && !window.confirm(`¿No es de la cita de ${p.cliente || 'ese cliente'}? El Yape vuelve a quedar libre.`)) return;
+    if (!si && !window.confirm(`¿No es de la cita de ${p.cliente || 'ese cliente'}? El pago vuelve a quedar libre.`)) return;
     setOcupado(p.id);
     const { error } = await supabase().rpc('lector_aprobar_propuesta', { p_company: companyId, p_aviso: p.id, p_si: si });
     setOcupado(0);
     if (error) return avisar(error.message, 'error');
-    avisar(si ? `Aprobado: cobrado y ${soles(Number(p.sobra))} de más anotados.` : 'Listo: el Yape vuelve a quedar libre.', 'ok');
+    avisar(si ? `Aprobado: cobrado y ${soles(Number(p.sobra))} de más anotados.` : 'Listo: el pago vuelve a quedar libre.', 'ok');
     releer();
   }
 
   async function aprobarSinYape(x: Esperando) {
-    if (!window.confirm(`¿Dar por cobrada la cita de ${x.cliente || 'ese cliente'} con esa foto, aunque el Yape no llegó al celular de cobros?`)) return;
+    if (!window.confirm(`¿Dar por cobrada la cita de ${x.cliente || 'ese cliente'} con esa foto, aunque el pago no llegó al celular de cobros?`)) return;
     const { error } = await supabase().rpc('lector_aprobar_sin_yape', { p_company: companyId, p_cita: x.cita_id, p_metodo: 'yape' });
     if (error) return avisar(error.message, 'error');
     avisar('Aprobado: la cita queda cobrada.', 'ok');
@@ -210,8 +210,8 @@ export function PagosDelCelularVista({ dia, pagos, sinLeer = 0, dudas, esperando
               : 'Ninguno este día'}
           </small>
           {porOrden > 0 && <small className="ldp-ambar">{porOrden === 1 ? '1 asignado por orden: compruébalo' : `${porOrden} asignados por orden: compruébalos`}</small>}
-          {delBarbero > 0 && <small className="ldp-ambar">{delBarbero === 1 ? '1 Yape elegido por el barbero: compruébalo' : `${delBarbero} Yapes elegidos por el barbero: compruébalos`}</small>}
-          {esperando.length > 0 && <small className="ldp-ambar">{esperando.length === 1 ? '1 cobro esperando su Yape' : `${esperando.length} cobros esperando su Yape`}</small>}
+          {delBarbero > 0 && <small className="ldp-ambar">{delBarbero === 1 ? '1 pago elegido por el barbero: compruébalo' : `${delBarbero} pagos elegidos por el barbero: compruébalos`}</small>}
+          {esperando.length > 0 && <small className="ldp-ambar">{esperando.length === 1 ? '1 cobro esperando su pago' : `${esperando.length} cobros esperando su pago`}</small>}
         </span>
         <ChevronDown size={18} aria-hidden="true" style={{ transform: abierta ? 'rotate(180deg)' : undefined, flex: 'none' }} />
       </button>
@@ -220,7 +220,7 @@ export function PagosDelCelularVista({ dia, pagos, sinLeer = 0, dudas, esperando
       {alDecidir && propuestas.map((p) => (
         <article key={p.id} className="ypa ypa--en-caja">
           <p className="ypa__pago">
-            <b>Por aprobar:</b> {p.quien} dice que el Yape de {soles(p.centimos / 100)} de {bonito(p.nombre) || 'alguien sin nombre'} ({horaLima(p.cuando)})
+            <b>Por aprobar:</b> {p.quien} dice que el pago de {soles(p.centimos / 100)} de {bonito(p.nombre) || 'alguien sin nombre'} ({horaLima(p.cuando)})
             {' '}es de {p.cliente || 'su cliente'} · {p.servicio}. Pagó <b>{soles(Number(p.sobra))} de más</b>.
             {p.foto_ok !== 'si' && <> <span className="ldp-ambar">{p.foto_ok === 'sin_foto' ? 'Sin foto.' : 'La foto no se pudo comprobar.'}</span></>}
             {p.foto_url && <> <a href={p.foto_url} target="_blank" rel="noopener">Ver foto</a></>}
@@ -232,7 +232,7 @@ export function PagosDelCelularVista({ dia, pagos, sinLeer = 0, dudas, esperando
             </button>
             <button type="button" className="ypa__opcion" disabled={ocupado === p.id} onClick={() => alDecidir(p, false)}>
               <b>No es de esa cita</b>
-              <span>El Yape vuelve a quedar libre</span>
+              <span>El pago vuelve a quedar libre</span>
             </button>
           </div>
         </article>
@@ -279,7 +279,7 @@ export function PagosDelCelularVista({ dia, pagos, sinLeer = 0, dudas, esperando
       {/* Cobros con evidencia que aún no tienen su Yape: se emparejan solos en cuanto llega. */}
       {abierta && esperando.length > 0 && (
         <div className="ldp-esperando">
-          <small className="muted">Esperando su Yape · se emparejan solos al llegar</small>
+          <small className="muted">Esperando su pago · se emparejan solos al llegar</small>
           <ul className="ldp-lista">
             {esperando.map((x) => (
               <li key={`${x.tipo}-${x.cita_id}`}>
@@ -296,7 +296,7 @@ export function PagosDelCelularVista({ dia, pagos, sinLeer = 0, dudas, esperando
                 </div>
                 {x.tipo === 'ticket' && alAprobarSinYape && (
                   <div className="ldp-detalle">
-                    <span>Si el Yape no va a llegar al celular de cobros, apruébalo con la foto.</span>
+                    <span>Si el pago no va a llegar al celular de cobros, apruébalo con la foto.</span>
                     <button type="button" className="ldp-quitar" onClick={() => alAprobarSinYape(x)}>Aprobar cobro</button>
                   </div>
                 )}

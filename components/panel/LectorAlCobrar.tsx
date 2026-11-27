@@ -52,12 +52,12 @@ export default function LectorAlCobrar({ companyId, dispositivos, alCambiar }: {
 
   return (
     <div className="ldp-cobrar">
-      <b>Cuando el barbero cobra con Yape</b>
+      <b>Cuando el barbero cobra con Yape, Plin o transferencia</b>
       <small className="muted">
-        En Mi agenda › Cobrar ve los Yapes que llegaron a este celular y toca el de su cliente. Se cobra al momento.
+        En Mi agenda › Cobrar ve los pagos que llegaron a este celular y toca el de su cliente. Se cobra al momento.
       </small>
       <label>
-        <span>Qué Yapes ve</span>
+        <span>Qué pagos ve</span>
         <span className="ldp-cobrar__fila">
           <select value={datos.antes} disabled={guardando} onChange={(e) => void guardar({ antes: Number(e.target.value) })} aria-label="Minutos antes">
             {ANTES.map((m) => <option key={m} value={m}>{m} min antes</option>)}
@@ -68,9 +68,9 @@ export default function LectorAlCobrar({ companyId, dispositivos, alCambiar }: {
         </span>
       </label>
       <label>
-        <span>Foto del Yape del cliente</span>
+        <span>Foto del comprobante del cliente</span>
         <select value={datos.foto} disabled={guardando} onChange={(e) => void guardar({ foto: e.target.value as Ajustes['foto'] })}>
-          <option value="obligatoria">Obligatoria: comprueba que es el Yape de su cliente</option>
+          <option value="obligatoria">Obligatoria: comprueba que es el pago de su cliente</option>
           <option value="opcional">Opcional: los cobrados sin foto salen en ámbar en el Cierre</option>
         </select>
       </label>
