@@ -32,9 +32,7 @@ import { useAvisar } from '@/components/panel/Avisos';
 import { useCargar } from '@/components/panel/useCargar';
 import { accion, ErrorFideliza, lecturas, mensaje, sincronizarEnSegundoPlano, type Version } from '@/modules/fideliza/cliente/api';
 import { subirImagenMarca } from '@/modules/fideliza/cliente/imagenMarca';
-import EncuadrarFoto from '@/modules/fideliza/ui/EncuadrarFoto';
-import TraeUnAmigo from '@/modules/fideliza/ui/TraeUnAmigo';
-import { slugDe } from '@/modules/fideliza/dominio/botones';
+import EncuadrarFoto from '@/modules/fideliza/ui/EncuadrarFoto';import { slugDe } from '@/modules/fideliza/dominio/botones';
 import { urlUnirse } from '@/modules/fideliza/dominio/config';
 import { AVISOS_AUTO, avisoDeFabrica, type PlantillaAuto } from '@/modules/fideliza/dominio/avisos';
 import { COLORES, PLANTILLAS_TARJETA, colorValido, tarjetaValida, type Estilo, type PlantillaTarjeta } from '@/modules/fideliza/dominio/estilo';
@@ -278,7 +276,7 @@ export default function CrearClub() {
         </ol>
         {slug && <div className="fz-probar__qr"><Qr valor={urlUnirse(slug)} tam={180} /></div>}
         {prendidos.length > 0 && (
-          <p className="fz-def">Tus avisos ya están prendidos: {prendidos.join(', ')}. Los cambias en Avisos.</p>
+          <p className="fz-def">Tus avisos ya están prendidos: {prendidos.join(', ')}. Los cambias en Promociones.</p>
         )}
         <div className="fz-fila" style={{ justifyContent: 'center', flexWrap: 'wrap' }}>
           <Link className="btn btn-primary" href="/panel/fideliza/caja">Ir a la Caja a darme el sello</Link>
@@ -299,9 +297,6 @@ export default function CrearClub() {
           </div>
           <Link className="btn btn-ghost btn-sm" href="/panel/fideliza/programa"><Settings2 size={15} /> Opciones avanzadas</Link>
         </div>
-
-        {/* 0028: arriba y plegada, para no bajar hasta el final. Solo con el club ya publicado. */}
-        {programa?.current_version_id && companyId && <TraeUnAmigo companyId={companyId} editable={editable} />}
 
         {!ajustes && (
           <section className="card fz-club__sec">

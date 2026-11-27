@@ -1,6 +1,17 @@
 'use client';
 
 /**
+ * FIDELIZA · PROMOCIONES (antes «Avisos»). 26-nov-2026, Alvaro: «deja claro el tema de las
+ * promociones y los referidos, que no sature». Todo en tres bloques, cada cosa una fila con su
+ * interruptor y lo que gana el cliente:
+ *   1 · Para atraer clientes nuevos: Trae a un amigo (0028) y, si el negocio tiene Mi página, su
+ *       descuento por reservar ahí (solo se LEE: se cambia en Mi página, que es de otro módulo).
+ *   2 · Para que vuelvan: los avisos de la tarjeta y los automáticos (bienvenida, volver,
+ *       te extrañamos, cumpleaños).
+ *   3 · Para que hablen bien de ti: pedir la reseña en Google.
+ * «Mandar un aviso ahora» sigue arriba, y «Mis avisos» debajo.
+ *
+ * Lo de antes, igual:
  * FIDELIZA · AVISOS — lo que le llega al celular del cliente, con interruptores.
  *
  * Solo por avisos push, solo a quien los aceptó, de 09:00 a 20:00 (Lima) y con un tope por
@@ -20,7 +31,11 @@
  * «Mis avisos» (los que manda el dueño cuando quiere) sigue debajo, sin cambios.
  */
 import { useEffect, useState } from 'react';
-import { Check, Pencil, Send, X } from 'lucide-react';
+import Link from 'next/link';
+import { Check, ExternalLink, Pencil, Send, X } from 'lucide-react';
+import { supabase } from '@/lib/supabase/client';
+import { pctDescuentoWeb } from '@/modules/tu-pagina/dominio/promos';
+import TraeUnAmigo from '@/modules/fideliza/ui/TraeUnAmigo';
 import '@/components/panel/resumen-negocio.css';
 import { useFideliza } from '@/modules/fideliza/ui/Contexto';
 import { Cargando, Fallo } from '@/modules/fideliza/ui/Estados';
@@ -59,7 +74,15 @@ export default function Campanas() {
     ]);
     const vivo = programas.find((p) => p.status === 'active' || p.status === 'paused') ?? null;
     const [version] = vivo?.current_version_id ? await lecturas.versiones(companyId, vivo.id).catch(() => []) : [];
-    return { campanas, config, m, alcance, club: vivo?.name ?? '', meta: version?.reward_threshold ?? null, premio: version?.reward_description ?? '' };
+    // El descuento de Mi página (tu-pagina 0038), solo para leerlo: null = el negocio no tiene Mi página.
+    let descuentoWeb: number | null = null;
+    try {
+      const { data } = await supabase().from('tu_pagina').select('secciones').eq('company_id', companyId).maybeSingle();
+      if (data) descuentoWeb = pctDescuentoWeb((data.secciones as { descuentoWeb?: unknown } | null)?.descuentoWeb);
+    } catch {
+      descuentoWeb = null;
+    }
+    return { campanas, config, m, alcance, club: vivo?.name ?? '', meta: version?.reward_threshold ?? null, premio: version?.reward_description ?? '', descuentoWeb };
   }, [companyId]);
 
   // Escape cierra la ventana.
@@ -70,7 +93,7 @@ export default function Campanas() {
     return () => document.removeEventListener('keydown', tecla);
   }, [editando, ocupado]);
 
-  if (cargando && !datos) return <Cargando texto="Cargando avisos…" />;
+  if (cargando && !datos) return <Cargando texto="Cargando promociones…" />;
   if (error) return <Fallo texto={error} reintentar={releer} />;
   if (!datos || !companyId) return null;
   const editable = puede('campaigns.manage');
@@ -169,11 +192,39 @@ export default function Campanas() {
           )}
         </article>
 
+        {/* 1 · Atraer: lo que trae gente nueva. */}
         <article className="fz-numeros__card">
-          <div className="negocio-card-head"><h2>Salen solos</h2><span className="negocio-currency">sin que hagas nada</span></div>
+          <div className="negocio-card-head"><h2>Para atraer clientes nuevos</h2></div>
+          <ul className="fz-avisos__lista">
+            <TraeUnAmigo companyId={companyId} editable={puede('program.edit')} enLista />
+            {datos.descuentoWeb !== null && (
+              <li className={`fz-avisos__fila${datos.descuentoWeb ? '' : ' fz-avisos__fila--off'}`}>
+                <div className="fz-avisos__cab">
+                  <div>
+                    <b>Descuento por reservar en tu página</b>
+                    <small>Para quien reserva solo desde tu página, una vez por celular.</small>
+                  </div>
+                  <span className={`badge-pill ${datos.descuentoWeb ? 'b-new' : 'b-mute'}`}>{datos.descuentoWeb ? 'Prendido' : 'Apagado'}</span>
+                </div>
+                <div className="fz-avisos__msg">
+                  <b>Lo que gana</b>
+                  <span>{datos.descuentoWeb ? `${datos.descuentoWeb} % menos en su primera reserva por la web.` : 'Nada por ahora.'}</span>
+                </div>
+                <div className="fz-avisos__pie">
+                  <small>Se cambia en Mi página (y allí, el aviso que lo anuncia al entrar).</small>
+                  <Link className="nc-link fz-avisos__editar" href="/panel/tu-pagina"><ExternalLink size={13} /> Ir a Mi página</Link>
+                </div>
+              </li>
+            )}
+          </ul>
+        </article>
+
+        {/* 2 · Que vuelvan: la tarjeta y los avisos que salen solos. */}
+        <article className="fz-numeros__card">
+          <div className="negocio-card-head"><h2>Para que vuelvan</h2><span className="negocio-currency">salen solos</span></div>
           <ul className="fz-avisos__lista">
             <Fila nombre="Al sumar un sello" fijo titulo="+1 sello" texto={`Llevas ${ejemplo} de ${meta}. Te faltan ${meta - ejemplo} para ${queGana}.`} pie="Siempre prendido: es lo que hace que vuelvan." />
-            <Fila nombre="Al ganar el premio" fijo titulo="¡Ganaste un premio!" texto={`${datos.premio || 'Tu premio'} · Enseña tu tarjeta en ${negocio || 'el local'} para canjearlo.`} pie="Siempre prendido." />
+            <Fila nombre="Al ganar el premio" fijo titulo="¡Ganaste un premio!" texto={`${datos.premio || 'Tu premio'} · Enseña tu tarjeta en ${negocio || 'el local'} para canjearlo.`} pie="El premio y cuántos sellos se cambian en Mi club › Tu tarjeta." />
 
             {(Object.keys(AVISOS_AUTO) as PlantillaAuto[]).map((t) => {
               const c = campana(t);
@@ -227,13 +278,6 @@ export default function Campanas() {
               />
             )}
 
-            <PedirResena
-              companyId={companyId}
-              editable={editable}
-              negocio={negocio}
-              placeId={((ajustes?.page_style ?? null) as { place_id?: string } | null)?.place_id ?? null}
-            />
-
             {rewardViejo && (
               <Fila
                 nombre="Premio disponible (antiguo)"
@@ -247,6 +291,19 @@ export default function Campanas() {
                 pie={resultado('reward_available')}
               />
             )}
+          </ul>
+        </article>
+
+        {/* 3 · Que hablen bien: la reseña en Google. */}
+        <article className="fz-numeros__card">
+          <div className="negocio-card-head"><h2>Para que hablen bien de ti</h2></div>
+          <ul className="fz-avisos__lista">
+            <PedirResena
+              companyId={companyId}
+              editable={editable}
+              negocio={negocio}
+              placeId={((ajustes?.page_style ?? null) as { place_id?: string } | null)?.place_id ?? null}
+            />
           </ul>
         </article>
       </section>

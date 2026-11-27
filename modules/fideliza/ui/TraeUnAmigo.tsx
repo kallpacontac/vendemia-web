@@ -5,15 +5,16 @@
  * (https://claude.ai/artifact/9BeiJ5K8c5zzGZwqgnNhh5): «que sea práctico de configurar, sin
  * scrollear hasta abajo, y que se pueda minimizar o desplegar».
  *
- *   · Va ARRIBA de Tu tarjeta, plegada: cerrada dice cómo está («Cada 2 amigos → Corte clásico») y
- *     tiene su interruptor a la vista; se despliega para cambiar algo. Solo con el club publicado.
+ *   · 26-nov-2026 (Alvaro: «deja claro el tema de las promociones y los referidos»): vive en
+ *     Promociones › «Para atraer clientes nuevos», como una fila más (`enLista`): nombre,
+ *     interruptor, lo que gana y «Cambiar» que la despliega. Ya no está en Tu tarjeta.
  *   · Por cada N (1–5) amigos que vienen, un premio: algo del catálogo del negocio o escrito a mano.
  *   · El amigo nuevo: nada (de fábrica) o 1 sello de regalo.
  *   · Se guarda sola, aparte de «Guardar y publicar» (no cambia la regla de sellos).
  * Sin la 0028 no se enseña.
  */
 import { useEffect, useState } from 'react';
-import { Check, ChevronDown, Minus, Plus } from 'lucide-react';
+import { Check, ChevronDown, Minus, Pencil, Plus } from 'lucide-react';
 import { useAvisar } from '@/components/panel/Avisos';
 import { useCargar } from '@/components/panel/useCargar';
 import { accion, mensaje } from '@/modules/fideliza/cliente/api';
@@ -34,7 +35,7 @@ interface Item {
 const igual = (a: Config, b: Config) =>
   a.activo === b.activo && a.cada === b.cada && a.premio.trim() === b.premio.trim() && a.catalogo_id === b.catalogo_id && a.regalo === b.regalo;
 
-export default function TraeUnAmigo({ companyId, editable }: { companyId: string; editable: boolean }) {
+export default function TraeUnAmigo({ companyId, editable, enLista = false }: { companyId: string; editable: boolean; enLista?: boolean }) {
   const avisar = useAvisar();
   const { datos, releer } = useCargar(async () => {
     try {
@@ -65,6 +66,8 @@ export default function TraeUnAmigo({ companyId, editable }: { companyId: string
   }, [datos]);
 
   if (!datos || !b) return null;
+  /** El borrador ya comprobado, para el formulario (una función: TypeScript no arrastra el `!b`). */
+  const borrador: Config = b;
   const guardado: Config = { activo: datos.activo, cada: datos.cada || 2, premio: datos.premio ?? '', catalogo_id: datos.catalogo_id ?? null, regalo: Boolean(datos.regalo) };
   const delCatalogo = b.catalogo_id !== null && catalogo.some((x) => x.id === b.catalogo_id);
   const tipo: 'cat' | 'otro' = b.catalogo_id !== null && catalogo.length > 0 ? 'cat' : 'otro';
@@ -101,6 +104,43 @@ export default function TraeUnAmigo({ companyId, editable }: { companyId: string
     }
   }
 
+  const interruptor = (
+    <button
+      type="button"
+      className={`toggle${guardado.activo ? ' on' : ''}`}
+      role="switch"
+      aria-checked={guardado.activo}
+      aria-label="Trae a un amigo"
+      disabled={!editable || ocupado}
+      onClick={() => void guardar({ ...b, activo: !guardado.activo }, guardado.activo ? 'Apagado: Trae a un amigo.' : 'Prendido: Trae a un amigo.')}
+    />
+  );
+
+  // En Promociones: una fila como las demás (nombre, interruptor, lo que gana y «Cambiar»).
+  if (enLista) {
+    return (
+      <li className={`fz-avisos__fila${guardado.activo ? '' : ' fz-avisos__fila--off'}`}>
+        <div className="fz-avisos__cab">
+          <div>
+            <b>Trae a un amigo</b>
+            <small>Tu cliente invita por su WhatsApp. Cuenta cuando el amigo viene y le ponen su primer sello.</small>
+          </div>
+          {interruptor}
+        </div>
+        <div className="fz-avisos__msg">
+          <b>Lo que gana</b>
+          <span>{guardado.premio.trim() ? `Cada ${guardado.cada} ${guardado.cada === 1 ? 'amigo' : 'amigos'}: ${guardado.premio}` : 'Elige el premio y se prende.'}{guardado.regalo ? ' · El amigo empieza con 1 sello.' : ''}</span>
+        </div>
+        <div className="fz-avisos__pie">
+          <button type="button" className="nc-link fz-avisos__editar" aria-expanded={abierto} onClick={() => setAbierto(!abierto)}>
+            <Pencil size={13} /> {abierto ? 'Cerrar' : 'Cambiar'}
+          </button>
+        </div>
+        {abierto && cuerpo()}
+      </li>
+    );
+  }
+
   return (
     <section className={`card fz-club__sec fz-amigo${abierto ? ' fz-amigo--abierto' : ''}`} aria-label="Trae a un amigo">
       <div className="fz-amigo__cab">
@@ -111,18 +151,15 @@ export default function TraeUnAmigo({ companyId, editable }: { companyId: string
           </span>
           <ChevronDown size={18} aria-hidden="true" />
         </button>
-        <button
-          type="button"
-          className={`toggle${guardado.activo ? ' on' : ''}`}
-          role="switch"
-          aria-checked={guardado.activo}
-          aria-label="Prender o apagar Trae a un amigo"
-          disabled={!editable || ocupado}
-          onClick={() => void guardar({ ...b, activo: !guardado.activo }, guardado.activo ? 'Trae a un amigo, apagado' : '¡Trae a un amigo está prendido!')}
-        />
+        {interruptor}
       </div>
+      {abierto && cuerpo()}
+    </section>
+  );
 
-      {abierto && (
+  function cuerpo() {
+    const b = borrador;
+    return (
         <div className="fz-amigo__cuerpo">
           <div className="fz-amigo__frase">
             Por cada
@@ -204,7 +241,6 @@ export default function TraeUnAmigo({ companyId, editable }: { companyId: string
             </button>
           )}
         </div>
-      )}
-    </section>
-  );
+    );
+  }
 }

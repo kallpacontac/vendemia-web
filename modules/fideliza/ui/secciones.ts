@@ -41,7 +41,9 @@ const SECCIONES: SeccionFideliza[] = [
   },
   { label: 'Caja', paginas: [{ href: '/panel/fideliza/caja', label: 'Caja', permiso: 'ops.record', modos: SOLO_CLUB }] },
   { label: 'Clientes', paginas: [{ href: '/panel/fideliza/clientes', label: 'Clientes', permiso: 'members.read', modos: SOLO_CLUB }] },
-  { label: 'Avisos', paginas: [{ href: '/panel/fideliza/campanas', label: 'Avisos', permiso: 'campaigns.manage', modos: SOLO_CLUB }] },
+  // 26-nov-2026 (Alvaro: «deja claro el tema de las promociones y los referidos»): Avisos pasa a
+  // ser Promociones, con todo lo que trae, hace volver y hace hablar bien. Misma dirección.
+  { label: 'Promociones', paginas: [{ href: '/panel/fideliza/campanas', label: 'Promociones', permiso: 'campaigns.manage', modos: SOLO_CLUB }] },
   {
     label: 'Mi club',
     paginas: [
